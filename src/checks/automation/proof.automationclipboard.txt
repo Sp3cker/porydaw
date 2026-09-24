@@ -1,10 +1,12 @@
 Assertion correspondence: automation/automationclipboard.cpp
 
 Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 Original: src/checks/automation/automationclipboard.cpp
 Original SHA-256: 8de1d04cb8fc0bc30dfa4a8e4cd997e62cc9229a0dff29bef8e5538f20c1df64
 Swift counterpart: src/checks/automation/automationclipboard.swift
-Swift SHA-256: 59b0c1f0fb3a17e6f03ce242eea757129382e4028444a508b4d9bc563cc5371d
+Swift SHA-256: 5e212455d528e00a3db1972ab40deb5f0c6e4f3e33d169d982b5c4d2c76d9eee
+Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,7 +25,14 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Provided by the controller for this worktree (not re-executed by this ledger task):
+deno task verify --filter swiftcore --verbose — PASS, 1/14 harnesses selected,
+13 skipped; swiftcore green including drawerAutomationCrossLanePasteClamps and the
+cited drawerAutomationParameterSwitchAndGhosts switch predicate. The predicate line
+anchors below were read from that settled source; the four openLabelMenu delivery
+sites are partial because the original rendered right-press on the parameter label is
+not exercised by the Swift presenter route (S032/S035/S039/S042 open the menu through
+openParameterMenu).
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -37,117 +46,147 @@ src/checks/automation/automationclipboard.cpp:113 | songTab, *canvas, tempoRow, 
 Original assertion inventory
 
 A001 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:65
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): QVERIFY(canvas) guards the native AutomationCanvas pointer. The production fixture constructs the Swift AutomationPage and publishes no nullable canvas accessor. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Original expression:
   QVERIFY(canvas)
 
 A002 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:66
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S048 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the production page accepts a parameter switch; the original activateParameter({Tempo,0,0}) is the same switch to the Tempo lane, which the Swift clamp fixture performs with fixture.activate(.tempo).
+Swift counterpart expression:
+  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
+                  message: "a parameter switch is accepted")
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
 
 A003 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original opens the tempo lane menu through a right-press on the rendered parameter label; the Swift contract opens it through the page presenter (S032, the tempo label opens its lane menu) and no rendered right-press delivery is exercised in this Swift run. Unproved condition: rendered label right-press delivery.
 Original expression:
   QVERIFY2(copyTempo.session, qUtf8Printable(copyTempo.diagnostic))
 
 A004 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:87
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original clicks the rendered Copy row; the Swift contract consumes the published action through page.consumeMenuAction (S033), which is not a rendered-row mouse click. Unproved condition: rendered menu-row click delivery.
 Original expression:
   QVERIFY2(clickRow(copyTempo, CanvasMenuAction::Copy), "the Copy tempo row was not clickable")
 
 A005 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:89
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S034 - src/checks/automation/automationclipboard.swift :: drawerAutomationCrossLanePasteClamps asserts the Copy tempo pick leaves the shared menu closed.
+Swift counterpart expression:
+  report.expect(!page.menuOpen, cppID: id, message: "the Copy tempo pick closes the menu")
 Original expression:
   QVERIFY2(!copyTempo.session->isOpen(), "the Copy tempo pick left the shared menu open")
 
 A006 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:93
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original clicks the rendered Paste row; the Swift contract consumes the published action through page.consumeMenuAction (S036), which is not a rendered-row mouse click. Unproved condition: rendered menu-row click delivery.
 Original expression:
   QVERIFY2(clickRow(pasteCc, CanvasMenuAction::Paste), "the Paste CC row was not clickable")
 
 A007 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:95
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S037 - src/checks/automation/automationclipboard.swift :: drawerAutomationCrossLanePasteClamps asserts the Paste CC pick leaves the shared menu closed.
+Swift counterpart expression:
+  report.expect(!page.menuOpen, cppID: id, message: "the Paste CC pick closes the menu")
 Original expression:
   QVERIFY2(!pasteCc.session->isOpen(), "the Paste CC pick left the shared menu open")
 
 A008 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:97
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S038 - src/checks/automation/automationclipboard.swift :: drawerAutomationCrossLanePasteClamps asserts the exact post-paste CC lane array (["96:127"]), which closes the pasted point count as well.
+Swift counterpart expression:
+  report.expectEqual(["96:127"], fixture.values(lfo), cppID: id,
+                       what: "the pasted tempo point clamps into the CC domain at its tick")
 Original expression:
   QCOMPARE(clampedCc.size(), std::size_t{1})
 
 A009 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:98
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S038 - the asserted lane array carries the pasted tick (96, the copied tempo tick), the same value the original reads from clampedCc.front().tick.
+Swift counterpart expression:
+  report.expectEqual(["96:127"], fixture.values(lfo), cppID: id,
+                       what: "the pasted tempo point clamps into the CC domain at its tick")
 Original expression:
   QCOMPARE(clampedCc.front().tick, kTempoCopyTick)
 
 A010 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:99
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S038 - the asserted lane array carries the clamped value 127, the same value the original reads from clampedCc.front().value.
+Swift counterpart expression:
+  report.expectEqual(["96:127"], fixture.values(lfo), cppID: id,
+                       what: "the pasted tempo point clamps into the CC domain at its tick")
 Original expression:
   QCOMPARE(clampedCc.front().value, 127)
 
 A011 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:107
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original reopens the CC lane menu through a right-press on the rendered label; the Swift contract reopens it through the page presenter (S039, the CC label reopens its lane menu) and no rendered right-press delivery is exercised. Unproved condition: rendered label right-press delivery.
 Original expression:
   QVERIFY2(copyCc.session, qUtf8Printable(copyCc.diagnostic))
 
 A012 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:108
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original clicks the rendered Copy row on the CC menu; the Swift contract consumes the published action through page.consumeMenuAction (S040). Unproved condition: rendered menu-row click delivery.
 Original expression:
   QVERIFY2(clickRow(copyCc, CanvasMenuAction::Copy), "the Copy CC row was not clickable")
 
 A013 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 - src/checks/automation/automationclipboard.swift :: drawerAutomationCrossLanePasteClamps asserts the Copy CC pick leaves the shared menu closed.
+Swift counterpart expression:
+  report.expect(!page.menuOpen, cppID: id, message: "the Copy CC pick closes the menu")
 Original expression:
   QVERIFY2(!copyCc.session->isOpen(), "the Copy CC pick left the shared menu open")
 
 A014 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original reopens the tempo lane menu through a right-press on the rendered label; the Swift contract reopens it through the page presenter (S042, the tempo label reopens its lane menu) and no rendered right-press delivery is exercised. Unproved condition: rendered label right-press delivery.
 Original expression:
   QVERIFY2(pasteTempo.session, qUtf8Printable(pasteTempo.diagnostic))
 
 A015 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original clicks the rendered Paste tempo row; the Swift contract consumes the published action through page.consumeMenuAction (S043). Unproved condition: rendered menu-row click delivery.
 Original expression:
   QVERIFY2(clickRow(pasteTempo, CanvasMenuAction::Paste),
                "the Paste tempo row was not clickable")
 
 A016 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:118
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S044 - src/checks/automation/automationclipboard.swift :: drawerAutomationCrossLanePasteClamps asserts the Paste tempo pick leaves the shared menu closed.
+Swift counterpart expression:
+  report.expect(!page.menuOpen, cppID: id, message: "the Paste tempo pick closes the menu")
 Original expression:
   QVERIFY2(!pasteTempo.session->isOpen(), "the Paste tempo pick left the shared menu open")
 
 A017 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S045 - src/checks/automation/automationclipboard.swift :: drawerAutomationCrossLanePasteClamps asserts the pasted CC point replaces the tempo stream with exactly one point, the original clampedTempo.size() == 1.
+Swift counterpart expression:
+  report.expectEqual(1, pasted.count, cppID: id,
+                       what: "the pasted CC point replaces the tempo stream")
 Original expression:
   QCOMPARE(clampedTempo.size(), std::size_t{1})
 
 A018 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S046 - the pasted tempo point keeps the copied CC tick (144), the same value the original reads from clampedTempo.front().tick.
+Swift counterpart expression:
+  report.expectEqual(Tick(144), pasted.first?.tick ?? Tick.max, cppID: id,
+                       what: "the pasted tempo point keeps the CC tick")
 Original expression:
   QCOMPARE(clampedTempo.front().tick, kCcCopyTick)
 
 A019 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S047 - the pasted tempo point clamps to the slowest tempo (TimeDefaults.microsecondsPerQuarterNote(forBPM: TimeDefaults.minimumTempoBPM)), the same value the original reads from clampedTempo.front().microsecondsPerQuarterNote.
+Swift counterpart expression:
+  report.expectEqual(TimeDefaults.microsecondsPerQuarterNote(forBPM: TimeDefaults.minimumTempoBPM),
+                       pasted.first?.microsecondsPerQuarterNote ?? 0, cppID: id,
+                       what: "the pasted tempo point clamps to the slowest tempo")
 Original expression:
   QCOMPARE(clampedTempo.front().microsecondsPerQuarterNote,
                CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(CoreTimeDefaults::kMinTempoBpm))
@@ -161,154 +200,236 @@ Swift expression:
   report.expect(pasteRowEnabled() == false, cppID: drawerAutomationRangeID,
                     message: "the range menu refuses Paste when the system clipboard is empty")
 
-S002 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:35
+S002 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:37
 Swift expression:
   report.expect(fixture.page.copyTimeSelection(), cppID: drawerAutomationRangeID,
                     message: "the selection copies into the semantic clipboard")
 
-S003 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:37
+S003 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:39
 Swift expression:
   report.expect(fixture.page.hasClipboard, cppID: drawerAutomationRangeID,
                     message: "the clipboard publishes its semantic payload")
 
-S004 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:39
+S004 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:41
 Swift expression:
   report.expect(pasteRowEnabled() == true, cppID: drawerAutomationRangeID,
                     message: "the range menu enables Paste for a copied system selection")
 
-S005 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:42
+S005 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:46
 Swift expression:
   report.expectEqual(310, fixture.page.pasteTimeSelection(at: 200).map(Int.init) ?? -1,
                          cppID: drawerAutomationRangeID,
                          what: "the paste cursor lands one span after the destination")
 
-S006 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:45
+S006 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:49
 Swift expression:
   report.expectEqual(["24:30", "120:40", "204:30", "300:40"], fixture.values(fixture.panLane),
                          cppID: drawerAutomationRangeID,
                          what: "the pasted lane writes its relative points at the destination")
 
-S007 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:48
+S007 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:52
 Swift expression:
   report.expectEqual(["0:120", "48:150", "228:150"], fixture.tempoValues, cppID: drawerAutomationRangeID,
                          what: "the pasted tempo point merges at its destination tick")
 
-S008 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:50
+S008 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:54
 Swift expression:
   report.expectEqual(beforePaste.revision + 1, fixture.document.revision, cppID: drawerAutomationRangeID,
                          what: "one paste is one document revision")
 
-S009 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:52
+S009 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:56
 Swift expression:
   report.expect(fixture.undo(), cppID: drawerAutomationRangeID, message: "the paste is undoable")
 
-S010 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:53
+S010 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:57
 Swift expression:
   report.expectEqual(["24:30", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationRangeID,
                          what: "one undo removes the pasted lane points")
 
-S011 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:55
+S011 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:59
 Swift expression:
   report.expectEqual(["0:120", "48:150"], fixture.tempoValues, cppID: drawerAutomationRangeID,
                          what: "one undo removes the pasted tempo point")
 
-S012 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:57
+S012 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:61
 Swift expression:
   report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationRangeID,
                     message: "one undo consumes the paste's single history entry")
 
-S013 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:64
+S013 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:68
 Swift expression:
   report.expect(cut.page.cutTimeSelection(), cppID: drawerAutomationRangeID,
                     message: "the cut copies and deletes in one document write")
 
-S014 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:66
+S014 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:70
 Swift expression:
   report.expectEqual(["120:40"], cut.values(cut.panLane), cppID: drawerAutomationRangeID,
                          what: "the cut removes only the covered span")
 
-S015 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:68
+S015 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:72
 Swift expression:
   report.expectEqual(cutBefore.revision + 1, cut.document.revision, cppID: drawerAutomationRangeID,
                          what: "the cut is one revision")
 
-S016 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:70
+S016 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:74
 Swift expression:
   report.expect(cut.page.hasClipboard && cut.undo(), cppID: drawerAutomationRangeID,
                     message: "the cut keeps its payload and is undoable")
 
-S017 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:72
+S017 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:76
 Swift expression:
   report.expectEqual(["24:30", "120:40"], cut.values(cut.panLane), cppID: drawerAutomationRangeID,
                          what: "one undo restores the cut span")
 
-S018 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:74
+S018 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:78
 Swift expression:
   report.expect(!cut.document.history.canUndo, cppID: drawerAutomationRangeID,
                     message: "one undo consumes the cut's single history entry")
 
-S019 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:80
+S019 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:84
 Swift expression:
   report.expect(cut.page.consumeMenuAction(actionId: AutomationMenuAction.copyLane.rawValue),
                     cppID: drawerAutomationRangeID, message: "lane menu copies its absolute points")
 
-S020 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:84
+S020 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:88
 Swift expression:
   report.expect(cut.page.consumeMenuAction(actionId: AutomationMenuAction.pasteLane.rawValue),
                     cppID: drawerAutomationRangeID, message: "lane menu pastes into another parameter")
 
-S021 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:86
+S021 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:90
 Swift expression:
   report.expectEqual(["24:30", "120:40"], cut.values(cut.volumeLane), cppID: drawerAutomationRangeID,
                          what: "lane paste preserves absolute ticks across parameters")
 
-S022 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:90
+S022 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:94
 Swift expression:
   report.expectEqual(280, otherDocument.page.pasteTimeSelection(at: 200).map(Int.init) ?? -1,
                          cppID: drawerAutomationRangeID, what: "the native range clip survives lane copy and detach")
 
-S023 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:92
+S023 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:96
 Swift expression:
   report.expectEqual(["204:30"], otherDocument.values(otherDocument.panLane), cppID: drawerAutomationRangeID,
                          what: "another document pastes the shared range clip, not the lane buffer")
 
-S024 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:103
+S024 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:107
 Swift expression:
   report.expect(!edit.unchanged, cppID: drawerAutomationRangeID,
                     message: "a replacement that differs from the lane is a change")
 
-S025 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:105
+S025 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:109
 Swift expression:
   report.expectEqual(Tick(0), edit.tickBegin, cppID: drawerAutomationRangeID,
                          what: "a whole-lane replacement starts at tick zero")
 
-S026 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:107
+S026 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:111
 Swift expression:
   report.expectEqual(TimeDefaults.noTick, edit.tickEnd, cppID: drawerAutomationRangeID,
                          what: "a whole-lane replacement covers the whole lane")
 
-S027 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:109
+S027 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:113
 Swift expression:
   report.expect(AutomationCommit.apply(edit, in: replace.document), cppID: drawerAutomationRangeID,
                     message: "the replacement commits through one lane write")
 
-S028 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:111
+S028 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:115
 Swift expression:
   report.expectEqual(["48:20", "96:0"], replace.values(replace.panLane), cppID: drawerAutomationRangeID,
                          what: "the replacement deduplicates by tick and clamps into the domain")
 
-S029 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:114
+S029 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:118
 Swift expression:
   report.expect(AutomationCommit.apply(clear, in: replace.document), cppID: drawerAutomationRangeID,
                     message: "clearing the lane writes once")
 
-S030 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:116
+S030 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:120
 Swift expression:
   report.expectEqual(0, replace.lanePoints(replace.panLane).count, cppID: drawerAutomationRangeID,
                          what: "clearing removes every written point")
 
-S031 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:118
+S031 | drawerAutomationRangeEditAndClipboard | src/checks/automation/automationclipboard.swift:122
 Swift expression:
   report.expect(AutomationRangeEditor.replaceLane(replace.facts(replace.panLane),
                                                       points: []).unchanged,
                     cppID: drawerAutomationRangeID, message: "clearing an empty lane is unchanged")
+
+S032 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:140
+Swift expression:
+  report.expect(page.openParameterMenu(index: page.catalogIndex(of: .tempo), x: 0, y: 0),
+                  cppID: id, message: "the tempo label opens its lane menu")
+
+S033 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:142
+Swift expression:
+  report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.copyLane.rawValue),
+                  cppID: id, message: "the tempo Copy row is consumed")
+
+S034 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:144
+Swift expression:
+  report.expect(!page.menuOpen, cppID: id, message: "the Copy tempo pick closes the menu")
+
+S035 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:146
+Swift expression:
+  report.expect(page.openParameterMenu(index: page.catalogIndex(of: lfo), x: 0, y: 0),
+                  cppID: id, message: "the CC label opens its lane menu")
+
+S036 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:148
+Swift expression:
+  report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.pasteLane.rawValue),
+                  cppID: id, message: "the Paste CC row is consumed")
+
+S037 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:150
+Swift expression:
+  report.expect(!page.menuOpen, cppID: id, message: "the Paste CC pick closes the menu")
+
+S038 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:151
+Swift expression:
+  report.expectEqual(["96:127"], fixture.values(lfo), cppID: id,
+                       what: "the pasted tempo point clamps into the CC domain at its tick")
+
+S039 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:157
+Swift expression:
+  report.expect(page.openParameterMenu(index: page.catalogIndex(of: lfo), x: 0, y: 0),
+                  cppID: id, message: "the CC label reopens its lane menu")
+
+S040 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:159
+Swift expression:
+  report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.copyLane.rawValue),
+                  cppID: id, message: "the Copy CC row is consumed")
+
+S041 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:161
+Swift expression:
+  report.expect(!page.menuOpen, cppID: id, message: "the Copy CC pick closes the menu")
+
+S042 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:163
+Swift expression:
+  report.expect(page.openParameterMenu(index: page.catalogIndex(of: .tempo), x: 0, y: 0),
+                  cppID: id, message: "the tempo label reopens its lane menu")
+
+S043 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:165
+Swift expression:
+  report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.pasteLane.rawValue),
+                  cppID: id, message: "the Paste tempo row is consumed")
+
+S044 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:167
+Swift expression:
+  report.expect(!page.menuOpen, cppID: id, message: "the Paste tempo pick closes the menu")
+
+S045 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:169
+Swift expression:
+  report.expectEqual(1, pasted.count, cppID: id,
+                       what: "the pasted CC point replaces the tempo stream")
+
+S046 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:171
+Swift expression:
+  report.expectEqual(Tick(144), pasted.first?.tick ?? Tick.max, cppID: id,
+                       what: "the pasted tempo point keeps the CC tick")
+
+S047 | drawerAutomationCrossLanePasteClamps | src/checks/automation/automationclipboard.swift:173
+Swift expression:
+  report.expectEqual(TimeDefaults.microsecondsPerQuarterNote(forBPM: TimeDefaults.minimumTempoBPM),
+                       pasted.first?.microsecondsPerQuarterNote ?? 0, cppID: id,
+                       what: "the pasted tempo point clamps to the slowest tempo")
+
+S048 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:19
+Swift expression:
+  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
+                  message: "a parameter switch is accepted")

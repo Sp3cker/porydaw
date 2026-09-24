@@ -4,7 +4,15 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationcanvaslayout.cpp
 Original SHA-256: 2a327b9ee3f719debb52dc61340e898ef31f3026e1e1ed02591876673fd7218c
 Swift counterpart: src/checks/automation/automationcanvaslayout.swift
-Swift SHA-256: a49d43e7820b843398d311a7889ed11f6be46fd2a3a05a94145ba600f642c4cb
+Swift SHA-256: 8863fc0c8237b05de4bf1362e4cd2d9da6f2e49fba5c1a21afcb7a49d38c8a50
+Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
+Swift SHA-256: d2861ca291148a67d21bd3b2c97bcb6d99fa3812875721118e69aadbc6c0c6d4
+Additional Swift counterpart: src/checks/automation/presentation/painting.swift
+Swift SHA-256: 591fb9b3c5dc1551c3f2a2ec4caa3b32529389f161b8b09a83841c4625d69aaa
+Additional Swift counterpart: src/checks/automation/automationmenus.swift
+Swift SHA-256: 23e3e173b7f5aab8380eedb9f152a7726df792b8bdf5642534376f619321acbd
+Additional Swift counterpart: src/checks/rollcheck/static/camera.swift
+Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,7 +31,13 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+deno task verify --filter swiftcore --verbose passed on this worktree at revision
+470231af89c12f08bf2d8b2562640c40f90a3049 (swiftcore ok; 1/14 harnesses selected, 13
+skipped). The result was supplied by the controller for the settled source snapshot
+recorded above; the ledger agent did not re-run it. The legacy automation C++ harness is
+retired, so this file is an assertion-obligation inventory, never current execution
+evidence for the C++ original. Converted-window command: deno task verify:qml --verbose.
+Disposition tally: MATCHED 12, PARTIAL 38, GAP 16, NATIVE 62 (128 sites).
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -41,778 +55,778 @@ src/checks/automation/automationcanvaslayout.cpp:267 | mouseMove(*m_automationIn
 Original assertion inventory
 
 A001 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:46
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation band geometry from the native TimelineBandLayout). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(automation.has_value())
 
 A002 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:47
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll band geometry from the native TimelineBandLayout). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(roll.has_value())
 
 A003 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:48
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the lane body rect's top-left is the canvas origin). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(body.topLeft(), QPoint{})
 
 A004 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:49
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The page's own body-height policy is asserted (S001: the requested height never falls under the minimum; S003: it is a fifth of the host inside those bounds), but the original compares the native lane body rect with the native automation viewport size.
 Original expression:
   QCOMPARE(body.height(), page.automationViewportSize().height())
 
 A005 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:50
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the lane body rect equals the automation band's plot rect). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(body.size(), automation->plotRect.size())
 
 A006 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:51
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (no drawerAutomationScrollBar item exists under the quick root). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(checks::support::visualDescendant(view.quickView()->rootObject(),
                                                 QStringLiteral("drawerAutomationScrollBar")) ==
               nullptr)
 
 A007 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:54
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation plot rect's left edge equals the native timeline split x). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(automation->plotRect.left(), view.timelineSplitX())
 
 A008 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:55
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll plot rect's left edge equals the native timeline split x). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(roll->plotRect.left(), view.timelineSplitX())
 
 A009 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:60
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the parameter tab item exists under the quick root). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(label)
 
 A010 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:61
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the rendered parameter tab item is visible). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(label->isVisible())
 
 A011 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:63
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the rendered parameter tab's scene rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(!labelRect.isEmpty())
 
 A012 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:64
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted presentations publish the label rows (S037: the row stack has AutomationCatalog.count rows), but the original's rendered tab rect lying inside the native gutter rect has no Swift predicate.
 Original expression:
   QVERIFY(labelRect.left() >= gutterRect.left() && labelRect.right() <= gutterRect.right())
 
 A013 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:82
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation band geometry is present). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(band.has_value())
 
 A014 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:83
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation band rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(!band->rect.isEmpty())
 
 A015 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:84
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the timelineAutomationInput item exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(m_automationInput)
 
 A016 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:85
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the timelineAutomationGutterInput item exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(gutter)
 
 A017 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the TimelineQuickScene object exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(quickScene)
 
 A018 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:87
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation input item's window is the quick window). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(m_automationInput->window(), m_quickWindow.data())
 
 A019 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:88
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the gutter input item's window is the quick window). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(gutter->window(), m_quickWindow.data())
 
 A020 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:96
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native EditorDrawer object exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(drawer)
 
 A021 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:97
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native TimelineQuickView exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(quick)
 
 A022 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:99
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the quick view's root object exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(root)
 
 A023 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:102
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation tabs scroller item exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(scroller)
 
 A024 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:103
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the tabs scroller publishes clip == true). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(scroller->property("clip").toBool())
 
 A025 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted drawer's sizing policy is asserted (S001: the requested automation height never falls under the metrics minimum body), but the original's native minimumSectionHeight()) > 0 reads the drawer's own bound.
 Original expression:
   QVERIFY(minimumHeight > 0)
 
 A026 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:111
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted page declares no page maximum (S004: maximumBodyHeight == nil) while the original asserts a positive maximumSectionHeight above the minimum, so this drawer-level bound is not equivalent.
 Original expression:
   QVERIFY(drawer->maximumSectionHeight() > minimumHeight)
 
 A027 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The sizing policy is asserted (S001 and S003), but the original observes the rendered automation viewport adopting the requested section height.
 Original expression:
   QTRY_COMPARE(m_page->automationViewportSize().height(), height)
 
 A028 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation band geometry survives the resize). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(automation.has_value())
 
 A029 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll band geometry survives the resize). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(roll.has_value())
 
 A030 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (no drawerAutomationScrollBar item exists under the quick root at either section height). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(checks::support::visualDescendant(
                       root, QStringLiteral("drawerAutomationScrollBar")) == nullptr)
 
 A031 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:124
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native timeline split x is unchanged by the resize). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
 A032 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation plot rect's left edge stays at the split). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(automation->plotRect.left(), splitBefore)
 
 A033 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:126
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll plot rect's left edge stays at the split). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(roll->plotRect.left(), splitBefore)
 
 A034 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:127
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the gutter input item's scene rect equals the automation band's gutter rect). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(itemSceneRect(automationGutterInput()), QRectF(automation->gutterRect()))
 
 A035 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted row stack publishes a positive row count (S037: AutomationCatalog.count rows), but the original's Flickable contentHeight is a native scroller measurement.
 Original expression:
   QVERIFY(stackHeight > 0.0)
 
 A036 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The uniform body floor is asserted (S001: preferredBodyHeight(200, metrics) >= metrics.minimumBody), but the original's Flickable content height exceeding the section height is a native measurement.
 Original expression:
   QVERIFY2(stackHeight > height,
                        "the tab stack does not overflow the uniform body floor")
 
 A037 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:137
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the first parameter tab item exists at the content top). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(firstTab)
 
 A038 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:138
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the first tab's scene rect lies inside the native gutter rect at the content top). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY2(checks::support::rectInside(firstTab->mapRectToScene(firstTab->boundingRect()),
                                                    QRectF(automation->gutterRect())),
                        "the first tab is not visible at the content top")
 
 A039 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:142
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation input item's scene rect equals the band's plot rect). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(itemSceneRect(automationInput()), QRectF(automation->plotRect))
 
 A040 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted presentations publish the parameter rows (S037, S038), but no Swift predicate asserts a rendered row handle's validity.
 Original expression:
   QVERIFY(row.has_value())
 
 A041 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the parameter tab item exists under the quick root). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(label)
 
 A042 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the rendered parameter tab item is visible). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(label->isVisible())
 
 A043 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:156
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the rendered parameter tab's scene rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(!labelRect.isEmpty())
 
 A044 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted presentations publish the parameter rows (S037), but the original's rendered tab rect lying inside the native gutter viewport has no Swift predicate.
 Original expression:
   QVERIFY2(checks::support::rectInside(labelRect, QRectF(automation->gutterRect())),
                        "the scrolled tab is not fully inside the gutter viewport")
 
 A045 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S034 asserts the page's active parameter is the lane the production activation route selects, the same activation the original performs through a rendered tab. [S034]
 Original expression:
   QVERIFY(activateParameter(*row))
 
 A046 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:160
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S034 asserts the activated lane becomes the page's active parameter after the switch; the original reads the same active index. [S034]
 Original expression:
   QCOMPARE(canvas->activeParameter(), index)
 
 A047 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:162
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S035 asserts a mid-gesture parameter switch writes nothing (document/history snapshot equality), the same no-mutation observable the original reads as frozenDocumentState(). [S035]
 Original expression:
   QVERIFY(frozenDocumentState() == frozen)
 
 A048 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:163
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Cursor stability across the pan route is asserted (S030: the released pan leaves the cursor where it was), but no Swift predicate asserts the edit cursor is unchanged by a rendered tab activation.
 Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
 A049 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:164
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native timeline split x is unchanged by each tab activation). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
 A050 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:176
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native TimelineQuickView exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(quick)
 
 A051 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:178
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the quick view's root object exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(root)
 
 A052 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the gutter input item exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(gutter)
 
 A053 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:187
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation band geometry is present). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(automation.has_value())
 
 A054 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:188
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll band geometry is present). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(roll.has_value())
 
 A055 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:189
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation plot rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(!automation->plotRect.isEmpty())
 
 A056 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:190
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll plot rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(!roll->plotRect.isEmpty())
 
 A057 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:194
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the quick window exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(quickWindow)
 
 A058 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:195
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the quick window's rect contains the gutter rect). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(QRect(QPoint(0, 0), quickWindow->size()).contains(gutterRect))
 
 A059 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:196
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation plot rect's left edge equals the native timeline split x). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(automation->plotRect.left(), view.timelineSplitX())
 
 A060 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:197
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll plot rect's left edge equals the native timeline split x). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(roll->plotRect.left(), view.timelineSplitX())
 
 A061 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:198
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (no drawerAutomationScrollBar item exists under the quick root). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(checks::support::visualDescendant(
                   quick->rootObject(), QStringLiteral("drawerAutomationScrollBar")) == nullptr)
 
 A062 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation input item's scene rect equals the band's plot rect). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(itemSceneRect(*m_automationInput), QRectF(automation->plotRect))
 
 A063 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:201
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the gutter input item's scene rect equals the band's gutter rect). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(itemSceneRect(*gutter), QRectF(gutterRect))
 
 A064 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:202
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation input item's rounded width equals the plot rect's width). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(qRound(m_automationInput->width()), automation->plotRect.width())
 
 A065 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:203
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the gutter item's rounded width equals the gutter rect's width). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(qRound(gutter->width()), gutterRect.width())
 
 A066 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:204
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the gutter item's rounded height equals the automation band rect's height). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(qRound(gutter->height()), automation->rect.height())
 
 A067 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:209
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted presentations publish the parameter rows (S037), but no Swift predicate asserts a rendered row handle's validity.
 Original expression:
   QVERIFY(row.has_value())
 
 A068 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S034 asserts the page's active parameter is the lane the production activation route selects, the same activation the original performs through a rendered tab. [S034]
 Original expression:
   QVERIFY(activateParameter(*row))
 
 A069 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:214
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the parameter tab item exists under the quick root). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(label)
 
 A070 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:216
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the rendered parameter tab's scene rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(!labelRect.isEmpty())
 
 A071 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:217
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted presentations publish the parameter rows and their scale labels (S037), but the original's rendered tab rect contained by the native gutter rect has no Swift predicate.
 Original expression:
   QVERIFY(QRectF(gutterRect).contains(labelRect))
 
 A072 | AutomationEditingTest::middleMousePanSurvivesRefresh | src/checks/automation/automationcanvaslayout.cpp:225
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The pan predicates run on a fixture whose pan lane is activated through the production catalog (S031 presses on it), but no Swift predicate asserts the original's activation return value.
 Original expression:
   QVERIFY(activateParameter(pan))
 
 A073 | AutomationEditingTest::middleMousePanSurvivesRefresh | src/checks/automation/automationcanvaslayout.cpp:227
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the pan lane's QQuickItem body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(!body.isEmpty())
 
 A074 | AutomationEditingTest::middleMousePanSurvivesRefresh | src/checks/automation/automationcanvaslayout.cpp:237
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The pan publishes its cursor kind (S023: page.cursorKind == closedHand while panning), but the original reads the native cursor shape on the automation input item.
 Original expression:
   QCOMPARE(m_automationInput->cursor().shape(), Qt::ClosedHandCursor)
 
 A075 | AutomationEditingTest::middleMousePanSurvivesRefresh | src/checks/automation/automationcanvaslayout.cpp:242
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S026 asserts the pan scrolls the shared camera by the pointer's 48 px travel (scrollBefore + 48), the same camera displacement the original reads as a 48 px displayX delta. [S026]
 Original expression:
   QVERIFY(qAbs((before - after) - 48.0) < 0.5)
 
 A076 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:255
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted suite stages its second lane directly on the same fixture; no Swift predicate asserts the minted index the original's addTrack(0) returns.
 Original expression:
   QCOMPARE(m_tab->document().addTrack(0), 1)
 
 A077 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:259
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The pan predicates run on a fixture activated through the production catalog (S031), but no Swift predicate asserts the original's activation return value for the old pan lane.
 Original expression:
   QVERIFY(activateParameter(oldPan))
 
 A078 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:261
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the pan lane's QQuickItem body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(!body.isEmpty())
 
 A079 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:268
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The pan publishes its cursor kind (S023), but the original reads the native cursor shape on the automation input item mid-gesture.
 Original expression:
   QCOMPARE(m_automationInput->cursor().shape(), Qt::ClosedHandCursor)
 
 A080 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:275
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S034 asserts the mid-pan switch rebuilds the page's active parameter to the switched lane, the same rebuild the original reads as a valid new row handle. [S034]
 Original expression:
   QTRY_VERIFY(findRow(newPan).valid())
 
 A081 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:276
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted page publishes one active parameter after the switch (S034), but no Swift predicate asserts the previous lane's row handle became invalid: the row-handle concept is retired into parameter identity.
 Original expression:
   QVERIFY(!findRow(oldPan).valid())
 
 A082 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:277
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the rebuilt row's QQuickItem lane body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(!laneBody(findRow(newPan)).isEmpty())
 
 A083 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:278
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S035 asserts the mid-pan switch writes nothing (document/history snapshot equality), the same frozenDocumentState() observable. [S035]
 Original expression:
   QVERIFY(frozenDocumentState() == frozen)
 
 A084 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:281
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The switched parameter is asserted active before the release (S034), but no Swift predicate re-reads the rebuilt row handle after the release.
 Original expression:
   QVERIFY(findRow(newPan).valid())
 
 A085 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:282
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No Swift predicate asserts the previous lane's row handle stays invalid after the release; the row-handle concept is retired into parameter identity.
 Original expression:
   QVERIFY(!findRow(oldPan).valid())
 
 A086 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:283
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S036 asserts releasing after the switch commits nothing (document/history snapshot equality), the same frozenDocumentState() observable. [S036]
 Original expression:
   QVERIFY(frozenDocumentState() == frozen)
 
 A087 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:290
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted suites stage empty lanes (an empty pan fixture, and an unwritten lane projects no point), but no Swift predicate asserts the document's LFO lane is empty at this point.
 Original expression:
   QVERIFY(m_tab->document().lanePoints(0, kLfoController).empty())
 
 A088 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:301
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S034 asserts the page's active parameter becomes the lane the production activation route selects, the same activation the original performs on the empty LFO lane. [S034]
 Original expression:
   QVERIFY(activateParameter(lfo))
 
 A089 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:303
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted presentations publish the parameter rows (S037), but no Swift predicate asserts a rendered row handle's validity.
 Original expression:
   QVERIFY(lane.valid())
 
 A090 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:305
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native timeline split x is unchanged by the empty-lane activation). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
 A091 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:306
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S035 asserts a parameter switch writes nothing (document/history snapshot equality including revision, identity and canUndo/canRedo), the same frozenDocumentState() observable. [S035]
 Original expression:
   QVERIFY(frozenDocumentState() == frozen)
 
 A092 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:307
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Cursor stability across the pan route is asserted (S030), but no Swift predicate asserts the edit cursor is unchanged by an empty-lane parameter switch.
 Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
 A093 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:308
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted drawer derives its snap policy from the same document and timeline (S040: the empty-lane press parks the edit cursor at AutomationSnapPolicy.snap), but no Swift predicate publishes a gridTicksAt(48) resolution readout.
 Original expression:
   QCOMPARE(view.grid().gridTicksAt(48), grid.gridTicks)
 
 A094 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:309
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The snap policy is exercised (S040), but no Swift predicate publishes a snapTicksAt(48) resolution readout.
 Original expression:
   QCOMPARE(view.grid().snapTicksAt(48), grid.snapTicks)
 
 A095 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:310
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The policy's non-fine snap output is asserted for one raw tick (S040: the parked cursor equals AutomationSnapPolicy.snap), but the original's GridMetrics.snapTick(30) resolution readout has no Swift predicate.
 Original expression:
   QCOMPARE(view.grid().snapTick(30.0, false), snap)
 
 A096 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:311
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No Swift predicate publishes the snap spacing at a snapped tick (snapTicksAt(snap)).
 Original expression:
   QCOMPARE(view.grid().snapTicksAt(snap), spacing)
 
 A097 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:312
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No Swift predicate publishes a positive grid-tick resolution.
 Original expression:
   QVERIFY(grid.gridTicks > 0)
 
 A098 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:313
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No Swift predicate publishes a positive snap-tick resolution.
 Original expression:
   QVERIFY(grid.snapTicks > 0)
 
 A099 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:314
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The half-open lattice rule is asserted for projection cells (S013: a cell contains its own begin), but the original's GridMetrics.snapTick quantization at 0.1 lattice steps has no Swift predicate.
 Original expression:
   QCOMPARE(view.grid().snapTick(double(snap) + 0.1 * double(spacing), false), snap)
 
 A100 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:315
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The half-open lattice rule is asserted for projection cells (S013), but the original's GridMetrics.snapTick quantization at 0.4 lattice steps has no Swift predicate.
 Original expression:
   QCOMPARE(view.grid().snapTick(double(snap) + 0.4 * double(spacing), false), snap)
 
 A101 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:316
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The half-open rule is asserted for projection cells (S014: a cell excludes its own end), but no Swift predicate asserts the original's snapTick at 1.1 lattice steps moving off the snap point.
 Original expression:
   QVERIFY(view.grid().snapTick(double(snap) + 1.1 * double(spacing), false) != snap)
 
 A102 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:323
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted page activates parameters through the production catalog (S034), but no Swift predicate asserts the original's activation return for the bend-range lane.
 Original expression:
   QVERIFY(activateParameter(bendRange))
 
 A103 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:340
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no EditorDrawer-level switch check was added, and no Swift predicate reads an EditorViewState automation block.
 Original expression:
   QVERIFY(whileVelocity.automation == beforeSwitch.automation)
 
 A104 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:341
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no Swift predicate reads an EditorViewState laneRanges block across a drawer page switch.
 Original expression:
   QVERIFY(whileVelocity.laneRanges == beforeSwitch.laneRanges)
 
 A105 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:342
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The page's body-size policy is asserted (S001 and S003), but the original's automation viewport size surviving a drawer page switch has no Swift predicate.
 Original expression:
   QCOMPARE(m_page->automationViewportSize(), viewportBefore)
 
 A106 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:343
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no Swift predicate asserts the active parameter surviving a drawer page switch.
 Original expression:
   QCOMPARE(m_page->canvas()->activeParameter(), activeBefore)
 
 A107 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:344
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no Swift predicate asserts document/history equality across a drawer page switch.
 Original expression:
   QVERIFY(frozenDocumentState() == frozen)
 
 A108 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:345
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no Swift predicate asserts the edit cursor surviving a drawer page switch.
 Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
 A109 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:350
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native timeline split x is unchanged by the page switch). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
 A110 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:351
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: A lane range applied through the production menu is asserted (S039: scaleLabels.first?.value == 64 after the 0-64 range pick), but the original's editorViewState laneRanges surviving a drawer page switch has no Swift predicate.
 Original expression:
   QCOMPARE(view.editorViewState().laneRanges.at(bendRange), uint8_t{64})
 
 A111 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:352
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no Swift predicate asserts document/history equality after the switch back to the Automations page.
 Original expression:
   QVERIFY(frozenDocumentState() == frozen)
 
 A112 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:353
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no Swift predicate asserts the edit cursor after the switch back.
 Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
 A113 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:360
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The pan and wheel predicates run on a fixture activated through the production catalog (S031), but no Swift predicate asserts the original's activation return value.
 Original expression:
   QVERIFY(activateParameter(pan))
 
 A114 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the pan lane's QQuickItem body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(!body.isEmpty())
 
 A115 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:372
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 asserts the production grid wheel route raises pixelsPerBeat for a wheel delta while preserving the anchor tick in one publication, the same camera zoom the original's automation-input wheel observes. [S041]
 Original expression:
   QVERIFY(view.camera().pxPerBeat() > zoomBefore)
 
 A116 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:373
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 asserts the anchor's tickAtContentX is unchanged (tolerance 1e-7) across the wheel zoom, the same anchoring the original reads within 0.001 ticks. [S041]
 Original expression:
   QVERIFY(std::abs(view.camera().tickAtContentX(anchor.x()) - tickBefore) < 0.001)
 
 A117 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:375
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer view-state block): no Swift predicate reads an EditorViewState velocity block after a wheel zoom.
 Original expression:
   QVERIFY(afterZoom.velocity == beforeZoom.velocity)
 
 A118 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:376
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer view-state block): no Swift predicate reads an EditorViewState voiceChanges block after a wheel zoom.
 Original expression:
   QVERIFY(afterZoom.voiceChanges == beforeZoom.voiceChanges)
 
 A119 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:377
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer view-state block): no Swift predicate reads an EditorViewState automation block after a wheel zoom.
 Original expression:
   QVERIFY(afterZoom.automation == beforeZoom.automation)
 
 A120 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:378
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer view-state block): no Swift predicate reads an EditorViewState activePage after a wheel zoom.
 Original expression:
   QVERIFY(afterZoom.activePage == beforeZoom.activePage)
 
 A121 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:385
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted drawer's bounds are asserted (S001: the minimum body floor; S003: the fifth-of-host height; S004: no page maximum), but the original's targetHeight != originalHeight guard reads the native drawer section bounds.
 Original expression:
   QVERIFY(targetHeight != originalHeight)
 
 A122 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:388
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The sizing policy is asserted (S001 and S003), but the original observes the rendered viewport adopting the requested section height.
 Original expression:
   QTRY_COMPARE(m_page->automationViewportSize().height(), targetHeight)
 
 A123 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:390
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native timeline split x is unchanged by the section resize). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
 A124 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:392
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer section resize): no Swift predicate reads an EditorViewState velocity block after a section resize.
 Original expression:
   QVERIFY(afterHeight.velocity == afterZoom.velocity)
 
 A125 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:393
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer section resize): no Swift predicate reads an EditorViewState voiceChanges block after a section resize.
 Original expression:
   QVERIFY(afterHeight.voiceChanges == afterZoom.voiceChanges)
 
 A126 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:394
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer section resize): no Swift predicate reads an EditorViewState activePage after a section resize.
 Original expression:
   QVERIFY(afterHeight.activePage == afterZoom.activePage)
 
 A127 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:395
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer section resize): no Swift predicate asserts document/history equality across a section resize.
 Original expression:
   QVERIFY(frozenDocumentState() == frozen)
 
 A128 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:396
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer section resize): no Swift predicate asserts the edit cursor across a section resize.
 Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
@@ -925,3 +939,107 @@ S020 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayou
 Swift expression:
   report.expectEqual(projection.cell(atRawTick: 0).tickBegin, degenerate[0].tickBegin,
                          cppID: drawerAutomationLayoutID, what: "a degenerate walk stays in the pointer's cell")
+
+S021 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:95
+Swift expression:
+  report.expect(page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle),
+                    cppID: id, message: "a middle press starts the pan")
+
+S022 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:97
+Swift expression:
+  report.expect(page.isPanning, cppID: id, message: "the page publishes the live pan")
+
+S023 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:98
+Swift expression:
+  report.expectEqual(AutomationCursorKind.closedHand.rawValue, page.cursorKind, cppID: id,
+                     what: "the pan publishes the closed hand")
+
+S024 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:100
+Swift expression:
+  report.expectEqual(before, fixture.snapshot, cppID: id,
+                     what: "starting a pan mutates nothing")
+
+S025 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:102
+Swift expression:
+  report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
+                     what: "starting a pan parks no cursor")
+
+S026 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:105
+Swift expression:
+  report.expectEqual(scrollBefore + 48, fixture.session.camera.snapshot.scrollX, cppID: id,
+                     what: "the pan scrolls the shared camera by the travel")
+
+S027 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:107
+Swift expression:
+  report.expectEqual(before, fixture.snapshot, cppID: id,
+                     what: "panning mutates nothing")
+
+S028 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:110
+Swift expression:
+  report.expect(!page.isPanning, cppID: id, message: "releasing ends the pan")
+
+S029 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:111
+Swift expression:
+  report.expectEqual(before, fixture.snapshot, cppID: id,
+                     what: "the released pan leaves document and history untouched")
+
+S030 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:113
+Swift expression:
+  report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
+                     what: "the released pan leaves the cursor where it was")
+
+S031 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:117
+Swift expression:
+  _ = page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle)
+
+S032 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:118
+Swift expression:
+  report.expect(page.isPanning, cppID: switchID, message: "a second pan starts")
+
+S033 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:120
+Swift expression:
+  report.expect(!page.isPanning, cppID: switchID,
+                message: "switching parameters ends the pan")
+
+S034 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:122
+Swift expression:
+  report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: switchID,
+                     what: "the switch rebuilds the active parameter")
+
+S035 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:124
+Swift expression:
+  report.expectEqual(before, fixture.snapshot, cppID: switchID,
+                     what: "switching mid-pan writes nothing")
+
+S036 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:127
+Swift expression:
+  report.expectEqual(before, fixture.snapshot, cppID: switchID,
+                     what: "releasing after the switch commits nothing")
+
+S037 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:43
+Swift expression:
+  report.expectEqual(AutomationCatalog.count, stack.rows.count, cppID: drawerAutomationLabelsID,
+                         what: "the row stack carries one row per catalog parameter")
+
+S038 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:45
+Swift expression:
+  report.expectEqual(AutomationParameter.tempo, stack.rows[0].parameter, cppID: drawerAutomationLabelsID,
+                         what: "the Tempo row leads the stack")
+
+S039 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:69
+Swift expression:
+  report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
+                     what: "the selected range rescales the lane to 64")
+
+S040 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:91
+Swift expression:
+  report.expectEqual(snapped, empty.session.editCursor, cppID: drawerAutomationCancelID,
+                     what: "the press parks the edit cursor at the snapped tick")
+
+S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:261
+Swift expression:
+  report.expect(
+      after.pixelsPerBeat > before.pixelsPerBeat
+          && gridCameraNear(session.camera.tickAtContentX(anchorX), anchorTick, tolerance: 1e-7)
+          && counters.camera == publications + 1,
+      cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")

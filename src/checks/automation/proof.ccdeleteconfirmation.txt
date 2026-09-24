@@ -6,28 +6,47 @@ Original: src/checks/automation/ccdeleteconfirmation.cpp
 Original SHA-256: d75733bc8844b4f8ca187a03fd69501172f4ee8b727804c945aeaaccae26aba3
 Swift counterpart: src/checks/automation/domain/tst_automationdomain.swift
 Swift SHA-256: c7314347f30a129f9ba667ef57a9b569b475c2dd4d6f520f51552f51329c32b7
+Additional Swift counterpart: src/checks/automation/automationpointmenus.swift
+Additional Swift SHA-256: 0482684ce44f2e79306271406de026d1aef2b72f06bebe141f2331bb70a207e7
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-All 157 sites in this file are GAP: openCcDeletePrompt, ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores, ccDeletePromptCancelButtonLeavesDocumentUntouched, ccDeletePromptEscapeLeavesDocumentUntouched, ccDeletePromptOutsideRightPressClosesWithoutRetarget, ccDeletePromptInitialReturnCancelsWithoutNavigation, ccDeletePromptStaleDocumentCannotDeleteTarget, ccDeletePromptInvalidationSparesForeignPopup, ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation, and ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic exercise CC delete confirmation dialog workflows, cancellation routes, stale document protection, and synthetic default volume behavior.
-MATCHED identifies equivalent model predicates; execution must still be verified.
+The reconciliation below classifies all 157 sites across the ten methods of the file
+(openCcDeletePrompt, the accept, cancel, Escape, outside-press, initial-Return, stale,
+foreign-popup, synthetic-only and written-count scenarios): the document, confirmation
+and history observations map to the new drawerAutomationLaneDeleteConfirmation
+predicates in src/checks/automation/automationpointmenus.swift and to
+drawerAutomationDeleteTransactions in the domain counterpart; rendered popup content,
+native pointer delivery and keyboard/focus routing stay recorded per site.
+MATCHED identifies equivalent model predicates; execution is recorded under Verification.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
+NATIVE identifies retained native-window/rendering or native pointer-delivery obligations;
 it does not establish coverage of the converted Swift window.
+DEFERRED-KEYBOARD identifies keyboard/focus routing explicitly deferred by the user
+(precedent proof.automationmenus.txt).
+RETIRED-REPRESENTATION identifies retired C++ harness or data plumbing with no Swift ingress.
 GAP identifies an original predicate without a replacement assertion.
 Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: PASS on this worktree (1/14 harnesses selected, 13 skipped; swiftcore green,
+including drawerAutomationLaneDeleteConfirmation, whose predicates are indexed below
+from S124). Recorded by the lane controller from the settled run at this source snapshot;
+this proof-only reconciliation did not re-run the build or the suite.
+Reference revision pin: the original recovered at the recorded revision hashes to the
+recorded Original SHA-256; the counterpart hashes above are the final checked-in sources.
+Registered run path: src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks
+-> src/checks/workspace/SessionChecks.swift :: runProjectSessionSuite -> projectSession
+(swiftcore suite 10); both counterparts are compiled in src/checks/CMakeLists.txt :: swift_core_check.
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
 
 Execution ownership
-The legacy AutomationEditingTest CC delete confirmation suite verified dialog prompting and lane deletion safety. In the converted Swift suite, drawerAutomationDeleteTransactions in src/checks/automation/domain/tst_automationdomain.swift exercises single-commit deletion transactions, undo, and event count verification.
+The legacy AutomationEditingTest CC delete confirmation suite verified dialog prompting and lane deletion safety. In the converted Swift suite, drawerAutomationDeleteTransactions in src/checks/automation/domain/tst_automationdomain.swift exercises single-commit deletion transactions, undo, and event count verification, and drawerAutomationLaneDeleteConfirmation in src/checks/automation/automationpointmenus.swift exercises the confirmation prompt kind, its accept, cancel and stale routes, the eventless synthetic-only lane and the written-event count.
 
 Fixture, sequence and row constraints
 Tests verify confirmation popup presentation, keyboard dismissals (Escape, Return), mouse clicks outside the popup, stale document revision rejection, foreign popup preservation, and synthetic default lane bypass. Loops verify remaining event lists across lanes.
@@ -37,8 +56,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
 Source context since previous assertion:
   // Regression coverage for the automation canvas' CC-lane delete confirmation:
   // the Quick form that replaced the nonempty-lane QMessageBox on the shared
@@ -198,8 +217,8 @@ Original expression:
   QVERIFY(focusAutomationBand());
 
 A002 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:158
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation scenario stages the CC lane whose written events the confirmation message names and the accept removes ([S127], [S130]).
 Source context since previous assertion:
 
       const EditorAutomationRowId ccRow{EditorAutomationRowKind::ControlChange, 0, kController};
@@ -210,8 +229,8 @@ Original expression:
   QVERIFY(findRow(ccRow).valid());
 
 A003 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation scenario stages the sibling volume lane and asserts it survives ([S131]).
 Source context since previous assertion:
 
 
@@ -219,8 +238,8 @@ Original expression:
   QVERIFY(findRow(volumeRow).valid());
 
 A004 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:162
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
 Source context since previous assertion:
 
 
@@ -230,8 +249,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A005 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:167
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]), the presenter representation of the rendered form and both buttons.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -244,8 +263,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A006 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Opening the confirmation writes nothing ([S128]).
 Source context since previous assertion:
 
 
@@ -256,8 +275,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
 
 A007 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:173
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The staged lane content is asserted by the post-accept removal and the undo restoration ([S130], [S134]).
 Source context since previous assertion:
 
 
@@ -265,8 +284,8 @@ Original expression:
   QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
 
 A008 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:174
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The staged lane content is asserted by the post-accept removal and the undo restoration ([S130], [S134]).
 Source context since previous assertion:
 
 
@@ -274,8 +293,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A009 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:175
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The sibling volume point is preserved and asserted across the transaction ([S131], [S134]).
 Source context since previous assertion:
 
 
@@ -284,8 +303,8 @@ Original expression:
                CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
 
 A010 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
 Source context since previous assertion:
 
 
@@ -296,8 +315,8 @@ Original expression:
                    "the confirmation did not give Cancel the initial focus");
 
 A011 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered Delete button click is not exercised; the Swift presenter accepts through its own route ([S129]).
 Source context since previous assertion:
 
 
@@ -306,8 +325,8 @@ Original expression:
                "the Delete button never rendered in the confirmation form");
 
 A012 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift scenario does not observe the shared session content item after the accept.
 Source context since previous assertion:
 
       // Accept consumed the prompt and returned the band focus.
@@ -317,8 +336,8 @@ Original expression:
                    "accepting left confirmation content on the session");
 
 A013 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:186
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
 Source context since previous assertion:
 
 
@@ -327,8 +346,8 @@ Original expression:
                    "accepting did not return focus to the automation band");
 
 A014 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:191
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One acceptance publishes one revision ([S132]), the public-API representation of one document change.
 Source context since previous assertion:
 
 
@@ -339,8 +358,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), frozen.documentChanges + 1);
 
 A015 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:192
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One acceptance publishes one revision ([S132]).
 Source context since previous assertion:
 
 
@@ -348,8 +367,8 @@ Original expression:
   QCOMPARE(songTab.document().revision(), frozen.revision + 1);
 
 A016 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:193
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One acceptance is one history entry, consumed by one undo ([S132], [S135]).
 Source context since previous assertion:
 
 
@@ -357,8 +376,8 @@ Original expression:
   QCOMPARE(songTab.document().undoStack()->count(), frozen.undoCount + 1);
 
 A017 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:194
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One acceptance advances the stack by one ([S135]).
 Source context since previous assertion:
 
 
@@ -366,8 +385,8 @@ Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), frozen.undoIndex + 1);
 
 A018 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:195
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The target lane written events are gone ([S130]), which changes the serialization.
 Source context since previous assertion:
 
 
@@ -375,8 +394,8 @@ Original expression:
   QVERIFY(songTab.document().smf().write() != frozen.smf);
 
 A019 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:197
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The first written event of the target lane is removed ([S130]).
 Source context since previous assertion:
 
       DocLanePoint point;
@@ -385,8 +404,8 @@ Original expression:
   QVERIFY(!songTab.document().findLanePoint(0, kController, kFirstPointTick, &point));
 
 A020 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:198
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The second written event of the target lane is removed ([S130]).
 Source context since previous assertion:
 
 
@@ -394,8 +413,8 @@ Original expression:
   QVERIFY(!songTab.document().findLanePoint(0, kController, kSecondPointTick, &point));
 
 A021 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:201
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift fixture activates the row through the presenter catalogue index without asserting the activation result; the staged row behaviour is asserted instead.
 Source context since previous assertion:
 
       // The parameter label persists and stays selectable; only its written
@@ -405,8 +424,8 @@ Original expression:
   QVERIFY2(activateParameter(volumeRow), "the volume label was no longer selectable");
 
 A022 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:202
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift fixture activates the row through the presenter catalogue index without asserting the activation result; the staged row behaviour is asserted instead.
 Source context since previous assertion:
 
 
@@ -414,8 +433,8 @@ Original expression:
   QVERIFY2(activateParameter(ccRow), "the cleared lane parameter was no longer selectable");
 
 A023 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:204
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The parameter remains in the catalogue after the accept ([S147]).
 Source context since previous assertion:
 
       const LaneHandle retained = findRow(ccRow);
@@ -424,8 +443,8 @@ Original expression:
   QVERIFY(retained.valid());
 
 A024 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:205
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered lane body is native rendering; the Swift predicate asserts catalogue membership ([S147]) but not the plot.
 Source context since previous assertion:
 
 
@@ -433,8 +452,8 @@ Original expression:
   QVERIFY(!laneBody(retained).isEmpty());
 
 A025 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:206
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The volume parameter remains in the catalogue ([S147]).
 Source context since previous assertion:
 
 
@@ -442,8 +461,8 @@ Original expression:
   QVERIFY(findRow(volumeRow).valid());
 
 A026 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:207
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the accept to remove only the target lane, preserving the volume point ([S131]).
 Source context since previous assertion:
 
 
@@ -451,8 +470,8 @@ Original expression:
   QVERIFY(songTab.document().findLanePoint(0, CoreTimeDefaults::kCcVolume, kVolumeTick, &point));
 
 A027 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:208
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the preserved volume point to keep its value ([S131]).
 Source context since previous assertion:
 
 
@@ -460,8 +479,8 @@ Original expression:
   QCOMPARE(point.value, CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
 
 A028 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:211
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the acceptance to be undoable ([S133]).
 Source context since previous assertion:
 
 
@@ -471,8 +490,8 @@ Original expression:
   QVERIFY(songTab.history().canUndo());
 
 A029 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:212
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires one undo to consume the acceptance ([S133]).
 Source context since previous assertion:
 
 
@@ -480,8 +499,8 @@ Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(songTab.history().requestUndo()));
 
 A030 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:213
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires undo to restore the first written event ([S134]).
 Source context since previous assertion:
 
 
@@ -489,8 +508,8 @@ Original expression:
   QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
 
 A031 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:214
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires undo to restore the second written event ([S134]).
 Source context since previous assertion:
 
 
@@ -498,8 +517,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A032 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The sibling volume point is preserved across the whole transaction ([S131]).
 Source context since previous assertion:
 
 
@@ -508,8 +527,8 @@ Original expression:
                CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
 
 A033 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:217
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The restored lane values plus the consumed single history entry ([S134], [S135]) are the public-API representation of the restored serialization.
 Source context since previous assertion:
 
 
@@ -517,8 +536,8 @@ Original expression:
   QCOMPARE(songTab.document().smf().write(), frozen.smf);
 
 A034 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:225
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
 Source context since previous assertion:
 
   }
@@ -533,8 +552,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A035 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:231
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -548,8 +567,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A036 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:234
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered Cancel button click is not exercised; the Swift presenter cancels through its own route ([S136]).
 Source context since previous assertion:
 
 
@@ -559,8 +578,8 @@ Original expression:
                "the Cancel button never rendered in the confirmation form");
 
 A037 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:236
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires cancelling the confirmation to drop the prompt ([S136]).
 Source context since previous assertion:
 
 
@@ -568,8 +587,8 @@ Original expression:
   QTRY_VERIFY2(!opened.session->isOpen(), "Cancel did not dismiss the confirmation");
 
 A038 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:237
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift scenario does not observe the shared session content item after the cancel.
 Source context since previous assertion:
 
 
@@ -578,8 +597,8 @@ Original expression:
                    "Cancel left confirmation content on the session");
 
 A039 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:240
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The confirmation cancel route leaves document and history untouched ([S137]).
 Source context since previous assertion:
 
 
@@ -588,8 +607,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
 
 A040 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:241
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The cancel route leaves the staged lane alone ([S137]).
 Source context since previous assertion:
 
 
@@ -597,8 +616,8 @@ Original expression:
   QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
 
 A041 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:242
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The cancel route leaves the staged lane alone ([S137]).
 Source context since previous assertion:
 
 
@@ -606,8 +625,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A042 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:243
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
 Source context since previous assertion:
 
 
@@ -616,8 +635,8 @@ Original expression:
                    "Cancel did not restore the automation band focus");
 
 A043 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:252
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
 Source context since previous assertion:
 
   }
@@ -632,8 +651,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A044 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:258
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -647,8 +666,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A045 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:262
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Escape and Return key delivery is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter dismisses through its own cancel route.
 Source context since previous assertion:
 
 
@@ -658,8 +677,8 @@ Original expression:
   QTRY_VERIFY2(!opened.session->isOpen(), "Escape did not dismiss the confirmation");
 
 A046 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:263
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift scenario does not observe the shared session content item after the dismissal.
 Source context since previous assertion:
 
 
@@ -668,8 +687,8 @@ Original expression:
                    "Escape left confirmation content on the session");
 
 A047 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:266
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route leaves document and history untouched ([S137]).
 Source context since previous assertion:
 
 
@@ -678,8 +697,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
 
 A048 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:267
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route leaves the staged lane alone ([S137]).
 Source context since previous assertion:
 
 
@@ -687,8 +706,8 @@ Original expression:
   QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
 
 A049 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:268
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route leaves the staged lane alone ([S137]).
 Source context since previous assertion:
 
 
@@ -696,8 +715,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A050 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:269
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
 Source context since previous assertion:
 
 
@@ -706,8 +725,8 @@ Original expression:
                    "Escape did not restore the automation band focus");
 
 A051 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:280
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
 Source context since previous assertion:
 
   }
@@ -724,8 +743,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A052 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:286
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -739,8 +758,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A053 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:292
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered confirmation frame item is native rendering.
 Source context since previous assertion:
 
 
@@ -752,8 +771,8 @@ Original expression:
   QVERIFY(frame);
 
 A054 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:296
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The outside witness geometry relative to the rendered frame is native rendering.
 Source context since previous assertion:
 
       const QRectF frameScene = frame->mapRectToScene(frame->boundingRect());
@@ -764,8 +783,8 @@ Original expression:
   QVERIFY2(!frameScene.contains(outside), "the outside witness sat inside the confirmation");
 
 A055 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:297
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The window rectangle containment of the witness is native rendering.
 Source context since previous assertion:
 
 
@@ -773,8 +792,8 @@ Original expression:
   QVERIFY(QRect(QPoint{}, m_quickWindow->size()).contains(outside));
 
 A056 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:301
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: An outside right press dismissing the confirmation is native pointer delivery.
 Source context since previous assertion:
 
 
@@ -785,8 +804,8 @@ Original expression:
   QVERIFY2(!opened.session->isOpen(), "an outside right press did not dismiss the confirmation");
 
 A057 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:305
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation scenario stages the same CC lane ([S127]).
 Source context since previous assertion:
 
       // Release over the plot, away from every label, so the release itself can
@@ -797,8 +816,8 @@ Original expression:
   QVERIFY(cc.valid());
 
 A058 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:306
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered lane plot body is native rendering.
 Source context since previous assertion:
 
 
@@ -806,8 +825,8 @@ Original expression:
   QTRY_VERIFY2(!laneBody(cc).isEmpty(), "the lane plot never rendered");
 
 A059 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:311
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The swallowed outside right release is native pointer delivery.
 Source context since previous assertion:
 
       QTest::mouseRelease(m_quickWindow, Qt::RightButton, Qt::NoModifier,
@@ -819,8 +838,8 @@ Original expression:
   QVERIFY2(session && !session->isOpen(), "the swallowed outside right release opened a popup");
 
 A060 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:313
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The shared popup session state after the swallowed release is native popup rendering.
 Source context since previous assertion:
 
       checks::support::pumpQuick();
@@ -829,8 +848,8 @@ Original expression:
   QVERIFY2(!session->isOpen(), "the outside dismissal reopened or retargeted the lane menu");
 
 A061 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:315
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route leaves document and history untouched ([S137]).
 Source context since previous assertion:
 
 
@@ -839,8 +858,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
 
 A062 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:316
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route leaves the staged lane alone ([S137]).
 Source context since previous assertion:
 
 
@@ -848,8 +867,8 @@ Original expression:
   QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
 
 A063 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:317
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route leaves the staged lane alone ([S137]).
 Source context since previous assertion:
 
 
@@ -857,8 +876,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A064 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:318
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
 Source context since previous assertion:
 
 
@@ -867,8 +886,8 @@ Original expression:
                    "the outside dismissal did not restore the automation band focus");
 
 A065 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:327
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
 Source context since previous assertion:
 
   }
@@ -883,8 +902,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A066 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:333
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -898,8 +917,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A067 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:335
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
 Source context since previous assertion:
 
 
@@ -908,8 +927,8 @@ Original expression:
                    "the confirmation did not give Cancel the initial focus");
 
 A068 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:340
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Escape and Return key delivery is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter dismisses through its own cancel route.
 Source context since previous assertion:
 
 
@@ -920,8 +939,8 @@ Original expression:
   QTRY_VERIFY2(!opened.session->isOpen(), "Return did not dismiss the confirmation");
 
 A069 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift scenario does not observe the shared session content item after the dismissal.
 Source context since previous assertion:
 
 
@@ -930,8 +949,8 @@ Original expression:
                    "Return left confirmation content on the session");
 
 A070 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:344
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route leaves document and history untouched ([S137]).
 Source context since previous assertion:
 
 
@@ -940,8 +959,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
 
 A071 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:345
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route leaves the staged lane alone ([S137]).
 Source context since previous assertion:
 
 
@@ -949,8 +968,8 @@ Original expression:
   QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
 
 A072 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:346
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route leaves the staged lane alone ([S137]).
 Source context since previous assertion:
 
 
@@ -958,8 +977,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A073 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:347
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
 Source context since previous assertion:
 
 
@@ -968,8 +987,8 @@ Original expression:
                    "the Return cancellation did not restore the automation band focus");
 
 A074 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:359
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
 Source context since previous assertion:
 
   }
@@ -988,8 +1007,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A075 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:361
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
 Source context since previous assertion:
 
 
@@ -998,8 +1017,8 @@ Original expression:
                    "the confirmation did not give Cancel the initial focus");
 
 A076 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:368
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered accept button item is native rendering.
 Source context since previous assertion:
 
 
@@ -1012,8 +1031,8 @@ Original expression:
   QVERIFY(opened.acceptButton);
 
 A077 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:389
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared popup state after the refused stale accept is not observed; the Swift stale scenario asserts the refusal and the unchanged snapshot ([S138], [S139]).
 Source context since previous assertion:
 
       const QPoint acceptCenter = quick_popup::itemCenter(*opened.acceptButton);
@@ -1041,8 +1060,8 @@ Original expression:
   QVERIFY2(!opened.session->isOpen(), "the stale request left a popup open");
 
 A078 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:391
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared popup session state after the stale release is not observed ([S138], [S139]).
 Source context since previous assertion:
 
       songview::QuickPopupSession *const session = quick_popup::popupSession(songTab.view());
@@ -1051,8 +1070,8 @@ Original expression:
   QVERIFY2(session && !session->isOpen(), "the stale request reopened a popup");
 
 A079 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:392
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared popup session and its rendered content are retired native popup rendering; the Swift presenter exposes the confirmation through its prompt kind ([S126]).
 Source context since previous assertion:
 
 
@@ -1060,8 +1079,8 @@ Original expression:
   QVERIFY(quick_popup::promptItem(*session, QLatin1String("ccDeleteConfirm")) == nullptr);
 
 A080 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:393
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale confirmation publishes no revision: the Swift scenario refuses the stale accept and leaves the snapshot unchanged ([S138], [S139]).
 Source context since previous assertion:
 
 
@@ -1069,8 +1088,8 @@ Original expression:
   QCOMPARE(songTab.document().revision(), revisionAfterWrite);
 
 A081 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:394
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale snapshot equality is the public-API representation of the unchanged history state ([S139]).
 Source context since previous assertion:
 
 
@@ -1078,8 +1097,8 @@ Original expression:
   QCOMPARE(songTab.document().undoStack()->count(), undoCountAfterWrite);
 
 A082 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:395
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale snapshot equality is the public-API representation of the unchanged history state ([S139]).
 Source context since previous assertion:
 
 
@@ -1087,8 +1106,8 @@ Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndexAfterWrite);
 
 A083 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:396
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale snapshot equality is the public-API representation of the unchanged serialization ([S139]).
 Source context since previous assertion:
 
 
@@ -1096,8 +1115,8 @@ Original expression:
   QCOMPARE(songTab.document().smf().write(), smfAfterWrite);
 
 A084 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:397
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale scenario now asserts the full post-write lane after the refused accept ([S150]) together with the unchanged snapshot ([S139]). The intervening write is a span write in Swift rather than the original lane replacement, so the literal point set differs while the no-op observation is asserted over the whole list.
 Source context since previous assertion:
 
 
@@ -1105,8 +1124,8 @@ Original expression:
   QCOMPARE(laneValue(kRewrittenTick), kRewrittenValue);
 
 A085 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:398
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The post-write lane predicate asserts the complete list after the refused accept ([S150]): the original target tick is absent because the interrupting write replaced the lane, while the Swift interrupt keeps it and appends at 168, so the same no-op property is asserted over the whole list.
 Source context since previous assertion:
 
 
@@ -1114,8 +1133,8 @@ Original expression:
   QCOMPARE(laneValue(kFirstPointTick), -1);
 
 A086 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:399
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The post-write lane predicate asserts the complete list after the refused accept ([S150]): the original second target tick is absent by that lane replacement, while the Swift interrupt keeps it and appends at 168, so the same no-op property is asserted over the whole list.
 Source context since previous assertion:
 
 
@@ -1123,8 +1142,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), -1);
 
 A087 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:400
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The refused accept leaves the whole document snapshot unchanged ([S139]) and the target lane content fully asserted ([S150]); the Swift stale interrupt writes only the target lane, and the sibling volume point is asserted by the same confirmation fixture ([S131], [S134]).
 Source context since previous assertion:
 
 
@@ -1132,8 +1151,8 @@ Original expression:
   QCOMPARE(volumeLaneValue(songTab, kVolumeTick), kInterveningVolumeValue);
 
 A088 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:401
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift predicate requires the parameter to remain in the catalogue ([S147]).
 Source context since previous assertion:
 
 
@@ -1141,8 +1160,8 @@ Original expression:
   QVERIFY(findRow({EditorAutomationRowKind::ControlChange, 0, kController}).valid());
 
 A089 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:402
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift predicate requires the parameter to remain in the catalogue ([S147]).
 Source context since previous assertion:
 
 
@@ -1151,8 +1170,8 @@ Original expression:
           findRow({EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume}).valid());
 
 A090 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:414
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
 Source context since previous assertion:
 
   }
@@ -1171,8 +1190,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A091 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:416
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
 Source context since previous assertion:
 
 
@@ -1181,8 +1200,8 @@ Original expression:
                    "the confirmation did not give Cancel the initial focus");
 
 A092 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:424
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The quick view root object is native rendering and view ownership.
 Source context since previous assertion:
 
 
@@ -1196,8 +1215,8 @@ Original expression:
   QVERIFY(root);
 
 A093 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:427
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The ruler input item is a native child of the quick view.
 Source context since previous assertion:
 
       auto *const rulerInput =
@@ -1207,8 +1226,8 @@ Original expression:
   QVERIFY(rulerInput);
 
 A094 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:429
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The ruler interaction object is native.
 Source context since previous assertion:
 
       auto *const ruler = dynamic_cast<songview::TimeRuler *>(rulerInput->interaction());
@@ -1217,8 +1236,8 @@ Original expression:
   QVERIFY(ruler);
 
 A095 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:432
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The ruler division control item is native.
 Source context since previous assertion:
 
       QQuickItem *const division =
@@ -1228,8 +1247,8 @@ Original expression:
   QVERIFY(division);
 
 A096 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:437
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The shared popup session pointer is retired native popup rendering.
 Source context since previous assertion:
 
       ruler->openDivisionMenu(
@@ -1241,8 +1260,8 @@ Original expression:
   QVERIFY(live);
 
 A097 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:438
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The foreign ruler menu publication over the pending confirmation is native popup rendering.
 Source context since previous assertion:
 
 
@@ -1254,8 +1273,8 @@ Original expression:
                "the foreign ruler menu did not publish over the pending confirmation");
 
 A098 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:443
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The shared session content item is retired native popup rendering.
 Source context since previous assertion:
 
 
@@ -1263,8 +1282,8 @@ Original expression:
   QVERIFY(live->contentItem() == nullptr);
 
 A099 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:444
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The confirmation content item absence is retired native popup rendering.
 Source context since previous assertion:
 
 
@@ -1272,8 +1291,8 @@ Original expression:
   QVERIFY(quick_popup::promptItem(*live, QLatin1String("ccDeleteConfirm")) == nullptr);
 
 A100 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:451
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The surviving foreign menu open state is native popup rendering.
 Source context since previous assertion:
 
 
@@ -1287,8 +1306,8 @@ Original expression:
   QVERIFY2(live->isOpen(), "the canvas rewrite cancelled the foreign ruler menu");
 
 A101 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:452
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The surviving rendered panel is native rendering.
 Source context since previous assertion:
 
 
@@ -1296,8 +1315,8 @@ Original expression:
   QVERIFY(quick_popup::menuPanel(*live));
 
 A102 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:463
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The foreign division rows belong to the shared native popup model.
 Source context since previous assertion:
 
       const uint64_t revisionAfterWrite = songTab.document().revision();
@@ -1315,8 +1334,8 @@ Original expression:
   QVERIFY2(targetRow >= 0, "the foreign division menu omitted the chosen denominator");
 
 A103 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:464
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered foreign row click is native pointer delivery.
 Source context since previous assertion:
 
 
@@ -1325,8 +1344,8 @@ Original expression:
                "the foreign division row did not receive a real click");
 
 A104 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:467
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The shared menu open state after the foreign pick is native popup rendering.
 Source context since previous assertion:
 
       QCoreApplication::processEvents();
@@ -1335,8 +1354,8 @@ Original expression:
   QVERIFY2(!live->isOpen(), "the foreign division pick left the shared menu open");
 
 A105 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:468
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The foreign division pick grid selection has no Swift predicate in this family.
 Source context since previous assertion:
 
 
@@ -1345,8 +1364,8 @@ Original expression:
                songview::GridSelection::musical(uint32_t(targetDenom)));
 
 A106 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:473
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
 Source context since previous assertion:
 
 
@@ -1358,8 +1377,8 @@ Original expression:
                    "the foreign pick did not return focus to the ruler control");
 
 A107 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:476
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Escape and Return key delivery is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter dismisses through its own cancel route.
 Source context since previous assertion:
 
       keyClick(Qt::Key_Return);
@@ -1372,8 +1391,8 @@ Original expression:
                "Return on the focused ruler control did not reopen the foreign menu");
 
 A108 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:486
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The shared popup session state after the explicit cancel is native popup rendering.
 Source context since previous assertion:
 
 
@@ -1386,8 +1405,8 @@ Original expression:
   QVERIFY(!live->isOpen());
 
 A109 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:488
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The shared popup session state after the explicit cancel is native popup rendering.
 Source context since previous assertion:
 
       checks::support::pumpQuick();
@@ -1396,8 +1415,8 @@ Original expression:
   QVERIFY(!live->isOpen());
 
 A110 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:489
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The confirmation content item absence is retired native popup rendering.
 Source context since previous assertion:
 
 
@@ -1405,8 +1424,8 @@ Original expression:
   QVERIFY(quick_popup::promptItem(*live, QLatin1String("ccDeleteConfirm")) == nullptr);
 
 A111 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:490
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The takeover-invalidated confirmation deletes nothing: the Swift stale scenario leaves the revision at the post-write value ([S138], [S139]).
 Source context since previous assertion:
 
 
@@ -1414,8 +1433,8 @@ Original expression:
   QCOMPARE(songTab.document().revision(), revisionAfterWrite);
 
 A112 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:491
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale snapshot equality is the public-API representation of the unchanged history state ([S139]).
 Source context since previous assertion:
 
 
@@ -1423,8 +1442,8 @@ Original expression:
   QCOMPARE(songTab.document().undoStack()->count(), undoCountAfterWrite);
 
 A113 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:492
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale snapshot equality is the public-API representation of the unchanged history state ([S139]).
 Source context since previous assertion:
 
 
@@ -1432,8 +1451,8 @@ Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndexAfterWrite);
 
 A114 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:493
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale snapshot equality is the public-API representation of the unchanged serialization ([S139]).
 Source context since previous assertion:
 
 
@@ -1441,8 +1460,8 @@ Original expression:
   QCOMPARE(songTab.document().smf().write(), smfAfterWrite);
 
 A115 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:494
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale scenario now asserts the full post-write lane after the refused accept ([S150]) together with the unchanged snapshot ([S139]), the same no-op observation this takeover site makes over the rewritten lane.
 Source context since previous assertion:
 
 
@@ -1450,8 +1469,8 @@ Original expression:
   QCOMPARE(laneValue(kRewrittenTick), kRewrittenValue);
 
 A116 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:495
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The post-write lane predicate asserts the complete list after the refused accept ([S150]): the original target tick is absent by that lane replacement, while the same no-op property is asserted over the whole list.
 Source context since previous assertion:
 
 
@@ -1459,8 +1478,8 @@ Original expression:
   QCOMPARE(laneValue(kFirstPointTick), -1);
 
 A117 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:496
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The post-write lane predicate asserts the complete list after the refused accept ([S150]): the original second target tick is absent by that lane replacement, while the same no-op property is asserted over the whole list.
 Source context since previous assertion:
 
 
@@ -1468,8 +1487,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), -1);
 
 A118 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:497
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation cancel route leaves the sibling volume point untouched ([S131], [S137]).
 Source context since previous assertion:
 
 
@@ -1478,8 +1497,8 @@ Original expression:
                CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
 
 A119 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:499
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift predicate requires the CC parameter to remain in the catalogue ([S147]).
 Source context since previous assertion:
 
 
@@ -1487,8 +1506,8 @@ Original expression:
   QVERIFY(findRow(ccRow).valid());
 
 A120 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:511
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift synthetic scenario stages the volume lane and the count scenario asserts it stays in the catalogue ([S147]).
 Source context since previous assertion:
 
   }
@@ -1507,8 +1526,8 @@ Original expression:
   QVERIFY(findRow(volumeRow).valid());
 
 A121 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:518
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift eventless lane disables Delete events ([S140]), the public statement that no written events remain.
 Source context since previous assertion:
 
 
@@ -1522,8 +1541,8 @@ Original expression:
   QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty());
 
 A122 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:520
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift predicate requires the volume parameter to remain in the catalogue ([S147]).
 Source context since previous assertion:
 
       const LaneHandle volume = findRow(volumeRow);
@@ -1532,8 +1551,8 @@ Original expression:
   QVERIFY(volume.valid());
 
 A123 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:521
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered lane body is native rendering.
 Source context since previous assertion:
 
 
@@ -1541,8 +1560,8 @@ Original expression:
   QVERIFY(!laneBody(volume).isEmpty());
 
 A124 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:524
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
 Source context since previous assertion:
 
 
@@ -1552,8 +1571,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A125 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:531
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift scenario stages the lane menu Delete-events guard on the eventless lane ([S140]); the shared popup session and model objects it inspects are retired native popup rendering.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -1567,8 +1586,8 @@ Original expression:
   QVERIFY2(menu.session && menu.model, qUtf8Printable(menu.diagnostic));
 
 A126 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:533
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift eventless lane publishes the Delete events row disabled ([S140]).
 Source context since previous assertion:
 
       const int removeRow = menu.model->rowForId(int(CanvasMenuAction::RemoveLane));
@@ -1577,8 +1596,8 @@ Original expression:
   QVERIFY2(removeRow >= 0, "the synthetic-only volume menu offered no RemoveLane row");
 
 A127 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:534
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered row click is not exercised; the Swift predicate refuses the disabled dispatch through the presenter ([S141]).
 Source context since previous assertion:
 
 
@@ -1587,8 +1606,8 @@ Original expression:
                "the RemoveLane row did not receive a real click");
 
 A128 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:540
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared menu open state after the refused pick is not observed ([S141]).
 Source context since previous assertion:
 
       QCoreApplication::processEvents();
@@ -1600,8 +1619,8 @@ Original expression:
   QVERIFY2(!menu.session->isOpen(), "the synthetic-only volume pick left a popup open");
 
 A129 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:543
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared popup session state after the refused pick is not observed ([S141]).
 Source context since previous assertion:
 
       checks::support::pumpQuick();
@@ -1612,8 +1631,8 @@ Original expression:
                "the synthetic-only volume pick opened a delete confirmation");
 
 A130 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:545
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The confirmation content item absence is retired native popup rendering; the Swift predicate asserts that no confirmation opens ([S142]).
 Source context since previous assertion:
 
 
@@ -1622,8 +1641,8 @@ Original expression:
                "the synthetic-only volume pick rendered a delete confirmation");
 
 A131 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:547
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift predicate requires the volume parameter to remain in the catalogue ([S147]).
 Source context since previous assertion:
 
 
@@ -1631,8 +1650,8 @@ Original expression:
   QVERIFY(findRow(volumeRow).valid());
 
 A132 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:548
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered lane body is native rendering.
 Source context since previous assertion:
 
 
@@ -1640,8 +1659,8 @@ Original expression:
   QVERIFY(!laneBody(findRow(volumeRow)).isEmpty());
 
 A133 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:549
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The synthetic scenario now asserts the refused dispatch leaves the document snapshot unchanged ([S151], [S141]).
 Source context since previous assertion:
 
 
@@ -1649,8 +1668,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
 
 A134 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:550
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift eventless lane carries no written events ([S140], [S141]).
 Source context since previous assertion:
 
 
@@ -1658,8 +1677,8 @@ Original expression:
   QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty());
 
 A135 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:565
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift predicate requires the volume parameter to remain in the catalogue ([S147]).
 Source context since previous assertion:
 
   }
@@ -1681,8 +1700,8 @@ Original expression:
   QVERIFY(findRow(volumeRow).valid());
 
 A136 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:570
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation message names the written event count of the staged lane ([S144]).
 Source context since previous assertion:
 
 
@@ -1694,8 +1713,8 @@ Original expression:
   QCOMPARE(writtenCount, 1);
 
 A137 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:572
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
 Source context since previous assertion:
 
       QSignalSpy documentChanged(&songTab.document(), &SongDocument::documentChanged);
@@ -1704,8 +1723,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A138 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:577
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -1718,8 +1737,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A139 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:579
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: DEFERRED-KEYBOARD
+Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
 Source context since previous assertion:
 
 
@@ -1728,8 +1747,8 @@ Original expression:
                    "the confirmation did not give Cancel the initial focus");
 
 A140 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:586
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation message advertises the written count of the staged lane ([S144]).
 Source context since previous assertion:
 
 
@@ -1743,8 +1762,8 @@ Original expression:
                "the confirmation did not advertise the written-event count");
 
 A141 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:588
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation message advertises the written count only, not the count including the projected synthetic node ([S144], [S146]).
 Source context since previous assertion:
 
 
@@ -1754,8 +1773,8 @@ Original expression:
                "the confirmation count includes the synthetic default node");
 
 A142 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:592
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered Delete button click is not exercised; the Swift presenter accepts through its own route ([S145]).
 Source context since previous assertion:
 
 
@@ -1765,8 +1784,8 @@ Original expression:
                "the Delete button never rendered in the confirmation form");
 
 A143 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:596
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One acceptance publishes one revision ([S132]).
 Source context since previous assertion:
 
 
@@ -1776,8 +1795,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), frozen.documentChanges + 1);
 
 A144 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:597
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One acceptance publishes one revision ([S132]).
 Source context since previous assertion:
 
 
@@ -1785,8 +1804,8 @@ Original expression:
   QCOMPARE(songTab.document().revision(), frozen.revision + 1);
 
 A145 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:598
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One acceptance is one history entry, consumed by one undo ([S132], [S135]).
 Source context since previous assertion:
 
 
@@ -1794,8 +1813,8 @@ Original expression:
   QCOMPARE(songTab.document().undoStack()->count(), frozen.undoCount + 1);
 
 A146 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:599
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One acceptance advances the stack by one ([S135]).
 Source context since previous assertion:
 
 
@@ -1803,8 +1822,8 @@ Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), frozen.undoIndex + 1);
 
 A147 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:600
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The written events are gone ([S146]), which changes the serialization.
 Source context since previous assertion:
 
 
@@ -1812,8 +1831,8 @@ Original expression:
   QVERIFY(songTab.document().smf().write() != frozen.smf);
 
 A148 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:601
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the accept to remove the written events ([S146]).
 Source context since previous assertion:
 
 
@@ -1821,8 +1840,8 @@ Original expression:
   QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty());
 
 A149 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:603
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift predicate requires the volume parameter to remain in the catalogue ([S147]).
 Source context since previous assertion:
 
       const LaneHandle retained = findRow(volumeRow);
@@ -1831,8 +1850,8 @@ Original expression:
   QVERIFY(retained.valid());
 
 A150 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:604
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered lane body is native rendering.
 Source context since previous assertion:
 
 
@@ -1840,8 +1859,8 @@ Original expression:
   QVERIFY(!laneBody(retained).isEmpty());
 
 A151 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:607
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the acceptance to be undoable ([S148]).
 Source context since previous assertion:
 
 
@@ -1851,8 +1870,8 @@ Original expression:
   QVERIFY(songTab.history().canUndo());
 
 A152 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:608
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires one undo to consume the acceptance ([S148]).
 Source context since previous assertion:
 
 
@@ -1860,8 +1879,8 @@ Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(songTab.history().requestUndo()));
 
 A153 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:609
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The restored written event is the public-API representation of the restored serialization ([S149]).
 Source context since previous assertion:
 
 
@@ -1869,8 +1888,8 @@ Original expression:
   QCOMPARE(songTab.document().smf().write(), frozen.smf);
 
 A154 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:611
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires undo to restore the written event at its tick ([S149]).
 Source context since previous assertion:
 
       DocLanePoint point;
@@ -1879,8 +1898,8 @@ Original expression:
   QVERIFY(songTab.document().findLanePoint(0, CoreTimeDefaults::kCcVolume, kVolumeTick, &point));
 
 A155 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:612
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires undo to restore the written event value ([S149]).
 Source context since previous assertion:
 
 
@@ -1888,8 +1907,8 @@ Original expression:
   QCOMPARE(point.value, CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
 
 A156 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:613
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift predicate requires the volume parameter to remain in the catalogue ([S147]).
 Source context since previous assertion:
 
 
@@ -1897,8 +1916,8 @@ Original expression:
   QVERIFY(findRow(volumeRow).valid());
 
 A157 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:614
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered lane body is native rendering.
 Source context since previous assertion:
 
 
@@ -1913,6 +1932,9 @@ Remaining original source (closing sequence and helper bodies):
 Swift assertion predicates
 The S entries are exact predicates called by the paired Swift suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S001-S123 index src/checks/automation/domain/tst_automationdomain.swift; S124-S151 index
+drawerAutomationLaneDeleteConfirmation in src/checks/automation/automationpointmenus.swift,
+which owns the confirmation, stale, synthetic-only and written-count predicates.
 
 S001 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:12
   report.expectEqual(AutomationCatalog.count, catalog.count, cppID: drawerAutomationCatalogID,
@@ -2436,7 +2458,120 @@ S123 | expect | src/checks/automation/domain/tst_automationdomain.swift:717
   report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::replaceSpans",
                             message: "tst_automationdomain.cpp:\(line) row=\(row)")
 
+S124 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:188
+    report.expect(page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0),
+                  cppID: id, message: "the lane menu opens")
+
+S125 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:190
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue),
+                  cppID: id, message: "the Delete events row is consumed")
+
+S126 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:192
+    report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id,
+                       what: "the row opens the delete confirmation")
+
+S127 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:194
+    report.expect(page.promptMessage.contains("2 written events"), cppID: id,
+                  message: "the confirmation names the written count")
+
+S128 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:196
+    report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "opening the confirmation writes nothing")
+
+S129 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:198
+    report.expect(page.acceptPromptDraft(), cppID: id, message: "the confirmation accepts")
+
+S130 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:199
+    report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
+                       what: "accept removes only the target lane")
+
+S131 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:201
+    report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
+                       what: "the volume lane is preserved")
+
+S132 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:203
+    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+                       what: "one acceptance is one revision")
+
+S133 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:205
+    report.expect(fixture.undo(), cppID: id, message: "the acceptance undoes")
+
+S134 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:206
+    report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
+                       what: "undo restores the target lane")
+
+S135 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:208
+    report.expect(!fixture.document.history.canUndo, cppID: id,
+                  message: "the acceptance recorded exactly one history entry")
+
+S136 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:216
+    report.expect(!page.hasPrompt, cppID: cancelID, message: "cancelling drops the confirmation")
+
+S137 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:217
+    report.expectEqual(cancelBefore, fixture.snapshot, cppID: cancelID,
+                       what: "cancelling leaves document and history untouched")
+
+S138 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:226
+    report.expect(!page.acceptPromptDraft(), cppID: staleID,
+                  message: "a stale confirmation cannot delete its target")
+
+S139 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:228
+    report.expectEqual(rewritten, fixture.snapshot, cppID: staleID,
+                       what: "the rejected confirmation leaves the rewritten lane intact")
+
+S140 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:240
+    report.expect(synthetic.page.publishedMenuRows.first {
+        $0.actionId == AutomationMenuAction.deleteLaneEvents.rawValue
+    }?.enabled == false, cppID: syntheticID,
+                  message: "the eventless lane disables Delete events")
+
+S141 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:244
+    report.expect(!synthetic.page.consumeMenuAction(
+        actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: syntheticID,
+                  message: "the disabled row is refused")
+
+S142 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:247
+    report.expect(!synthetic.page.hasPrompt, cppID: syntheticID,
+                  message: "no confirmation opens for the eventless lane")
+
+S143 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:258
+    report.expect(single.page.consumeMenuAction(
+        actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: countID,
+                  message: "the Delete events row is consumed")
+
+S144 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:261
+    report.expect(single.page.promptMessage.contains("1 written events"), cppID: countID,
+                  message: "the confirmation counts written events only")
+
+S145 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:263
+    report.expect(single.page.acceptPromptDraft(), cppID: countID,
+                  message: "the confirmation accepts")
+
+S146 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:265
+    report.expectEqual([String](), single.values(single.volumeLane), cppID: countID,
+                       what: "accept removes the written event")
+
+S147 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:267
+    report.expect(single.page.catalogIndex(of: single.volumeLane) >= 0, cppID: countID,
+                  message: "the volume parameter remains in the catalog")
+
+S148 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:269
+    report.expect(single.undo(), cppID: countID, message: "the acceptance undoes")
+
+S149 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:270
+    report.expectEqual(["48:70"], single.values(single.volumeLane), cppID: countID,
+                       what: "undo restores the written event")
+
+S150 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:230
+    report.expectEqual(["24:60", "120:40", "168:5"], fixture.values(fixture.panLane),
+                       cppID: staleID,
+                       what: "the rejected confirmation preserves the rewritten points")
+
+S151 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:249
+    report.expectEqual(syntheticBefore, synthetic.snapshot, cppID: syntheticID,
+                       what: "the refused row writes nothing")
+
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
-src/checks/automation/AutomationPageChecks.swift:381
+SHA-256: 66ff0023e15e9a97db73c6437733c92c29d893de5680ce1179876a6e3156dea4
+src/checks/automation/AutomationPageChecks.swift:397
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

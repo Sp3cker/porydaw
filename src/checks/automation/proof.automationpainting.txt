@@ -6,12 +6,16 @@ Original: src/checks/automation/automationpainting.cpp
 Original SHA-256: 09e2e4c1753bd3e77841bd749f9406eb3d65d0e391d92f2e936b3b54d9144f7d
 Swift counterpart: src/checks/automation/presentation/painting.swift
 Swift SHA-256: 591fb9b3c5dc1551c3f2a2ec4caa3b32529389f161b8b09a83841c4625d69aaa
+Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
+Swift SHA-256: d2861ca291148a67d21bd3b2c97bcb6d99fa3812875721118e69aadbc6c0c6d4
+Additional Swift counterpart: src/checks/automation/automationselection.swift
+Swift SHA-256: 0a7b0cfb0250cb63deb707a28b4eefa9165d9ec8b0b9ed114240876e62e47d7c
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-All 62 sites in this file are GAP: emptyTempoStorageComposesNoLeadIn, firstNonzeroTempoPointComposesImplicitLeadInCurve, explicitTickZeroTempoPointSuppressesLeadInCurve, stepCurvesAndNodesComposed, selectionRingsAndReticlesComposed, and halfOpenTimeSelectionComposesNodeRings exercise presentation curve and node geometry composition. While presentation/painting.swift asserts scale labels and row stacks, exact assertion correspondence for curve rendering and reticles remains an open obligation.
+Of the 62 sites in this file, 23 are MATCHED, 1 PARTIAL, 31 NATIVE, and 7 NATIVE-SETUP. The domain half of every method (lane activation on the production page and the document staying uncommitted while the presentation composes its preview) is executed by drawerAutomationScaleLabelsAndLaneCounts and drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift plus the page-level no-write predicates in src/checks/automation/automationselection.swift and src/checks/automation/automationcanvasediting.swift; the Quick scene-graph curve/node/selection layer revisions and their colour/ring probes stay NATIVE because no Swift presenter predicate observes the rendered mesh. NATIVE-SETUP sites are the retired AutomationCanvas lane row/body geometry. The one PARTIAL site (empty tempo storage) names its unproved condition.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -21,13 +25,13 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including the predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
 
 Execution ownership
-The legacy AutomationEditingTest painting suite verified curve, node, and selection reticle geometry composition. In the converted Swift suite, drawerAutomationScaleLabelsAndLaneCounts and drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift verify projection scale labels, row stacks, and event counts.
+The legacy AutomationEditingTest painting suite verified curve, node, and selection reticle geometry composition. In the converted Swift suite, drawerAutomationScaleLabelsAndLaneCounts and drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift verify projection scale labels, row stacks, event counts and the selection indicators the reticles consumed; the page-level no-write predicates in src/checks/automation/automationselection.swift and src/checks/automation/automationcanvasediting.swift carry the domain half. Registered run path: src/checks/automation/AutomationPageChecks.swift:348,351 :: runAutomationPageChecks → projectSession (swiftcore suite 10).
 
 Fixture, sequence and row constraints
 Data rows expand stepCurvesAndNodesComposed (tempo-steps, cc-steps) and selectionRingsAndReticlesComposed (single-selected, range-selected). Loops verify step segments and node reticles across ticks.
@@ -37,8 +41,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:109
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators activates a lane on the production page and asserts the page's published active parameter, the observable of the original activateParameter(row) result. [S030]
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -153,8 +157,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(LaneKind::Tempo)));
 
 A002 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
 Source context since previous assertion:
 
       SongDocument &document = m_tab->document();
@@ -165,8 +169,8 @@ Original expression:
   QVERIFY(!tempo.body.isEmpty());
 
 A003 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene) and its composition layers. A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
 
@@ -176,8 +180,8 @@ Original expression:
   QVERIFY(scene);
 
 A004 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The presentation predicates assert a Tempo row's event count through the row stack (drawerAutomationScaleLabelsAndLaneCounts :: stack.row(for:) event counts), but no predicate executes an empty Tempo storage composition. Unproved: empty tempo storage producing no lead-in. [S015]
 Source context since previous assertion:
 
 
@@ -185,8 +189,8 @@ Original expression:
   QVERIFY(document.tempoPoints().empty());
 
 A005 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -197,8 +201,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A006 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -206,8 +210,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A007 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:135
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -228,8 +232,8 @@ Original expression:
                                                 tempo.color));
 
 A008 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:137
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -238,8 +242,8 @@ Original expression:
                                                 tempo.color));
 
 A009 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:139
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -247,8 +251,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A010 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:144
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators activates a lane on the production page and asserts the page's published active parameter, the observable of the original activateParameter(row) result. [S030]
 Source context since previous assertion:
 
   }
@@ -260,8 +264,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(LaneKind::Tempo)));
 
 A011 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
 Source context since previous assertion:
 
       SongDocument &document = m_tab->document();
@@ -272,8 +276,8 @@ Original expression:
   QVERIFY(!tempo.body.isEmpty());
 
 A012 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:150
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene) and its composition layers. A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       auto *scene = view.findChild<songview::TimelineQuickScene *>();
@@ -282,8 +286,8 @@ Original expression:
   QVERIFY(scene);
 
 A013 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:156
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
 
@@ -297,8 +301,8 @@ Original expression:
                   curvesBefore);
 
 A014 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:160
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
       QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
@@ -308,8 +312,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A015 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -317,8 +321,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A016 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -337,8 +341,8 @@ Original expression:
           lineProbe(leadMid, 8.0, lineHalf), tempo.color));
 
 A017 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:174
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -348,8 +352,8 @@ Original expression:
           tempo.color));
 
 A018 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:177
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -359,8 +363,8 @@ Original expression:
           tempo.color));
 
 A019 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -368,8 +372,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A020 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:185
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators activates a lane on the production page and asserts the page's published active parameter, the observable of the original activateParameter(row) result. [S030]
 Source context since previous assertion:
 
   }
@@ -381,8 +385,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(LaneKind::Tempo)));
 
 A021 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:189
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
 Source context since previous assertion:
 
       SongDocument &document = m_tab->document();
@@ -393,8 +397,8 @@ Original expression:
   QVERIFY(!tempo.body.isEmpty());
 
 A022 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:191
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene) and its composition layers. A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       auto *scene = view.findChild<songview::TimelineQuickScene *>();
@@ -403,8 +407,8 @@ Original expression:
   QVERIFY(scene);
 
 A023 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:196
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
 
@@ -416,8 +420,8 @@ Original expression:
   QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision > nodesBefore);
 
 A024 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:199
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
       QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
@@ -427,8 +431,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A025 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -436,8 +440,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A026 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:208
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -454,8 +458,8 @@ Original expression:
           tempo.color));
 
 A027 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:211
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -465,8 +469,8 @@ Original expression:
           lineProbe(leadMid, 8.0, lineHalf), tempo.color));
 
 A028 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:214
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -474,8 +478,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A029 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:228
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators activates a lane on the production page and asserts the page's published active parameter, the observable of the original activateParameter(row) result. [S030]
 Source context since previous assertion:
 
   }
@@ -496,8 +500,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(kind)));
 
 A030 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:232
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene) and its composition layers. A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       SongDocument &document = m_tab->document();
@@ -508,8 +512,8 @@ Original expression:
   QVERIFY(scene);
 
 A031 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:246
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
       const quint64 curvesBefore =
@@ -531,8 +535,8 @@ Original expression:
                   curvesBefore);
 
 A032 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:248
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
 
@@ -540,8 +544,8 @@ Original expression:
   QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision > nodesBefore);
 
 A033 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:251
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
       QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
@@ -551,8 +555,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A034 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:252
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -560,8 +564,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A035 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:256
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -572,8 +576,8 @@ Original expression:
   QVERIFY(lane.handle.valid());
 
 A036 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
 Source context since previous assertion:
 
 
@@ -581,8 +585,8 @@ Original expression:
   QVERIFY(!lane.body.isEmpty());
 
 A037 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:265
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       const int held = kind == LaneKind::Tempo ? kTempoHeld : kCcHeld;
@@ -599,8 +603,8 @@ Original expression:
           lane.color));
 
 A038 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:268
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -610,8 +614,8 @@ Original expression:
           lane.color));
 
 A039 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -620,8 +624,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A040 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:286
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators activates a lane on the production page and asserts the page's published active parameter, the observable of the original activateParameter(row) result. [S030]
 Source context since previous assertion:
 
   }
@@ -642,8 +646,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(kind)));
 
 A041 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:290
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene) and its composition layers. A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       SongDocument &document = m_tab->document();
@@ -654,8 +658,8 @@ Original expression:
   QVERIFY(scene);
 
 A042 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:300
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
       if (kind == LaneKind::Tempo) {
@@ -672,8 +676,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A043 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:301
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -681,8 +685,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A044 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:304
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -692,8 +696,8 @@ Original expression:
   QVERIFY(!lane.body.isEmpty());
 
 A045 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:320
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
       const int nodeValue = kind == LaneKind::Tempo ? kTempoNode : kCcNode;
@@ -716,8 +720,8 @@ Original expression:
   QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationNodes).revision > nodesBefore);
 
 A046 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:321
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
 
@@ -726,8 +730,8 @@ Original expression:
                   selectionBefore);
 
 A047 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:326
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -740,8 +744,8 @@ Original expression:
           geometry.selectedNodeRingRadius, geometry.selectedNodeRingDipWidth, highlight));
 
 A048 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:335
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       const QColor edge = themes::color(themes::Role::song_view_selection_edge);
@@ -759,8 +763,8 @@ Original expression:
                   QRectF(firstX + 4.0, lane.body.center().y() - 2.0, 8.0, 4.0), fill));
 
 A049 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -769,8 +773,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A050 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:349
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene) and its composition layers. A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
   }
@@ -785,8 +789,8 @@ Original expression:
   QVERIFY(scene);
 
 A051 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:353
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
       setCc(document, {{48, 40}, {72, 80}, {120, 55}});
@@ -797,8 +801,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A052 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:354
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -806,8 +810,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A053 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:357
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/body geometry is replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate). This is not a native rendering assertion.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -817,8 +821,8 @@ Original expression:
   QVERIFY(!lane.body.isEmpty());
 
 A054 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:370
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph AutomationCurves/AutomationNodes/AutomationSelection layer revisions observe the native mesh rebuild. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
       const QPointF first = nodePoint(view, *m_automationInput, lane, 48, 40);
@@ -839,8 +843,8 @@ Original expression:
                   initialRevision);
 
 A055 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:374
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       const songview::TimelineQuickLayerData excluded =
@@ -851,8 +855,8 @@ Original expression:
                                               geometry.selectedNodeRingDipWidth, highlight));
 
 A056 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:376
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -861,8 +865,8 @@ Original expression:
                                                geometry.selectedNodeRingDipWidth, highlight));
 
 A057 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:378
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -871,8 +875,8 @@ Original expression:
                                                geometry.selectedNodeRingDipWidth, highlight));
 
 A058 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:384
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -885,8 +889,8 @@ Original expression:
                   excludedRevision);
 
 A059 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:388
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       const songview::TimelineQuickLayerData included =
@@ -897,8 +901,8 @@ Original expression:
                                               geometry.selectedNodeRingDipWidth, highlight));
 
 A060 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:390
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -907,8 +911,8 @@ Original expression:
                                               geometry.selectedNodeRingDipWidth, highlight));
 
 A061 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:392
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -917,8 +921,8 @@ Original expression:
                                                geometry.selectedNodeRingDipWidth, highlight));
 
 A062 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:395
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
 Source context since previous assertion:
 
 
@@ -1084,6 +1088,18 @@ S033 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/pr
 S034 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:137
   report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
                          what: "unpinning drops the ghost label")
+
+S035 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:84
+Swift expression:
+  report.expectEqual(emptyBefore, empty.snapshot, cppID: drawerAutomationCancelID, what: "the parked press leaves the document alone")
+
+S036 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:194
+Swift expression:
+  report.expectEqual(before, fixture.snapshot, cppID: id, what: "banding writes nothing")
+
+S037 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:115
+Swift expression:
+  report.expectEqual(hoverBefore, hover.snapshot, cppID: id, what: "blank hover deletion changes nothing")
 
 Shared helper: src/checks/automation/AutomationPageChecks.swift
 SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
