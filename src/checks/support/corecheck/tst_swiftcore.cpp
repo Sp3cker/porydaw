@@ -78,6 +78,11 @@ void SwiftCoreTest::bankHistory()
     pdc_suite_run(PDC_SUITE_BANK_HISTORY, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::projectIdentity()
+{
+    pdc_suite_run(PDC_SUITE_PROJECT_IDENTITY, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);

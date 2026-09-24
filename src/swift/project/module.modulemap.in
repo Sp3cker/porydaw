@@ -1,0 +1,5 @@
+module PorydawProjectNative {
+    header "@PORYAAAA_DIR@/plugin/voicegroup_loader.h"
+    header "@CMAKE_SOURCE_DIR@/src/project/banklease.h"
+    export *
+}

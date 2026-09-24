@@ -194,6 +194,7 @@ if(APPLE)
         trackheaders/TrackHeadersChecks.swift
         trackheaders/TrackHeadersInputChecks.swift
         workspace/SessionChecks.swift
+        projectstore/ProjectIdentityChecks.swift
         workspace/session_support.swift
         workspace/session_fixtures.swift
         workspace/session_editor_semantics.swift
@@ -219,7 +220,7 @@ if(APPLE)
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
     )
-    target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback PorydawApp)
+    target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback PorydawProject PorydawApp)
     target_link_libraries(porydaw_checks PRIVATE swift_core_check)
     target_sources(porydaw_checks PRIVATE
         support/corecheck/tst_swiftcore.cpp

@@ -164,6 +164,13 @@ const std::vector<CheckDefinition> &catalog()
                                                    "test_midis/smf/malformed/duplicate_eot.mid",
                                                    "test_midis/smf/stress/automation_burst.mid"}) +
                                           rich});
+        result.push_back(
+            {.name = "projectidentitycheck",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectIdentity"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project});
         // Swift grid input/raster and cross-surface routing. swiftrollgated also
         // covers standalone Quick drawer hover/drag pixels and Tab/arrow ownership.
         for (const char *name : {"swiftrollgated", "swiftbandkeys", "swiftqtml", "selectionkey"}) {

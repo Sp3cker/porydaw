@@ -169,6 +169,7 @@ if(APPLE)
     enable_language(Swift)
     add_subdirectory(src/swift/core)
     add_subdirectory(src/swift/playback)
+    add_subdirectory(src/swift/project)
     include(cmake/QtBridge.cmake)
     add_subdirectory(src/swift/app)
 endif()
@@ -206,10 +207,6 @@ qt_add_library(porydaw_app STATIC
     src/project/songsmk.h
     src/project/swift_project_service.cpp
     src/project/swift_project_service.h
-    src/project/samplereg.cpp
-    src/project/samplereg.h
-    src/project/sidecar.cpp
-    src/project/sidecar.h
     src/project/voicegroupprojectcontext.cpp
     src/project/voicegroupprojectcontext.h
     src/project/voicegroupsource.cpp
