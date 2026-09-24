@@ -59,6 +59,8 @@ enum ShellQmlLane {
               fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
         Entry(name: "shell-chrome-visuals", inputFileName: "tst_ShellChromeVisuals.qml",
               fixtureFiles: songs("mus_route101")),
+        Entry(name: "shell-transport", inputFileName: "tst_ShellTransport.qml",
+              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
         Entry(name: "shell-note-visuals", inputFileName: "tst_ShellNoteVisuals.qml",
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-reticle-visuals", inputFileName: "tst_ShellReticleVisuals.qml",
@@ -162,6 +164,19 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     /// tasks. Mirror EditorQmlBootstrap.start for real opens and the close walk.
     public func pumpMainRunLoop() {
         _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    /// The QWidget widget baseline uses logical item coordinates for both DPRs.
+    public func transportReferenceJson(dpr: Int, fontPx: Int) -> String {
+        guard (dpr == 1 || dpr == 2), (fontPx == 12 || fontPx == 16) else { return "" }
+        let path = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
+            .deletingLastPathComponent()
+            .appendingPathComponent("fixtures/visual/macos-dpr\(dpr)-font\(fontPx)/transportbar/vanilla.json")
+        return (try? String(contentsOf: path, encoding: .utf8)) ?? ""
+    }
+
+    public func transportCapturePath(fontPx: Int) -> String {
+        URL(fileURLWithPath: projectRoot, isDirectory: true)
+            .appendingPathComponent("transport-font\(fontPx).png").path
     }
 
     /// The full native keymap assertions run only after QML has written the

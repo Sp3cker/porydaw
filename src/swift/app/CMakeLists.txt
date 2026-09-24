@@ -16,6 +16,7 @@ add_library(PorydawApp STATIC
     audio/AudioSampleAudition.swift
     audio/ResonanceSuppression.swift
     ApplicationSession.swift
+    transport/TransportBarPresenter.swift
     SongTabsController.swift
     eventlist/EventListModel.swift
     eventlist/EventListPresenter.swift

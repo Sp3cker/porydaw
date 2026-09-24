@@ -55,6 +55,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private let playhead: SharedPlayheadPresenter
     private let playheadGuides: PlayheadGuidesPresenter
     private let eventList: EventListPresenter
+    private let transportBar: TransportBarPresenter
     private let mouseHints = MouseHints()
     /// The workspaces whose rows have left the strip and whose pages have not
     /// reported their destruction yet. The page holds the C++ proxy for every
@@ -79,12 +80,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
         playhead = SharedPlayheadPresenter()
         playheadGuides = PlayheadGuidesPresenter()
         eventList = EventListPresenter()
+        transportBar = TransportBarPresenter()
         do {
             audio = try NativeAudio()
         } catch {
             lastSaveError = String(describing: error)
         }
         songTabs.attach(app: self)
+        transportBar.attach(session: self)
     }
 
     public func componentComplete() {}
@@ -204,6 +207,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// same state through the presenter accessors below.
     @QtIgnored
     public var selectedDocument: DocumentSession? { workspace?.session }
+    @QtIgnored
+    internal var transportAudio: NativeAudio? { audio }
 
     public func isDocumentDirty() -> Bool { documentDirty }
     public func songCount() -> Int { labels.count }
@@ -263,6 +268,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// bound and returns to that empty presentation whenever the document is
     /// deactivated.
     public func playheadPresenter() -> SharedPlayheadPresenter { playhead }
+    public func transportBarPresenter() -> TransportBarPresenter { transportBar }
 
     public func playheadGuidesPresenter() -> PlayheadGuidesPresenter { playheadGuides }
 

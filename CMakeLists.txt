@@ -331,6 +331,9 @@ target_link_libraries(porydaw_shell_entry PRIVATE QtBridge PorydawApp)
 set(shell_qml
     src/ui/shell/PorydawApplication.qml
     src/ui/shell/ShellWindow.qml
+    src/ui/shell/TransportBar.qml
+    src/ui/shell/TransportButton.qml
+    src/ui/shell/TransportOutputDial.qml
 )
 set_source_files_properties(${shell_qml} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 qt_add_executable(porydaw ${shell_qml} resources/fonts.qrc)

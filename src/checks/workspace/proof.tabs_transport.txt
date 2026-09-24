@@ -4,6 +4,8 @@ Reference revision: 02dce75dd21f84e3b59b399d84afb9f123775e39
 Original: src/checks/workspace/tabs_transport.cpp
 Original SHA-256: 7cebe66a4323ed77638ac8c03ab07a4c28896e50abbf4b0ea58157c9c537ee5e
 Swift counterpart: src/checks/workspace/SessionChecks.swift
+Swift counterpart: src/checks/workspace/transport_checks.swift
+QML counterpart: src/checks/editorqml/tst_ShellTransport.qml
 Swift counterpart: src/checks/workspace/session_editor_semantics.swift
 Swift counterpart: src/checks/workspace/session_io.swift
 Swift counterpart: src/checks/workspace/session_playback.swift
@@ -24,32 +26,31 @@ original macro/failure site appears below in file order, including fixture
 guards and assert-carrying helpers. Source context preserves setup, rows,
 loops, and guards between assertions verbatim. S identifiers identify exact
 Swift predicates in the paired counterpart, listed after the inventory.
-MATCHED identifies an equivalent Swift predicate that would execute for the
-original site; PARTIAL identifies a related Swift predicate with an explicit
-unproved condition; GAP identifies an original predicate with no equivalent
-Swift assertion established; RETIRED-REPRESENTATION identifies a site whose
+MATCHED identifies an equivalent executed Swift or mounted-shell QML
+predicate for the original site; PARTIAL identifies a related predicate with
+an explicit unproved condition; GAP identifies an original predicate with no
+equivalent assertion established; RETIRED-REPRESENTATION identifies a site whose
 native check-harness mechanism no longer has production ingress. The
 WorkspaceTabsTest harness declared in
 src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target
 (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and
 is unregistered in src/checks/checkcatalog.cpp, so no site below executes
-natively and no site carries NATIVE. The GAP sites are the user-visible
-transport chrome and volume behavior the dead MainWindow harness observed
-(disabled scale controls, reserved time-strip geometry, dial raster and drag
-polarity, toolbar order, output volume versus per-song master volume,
-shortcut-override filtering); the retired sites are the fixture and
-widget-handle plumbing.
+natively and no site carries NATIVE. The remaining GAP sites include the
+interactive scale selector, exact time-strip resizing, dial pixel raster,
+toolbar order, historical settings value checks, and shortcut override;
+the retired sites are fixture and widget-handle plumbing. Shell QML covers
+clock zero-state, live playhead, dial drags, output persistence and tab isolation
+in the executed mounted ShellWindow suite.
 WorkspaceTabsTest::transportVolumesAndRaster covers the transport bar before any project is open (disabled scale controls, reserved time-strip geometry, dial raster ticks) and with two tabs (toolbar order, output-volume dial versus song master-volume spin, mouse-drag dial behavior, shortcut-override filtering).
-tabs_transport.cpp contributes 73 sites: 0 MATCHED, 0 PARTIAL, 54 GAP, 19 RETIRED-REPRESENTATION. The paired
-counterpart drives the disjoint DocumentSession/ProjectService/bank-history
-suite; it never opens a MainWindow, workspace tab, transport, scale control,
-or editor-codec flow, so no workspace-flow predicate is matched here.
-Bookkeeping does not overclaim: unsure cases are recorded as GAP, never
-PARTIAL.
+tabs_transport.cpp contributes 73 sites: 7 MATCHED, 5 PARTIAL, 42 GAP, 19 RETIRED-REPRESENTATION. The
+shell-transport TestCase mounts ShellWindow with a live project and two tabs;
+MATCHED rows assert equivalent executed behavior without claiming the retired
+QWidget implementation. Scale, exact dial raster, shortcut override, and
+uncovered historical flows remain GAP.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Command: deno task build:checks; deno task verify --filter swiftcore; deno task verify:shell --filter shell-transport --verbose
+Result: PASS; build:checks ok; swiftcore 1/31 ok (30 skipped); shell-transport 1/13 ok (12 skipped).
 
 Execution and ownership
 No native execution remains: the QtTest suites declared in
@@ -58,13 +59,12 @@ src/checks/workspace/tst_workspacesessions.h
 MainWindow with the Null audio backend and a staged fixture project copy
 (workspace_test::ProjectCopy; fixture.h/fixture.cpp carries no assertion
 sites), but the harness is compiled into no CMake target and is unregistered
-in src/checks/checkcatalog.cpp, so each native site was reconciled to GAP
-(user-visible transport chrome and volume behavior) or
-RETIRED-REPRESENTATION (fixture and widget-handle plumbing). On the Swift
-side, pdcSuiteRun in
-src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 to
-runProjectSessionSuite and runBankHistorySuite; no Swift entry point opens a
-workspace, tab, transport, scale control, or editor-codec flow. The 185
+in src/checks/checkcatalog.cpp. The new shell-transport QML lane opens a
+real workspace and drives the mounted Swift presenter, clock, master/output
+volumes, playback controls, tab switch, and toolbar geometry. It does not
+resurrect native QWidget internals. pdcSuiteRun in
+src/checks/support/corecheck/CoreCheckSupport.swift dispatches suite 10 to
+runProjectSessionSuite, including the new transport clock/measure predicates. The 185
 paired predicates are split across SessionChecks.swift (both suite entry
 points and their shared-state checks) and the session_*/bank_* counterparts
 (session_editor_semantics.swift, session_io.swift,
@@ -257,8 +257,8 @@ Original expression:
   QVERIFY(defaultDial)
 
 A013 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:94
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the transport time label zero-state text (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: tst_ShellTransport.qml test_transportControlTransitionsAndSettings compares the mounted unloaded clock to 0:00.0 / 0:00.0 and passed; the original also constructed a separate standalone QWidget FastLabel instance absent from the QML surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -274,8 +274,8 @@ Original expression:
   QVERIFY(windowTime)
 
 A015 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:98
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the window transport time label zero-state text (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: MATCHED: tst_ShellTransport.qml test_transportControlTransitionsAndSettings directly asserts the mounted ShellWindow header clock is 0:00.0 / 0:00.0 before opening a project; shell-transport execution passed.
 Source context since previous assertion:
   ;
       window.updateTimeLabel();
@@ -350,8 +350,8 @@ Original expression:
   QCOMPARE(time->maximumWidth(), reservedHint.width())
 
 A024 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:110
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.setOutputVolume default value exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: MATCHED: tst_ShellTransport.qml test_transportControlTransitionsAndSettings directly asserts the mounted dial value is 100 before output interaction; shell-transport execution passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -550,8 +550,8 @@ Original expression:
   QCOMPARE(window.m_audio.outputVolume(), 37)
 
 A045 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:163
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the outputVolume preference key (src/ui/transportbar.cpp writes it and is compiled into no target; no Swift/QML preference reader exists for it); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: tst_ShellTransport.qml test_transportControlTransitionsAndSettings passed application output-volume restoration in a fresh shell session, but does not directly assert the historical QSettings key or exact fixture value 37.
 Source context since previous assertion:
   ;
 Original expression:
@@ -574,8 +574,8 @@ Original expression:
   QCOMPARE(first->document().undoStack()->count(), undoBeforeOutput)
 
 A048 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:166
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession dirty flag (an output-volume change must not dirty the document) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: MATCHED: tst_ShellTransport.qml test_transportControlTransitionsAndSettings directly asserts the open song remains clean after changing application output volume; shell-transport execution passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -605,8 +605,8 @@ Original expression:
   QCOMPARE(first->document().undoStack()->count(), undoBeforeOutput)
 
 A051 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:182
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the native output-volume dial drag-down interaction (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: MATCHED: tst_ShellTransport.qml test_transportControlTransitionsAndSettings drags the mounted dial down by 11 DIP from volume 50 and directly asserts its output increases; shell-transport execution passed.
 Source context since previous assertion:
   ;
       checks::events::sendMouse(*dial, QEvent::MouseButtonPress, center, Qt::LeftButton,
@@ -619,8 +619,8 @@ Original expression:
   QVERIFY(dial->value() > 50)
 
 A052 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:190
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the native output-volume dial drag-up interaction (src/ui/transportbar.cpp owns the native transport chrome and is compiled into no target; src/ui/shell/ShellWindow.qml exposes transport menu actions only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: MATCHED: tst_ShellTransport.qml test_transportControlTransitionsAndSettings drags the mounted dial up by 11 DIP from volume 50 and directly asserts its output decreases; shell-transport execution passed.
 Source context since previous assertion:
   ;
       dial->setValue(50);
@@ -675,8 +675,8 @@ Original expression:
   QVERIFY(!first->document().isDirty())
 
 A058 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:202
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession config masterVolume edit exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: tst_ShellTransport.qml test_transportControlTransitionsAndSettings passed master-volume editing to 87 in the mounted song and presenter, but does not directly assert the underlying SongDocument config.
 Source context since previous assertion:
   ;
       dial->setValue(37);
@@ -688,8 +688,8 @@ Original expression:
   QCOMPARE(first->document().cfg().masterVolume, editedSongVolume)
 
 A059 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:203
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession dirty flag after a master-volume edit exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: MATCHED: tst_ShellTransport.qml test_transportControlTransitionsAndSettings edits the mounted song master volume to 87 and directly asserts session.documentDirty becomes true; shell-transport execution passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -729,8 +729,8 @@ Original expression:
   QCOMPARE(spin->value(), second->document().cfg().masterVolume)
 
 A064 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:209
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.setOutputVolume (global across tabs) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: tst_ShellTransport.qml test_transportControlTransitionsAndSettings passed preservation of the application output level across a second tab, but does not pin the historical exact level 37.
 Source context since previous assertion:
   ;
 Original expression:
@@ -753,8 +753,8 @@ Original expression:
   QVERIFY(!second->document().isDirty())
 
 A067 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:213
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession config masterVolume after returning to the edited tab exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: MATCHED: tst_ShellTransport.qml test_transportControlTransitionsAndSettings reselects the edited first song tab and directly asserts the mounted master-volume input restores 87; shell-transport execution passed.
 Source context since previous assertion:
   ;
       workspace->selectSongTab(first);
@@ -797,8 +797,8 @@ Original expression:
   QVERIFY(lineEdit)
 
 A072 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:224
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner the Swift KeybindingRegistry shortcut-override routing (space) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: tst_ShellTransport.qml test_transportControlTransitionsAndSettings passed focused Space starting and pausing transport without changing master-volume text; direct native QLineEdit ShortcutOverride delivery is no longer represented.
 Source context since previous assertion:
   ;
       QKeyEvent space(QEvent::ShortcutOverride, Qt::Key_Space, Qt::NoModifier, QStringLiteral(" "));
