@@ -95,6 +95,7 @@ add_library(PorydawApp STATIC
     headers/TrackHeadersInput.swift
     shell/ShellPresenter.swift
     shell/ShellAppearance.swift
+    shell/EngineSettingsStore.swift
 )
 
 # Generated like the playback module map: the bank-lease header lives at the

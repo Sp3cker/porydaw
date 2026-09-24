@@ -1,4 +1,5 @@
 import Foundation
+import PorydawCore
 
 /// Owns one document's editor presenters and all document-scoped publication wiring.
 /// The application replaces and tears down this object as a single unit;
@@ -53,6 +54,7 @@ public final class DocumentWorkspace {
     private unowned let eventList: EventListPresenter
     private let callbacks: Callbacks
     private var lastPlayheadPresentation: SharedPlayheadPresentation?
+    private var appliedSongConfig: SongConfig
     private var isActive = false
     private var isTornDown = false
 
@@ -62,6 +64,7 @@ public final class DocumentWorkspace {
                 eventList: EventListPresenter, palette: GridPalette,
                 callbacks: Callbacks) {
         self.session = session
+        appliedSongConfig = session.document.state.config
         self.audio = audio
         self.playhead = playhead
         self.playheadGuides = playheadGuides
@@ -139,6 +142,7 @@ public final class DocumentWorkspace {
         do {
             try audio.bind(timeline: session.timeline, bank: session.bankLease,
                            config: session.document.state.config)
+            appliedSongConfig = session.document.state.config
         } catch {
             // The renderer refused this document's voices. The document stays
             // editable without a transport, exactly as it does when a playback
@@ -317,6 +321,10 @@ public final class DocumentWorkspace {
             grid.refreshFromSession()
         } else if change.domains.contains(.cursor) {
             grid.refreshCursorPresentation()
+        }
+        if isActive && documentChanged && appliedSongConfig != session.document.state.config {
+            appliedSongConfig = session.document.state.config
+            audio.updateSettings(config: appliedSongConfig)
         }
 
         if isActive && change.domains.contains(.bank) {

@@ -6,6 +6,7 @@ import QtCore
 import QtQml.Models
 import PorydawApp
 import "qrc:/porydaw/swiftroll" as SwiftRoll
+import "settings" as SettingsUi
 
 ApplicationWindow {
     id: root
@@ -68,6 +69,30 @@ ApplicationWindow {
             shell.openStartup()
         }
     }
+    Loader {
+        id: engineSettingsStore
+        active: false
+        sourceComponent: Settings { category: "engine" }
+        onLoaded: {
+            const settings = engineSettingsStore.item
+            shell.settingsStore.restore(String(settings.value("pcmMixer", "ipatix")),
+                                        String(settings.value("maxPcmChannels", 5)),
+                                        String(settings.value("pcmMixRate", 13379)),
+                                        String(settings.value("analogFilter", false)))
+        }
+    }
+    Connections {
+        target: shell.settingsStore
+        function onRevisionChanged() {
+            if (engineSettingsStore.status !== Loader.Ready)
+                return
+            const settings = engineSettingsStore.item
+            settings.setValue("pcmMixer", shell.settingsStore.mixer)
+            settings.setValue("maxPcmChannels", shell.settingsStore.maxPcmChannels)
+            settings.setValue("pcmMixRate", shell.settingsStore.mixRate)
+            settings.setValue("analogFilter", shell.settingsStore.analogFilter)
+        }
+    }
     Component.onCompleted: {
         if (establishApplicationIdentity) {
             Qt.application.name = "porydaw"
@@ -75,6 +100,7 @@ ApplicationWindow {
             Qt.application.domain = ""
         }
         transportBar.restoreOutputVolume()
+        engineSettingsStore.active = true
         appearanceStore.active = true
     }
 
@@ -113,6 +139,7 @@ ApplicationWindow {
         target: shell
         function onChooseProjectRequested() { projectPicker.open() }
         function onChooseSongRequested() { songPicker.open() }
+        function onSettingsRequested(songFirst) { settingsDialog.showSettings(songFirst) }
         function onQuitRequested() { root.close() }
         function onInformationRequested(title, message) {
             informationDialog.text = title
@@ -359,6 +386,14 @@ ApplicationWindow {
                 onObjectRemoved: (index, object) => viewMenu.removeItem(object)
             }
         }
+    }
+    SettingsUi.SettingsDialog {
+        id: settingsDialog
+        objectName: "shellSettingsDialog"
+        transientParent: root
+        store: shell.settingsStore
+        colors: root.colors
+        applicationFont: Application.font
     }
 
     Loader {

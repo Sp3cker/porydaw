@@ -43,6 +43,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     private var projectRoot = ""
     private var labels: [String] = []
+    private var settingsVoicegroups: [String] = []
     private var catalogService: ProjectService?
     private var audio: NativeAudio?
     /// The empty presenter the surface binds while no document is presented.
@@ -255,6 +256,22 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public var selectedDocument: DocumentSession? { workspace?.session }
     @QtIgnored
     internal var transportAudio: NativeAudio? { audio }
+    @QtIgnored
+    public func settingsVoicegroupArgs() -> [String] { settingsVoicegroups }
+
+    @QtIgnored
+    public func settingsSongLabel() -> String { songTabs.selectedPage?.title ?? "" }
+
+    @QtIgnored
+    public func setEngineSettings(_ settings: EngineSettings) {
+        audio?.setEngineSettings(settings, config: workspace?.session.document.state.config)
+    }
+
+    @QtIgnored
+    public func reportSettingsFailure(_ message: String) {
+        lastSaveError = message
+        operationFailed(message: message)
+    }
     public func voiceListController() -> VoiceListController { voiceList }
 
     public func isDocumentDirty() -> Bool { documentDirty }
@@ -862,6 +879,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         projectRoot = candidate.path
         labels = candidate.labels
         let catalog = candidate.voicegroupCatalog
+        settingsVoicegroups = candidate.voicegroupArgs
         voiceList.setVoicegroupChoices(candidate.voicegroupArgs)
         voiceList.sampleChoices = catalog.samples
         voiceList.waveSymbols = catalog.waves

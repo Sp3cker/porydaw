@@ -23,6 +23,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("file.quit", "Quit"),
         Action("edit.undo", "Undo"),
         Action("edit.redo", "Redo"),
+        Action("edit.preferences", "Preferences…"),
+        Action("edit.song_settings", "Song Settings…"),
+        Action("edit.engine_settings", "Engine Settings…"),
         Action("roll.copy", "Copy Notes", .copy),
         Action("roll.cut", "Cut Notes", .cut),
         Action("roll.duplicate_time", "Duplicate", .duplicate),
@@ -75,6 +78,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         "automation.pencil_mode", "roll.split", "roll.join",
         "roll.lengthen_note", "roll.shorten_note", "roll.grid_narrow",
         "roll.grid_widen", "roll.grid_triplet",
+        "edit.preferences", "edit.song_settings", "edit.engine_settings",
     ]
     private static let transportIds = allActionIds.filter { $0.hasPrefix("transport.") }
     private static let viewIds = allActionIds.filter { $0.hasPrefix("view.") }
@@ -97,6 +101,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     private let keybindings = KeybindingRegistry()
 
     @QtTracked public var session: ApplicationSession
+    @QtTracked public var settingsStore: EngineSettingsStore
     @QtTracked public var actionIds: [String]
     @QtTracked public var fileActionIds: [String]
     @QtTracked public var editTopActionIds: [String]
@@ -122,6 +127,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     public init() {
         session = ApplicationSession()
+        settingsStore = EngineSettingsStore()
+        settingsStore.attach(session: session)
         actionIds = Self.allActionIds
         fileActionIds = Self.fileIds
         editTopActionIds = Self.editTopIds
@@ -156,7 +163,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     public func actionEnabled(id: String) -> Bool {
         guard let action = Self.byId[id] else { return false }
-        if id == "view.polyphony_debugger" { return true }
+        if id == "view.polyphony_debugger" || id == "edit.preferences"
+            || id == "edit.engine_settings" { return true }
         guard sceneActive else { return false }
         if let command = action.command {
             return session.songOpen && session.gridCommandAvailable(command: command.rawValue)
@@ -166,6 +174,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "file.save_song": return session.songOpen && !session.saveInProgress
         case "edit.undo": return session.songOpen && session.canUndo
         case "edit.redo": return session.songOpen && session.canRedo
+        case "edit.song_settings": return session.songOpen
         case "transport.play_pause", "transport.stop": return session.songOpen
         default: return true // open project and quit were always enabled
         }
@@ -195,6 +204,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "file.quit": quitRequested()
         case "edit.undo": session.requestUndo()
         case "edit.redo": session.requestRedo()
+        case "edit.preferences": settingsRequested(songFirst: session.songOpen)
+        case "edit.song_settings": settingsRequested(songFirst: true)
+        case "edit.engine_settings": settingsRequested(songFirst: false)
         case "transport.play_pause": session.playPause()
         case "transport.stop": session.stop()
         case "view.polyphony_debugger":
@@ -335,6 +347,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     @QtSignal public func chooseProjectRequested()
     @QtSignal public func chooseSongRequested()
+    @QtSignal public func settingsRequested(songFirst: Bool)
     @QtSignal public func quitRequested()
     @QtSignal public func informationRequested(title: String, message: String)
     @QtSignal public func criticalRequested(title: String, message: String)

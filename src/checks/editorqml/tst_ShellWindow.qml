@@ -569,6 +569,8 @@ TestCase {
             "shellAction_roll.join", "shellAction_roll.lengthen_note",
             "shellAction_roll.shorten_note", "shellAction_roll.grid_narrow",
             "shellAction_roll.grid_widen", "shellAction_roll.grid_triplet",
+            "shellAction_edit.preferences", "shellAction_edit.song_settings",
+            "shellAction_edit.engine_settings",
         ]
         compare(editMenu.count, editOrder.length, "Edit contains exactly the mounted commands")
         var actualOrder = []
