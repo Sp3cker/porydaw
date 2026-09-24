@@ -109,7 +109,7 @@ QVERIFY2(d.key >= 0, "no free grid cell for the off-grid resize")
 
 A002 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:57
 Disposition: PARTIAL
-Mapping/reason: S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:288) drives a real pointer hover onto a wide note's edges in the production overlay and asserts the published cursorKind 3 with the QML cursorShape Qt.SizeHorCursor; S020/S021 (src/checks/rollcheck/resize.swift:373, :376) publish cursorKind 3 for the right and left edges. Unproved: the DPI-matched custom cursor bitmaps and that the left and right edge images are distinguishable pixmaps (the Swift cursor is a named shape, not a bitmap).
+Mapping/reason: S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:313-318) drives a real pointer hover onto a wide note's edges in the production overlay and asserts the published cursorKind 3 with the QML cursorShape Qt.SizeHorCursor; S020/S021 (src/checks/rollcheck/resize.swift:373, :376) publish cursorKind 3 for the right and left edges. Unproved: the DPI-matched custom cursor bitmaps and that the left and right edge images are distinguishable pixmaps (the Swift cursor is a named shape, not a bitmap).
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -140,7 +140,7 @@ QVERIFY2(leftImage != rightImage,
 
 A003 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:61
 Disposition: PARTIAL
-Mapping/reason: S021 (src/checks/rollcheck/resize.swift:376) asserts the left edge grip publishes cursorKind 3 and S023 (src/checks/rollcheck/resize.swift:127) asserts the grip targets the planted off-grid note; S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:288) asserts the production overlay shows Qt.SizeHorCursor at an edge. Unproved: the left-drag custom cursor pixmap identity, since the Swift surface publishes a named cursor shape rather than a DPI-matched bitmap.
+Mapping/reason: S021 (src/checks/rollcheck/resize.swift:376) asserts the left edge grip publishes cursorKind 3 and S023 (src/checks/rollcheck/resize.swift:127) asserts the grip targets the planted off-grid note; S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:313-318) asserts the production overlay shows Qt.SizeHorCursor at an edge. Unproved: the left-drag custom cursor pixmap identity, since the Swift surface publishes a named cursor shape rather than a DPI-matched bitmap.
 Source context since previous assertion:
 ;
     checks::events::sendMouse(roll, QEvent::MouseMove, leftHandle, Qt::NoButton, Qt::NoButton,
@@ -153,7 +153,7 @@ QVERIFY2(roll.cursor().shape() == Qt::BitmapCursor &&
 
 A004 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:66
 Disposition: PARTIAL
-Mapping/reason: S020 (src/checks/rollcheck/resize.swift:373) asserts the right edge grip publishes cursorKind 3 and S023 (src/checks/rollcheck/resize.swift:127) asserts the grip targets the planted off-grid note; S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:288) asserts the production overlay shows Qt.SizeHorCursor at an edge. Unproved: the right-drag custom cursor pixmap identity, since the Swift surface publishes a named cursor shape rather than a DPI-matched bitmap.
+Mapping/reason: S020 (src/checks/rollcheck/resize.swift:373) asserts the right edge grip publishes cursorKind 3 and S023 (src/checks/rollcheck/resize.swift:127) asserts the grip targets the planted off-grid note; S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:313-318) asserts the production overlay shows Qt.SizeHorCursor at an edge. Unproved: the right-drag custom cursor pixmap identity, since the Swift surface publishes a named cursor shape rather than a DPI-matched bitmap.
 Source context since previous assertion:
 ;
     checks::events::sendMouse(roll, QEvent::MouseMove, rightHandle, Qt::NoButton, Qt::NoButton,
@@ -500,7 +500,7 @@ QVERIFY2(g.key >= 0, "no free grid cell for the abutting-notes resize")
 
 A027 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:243
 Disposition: PARTIAL
-Mapping/reason: S013/S016 (src/checks/rollcheck/resize.swift:308, :325) assert the shared boundary grips target the first and second abutting note (activeNoteId plus a Resizing status), S021 (src/checks/rollcheck/resize.swift:376) publishes cursorKind 3 at an edge grip, and S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:288) asserts Qt.SizeHorCursor on the production overlay. Unproved: the left-drag/right-drag custom cursor bitmaps at the shared boundary.
+Mapping/reason: S013/S016 (src/checks/rollcheck/resize.swift:308, :325) assert the shared boundary grips target the first and second abutting note (activeNoteId plus a Resizing status), S021 (src/checks/rollcheck/resize.swift:376) publishes cursorKind 3 at an edge grip, and S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:313-318) asserts Qt.SizeHorCursor on the production overlay. Unproved: the left-drag/right-drag custom cursor bitmaps at the shared boundary.
 Source context since previous assertion:
 ;
     doc.addNote(track, g.tick, uint8_t(g.key), uint32_t(g.dur), 100);
@@ -525,7 +525,7 @@ QCOMPARE(roll.cursor().pixmap().toImage(), rightGrip.toImage())
 
 A028 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:248
 Disposition: PARTIAL
-Mapping/reason: S013/S016 (src/checks/rollcheck/resize.swift:308, :325) assert the shared boundary grips target the first and second abutting note (activeNoteId plus a Resizing status), S021 (src/checks/rollcheck/resize.swift:376) publishes cursorKind 3 at an edge grip, and S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:288) asserts Qt.SizeHorCursor on the production overlay. Unproved: the left-drag/right-drag custom cursor bitmaps at the shared boundary.
+Mapping/reason: S013/S016 (src/checks/rollcheck/resize.swift:308, :325) assert the shared boundary grips target the first and second abutting note (activeNoteId plus a Resizing status), S021 (src/checks/rollcheck/resize.swift:376) publishes cursorKind 3 at an edge grip, and S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:313-318) asserts Qt.SizeHorCursor on the production overlay. Unproved: the left-drag/right-drag custom cursor bitmaps at the shared boundary.
 Source context since previous assertion:
 ;
     checks::events::sendMouse(roll, QEvent::MouseMove, right, Qt::NoButton, Qt::NoButton,
@@ -755,7 +755,7 @@ Counterpart expression:
 report.expect(grid.activeNoteId == noteID.rawValue && grid.statusText.contains("Resizing"),
               cppID: id, message: "right edge grips the off-grid note")
 
-S024 | test_edgeHoverShowsResizeCursor | src/checks/rollqml/tst_SwiftRollSelection.qml:288
+S024 | test_edgeHoverShowsResizeCursor | src/checks/rollqml/tst_SwiftRollSelection.qml:313-318
 Real pointer input into the production overlay: mouseMove onto a wide note's edge publishes
 g.cursorKind === 3 and the mounted roll input's cursorShape === Qt.SizeHorCursor; moving to
 the note body publishes g.cursorKind === 0 (arrow). Covers the edge-hover cursor equivalence.

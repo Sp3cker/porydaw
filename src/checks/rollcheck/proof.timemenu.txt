@@ -28,7 +28,7 @@ observations; only the indexed undo-byte condition is MATCHED.
 Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS (controller, 10.17s).
-Counts: MATCHED 1, PARTIAL 0, GAP 57, NATIVE 42.
+Counts: MATCHED 1, PARTIAL 0, GAP 59, NATIVE 40.
 
 Execution and ownership
 The Swift projectSession suite executes the indexed model assertion; the original slots run under
@@ -55,8 +55,8 @@ the slots.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:105
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: GAP — fixture seed guard (QVERIFY seed presence) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -167,7 +167,7 @@ Original expression:
 
 A002 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:112
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — seed-note reachability guard (findNote of the time-menu seed at track/tick/key) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Closed by a Swift predicate observing the seeded note presence at this slot track/tick/key.
 Source context since previous assertion:
   ;
       SongDocument &doc = check.document();
@@ -182,7 +182,7 @@ Original expression:
 
 A003 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:125
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
       doc.moveNotes({moved}, int64_t(snapCell), 0);
@@ -202,7 +202,7 @@ Original expression:
 
 A004 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:128
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
       // Native clipboard change notifications can arrive after setMimeData returns.
@@ -322,7 +322,7 @@ Original expression:
 
 A015 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:172
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
       const std::optional<songview::Clip> copied =
@@ -333,7 +333,7 @@ Original expression:
 
 A016 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:185
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
       const bool restoredNote =
@@ -352,7 +352,7 @@ Original expression:
 
 A017 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:186
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
 Source context since previous assertion:
   ;
 Original expression:
@@ -362,7 +362,7 @@ Original expression:
 
 A018 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:194
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 
@@ -422,7 +422,7 @@ Original expression:
 
 A024 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:207
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
 Source context since previous assertion:
   ;
 Original expression:
@@ -431,8 +431,8 @@ Original expression:
                "a click on the disabled Paste row mutated the document")
 
 A025 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:216
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: GAP — fixture seed guard (QVERIFY seed presence) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
 Source context since previous assertion:
   ;
   }
@@ -446,7 +446,7 @@ Original expression:
 
 A026 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:223
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — seed-note reachability guard (findNote of the rejected-paste seed at track/tick/key) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Closed by a Swift predicate observing the seeded note presence at this slot track/tick/key.
 Source context since previous assertion:
   ;
       SongDocument &doc = check.document();
@@ -552,7 +552,7 @@ Original expression:
 
 A033 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:278
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
               } else {
@@ -564,7 +564,7 @@ Original expression:
 
 A034 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:279
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -572,7 +572,7 @@ Original expression:
 
 A035 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:280
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -580,7 +580,7 @@ Original expression:
 
 A036 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:281
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -588,7 +588,7 @@ Original expression:
 
 A037 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:282
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -596,7 +596,7 @@ Original expression:
 
 A038 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:283
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -604,7 +604,7 @@ Original expression:
 
 A039 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:284
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -612,7 +612,7 @@ Original expression:
 
 A040 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:285
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -620,7 +620,7 @@ Original expression:
 
 A041 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:286
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -628,7 +628,7 @@ Original expression:
 
 A042 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:287
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -636,7 +636,7 @@ Original expression:
 
 A043 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:288
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -644,7 +644,7 @@ Original expression:
 
 A044 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:289
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -652,7 +652,7 @@ Original expression:
 
 A045 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:290
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -660,7 +660,7 @@ Original expression:
 
 A046 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:291
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -668,7 +668,7 @@ Original expression:
 
 A047 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:292
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -676,7 +676,7 @@ Original expression:
 
 A048 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:305
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
           }
@@ -696,7 +696,7 @@ Original expression:
 
 A049 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:306
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -704,7 +704,7 @@ Original expression:
 
 A050 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:307
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -712,7 +712,7 @@ Original expression:
 
 A051 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:308
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -720,7 +720,7 @@ Original expression:
 
 A052 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:309
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -728,7 +728,7 @@ Original expression:
 
 A053 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:311
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
           if (!rangeClip)
@@ -737,7 +737,7 @@ Original expression:
 
 A054 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:312
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -745,7 +745,7 @@ Original expression:
 
 A055 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:313
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -753,7 +753,7 @@ Original expression:
 
 A056 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:314
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -761,7 +761,7 @@ Original expression:
 
 A057 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:317
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
           const QByteArray accepted = doc.smf().write();
@@ -771,7 +771,7 @@ Original expression:
 
 A058 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:319
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
           doc.undoStack()->redo();
@@ -780,7 +780,7 @@ Original expression:
 
 A059 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:335
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
           doc.undoStack()->undo();
@@ -803,7 +803,7 @@ Original expression:
 
 A060 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:336
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -811,7 +811,7 @@ Original expression:
 
 A061 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:337
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -819,7 +819,7 @@ Original expression:
 
 A062 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:338
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -827,7 +827,7 @@ Original expression:
 
 A063 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:339
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -835,7 +835,7 @@ Original expression:
 
 A064 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:340
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -888,7 +888,7 @@ Original expression:
 
 A068 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:370
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — fixture seed guard (QVERIFY seed presence) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
 Source context since previous assertion:
   ;
       SongDocument &doc = check.document();
@@ -937,7 +937,7 @@ Original expression:
 
 A071 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:393
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
 Original expression:
@@ -946,7 +946,7 @@ Original expression:
 
 A072 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:395
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
 Source context since previous assertion:
   ;
 Original expression:
@@ -989,7 +989,7 @@ Original expression:
 
 A076 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:410
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1013,7 +1013,7 @@ Original expression:
 
 A078 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:426
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — fixture seed guard (QVERIFY seed presence) with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
 Source context since previous assertion:
   ;
       SongDocument &doc = check.document();
@@ -1087,7 +1087,7 @@ Original expression:
 
 A084 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:452
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1097,7 +1097,7 @@ Original expression:
 
 A085 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:455
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1106,7 +1106,7 @@ Original expression:
 
 A086 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:459
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
       const songview::EditorSelectionModel::TimeSelection insertedSelection =
@@ -1118,7 +1118,7 @@ Original expression:
 
 A087 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:462
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1173,7 +1173,7 @@ Original expression:
 
 A091 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:501
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
 Source context since previous assertion:
   ;
       const qreal pressX = check.view().camera().displayX(double(pressTick), 0.0, rows.dpr());
@@ -1194,7 +1194,7 @@ Original expression:
 
 A092 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:506
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
 Source context since previous assertion:
   ;
       // Still holding the button: the gesture is live, but the cached actions
@@ -1205,7 +1205,7 @@ Original expression:
 
 A093 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:507
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1214,7 +1214,7 @@ Original expression:
 
 A094 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:509
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1223,7 +1223,7 @@ Original expression:
 
 A095 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:511
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1267,7 +1267,7 @@ Original expression:
 
 A099 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:531
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — menu-row enablement observation (Duplicate Time enabled after a real sweep) with no Swift menu surface; the Swift counterpart never opens the native time-selection menu. Closed by a Swift predicate observing the duplicate-command enablement for the sweep selection.
 Source context since previous assertion:
   ;
       // Note-only selection: the same canonical Duplicate command enables for
@@ -1280,7 +1280,7 @@ Original expression:
 
 A100 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:534
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
 Source context since previous assertion:
   ;
       view.selectionModel().setNoteSelection({seedNote.noteId});

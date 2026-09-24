@@ -5,27 +5,41 @@ Original: src/checks/rollcheck/interlock.cpp
 Original SHA-256: 971c3e6a77a900a75bbef16205c6f5a4cb3c5872fad7a6833cd7d1d85c842e18
 Swift counterpart: src/checks/rollcheck/interlock.swift
 Swift SHA-256: d37ba279712c6fec477b9d5d407aa378be67cedf26683b0b3dc8d23617ccc93c
-Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
-Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
 S identifiers identify exact counterpart predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
+MATCHED identifies equivalent Swift predicates executed by the swiftcore suite.
 PARTIAL identifies related counterpart predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift surface.
 GAP identifies an original predicate without a replacement assertion.
-interlock.swift drives all five button sequences and asserts note selection, audition, velocity previews, and per-scenario and slot-level MIDI byte/history invariants. A003 and A005 are PARTIAL: interlock.swift asserts empty note selection and no active pointer, but PianoGrid has no time-selection state, so the original inactive-time-selection conjunct stays unproved. Counts: MATCHED 18, PARTIAL 2, GAP 0, NATIVE 0. The gated S001-S033 index remains separate and closes no site.
+interlock.swift drives all five button sequences and asserts note selection, audition,
+velocity previews, and per-scenario and slot-level MIDI byte/history invariants.
+S001-S018 index the exact executing predicates. A003 and A005 stay PARTIAL: the Swift
+predicates assert empty note selection and no active pointer, but PianoGrid has no
+time-selection state, so the original inactive-time-selection conjunct stays unproved.
+Disposition tally: 20 sites: 18 MATCHED, 2 PARTIAL, 0 GAP, 0 NATIVE.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS (swiftcore, 10.04s).
+Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore
+projectSession suite executed runInterlockChecks and the S001-S018 predicates.
+Command: deno task verify:qml-roll --verbose
+Result: PASS — 1/1 ok (controller-recorded post-change run); no interlock site
+depends on the roll QML lane.
+Command: deno task verify:shell --verbose
+Result: PASS — 11/11 ok (controller-recorded post-change run); no interlock site
+depends on the shell lane. The shell and roll QML runs predate only a
+swiftcore-checks-only commit; no production or QML source changed after them.
 
 Execution and ownership
-runInterlockChecks executes checkGestureInterlock in the projectSession Swift suite; interlock.swift drives PianoGrid through five original interlock sequences. SwiftRollGatedTest::rightDragSelectionCommits, escapeCancelsSelectionBand and ungrabCancelsSelectionBand retain a separate gated index below.
+runInterlockChecks executes checkGestureInterlock in the projectSession Swift suite
+(swiftcore); interlock.swift drives PianoGrid through the five original interlock
+sequences with per-scenario MIDI byte/history baselines. The retired
+gesturechecks.cpp slots (rightDragSelectionCommits, escapeCancelsSelectionBand,
+ungrabCancelsSelectionBand) are QSKIP stubs that close no site and are no longer
+indexed.
 
 Fixture, sequence and row constraints
 Each scenario owns local SMF bytes, undo index and undo count baselines inside gestureInterlock; the slot closes with two undo-slot QCOMPAREs. No data rows; fixture scans never re-execute an assertion.
@@ -36,7 +50,7 @@ Original assertion inventory and source sequence
 
 A001 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:27
 Disposition: MATCHED
-Mapping: interlock.swift:46 report.expect(seeded?.count == 2) proves the two-note fixture is seeded.
+Mapping: S001 (src/checks/rollcheck/interlock.swift:46-47) asserts the two-note A/B velocity fixture seeded as exactly two notes.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -69,7 +83,7 @@ Original expression:
 
 A002 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:58
 Disposition: MATCHED
-Mapping: interlock.swift:74 report.expect(freeX != nil) proves a projected unoccupied draw cell exists.
+Mapping: S002 (src/checks/rollcheck/interlock.swift:74) asserts a projected unoccupied free draw cell exists.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -106,7 +120,7 @@ Original expression:
 
 A003 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:77
 Disposition: PARTIAL
-Mapping/reason: interlock.swift:104 asserts empty note selection and no active pointer after blocked right release. PARTIAL remains because PianoGrid has no time-selection state, so the original inactive-time-selection conjunct is unproved.
+Mapping/reason: S003 (src/checks/rollcheck/interlock.swift:104-105) asserts empty note selection and no active pointer after the blocked right release. PARTIAL remains because PianoGrid has no time-selection state, so the original inactive-time-selection conjunct is unproved.
 Source context since previous assertion:
       view.selectionModel().clearNoteSelection();
       view.selectionModel().clearTimeSelection();
@@ -132,7 +146,7 @@ Original expression:
 
 A004 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:82
 Disposition: MATCHED
-Mapping: interlock.swift:107 report.expect(unchanged(before)) compares captured MIDI bytes, undoIndex and undoCount after left release.
+Mapping: S004 (src/checks/rollcheck/interlock.swift:107-108) compares captured MIDI bytes, undoIndex and undoCount after the aborted left release.
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandEnd, Qt::LeftButton,
                                     Qt::NoButton, Qt::NoModifier);
@@ -142,7 +156,7 @@ Original expression:
 
 A005 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:103
 Disposition: PARTIAL
-Mapping/reason: interlock.swift:119 asserts empty note selection and no active pointer after demoted Band right release. PARTIAL remains because PianoGrid has no time-selection state, so the original inactive-time-selection conjunct is unproved.
+Mapping/reason: S005 (src/checks/rollcheck/interlock.swift:119-120) asserts empty note selection and no active pointer after the demoted Band right release. PARTIAL remains because PianoGrid has no time-selection state, so the original inactive-time-selection conjunct is unproved.
 Source context since previous assertion:
       }
 
@@ -170,7 +184,7 @@ Original expression:
 
 A006 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:108
 Disposition: MATCHED
-Mapping: interlock.swift:122 report.expect(unchanged(before)) compares MIDI bytes, undoIndex and undoCount after demoted Band left release.
+Mapping: S006 (src/checks/rollcheck/interlock.swift:122-123) compares MIDI bytes, undoIndex and undoCount after the demoted Band left release.
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonRelease, beyondB, Qt::LeftButton,
                                     Qt::NoButton, Qt::NoModifier);
@@ -180,7 +194,7 @@ Original expression:
 
 A007 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:126
 Disposition: MATCHED
-Mapping: interlock.swift:133 report.expect(containsAB()) checks both original seeded IDs after right Band release from PendingDraw.
+Mapping: S007 (src/checks/rollcheck/interlock.swift:133-134) checks both original seeded IDs after the right Band release from PendingDraw.
 Source context since previous assertion:
       }
 
@@ -203,7 +217,7 @@ Original expression:
 
 A008 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:129
 Disposition: MATCHED
-Mapping: interlock.swift:136 report.expect(containsAB()) verifies both seeded IDs remain selected after parked left release.
+Mapping: S008 (src/checks/rollcheck/interlock.swift:136-137) verifies both seeded IDs remain selected after the parked left release.
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonRelease, freeCell.center, Qt::LeftButton,
                                     Qt::NoButton, Qt::NoModifier);
@@ -212,7 +226,7 @@ Original expression:
 
 A009 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:130
 Disposition: MATCHED
-Mapping: interlock.swift:138 report.expect(unchanged(before)) checks MIDI bytes, undoIndex and undoCount after parked left release.
+Mapping: S009 (src/checks/rollcheck/interlock.swift:138-139) compares MIDI bytes, undoIndex and undoCount after the parked left release.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -221,7 +235,7 @@ Original expression:
 
 A010 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:148
 Disposition: MATCHED
-Mapping: interlock.swift:149 report.expect(session.selectedNoteOrder == [seeded[1]]) after Ctrl-left press and release while right Band is live.
+Mapping: S010 (src/checks/rollcheck/interlock.swift:149-150) asserts the deferred Ctrl click selects exactly B while the right Band stays live.
 Source context since previous assertion:
       }
 
@@ -244,7 +258,7 @@ Original expression:
 
 A011 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:158
 Disposition: MATCHED
-Mapping: interlock.swift:159 report.expect(bAuditioned) observes onAudition with B pitch and velocity > 0 on following right Band move.
+Mapping: S011 (src/checks/rollcheck/interlock.swift:159-160) observes onAudition with B's pitch and velocity > 0 on the following right Band move.
 Source context since previous assertion:
           bool noteBAuditioned = false;
           const auto auditionConnection = QObject::connect(&view, &SongView::auditionNoteTimed, &view,
@@ -260,7 +274,7 @@ Original expression:
 
 A012 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:164
 Disposition: MATCHED
-Mapping: interlock.swift:163 report.expect(containsAB()) checks both seeded IDs after the deferred Ctrl click and right Band release.
+Mapping: S012 (src/checks/rollcheck/interlock.swift:163-164) checks both seeded IDs after the deferred Ctrl click and right Band release.
 Source context since previous assertion:
           const QPoint beyondA = beyond(b.center, a.center);
           checks::events::sendMouse(roll, QEvent::MouseMove, beyondA, Qt::NoButton, Qt::RightButton,
@@ -272,7 +286,7 @@ Original expression:
 
 A013 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:165
 Disposition: MATCHED
-Mapping: interlock.swift:165 report.expect(unchanged(before)) compares MIDI bytes, undoIndex and undoCount after deferred modifier Band release.
+Mapping: S013 (src/checks/rollcheck/interlock.swift:165-166) compares MIDI bytes, undoIndex and undoCount after the deferred-modifier Band release.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -281,7 +295,7 @@ Original expression:
 
 A014 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:180
 Disposition: MATCHED
-Mapping: interlock.swift:175 report.expect(grid.previewVelocity(seeded[1]) != nil) on first Ctrl-left upward drag.
+Mapping: S014 (src/checks/rollcheck/interlock.swift:175-176) asserts a velocity preview is staged on the Ctrl-left upward drag (attempt 0 message "A014 Ctrl velocity drag stages a preview").
 Source context since previous assertion:
       }
 
@@ -302,7 +316,7 @@ Original expression:
 
 A015 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:186
 Disposition: MATCHED
-Mapping: interlock.swift:180 report.expect(grid.previewVelocity(seeded[1]) == nil) after first right press/release abort.
+Mapping: S015 (src/checks/rollcheck/interlock.swift:180-181) asserts the preview clears after the first right press/release abort (attempt 0 message "A015 right release aborts velocity preview").
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonPress, bandStart, Qt::RightButton,
                                     bothButtons, Qt::NoModifier);
@@ -314,7 +328,7 @@ Original expression:
 
 A016 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:194
 Disposition: MATCHED
-Mapping: interlock.swift:175 report.expect(grid.previewVelocity(seeded[1]) != nil) on second Ctrl-left upward drag (attempt == 1).
+Mapping: S014 (src/checks/rollcheck/interlock.swift:175-176) asserts a velocity preview is staged on the later Ctrl-left drag (attempt 1 message "A016 later Ctrl velocity drag stages a preview").
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandStart, Qt::LeftButton,
                                     Qt::NoButton, Qt::NoModifier);
@@ -328,7 +342,7 @@ Original expression:
 
 A017 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:200
 Disposition: MATCHED
-Mapping: interlock.swift:180 report.expect(grid.previewVelocity(seeded[1]) == nil) after second right press/release abort (attempt == 1).
+Mapping: S015 (src/checks/rollcheck/interlock.swift:180-181) asserts the preview clears after the second right press/release abort (attempt 1 message "A017 second right release aborts velocity preview").
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonPress, bandStart, Qt::RightButton,
                                     bothButtons, Qt::NoModifier);
@@ -340,7 +354,7 @@ Original expression:
 
 A018 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:204
 Disposition: MATCHED
-Mapping: interlock.swift:185 report.expect(unchanged(before)) compares MIDI bytes, undoIndex and undoCount after both velocity aborts.
+Mapping: S016 (src/checks/rollcheck/interlock.swift:185-186) compares MIDI bytes, undoIndex and undoCount after both velocity aborts.
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandStart, Qt::LeftButton,
                                     Qt::NoButton, Qt::NoModifier);
@@ -350,7 +364,7 @@ Original expression:
 
 A019 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:207
 Disposition: MATCHED
-Mapping: interlock.swift:188 report.expect(session.document.history.undoIndex == undoSlot) after all five scenarios.
+Mapping: S017 (src/checks/rollcheck/interlock.swift:188-189) asserts session.document.history.undoIndex == undoSlot after all five interlocks.
 Source context since previous assertion:
       }
 Original expression:
@@ -358,7 +372,7 @@ Original expression:
 
 A020 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:208
 Disposition: MATCHED
-Mapping: interlock.swift:190 report.expect((try? session.document.captureSave().bytes) == beforeSlot) after all five scenarios.
+Mapping: S018 (src/checks/rollcheck/interlock.swift:190-191) asserts the serialized MIDI bytes still equal the slot baseline after all five interlocks.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -367,168 +381,80 @@ Original expression:
 Remaining original source (closing sequence and helper bodies):
   }
 
-Counterpart executable predicate index
-The S entries are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid (no report.expect Swift predicates exist in these counterparts). Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+Swift assertion predicates
+The S entries are exact report.expect predicates already executed by
+runInterlockChecks in the swiftcore projectSession suite (deno task verify
+--filter swiftcore --verbose, PASS 1/14 ok, controller-recorded).
 
-S001 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:420
-Counterpart expression:
-  QSKIP("right-drag selection belongs to swiftbandkeys");
+S001 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:46
+  report.expect(seeded?.count == 2, cppID: id,
+                message: "A001 velocity fixture seeds notes A and B")
 
-S002 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:423
-Counterpart expression:
-  QVERIFY2(fixture.open(&error), qPrintable(error));
+S002 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:74
+  report.expect(freeX != nil, cppID: id, message: "A002 free draw cell exists")
 
-S003 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:425
-Counterpart expression:
-  QVERIFY2(target.has_value(), qPrintable(error));
+S003 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:104
+  report.expect(session.selectedNoteOrder.isEmpty && !grid.interactionActive,
+                cppID: id, message: "A003 blocked right click resolves as empty space")
 
-S004 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:426
-Counterpart expression:
-  QVERIFY(!target->selected);
+S004 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:107
+  report.expect(unchanged(before), cppID: id,
+                message: "A004 aborted left Move preserves MIDI bytes and undo history")
 
-S005 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:428
-Counterpart expression:
-  QVERIFY(band.has_value());
+S005 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:119
+  report.expect(session.selectedNoteOrder.isEmpty && !grid.interactionActive,
+                cppID: id, message: "A005 demoted right Band resolves as a plain clear")
 
-S006 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:430
-Counterpart expression:
-  QVERIFY(QTest::qWaitFor(
-          [&] {
-              QString ignored;
-              const auto selected = noteWithId(fixture.notes(&ignored), target->id);
-              return selected && selected->selected;
-          },
-          kSettleTimeoutMs));
+S006 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:122
+  report.expect(unchanged(before), cppID: id,
+                message: "A006 demoted Band preserves MIDI bytes and undo history")
 
-S007 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:442
-Counterpart expression:
-  QSKIP("Escape cancellation belongs to swiftbandkeys");
+S007 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:133
+  report.expect(containsAB(), cppID: id,
+                message: "A007 Band selects A and B from PendingDraw")
 
-S008 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:445
-Counterpart expression:
-  QVERIFY2(fixture.open(&error), qPrintable(error));
+S008 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:136
+  report.expect(containsAB(), cppID: id,
+                message: "A008 parked PendingDraw release retains A and B")
 
-S009 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:448
-Counterpart expression:
-  QVERIFY2(target.has_value(), qPrintable(error));
+S009 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:138
+  report.expect(unchanged(before), cppID: id,
+                message: "A009 PendingDraw interlock preserves MIDI bytes and undo history")
 
-S010 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:450
-Counterpart expression:
-  QVERIFY(band.has_value());
+S010 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:149
+  report.expect(session.selectedNoteOrder == [seeded[1]], cppID: id,
+                message: "A010 deferred Ctrl click selects exactly B")
 
-S011 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:454
-Counterpart expression:
-  QVERIFY(QTest::qWaitFor(
-          [&] {
-              QString ignored;
-              const auto selected = noteWithId(fixture.notes(&ignored), target->id);
-              return selected && selected->selected;
-          },
-          kSettleTimeoutMs));
+S011 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:159
+  report.expect(bAuditioned, cppID: id,
+                message: "A011 live right Band auditions B above zero velocity")
 
-S012 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:464
-Counterpart expression:
-  QVERIFY(QTest::qWaitFor(
-          [&] { return fixture.grid()->property("noteSummary").toString() == before; },
-          kSettleTimeoutMs));
+S012 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:163
+  report.expect(containsAB(), cppID: id,
+                message: "A012 deferred Ctrl click retains Band token through release")
 
-S013 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:467
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("lastCancelReason").toInt(), -1);
+S013 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:165
+  report.expect(unchanged(before), cppID: id,
+                message: "A013 deferred modifier interlock preserves bytes and history")
 
-S014 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:472
-Counterpart expression:
-  QVERIFY(idleItem != nullptr);
+S014 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:175
+  report.expect(grid.previewVelocity(seeded[1]) != nil, cppID: id,
+                message: attempt == 0 ? "A014 Ctrl velocity drag stages a preview" :
+                    "A016 later Ctrl velocity drag stages a preview")
 
-S015 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:475
-Counterpart expression:
-  QVERIFY(QTest::qWaitFor(
-          [&] {
-              QString ignored;
-              const auto selected = noteWithId(fixture.notes(&ignored), target->id);
-              return selected && selected->selected;
-          },
-          kSettleTimeoutMs));
+S015 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:180
+  report.expect(grid.previewVelocity(seeded[1]) == nil, cppID: id,
+                message: attempt == 0 ? "A015 right release aborts velocity preview" :
+                    "A017 second right release aborts velocity preview")
 
-S016 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:484
-Counterpart expression:
-  QVERIFY2(idleError.isEmpty(), qPrintable(idleError));
+S016 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:185
+  report.expect(unchanged(before), cppID: id,
+                message: "A018 velocity aborts preserve MIDI bytes and undo history")
 
-S017 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:489
-Counterpart expression:
-  QVERIFY(QTest::qWaitFor(
-          [&] {
-              QString ignored;
-              const auto cleared = noteWithId(fixture.notes(&ignored), target->id);
-              return cleared && !cleared->selected;
-          },
-          kSettleTimeoutMs));
+S017 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:188
+  report.expect(session.document.history.undoIndex == undoSlot, cppID: id,
+                message: "A019 all five interlocks preserve the slot undo index")
 
-S018 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:498
-Counterpart expression:
-  QVERIFY2(idleAfterError.isEmpty(), qPrintable(idleAfterError));
-
-S019 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:499
-Counterpart expression:
-  QCOMPARE(idleAfter.size(), idleBefore.size());
-
-S020 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:501
-Counterpart expression:
-  QCOMPARE(idleAfter[index].id, idleBefore[index].id);
-
-S021 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:502
-Counterpart expression:
-  QCOMPARE(idleAfter[index].tick, idleBefore[index].tick);
-
-S022 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:503
-Counterpart expression:
-  QCOMPARE(idleAfter[index].duration, idleBefore[index].duration);
-
-S023 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:504
-Counterpart expression:
-  QCOMPARE(idleAfter[index].pitch, idleBefore[index].pitch);
-
-S024 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:505
-Counterpart expression:
-  QCOMPARE(idleAfter[index].track, idleBefore[index].track);
-
-S025 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:506
-Counterpart expression:
-  QCOMPARE(idleAfter[index].velocity, idleBefore[index].velocity);
-
-S026 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:507
-Counterpart expression:
-  QVERIFY(!idleAfter[index].selected);
-
-S027 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:509
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("appliedRevisionText").toString(), idleRevision);
-
-S028 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:510
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("lastCancelReason").toInt(), idleReason);
-
-S029 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:516
-Counterpart expression:
-  QSKIP("pointer-ungrab cancellation belongs to swiftbandkeys");
-
-S030 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:519
-Counterpart expression:
-  QVERIFY2(fixture.open(&error), qPrintable(error));
-
-S031 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:522
-Counterpart expression:
-  QVERIFY2(target.has_value(), qPrintable(error));
-
-S032 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:524
-Counterpart expression:
-  QVERIFY(band.has_value());
-
-S033 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:531
-Counterpart expression:
-  QVERIFY(QTest::qWaitFor(
-          [&] {
-              return fixture.grid()->property("lastCancelReason").toInt() == 1 &&
-                     fixture.grid()->property("noteSummary").toString() == before;
-          },
-          kSettleTimeoutMs));
+S018 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:190
+  report.expect((try? session.document.captureSave().bytes) == beforeSlot, cppID: id,
+                message: "A020 all five interlocks preserve slot MIDI bytes")
