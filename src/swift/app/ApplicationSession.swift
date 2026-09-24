@@ -864,6 +864,11 @@ public struct EditorCommandRouter {
             return
         }
         if command == .delete && automation.consumeHoverDelete() { return }
+        if command == .pencilMode {
+            grid.performCommand(command: command.rawValue)
+            automation.isPencilMode = grid.pencilMode
+            return
+        }
         // Note and standalone commands keep their existing grid executor.
         // Clipboard paste above is document-wide, never selected by focus.
         grid.performCommand(command: command.rawValue)

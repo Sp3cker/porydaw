@@ -7,6 +7,10 @@ Swift counterpart: src/checks/automation/automationactions.swift
 Swift SHA-256: d00e05534bcb9e621426c20fbe36aca9d386c8fb906c735901b97509f866fea1
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
 Swift SHA-256: d70079064b3497280fc052f594e9d53e374cd8b65e2e902a92abb83f82727e44
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
+Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
+Swift SHA-256: 1815b25fa9324fe0c694879db826643105c7fc5563408e0335dbe1d21f91159e
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,15 +27,22 @@ The original swiftcore suite entrypoints invoke these paired functions in their 
 order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
 VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
+The shortcut-delivery predicates S028-S029 execute from runKeybindingRegistryChecks
+(src/checks/keyboard/KeybindingRegistryChecks.swift) through runProjectSessionSuite
+(SessionChecks.swift:11, swiftcore lane) and through the shellwindow lane bootstrap
+(ShellQmlTests.swift:169, reached from test_aKeymapNativeSettingsSeeds at
+tst_ShellWindow.qml:181). S030-S034 execute in the shellwindow lane as
+test_fPencilLatchTextAndSpaceOwnership over the same tst_ShellWindow.qml.
 
 Verification evidence
-Command: deno task verify --filter swiftcore --verbose. Result: build: ok (0.13s); ok:
-swiftcore (9.85s) — ********* Finished testing of SwiftCoreTest *********; verify: 1/14 ok
-(9.87s, 13 skipped); run_checks: PASS (all harnesses in 9.87s). The controller ran it in
-this worktree on HEAD 19aca868 plus the uncommitted automationcanvasediting.swift,
-AutomationPageChecks.swift, automationpointmenus.swift and automationtaptempo.swift edits,
-and supplied the banner; the ledger agent did not run it. That snapshot is the one pinned
-above. The legacy automation C++ harness is retired, so this file is an
+Command: deno task verify --filter swiftcore --verbose. Result: PASS — build ok (0.15s);
+ok swiftcore (10.38s); verify 1/6 ok (5 skipped); run_checks PASS. Controller-run on the
+frozen tree pinned by the hashes above; the ledger agent did not run it.
+Command: deno task verify:shell --filter shellwindow --verbose. Result: PASS — build ok
+(0.16s); ok shellwindow (3.74s); verify 1/11 ok (10 skipped); run_checks PASS.
+Controller-run on the same frozen tree; the ledger agent did not run it. The shellwindow
+lane executes the tst_ShellWindow.qml rows cited by S030-S034 and re-runs
+runKeybindingRegistryChecks (S028/S029, S035) through ShellQmlTests.registryFailures. The legacy automation C++ harness is retired, so this file is an
 assertion-obligation inventory, never current execution evidence for the C++ original.
 Converted-window command: deno task verify:qml --verbose.
 drawerAutomationProjectionInsertionAndPencilClick (automationactions.swift:98) is called at
@@ -40,7 +51,7 @@ AutomationPageChecks.swift:380, and executes under cppID
 automation/AutomationEditingTest::projectionInsertionTiming and cppID
 automation/AutomationEditingTest::pencilClickHalfOpenQuantization. Its indexed statements
 are S020-S027 below.
-Disposition tally: MATCHED 14, PARTIAL 10, GAP 22, NATIVE 5, RETIRED-REPRESENTATION 2
+Disposition tally: MATCHED 34, PARTIAL 11, GAP 1, NATIVE 5, RETIRED-REPRESENTATION 2
 (53 sites).
 
 Fixture, sequence, data-row and loop inventory
@@ -53,128 +64,128 @@ src/checks/automation/automationactions.cpp:143 | for (const LaneHandle lane : {
 Original assertion inventory
 
 A001 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:35
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the converted drawer publishes no QAction object or shortcut binding, so no automation-lane Swift predicate can observe this site; window shortcut delivery is owned by the keybindings lane, and the page isPencilMode flag alone is not the original observation.
+Disposition: MATCHED
+Mapping/reason: S028 asserts the shipped fixed catalogue registers the automation.pencil_mode command with its editor-routed delivery scope (registry.scope precondition-fails on an unknown id, so the equality proves the binding exists); binding availability stands in for the site non-null QAction guard, and no QAction object or pointer identity is claimed. [S028]
 Original expression:
   QVERIFY(action)
 
 A002 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:37
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): no Swift predicate decodes the action shortcut key; the fixed-catalogue binding is owned by the keybindings lane.
+Disposition: MATCHED
+Mapping/reason: S029 asserts registry.sequences(automation.pencil_mode) resolves to exactly one unmodified B stroke ([QtKeyCode.b.rawValue]), the shipped binding decoding to a real key rather than Qt::Key_unknown; the C++ read-back QKeyCombination is not reproduced. [S029]
 Original expression:
   QVERIFY(shortcut.key() != Qt::Key_unknown)
 
 A003 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:41
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): no automation-lane Swift predicate observes the shortcut press latching pencil mode.
+Disposition: MATCHED
+Mapping/reason: S030 asserts a B press delivered to the focused roll turns BOTH grid.pencilMode and automation.isPencilMode true from the verified-false start state, the same production sync that mirrors the grid flag onto the automation page (ApplicationSession.swift:867-871); this site reads that latch back from the action. [S030]
 Original expression:
   QVERIFY(action->isChecked())
 
 A004 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:43
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the checked latch surviving the key release is undelivered in this lane.
+Disposition: MATCHED
+Mapping/reason: S031 asserts the B release keeps BOTH grid.pencilMode and automation.isPencilMode true, the checked latch surviving the release that this site reads back. [S031]
 Original expression:
   QVERIFY(action->isChecked())
 
 A005 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:46
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the second press unlatching pencil mode is undelivered in this lane.
+Disposition: MATCHED
+Mapping/reason: S032 asserts the second B press turns BOTH grid.pencilMode and automation.isPencilMode false again, the unlatch this site reads back. [S032]
 Original expression:
   QVERIFY(!action->isChecked())
 
 A006 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:48
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the unlatched state surviving the second release is undelivered in this lane.
+Disposition: MATCHED
+Mapping/reason: S032 asserts the second B release keeps BOTH flags false, the unlatched state surviving the second release that this site reads back. [S032]
 Original expression:
   QVERIFY(!action->isChecked())
 
 A007 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:54
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the text-immunity scenario reads the same undelivered action object.
+Disposition: MATCHED
+Mapping/reason: S028 asserts the same shipped automation.pencil_mode catalogue binding exists with its editor-routed scope; the text-immunity scenario reads the same binding, and no QAction object or pointer identity is claimed. [S028]
 Original expression:
   QVERIFY(action)
 
 A008 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:56
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): no Swift predicate decodes the shortcut key in the text-immunity scenario.
+Disposition: MATCHED
+Mapping/reason: S029 asserts the same single unmodified B stroke for automation.pencil_mode, the key this text-immunity scenario decodes. [S029]
 Original expression:
   QVERIFY(shortcut.key() != Qt::Key_unknown)
 
 A009 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:62
-Disposition: GAP
-Mapping/reason: GAP (native focus chain): the original waits for the standalone QLineEdit to take focus; the converted lane owns no focus item and no Swift predicate observes focus routing.
+Disposition: MATCHED
+Mapping/reason: S033 asserts the real text probe created under the production window reaches activeFocus (:588) before B is delivered, the focus establishment this QTRY waits for; both layers use a test-owned text input. [S033]
 Original expression:
   QTRY_VERIFY(editor.hasFocus())
 
 A010 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:66
-Disposition: GAP
-Mapping/reason: GAP (host text-input delivery): the delivered character reaching the focused QLineEdit is host input routing with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: S033 asserts the delivered B reaches the focused text probe and is kept as its typed b, the same delivered-character observation. [S033]
 Original expression:
   QCOMPARE(editor.text(), QStringLiteral("b"))
 
 A011 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:67
-Disposition: GAP
-Mapping/reason: GAP (host shortcut suppression): the shortcut not latching while the line edit owns focus is native text-input routing, owned by the host/keybindings lane; no automation-lane predicate observes it.
+Disposition: MATCHED
+Mapping/reason: S033 asserts that while the text probe owns focus the same B press leaves BOTH grid.pencilMode and automation.isPencilMode false, the shortcut suppression this site reads back; the numeric prompt rows S034 assert the same for the velocity input. [S033][S034]
 Original expression:
   QVERIFY(!action->isChecked())
 
 A012 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:73
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the auto-repeat scenario reads the same undelivered action object.
+Disposition: MATCHED
+Mapping/reason: S028 asserts the same shipped automation.pencil_mode catalogue binding exists with its editor-routed scope; the auto-repeat scenario reads the same binding, and no QAction object or pointer identity is claimed. [S028]
 Original expression:
   QVERIFY(action)
 
 A013 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:75
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): no Swift predicate decodes the shortcut key in the auto-repeat scenario.
+Disposition: MATCHED
+Mapping/reason: S029 asserts the same single unmodified B stroke for automation.pencil_mode, the key this auto-repeat scenario decodes. [S029]
 Original expression:
   QVERIFY(shortcut.key() != Qt::Key_unknown)
 
 A014 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:79
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the press latching pencil mode is undelivered in this lane.
+Disposition: MATCHED
+Mapping/reason: S030 asserts the B press latches BOTH grid.pencilMode and automation.isPencilMode true, the press latch this held-key scenario reads back before its 510 ms wait. [S030]
 Original expression:
   QVERIFY(action->isChecked())
 
 A015 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:83
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the auto-repeat press/release pair leaving the latch checked is undelivered in this lane.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S031 holds B for 520 ms without release and asserts both grid.pencilMode and automation.isPencilMode stay true; unproved: the synthetic auto-repeat pair itself, because QTest cannot set QKeyEvent.isAutoRepeat, so neither lane synthesizes the autorep press/release this site delivers and only the un-synthesized hold is observed. [S031]
 Original expression:
   QVERIFY(action->isChecked())
 
 A016 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:86
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the real release leaving the latch checked is undelivered in this lane.
+Disposition: MATCHED
+Mapping/reason: S031 asserts the real B release after the 520 ms hold leaves BOTH grid.pencilMode and automation.isPencilMode true, the release behaviour this site reads back. [S031]
 Original expression:
   QVERIFY(action->isChecked())
 
 A017 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:97
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the held-key scenario reads the same undelivered action object.
+Disposition: MATCHED
+Mapping/reason: S028 asserts the same shipped automation.pencil_mode catalogue binding exists with its editor-routed scope; the held-key scenario reads the same binding, and no QAction object or pointer identity is claimed. [S028]
 Original expression:
   QVERIFY(action)
 
 A018 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:99
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): no Swift predicate decodes the shortcut key in the held-key scenario.
+Disposition: MATCHED
+Mapping/reason: S029 asserts the same single unmodified B stroke for automation.pencil_mode, the key this held-key scenario decodes. [S029]
 Original expression:
   QVERIFY(shortcut.key() != Qt::Key_unknown)
 
 A019 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:103
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the latch before the 510 ms held key is undelivered in this lane.
+Disposition: MATCHED
+Mapping/reason: S030 asserts a B press from the verified-false start state latches BOTH grid.pencilMode and automation.isPencilMode true, the latch this scenario establishes before its 510 ms wait. [S030]
 Original expression:
   QVERIFY(action->isChecked())
 
 A020 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:106
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the latch surviving the 510 ms held key is undelivered in this lane.
+Disposition: MATCHED
+Mapping/reason: S031 asserts the latch survives the 520 ms held key (both flags still true after wait(520)) and that the following release keeps them true, the 510 ms hold behaviour this site reads back. [S031]
 Original expression:
   QVERIFY(action->isChecked())
 
 A021 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:110
-Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): re-latching after the key is toggled off and pressed again is undelivered in this lane.
+Disposition: MATCHED
+Mapping/reason: S030 asserts a fresh B press from the verified-false start state re-latches BOTH grid.pencilMode and automation.isPencilMode true, which is this forced-off re-press observation; the intervening toggle cycle of the same test is asserted by S032 (second B press and release leave both flags false). [S030][S032]
 Original expression:
   QVERIFY(action->isChecked())
 
@@ -198,7 +209,7 @@ Original expression:
 
 A025 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:119
 Disposition: GAP
-Mapping/reason: GAP (shortcut delivery owned by the keybindings lane): the latch after the delivered pointer press/release is undelivered; the pointer half is exercised by S009 and S011 in this lane, the shortcut half is owned by the keybindings lane.
+Mapping/reason: The keyboard half of this conjunction is now asserted (S030/S031 hold B and keep BOTH grid.pencilMode and automation.isPencilMode latched), but no predicate delivers a pointer press/release under the held B, so the pointer half is unexercised and the conjunction stays unproved.
 Original expression:
   QVERIFY(action->isChecked())
 
@@ -528,3 +539,74 @@ Swift expression:
   report.expectEqual([72], biased.lanePoints(biased.panLane)
       .filter { $0.tick == cell.tickBegin }.map(\.value),
       cppID: clickID, what: "a late-cell click still writes at the half-open cell begin")
+
+S028 | runKeybindingRegistryChecks (deliveryScopes) | src/checks/keyboard/KeybindingRegistryChecks.swift:92
+Swift expression:
+  for row in scopeRows {
+      onAssertion(registry.scope(row.id) == row.expected, deliveryScopes, row.id)
+  }
+      with the row ("automation.pencil_mode", .editorRouted) at :87; registry.scope
+      precondition-fails on an unknown id, so this equality asserts both the shipped
+      binding's presence and its editor-routed delivery scope.
+      cppID: KeymapCheckTest::deliveryScopes.
+
+S029 | runKeybindingRegistryChecks (deliveryScopes) | src/checks/keyboard/KeybindingRegistryChecks.swift:105
+Swift expression:
+  onAssertion(
+      registry.sequences("automation.pencil_mode").map(\.strokes) ==
+          [[QtKeyCode.b.rawValue]],
+      deliveryScopes,
+      "Pencil Mode keeps unmodified B")
+      with the defaultMatching row ("automation-pencil", "automation.pencil_mode",
+      QtKeyCode.b.rawValue, QtKeyboardModifier.none.rawValue, true) at :122 asserting
+      registry.matches(0x42, 0, "automation.pencil_mode"). cppID: KeymapCheckTest::deliveryScopes.
+
+S030 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:558
+Swift expression:
+  keyPress(Qt.Key_B) with tryCompare(grid, "pencilMode", true, 3000) at :559 and
+  tryCompare(automation, "isPencilMode", true, 3000) at :560, after
+  compare(grid.pencilMode, false) and compare(automation.isPencilMode, false) at :554-555
+  establish the off state; automation is session.automationPage().
+
+S031 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:561
+Swift expression:
+  wait(520); compare(grid.pencilMode, true, "the pencil latch survives the B hold without release") at
+  :562; compare(automation.isPencilMode, true, "holding B preserves automation pencil mode")
+  at :563; keyRelease(Qt.Key_B) at :564; compare(grid.pencilMode, true, "releasing B keeps
+  the pencil latched") at :565 and compare(automation.isPencilMode, true, "releasing B keeps
+  automation pencil latched") at :566.
+
+S032 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:575
+Swift expression:
+  keyPress(Qt.Key_B) at :575 with tryCompare(grid, "pencilMode", false, 3000) at :576 and
+  tryCompare(automation, "isPencilMode", false, 3000) at :577; keyRelease(Qt.Key_B) at :578;
+  compare(grid.pencilMode, false, "releasing the second B preserves the off state") at :579
+  and compare(automation.isPencilMode, false, "releasing the second B preserves the
+  automation off state") at :580-581.
+
+S033 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:587
+Swift expression:
+  textProbe.forceActiveFocus(Qt.OtherFocusReason) at :587 with
+  tryCompare(textProbe, "activeFocus", true, 3000) at :588; keyClick(Qt.Key_B) at :589;
+  compare(textProbe.text.toLowerCase(), "b", "text focus keeps its typed B") at :590;
+  compare(grid.pencilMode, false, "text-field B never enables the pencil") at :591 and
+  compare(automation.isPencilMode, false, "text-field B never changes automation pencil
+  mode") at :592-593.
+
+S034 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:601
+Swift expression:
+  var field = findChild(surface, "noteVelocityInput") at :599 with
+  tryCompare(field, "activeFocus", true, 3000) at :601; keyClick(Qt.Key_B) at :603;
+  compare(field.text, numericText, "numeric text rejects the nonnumeric B") at :604;
+  compare(grid.pencilMode, false, "numeric B never reaches the pencil shortcut") at :605 and
+  compare(automation.isPencilMode, false, "numeric B never changes automation pencil mode")
+  at :606-607.
+
+S035 | test_aKeymapNativeSettingsSeeds (shellwindow lane) | src/checks/editorqml/tst_ShellWindow.qml:181
+Swift expression:
+  var failures = bootstrap.registryFailures();
+  compare(failures.length, 0, "the complete native keymap assertions: " + failures.join("; "))
+      ShellQmlBootstrap.registryFailures (ShellQmlTests.swift:169) runs
+      runKeybindingRegistryChecks and collects every failed assertion, so this row is the
+      shellwindow lane's execution binding for S028/S029; the swiftcore lane runs the same
+      predicates through runProjectSessionSuite (SessionChecks.swift:11).

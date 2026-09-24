@@ -194,9 +194,16 @@ ApplicationWindow {
             objectName: "shellEditMenu"
             title: qsTr("&Edit")
             onAboutToShow: ++root.actionRevision
-            MenuSeparator {}
+            Component.onCompleted: {
+                editTopItems.active = true
+                editClipboardItems.active = true
+                editNotesItems.active = true
+                editTailItems.active = true
+            }
             Instantiator {
-                model: shell.editActionIds
+                id: editTopItems
+                active: false
+                model: shell.editTopActionIds
                 delegate: MenuItem {
                     required property string modelData
                     objectName: "shellAction_" + modelData
@@ -207,7 +214,107 @@ ApplicationWindow {
                     }
                     onTriggered: shell.activate(modelData)
                 }
-                onObjectAdded: (index, object) => editMenu.insertItem(index < 2 ? index : index + 1, object)
+                onObjectAdded: (index, object) => editMenu.insertItem(index, object)
+                onObjectRemoved: (index, object) => editMenu.removeItem(object)
+            }
+            MenuSeparator { objectName: "shellEditSectionSeparator" }
+            Instantiator {
+                id: editClipboardItems
+                active: false
+                model: shell.editClipboardActionIds
+                delegate: MenuItem {
+                    required property string modelData
+                    objectName: "shellAction_" + modelData
+                    text: root.nativeMenuText(modelData)
+                    enabled: {
+                        root.actionRevision
+                        return shell.actionEnabled(modelData)
+                    }
+                    onTriggered: shell.activate(modelData)
+                }
+                onObjectAdded: (index, object) =>
+                    editMenu.insertItem(shell.editTopActionIds.length + 1 + index, object)
+                onObjectRemoved: (index, object) => editMenu.removeItem(object)
+            }
+            Menu {
+                id: timeMenu
+                objectName: "shellTimeMenu"
+                title: qsTr("&Time")
+                onAboutToShow: ++root.actionRevision
+                Instantiator {
+                    model: shell.timeActionIds
+                    delegate: MenuItem {
+                        required property string modelData
+                        objectName: "shellAction_" + modelData
+                        text: root.nativeMenuText(modelData)
+                        enabled: {
+                            root.actionRevision
+                            return shell.actionEnabled(modelData)
+                        }
+                        onTriggered: shell.activate(modelData)
+                    }
+                    onObjectAdded: (index, object) => timeMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => timeMenu.removeItem(object)
+                }
+            }
+            Instantiator {
+                id: editNotesItems
+                active: false
+                model: shell.editNotesActionIds
+                delegate: MenuItem {
+                    required property string modelData
+                    objectName: "shellAction_" + modelData
+                    text: root.nativeMenuText(modelData)
+                    enabled: {
+                        root.actionRevision
+                        return shell.actionEnabled(modelData)
+                    }
+                    onTriggered: shell.activate(modelData)
+                }
+                onObjectAdded: (index, object) =>
+                    editMenu.insertItem(shell.editTopActionIds.length
+                                        + shell.editClipboardActionIds.length + 2 + index, object)
+                onObjectRemoved: (index, object) => editMenu.removeItem(object)
+            }
+            Menu {
+                id: tracksMenu
+                objectName: "shellTracksMenu"
+                title: qsTr("Tr&acks")
+                onAboutToShow: ++root.actionRevision
+                Instantiator {
+                    model: shell.tracksActionIds
+                    delegate: MenuItem {
+                        required property string modelData
+                        objectName: "shellAction_" + modelData
+                        text: root.nativeMenuText(modelData)
+                        enabled: {
+                            root.actionRevision
+                            return shell.actionEnabled(modelData)
+                        }
+                        onTriggered: shell.activate(modelData)
+                    }
+                    onObjectAdded: (index, object) => tracksMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => tracksMenu.removeItem(object)
+                }
+            }
+            Instantiator {
+                id: editTailItems
+                active: false
+                model: shell.editTailActionIds
+                delegate: MenuItem {
+                    required property string modelData
+                    objectName: "shellAction_" + modelData
+                    text: root.nativeMenuText(modelData)
+                    enabled: {
+                        root.actionRevision
+                        return shell.actionEnabled(modelData)
+                    }
+                    onTriggered: shell.activate(modelData)
+                }
+                onObjectAdded: (index, object) =>
+                    editMenu.insertItem(shell.editTopActionIds.length
+                                        + shell.editClipboardActionIds.length
+                                        + shell.editNotesActionIds.length + 3 + index, object)
                 onObjectRemoved: (index, object) => editMenu.removeItem(object)
             }
         }
