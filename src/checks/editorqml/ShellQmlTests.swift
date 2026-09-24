@@ -82,6 +82,8 @@ enum ShellQmlLane {
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-voicegroup", inputFileName: "tst_ShellVoicegroup.qml",
               fixtureFiles: songs("mus_route101")),
+        Entry(name: "shell-settings", inputFileName: "tst_ShellSettings.qml",
+              fixtureFiles: songs("mus_route101")),
     ]
 
     private static var manifestLine: String {
@@ -296,6 +298,26 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
             .appendingPathComponent("transport-font\(fontPx).png").path
     }
 
+    public func settingsReferenceJson(profile: String, page: String) -> String {
+        guard ["macos-dpr1-font12", "macos-dpr2-font16"].contains(profile),
+              ["engine", "song"].contains(page) else { return "" }
+        let path = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
+            .deletingLastPathComponent()
+            .appendingPathComponent("fixtures/visual/\(profile)/settings/\(page)-vanilla.json")
+        return (try? String(contentsOf: path, encoding: .utf8)) ?? ""
+    }
+    public func settingsCapturePath(page: String, fontPx: Int) -> String {
+        URL(fileURLWithPath: projectRoot, isDirectory: true)
+            .appendingPathComponent("settings-\(page)-font\(fontPx).png").path
+    }
+
+    public func settingsSavedFlags() -> String {
+        let path = URL(fileURLWithPath: projectRoot, isDirectory: true)
+            .appendingPathComponent("sound/songs/midi/midi.cfg")
+        guard let text = try? String(contentsOf: path, encoding: .utf8) else { return "" }
+        return text.components(separatedBy: .newlines)
+            .first(where: { $0.hasPrefix("mus_route101.mid:") }) ?? ""
+    }
     /// The full native keymap assertions run only after QML has written the
     /// four original values to the genuine QtCore.Settings user store.
     public func registryFailures() -> [String] {

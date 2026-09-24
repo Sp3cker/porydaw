@@ -202,6 +202,10 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         MainActor.assumeIsolated {
             runPolyphonyPanelChecks(boxedPolyphony.report)
         }
+        let boxedSettings = ReportBox(report)
+        MainActor.assumeIsolated {
+            runEngineSettingsChecks(boxedSettings.report)
+        }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

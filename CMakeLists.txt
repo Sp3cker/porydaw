@@ -392,10 +392,27 @@ set(shell_qml
     src/ui/shell/PolyphonyPanel.qml
     src/ui/shell/PolyphonyChannelGroup.qml
 )
+set(shell_settings_qml
+    src/ui/shell/settings/SettingsDialog.qml
+    src/ui/shell/settings/EngineSettingsPage.qml
+    src/ui/shell/settings/SongSettingsPage.qml
+)
 set_source_files_properties(${shell_qml} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-qt_add_executable(porydaw ${shell_qml} resources/fonts.qrc)
+set_source_files_properties(${shell_qml} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+qt_add_executable(porydaw ${shell_qml} ${shell_settings_qml} resources/fonts.qrc)
 if(NOT APPLE)
     target_sources(porydaw PRIVATE src/app/qt_main_executor.cpp)
+endif()
+if(APPLE)
+    # Named builds (build:app/build:checks) do not run CMake's bundle-content
+    # copy rules. Keep the relative "settings" import staged for those builds.
+    add_custom_target(stage_settings_qml
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/shell/settings"
+                "$<TARGET_BUNDLE_CONTENT_DIR:porydaw>/Resources/settings"
+        DEPENDS ${shell_settings_qml}
+        VERBATIM)
+    add_dependencies(porydaw stage_settings_qml)
 endif()
 if(NOT APPLE)
     foreach(qml IN LISTS shell_qml)

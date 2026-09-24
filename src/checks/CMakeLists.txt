@@ -72,6 +72,7 @@ if(APPLE)
         keyboard/tst_velocityaxis.swift
         keyboard/tst_velocitygesture.swift
         keyboard/KeybindingRegistryChecks.swift
+        keyboard/EngineSettingsChecks.swift
         themecolor/ThemeColorChecks.swift
         editcheck/tst_songdocument_songraw.swift
         editcheck/tst_songdocument_runner.swift

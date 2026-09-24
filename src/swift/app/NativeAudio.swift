@@ -16,6 +16,7 @@ public enum NativeAudioError: Error, Equatable {
 public final class NativeAudio {
     nonisolated(unsafe) private let device: AudioDevice
     private var bankLease: NativeBankLease?
+    private var engineSettings = AudioSettings()
 
     public init() throws {
         do {
@@ -57,7 +58,7 @@ public final class NativeAudio {
 
     public func bind(timeline: PlaybackTimeline, bank: NativeBankLease,
                      config: SongConfig) throws {
-        try bind(timeline: timeline, bank: bank, settings: Self.settings(for: config))
+        try bind(timeline: timeline, bank: bank, settings: settings(for: config))
     }
 
     public func bind(timeline: PlaybackTimeline, bank: NativeBankLease,
@@ -86,7 +87,12 @@ public final class NativeAudio {
     }
 
     public func updateSettings(config: SongConfig) {
-        updateSettings(Self.settings(for: config))
+        updateSettings(settings(for: config))
+    }
+
+    public func setEngineSettings(_ engine: EngineSettings, config: SongConfig?) {
+        engine.apply(to: &engineSettings)
+        if let config, songLoaded { updateSettings(config: config) }
     }
 
     public func updateVoicegroup(_ bank: NativeBankLease) throws {
@@ -143,8 +149,8 @@ public final class NativeAudio {
 
     public func auditionSampleOff() { device.renderer.audition.sampleOff() }
 
-    private static func settings(for config: SongConfig) -> AudioSettings {
-        var settings = AudioSettings()
+    private func settings(for config: SongConfig) -> AudioSettings {
+        var settings = engineSettings
         settings.songVolume = UInt8(clamping: config.masterVolume)
         settings.reverb = UInt8(clamping: config.reverb ?? 50)
         return settings
