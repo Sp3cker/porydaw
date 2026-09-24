@@ -333,6 +333,7 @@ if(APPLE)
     add_library(shell_qml_lane STATIC
         editorqml/ShellQmlTests.swift
         editorqml/GridInputClipProbe.swift
+        editorqml/GatedVisualsProbe.swift
         keyboard/KeybindingRegistryChecks.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
     )

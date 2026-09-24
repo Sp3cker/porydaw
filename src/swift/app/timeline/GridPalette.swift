@@ -99,6 +99,7 @@ public enum PaletteMath {
         let a = (base.a * alpha + 127) / 255
         return hex(r: base.r, g: base.g, b: base.b, a: a)
     }
+
     public static func noteFill(track: Int, velocity: Int, zeroColor: String) -> String {
         let v = min(127, max(0, velocity))
         if v == 0 { return zeroColor }
