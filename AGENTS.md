@@ -105,6 +105,11 @@ deno task format [--check] [files...]
 
 Swift LSP (sourcekit-lsp) has no background indexing: run `deno task lsp:swift` after CMake reconfigures or Swift edits — stale references/rename lie silently, and rename needs `timeout >= 120` cold. References empty while hover works means the server predates the index: kill the `sourcekit-lsp` processes; the next query cold-starts.
 
+Proof ledgers (`src/checks/**/proof.*.txt`) are per-surface specs, not a
+work stream. Follow `.omp/rules/proof-ledger-workflow.md`: build one Swift/QML
+surface at a time; edit only its rows, in the commit whose code and checks
+prove them. No standalone reconciliation, re-pinning, or gap-closing passes.
+
 ### Windows toolchain and launch
 
 Windows builds use MSVC: the `msvc2022_64` Qt kit and a Visual Studio
