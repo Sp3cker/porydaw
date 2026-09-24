@@ -29,6 +29,7 @@ add_library(PorydawApp STATIC
     roll/GridScene.swift
     roll/NoteCommands.swift
     timeline/EditorCamera.swift
+    timeline/TimelineScrollbar.swift
     timeline/DocumentProjectionCache.swift
     timeline/PlayheadGuides.swift
     timeline/SharedPlayhead.swift

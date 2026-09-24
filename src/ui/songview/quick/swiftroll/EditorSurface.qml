@@ -21,6 +21,7 @@ Item {
                                             && Window.window.visible && Window.window.active
     onHintWindowActiveChanged: hintService.setWindowActive(hintWindowActive)
     readonly property real timelineSplitX: headersModel.trackHeaderWidth + gridModel.keyboardWidth
+    readonly property real scrollbarBreadth: headersModel.scrollbarWidth
     readonly property int noteCount: gridModel.renderedNoteCount
     readonly property var timeSigHost: applicationSession.timeSigHost
     property point timeSigMenuPosition: Qt.point(0, 0)
@@ -117,7 +118,8 @@ Item {
         id: rollBandContent
         objectName: "swiftRollBand"
         width: root.width
-        height: Math.max(root.height - editorDrawer.height - hintStatus.height, 0)
+        height: Math.max(root.height - editorDrawer.height - hintStatus.height
+                         - root.scrollbarBreadth, 0)
         z: 1
 
         Original.TrackHeaderBand {
@@ -136,7 +138,7 @@ Item {
         Item {
             id: rollStack
             x: root.headersModel.trackHeaderWidth
-            width: Math.max(parent.width - x, 0)
+            width: Math.max(parent.width - x - root.scrollbarBreadth, 0)
             height: parent.height
             clip: true
 
@@ -420,6 +422,64 @@ Item {
         }
     }
 
+    // Keep the timeline row below the drawer; its value is owned by the Swift
+    // camera and the control only requests a new scroll position.
+    Original.TimelineScrollbar {
+        id: horizontalScrollBar
+        objectName: "timelineHorizontalScrollBar"
+        z: 2
+        x: root.timelineSplitX
+        y: root.height - hintStatus.height - height
+        width: Math.max(root.width - x, 0)
+        height: root.scrollbarBreadth
+        orientation: Qt.Horizontal
+        minimum: root.gridModel.cameraMinHScroll
+        maximum: root.gridModel.cameraMaxHScroll
+        value: root.gridModel.cameraScrollX
+        pageStep: rollPlot.width
+        singleStep: 1
+        minimumThumbLength: root.headersModel.scrollbarMinimumThumbHeight
+        accessibleName: qsTr("Timeline")
+        handleColor: root.headersModel.appearance.scrollbarHandle
+        handleHoverColor: root.headersModel.appearance.scrollbarHandleHover
+        visibleWhenNotScrollable: true
+        thumbObjectName: "timelineHorizontalScrollThumb"
+
+        onValueRequested: (value) => root.gridModel.setCameraHScroll(value)
+        onWheelRequested: (pixelX, pixelY, angleX, angleY, inverted) =>
+                              root.gridModel.scrollHorizontalByWheel(
+                                  pixelX, pixelY, angleX, angleY,
+                                  Qt.styleHints.wheelScrollLines)
+    }
+
+    Original.TimelineScrollbar {
+        id: rollScrollBar
+        objectName: "timelineRollScrollBar"
+        z: 2
+        x: rollStack.x + rollStack.width
+        y: rollPlot.y
+        width: root.scrollbarBreadth
+        height: rollPlot.height
+        orientation: Qt.Vertical
+        minimum: 0
+        maximum: root.gridModel.cameraMaxVScroll
+        value: root.gridModel.cameraScrollY
+        pageStep: rollPlot.height
+        singleStep: 1
+        minimumThumbLength: root.headersModel.scrollbarMinimumThumbHeight
+        accessibleName: qsTr("Piano roll")
+        handleColor: root.headersModel.appearance.scrollbarHandle
+        handleHoverColor: root.headersModel.appearance.scrollbarHandleHover
+        visibleWhenNotScrollable: true
+        thumbObjectName: "timelineRollScrollThumb"
+
+        onValueRequested: (value) => root.gridModel.setCameraVScroll(value)
+        onWheelRequested: (pixelX, pixelY, angleX, angleY, inverted) =>
+                              root.gridModel.scrollVerticalByWheel(
+                                  pixelX, pixelY, angleX, angleY,
+                                  Qt.styleHints.wheelScrollLines)
+    }
+
     Loader {
         id: headerMenuLoader
         anchors.fill: parent
@@ -587,7 +647,7 @@ Item {
         id: editorDrawer
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: hintStatus.top
+        anchors.bottom: horizontalScrollBar.top
         z: 2
 
         applicationSession: root.applicationSession
@@ -639,9 +699,11 @@ Item {
                                          root.gridModel.baseFontPx, dpr)
         root.headersModel.configureViewport(trackHeaders.width, trackHeaders.height,
                                             root.gridModel.baseFontPx, dpr)
-        // Every drawer plot shares the roll's timeline split, leaving the full
-        // header-plus-keyboard gutter for the automation parameter labels.
-        root.drawerPresenter.configureLayout(root.width, Math.max(0, root.height - hintStatus.height),
+        // Drawer plots share the roll viewport, not the scrollbar strips;
+        // the container still spans the full surface behind that chrome.
+        root.drawerPresenter.configureLayout(Math.max(0, root.width - root.scrollbarBreadth),
+                                             Math.max(0, root.height - hintStatus.height
+                                                      - root.scrollbarBreadth),
                                              root.timelineSplitX,
                                              root.gridModel.baseFontPx,
                                              applicationFontMetrics.lineSpacing)

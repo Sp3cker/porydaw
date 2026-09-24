@@ -90,6 +90,8 @@ public final class PianoGrid {
     @QtTracked public var cameraScrollX = 0.0
     @QtTracked public var cameraScrollY = 0.0
     @QtTracked public var cameraMaxVScroll = 0.0
+    @QtTracked public var cameraMinHScroll = 0.0
+    @QtTracked public var cameraMaxHScroll = 0.0
     @QtTracked public var keyboardWidth = 56.0
     @QtTracked public var trackHeaderWidth = fontPx(GridCameraPolicy.seedBaseFontPx, 17.5)
     @QtTracked public var rulerHeight = 0.0
@@ -303,6 +305,24 @@ public final class PianoGrid {
 
     public func setCameraVScroll(value: Double) {
         session.mutateCamera { _ = $0.setVScroll(value) }
+    }
+
+    public func scrollHorizontalByWheel(pixelX: Double, pixelY: Double,
+                                        angleX: Double, angleY: Double,
+                                        wheelScrollLines: Double) {
+        let delta = TimelineScrollbar.wheelDips(
+            horizontal: true, pixelX: pixelX, pixelY: pixelY,
+            angleX: angleX, angleY: angleY, wheelScrollLines: wheelScrollLines)
+        session.mutateCamera { _ = $0.scrollByPx(delta) }
+    }
+
+    public func scrollVerticalByWheel(pixelX: Double, pixelY: Double,
+                                      angleX: Double, angleY: Double,
+                                      wheelScrollLines: Double) {
+        let delta = TimelineScrollbar.wheelDips(
+            horizontal: false, pixelX: pixelX, pixelY: pixelY,
+            angleX: angleX, angleY: angleY, wheelScrollLines: wheelScrollLines)
+        session.mutateCamera { _ = $0.scrollRollBy(delta) }
     }
 
     public func handleWheel(angleDeltaX: Double, angleDeltaY: Double,
@@ -1004,6 +1024,8 @@ public final class PianoGrid {
         cameraScrollX = snapshot.scrollX
         cameraScrollY = snapshot.scrollY
         cameraMaxVScroll = snapshot.maxVScroll
+        cameraMinHScroll = snapshot.minHScroll
+        cameraMaxHScroll = snapshot.maxHScroll
         keyboardWidth = metrics.keyboardWidth
         trackHeaderWidth = fontPx(baseFontPx, 17.5)
         ticksPerBeat = Int(max(1, session.document.ticksPerBeat))

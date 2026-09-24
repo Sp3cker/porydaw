@@ -200,16 +200,16 @@ Original expression:
   QVERIFY(roll->plotRect.right() < verticalRect.left() + kTolerance);
 
 A014 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:67
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/scrollbar/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_tracksFollowViewportAndCamera asserts the mounted horizontal track and rendered thumb are visible; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(bar(Qt::Horizontal).isVisible() && thumb(Qt::Horizontal).isVisible());
 
 A015 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:68
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/scrollbar/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_tracksFollowViewportAndCamera asserts the mounted roll track and rendered thumb are visible; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -248,16 +248,16 @@ Original expression:
   QVERIFY(actualVerticalRect().left() > roll->plotRect.right());
 
 A020 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:74
-Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_tracksFollowViewportAndCamera asserts the rendered horizontal thumb lies within the mounted time track; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(withinTrack(Qt::Horizontal));
 
 A021 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:75
-Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_tracksFollowViewportAndCamera asserts the rendered roll thumb lies within the mounted vertical track; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -343,8 +343,8 @@ Original expression:
   QVERIFY(near(verticalRect.top(), roll->rect.top()));
 
 A030 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:106
-Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the drawer-tracked roll scrollbar geometry asserted here belongs to the unmounted EditorSurface.qml roll scrollbar.
+Disposition: PARTIAL
+Mapping/reason: tst_TimelineScrollbar.qml::test_tracksFollowViewportAndCamera compares mounted roll scrollbar and plot heights across a viewport resize, but not a drawer-section resize; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
   ;
 Original expression:

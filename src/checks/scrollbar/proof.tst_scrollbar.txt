@@ -360,8 +360,8 @@ Original expression:
                        m_root->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollThumb"))))
 
 A015 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:226
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_tracksFollowViewportAndCamera asserts both mounted bars and their rendered thumbs are visible; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
   ;
 
@@ -382,8 +382,8 @@ Original expression:
                   !m_verticalThumb->boundingRect().isEmpty())
 
 A017 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:232
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_tracksFollowViewportAndCamera asserts both mounted rendered thumbs fit their tracks; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
   ;
 
@@ -391,8 +391,8 @@ Original expression:
   QTRY_VERIFY(withinTrack(Qt::Horizontal) && withinTrack(Qt::Vertical))
 
 A018 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:233
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::initTestCase asserts both mounted horizontal and roll thumb travels are positive; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
   ;
 

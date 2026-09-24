@@ -12,6 +12,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
         report.expect(passed, cppID: cppID, message: message)
     }
     runEditorCameraChecks(report)
+    runTimelineScrollbarChecks(report)
     runEditorDrawerChecks(report)
     runTypographyLayoutChecks(report)
     mouseHintOwnershipChecks(report)

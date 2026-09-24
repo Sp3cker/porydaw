@@ -151,8 +151,8 @@ Original expression:
   QTRY_VERIFY(near(value(songView, axis), minimumValue + span / 2.0));
 
 A003 | ScrollbarTest::dragClampsAndReverses | src/checks/scrollbar/drag.cpp:95
-Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); drag clamping and reversal are only reachable through those unmounted EditorSurface.qml TimelineScrollbar tracks, which no mounted shell surface instantiates.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_dragClampsAndReverses drags both mounted bars past the far edge and asserts the Swift camera equals its maximum; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
       const QPointF dragPosition = beginDrag(axis);
       const QPointF pastMaximum = dragPosition + offset(axis, 2.0 * trackLength(track, axis));
@@ -187,8 +187,8 @@ Original expression:
   QTRY_VERIFY(withinTrack(axis));
 
 A007 | ScrollbarTest::dragClampsAndReverses | src/checks/scrollbar/drag.cpp:106
-Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); drag clamping and reversal are only reachable through those unmounted EditorSurface.qml TimelineScrollbar tracks, which no mounted shell surface instantiates.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_dragClampsAndReverses drags both mounted bars past the near edge and asserts the Swift camera equals its minimum; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
       const QPointF pastMinimum = reverse - offset(axis, 2.0 * trackLength(track, axis));
       move(pastMinimum);
@@ -282,8 +282,8 @@ Original expression:
   QVERIFY(expected < songView.camera().maxHScroll());
 
 A017 | ScrollbarTest::dragRebasesAfterZoom | src/checks/scrollbar/drag.cpp:141
-Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a zoom change is only exercised by the unmounted EditorSurface.qml horizontal TimelineScrollbar track.
+Disposition: PARTIAL
+Mapping/reason: tst_TimelineScrollbar.qml::test_zoomDuringHeldDragRebases zooms the mounted time track while grabbed and observes resumed scrolling; the exact one-pixel displacement remains unproved; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
       move(dragPosition + offset(Qt::Horizontal, kOnePixel));
 Original expression:
@@ -350,8 +350,8 @@ Original expression:
   QVERIFY(expected < freshSpan);
 
 A024 | ScrollbarTest::dragRebasesAfterResize | src/checks/scrollbar/drag.cpp:169
-Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a window resize is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_wheelAndResizeRebase drags the mounted roll track after a viewport resize and asserts the fresh camera value equals freshValue + 30 * freshSpan / freshTravel; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
       move(dragPosition + offset(Qt::Vertical, kDragDistance));
 Original expression:

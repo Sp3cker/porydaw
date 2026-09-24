@@ -110,6 +110,7 @@ if(APPLE)
         rollcheck/static/camera.swift
         rollcheck/static/geometry.swift
         rollcheck/static/gate.swift
+        scrollbar/ScrollbarChecks.swift
         rollcheck/pencil.swift
         rollcheck/resize.swift
         rollcheck/scale_editing.swift
