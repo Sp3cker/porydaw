@@ -1,34 +1,19 @@
 @testable import PorydawApp
 
-/// Typography and layout-scale policy ported from the C++ UI support code
-/// (`src/ui/typography.cpp`, `src/ui/layout.cpp`, `src/ui/applicationstartup.cpp`)
-/// before its deletion. Pure scale tables, base propagation and face contracts
-/// execute here in the swiftcore harness; bundled-font registration and the
-/// resolved base font in the production shell execute in the shell-typography
-/// QML entry (`src/checks/editorqml/tst_Typography.qml`).
 let typographyLayoutScaleID = "swiftcore/TypographyLayout::scaleTables"
 let typographyLayoutBaseID = "swiftcore/TypographyLayout::basePropagation"
 let typographyLayoutFaceID = "swiftcore/TypographyLayout::faceContracts"
 let typographyLayoutFeaturesID = "swiftcore/TypographyLayout::tabularFeatures"
 let typographyLayoutFittedID = "swiftcore/TypographyLayout::fittedMaximality"
 
-/// Lane base sizes of the original editor-layout-12/16/18 checks
-/// (`src/checks/themelayout/themelayoutcheck.cpp :: runThemeLayoutScaleCheck`).
 private let typographyLayoutBases: [Double] = [12, 16, 18]
 
-/// `src/ui/layout.cpp:45` SPACE_MULTIPLIERS in enum order:
-/// Zero, Half, One, Two, Three, Four, Six, Eight.
 private let typographyLayoutSpaceMultipliers: [Double] =
     [0.0, 0.125, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0]
 
-/// `src/checks/themelayout/tst_themelayout_scale.cpp:77-80` fontPx data rows.
 private let typographyLayoutFontPxMultipliers: [Double] =
     [1.0 / 48.0, 1.0 / 12.0, 1.0 / 6.0, 1.0 / 3.0, 5.0 / 12.0, 7.0 / 12.0, 4.0 / 3.0, 17.5]
 
-/// Pinned integral expectations `max(1, round(base * multiplier))`, with the
-/// 0.0 multiplier mapping to 0 (`src/ui/layout.cpp:70-77 :: resolve`). The
-/// literals pin the original clamped tables at the three lane bases instead
-/// of re-running the formula under test.
 private let typographyLayoutFontPxExpected: [[Double]] = [
     [1, 1, 2, 4, 5, 7, 16, 210],
     [1, 1, 3, 5, 7, 9, 21, 280],
@@ -41,12 +26,8 @@ private let typographyLayoutSpaceExpected: [[Double]] = [
     [0, 2, 5, 9, 14, 18, 27, 36],
 ]
 
-/// `src/ui/typography.cpp:16` bodyScale 1.125: `max(1, round(base * 1.125))`.
 private let typographyLayoutBodyPxExpected: [Double] = [14, 18, 20]
 
-/// `GridTypography.fonts` ruler/beat rows at the three lane bases:
-/// ruler is `max(rulerMin, bodyPx - 1)`, beat is `max(rulerMin, rulerPx - 1)`
-/// with `rulerMin = fontPx(base, 5/6)` (`src/swift/app/timeline/GridTypography.swift:92-95`).
 private let typographyLayoutRulerPxExpected: [Double] = [13, 17, 19]
 
 @MainActor
@@ -73,8 +54,6 @@ private func typographyLayoutCheckScaleTables(_ report: CheckReport) {
                 cppID: typographyLayoutScaleID,
                 what: "space token \(token) pins its multiplier row at base \(Int(base))")
         }
-        // `src/checks/themelayout/tst_themelayout_scale.cpp:82-85` fontPxF rows,
-        // including the negative multiplier: unclamped `base * multiplier`.
         for multiplier in [3.0, 7.0 / 24.0, -1.0 / 24.0] {
             let actual = fontPxF(base, multiplier)
             report.expect(
@@ -82,8 +61,6 @@ private func typographyLayoutCheckScaleTables(_ report: CheckReport) {
                 message: "fontPxF keeps the unclamped product at base \(Int(base))")
         }
     }
-    // `src/ui/layout.cpp:458-461` singlePixel is the initialization-independent
-    // logical-pixel hairline: both Swift owners keep it at exactly 1.
     for base in typographyLayoutBases {
         report.expectEqual(
             1, EditorDrawerMetrics.resolve(baseFontPx: base, appFontLineSpacing: 0).pixel,
@@ -109,8 +86,6 @@ private func typographyLayoutCheckBasePropagation(_ report: CheckReport) {
         report.expectEqual(
             fontPx(base, 0.5), metrics.spaceTwo, cppID: typographyLayoutBaseID,
             what: "grid Two spacing derives from the same base")
-        // Re-resolving the same base is side-effect free: the Swift value has
-        // no process-global stylesheet to disturb.
         let again = GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0)
         report.expect(
             again.baseFontPx == metrics.baseFontPx && again.spaceHalf == metrics.spaceHalf &&
@@ -118,8 +93,6 @@ private func typographyLayoutCheckBasePropagation(_ report: CheckReport) {
             cppID: typographyLayoutBaseID,
             message: "re-resolving base \(Int(base)) reproduces the identical metrics")
     }
-    // One shared seed threads every owner (`src/ui/applicationstartup.cpp:78-83`
-    // ordering: the captured base sizes layout before theme reads it).
     let seed = GridCameraPolicy.seedBaseFontPx
     report.expectEqual(13.0, seed, cppID: typographyLayoutBaseID,
                        what: "the grid carries the single base seed")
@@ -127,8 +100,6 @@ private func typographyLayoutCheckBasePropagation(_ report: CheckReport) {
                        what: "the velocity page seeds from the same base")
     report.expectEqual(seed, AutomationPagePolicy.seedBaseFontPx, cppID: typographyLayoutBaseID,
                        what: "the automation page seeds from the same base")
-    // A degenerate base never latches: drawer metrics fall back to the seed so
-    // the row never collapses (`src/swift/app/drawer/EditorDrawerTypes.swift:83-86`).
     let seeded = EditorDrawerMetrics.resolve(baseFontPx: seed, appFontLineSpacing: 0)
     for degenerate in [0.0, -4.0, Double.nan, Double.infinity] {
         report.expectEqual(
@@ -146,25 +117,18 @@ private func typographyLayoutCheckFaceContracts(_ report: CheckReport) {
     for (lane, base) in typographyLayoutBases.enumerated() {
         let metrics = GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0)
         let fonts = GridTypography.fonts(metrics: metrics)
-        // Caption contract (`src/ui/typography.cpp:124-130` caption: Next,
-        // Normal, base size; same triple as `PromptAppearance.font`):
-        // the chip face carries it.
         let chip = fonts[.chip]
         report.expect(
             chip?.family == "Atkinson Hyperlegible Next" && chip?.pixelSize == Int(base) &&
                 chip?.weight == 400,
             cppID: typographyLayoutFaceID,
             message: "the caption-size face stays Next at the base size with Normal weight")
-        // Body size (`src/ui/typography.cpp:16,82` bodyScale 1.125): the sig
-        // face pins the Next family at the derived body size.
         let sig = fonts[.sig]
         report.expect(
             sig?.family == "Atkinson Hyperlegible Next" &&
                 sig?.pixelSize == Int(typographyLayoutBodyPxExpected[lane]),
             cppID: typographyLayoutFaceID,
             message: "the body-size face stays Next at base \(Int(base)) times 1.125")
-        // Mono contract (`src/ui/typography.cpp:104-116` bodyMono: Mono,
-        // Regular, body-matched size): the ruler and beat faces carry it.
         let ruler = fonts[.ruler]
         report.expect(
             ruler?.family == "Atkinson Hyperlegible Mono" &&
@@ -178,8 +142,6 @@ private func typographyLayoutCheckFaceContracts(_ report: CheckReport) {
                 beat?.pixelSize == Int(base) && beat?.weight == 400,
             cppID: typographyLayoutFaceID,
             message: "the beat mono face stays Mono at the base size with Normal weight")
-        // Bold preserves size with DemiBold weight (`src/ui/typography.cpp:150-157`):
-        // the mono bold face carries it for the ruler row.
         let bold = fonts[.bold]
         report.expect(
             bold?.family == "Atkinson Hyperlegible Mono" &&
@@ -187,24 +149,17 @@ private func typographyLayoutCheckFaceContracts(_ report: CheckReport) {
                 bold?.weight == 600,
             cppID: typographyLayoutFaceID,
             message: "the bold face keeps the ruler size with DemiBold weight")
-        // macOS note-name contract (`src/ui/typography.cpp:165-176`: caption
-        // size, Regular on macOS): the key-label face carries Next at the
-        // base size with Normal weight.
         let keyLabel = fonts[.keyLabel]
         report.expect(
             keyLabel?.family == "Atkinson Hyperlegible Next" &&
                 keyLabel?.pixelSize == Int(base) && keyLabel?.weight == 400,
             cppID: typographyLayoutFaceID,
             message: "the key-label face stays Next at the base size with Normal weight")
-        // The negative fontPxF row survives in the owner: ruler spacing is
-        // `fontPxF(base, -1/24)` (`src/swift/app/timeline/GridGeometry.swift:92`).
         let spacing = fonts[.ruler]?.letterSpacing ?? .nan
         report.expect(
             abs(spacing - base * (-1.0 / 24.0)) < 1e-9, cppID: typographyLayoutFaceID,
             message: "ruler spacing keeps the negative thirty-second scale at base \(Int(base))")
     }
-    // Drawer chrome consumes the same Half/One tokens through the shared base:
-    // bar, handle, floor, reserve, inset and step at the three lane bases.
     let sifatida = [
         (barHeight: 6, handleHeight: 4, minimumBody: 41, pianoRollReserve: 120,
          toggleInset: 3, resizeStep: 6),
@@ -224,12 +179,30 @@ private func typographyLayoutCheckFaceContracts(_ report: CheckReport) {
             cppID: typographyLayoutFaceID,
             message: "drawer chrome derives bar, handle, floor, reserve, inset and step at base \(Int(base))")
     }
+    let unhinted = GridTypography.fonts(metrics:
+        GridMetrics(baseFontPx: 16, dpr: 1, width: 0, height: 0))
+    for kind in [GridFontKind.ruler, GridFontKind.beat, GridFontKind.bold, GridFontKind.sig, GridFontKind.chip, GridFontKind.keyLabel] {
+        report.expect(
+            unhinted[kind]?.map["hintingPreference"] as? Int == fontPreferNoHinting,
+            cppID: typographyLayoutFaceID,
+            message: "the published face map pins the unhinted preference")
+    }
+    report.expect(
+        VelocityScene.fontMap(emphasized: false, typography: nil, baseFontPx: 16)["hintingPreference"] as? Int == fontPreferNoHinting,
+        cppID: typographyLayoutFaceID,
+        message: "the fallback label map pins the unhinted preference")
+    report.expect(
+        AutomationCaption(pixelSize: 16, weight: 400).fontMap["hintingPreference"] as? Int == fontPreferNoHinting,
+        cppID: typographyLayoutFaceID,
+        message: "the automation caption map pins the unhinted preference")
+    report.expect(
+        VoiceCaption(pixelSize: 16, weight: 400).fontMap["hintingPreference"] as? Int == fontPreferNoHinting,
+        cppID: typographyLayoutFaceID,
+        message: "the voice caption map pins the unhinted preference")
 }
 
 @MainActor
 private func typographyLayoutCheckTabularFeatures(_ report: CheckReport) {
-    // Every face enables tabular figures (`src/ui/typography.cpp:22-25`
-    // enableTabularNumbers via setFace and bodyMono).
     guard let chip = GridTypography.fonts(metrics:
         GridMetrics(baseFontPx: 16, dpr: 1, width: 0, height: 0))[.chip]
     else {
@@ -247,8 +220,6 @@ private func typographyLayoutCheckTabularFeatures(_ report: CheckReport) {
         emissionMatches,
         cppID: typographyLayoutFeaturesID,
         message: "the QML map emits the tabular feature")
-    // The default covers every face the canvas measures, including the mono
-    // ruler/beat/bold faces behind `bodyMono`.
     let faces = GridTypography.fonts(metrics:
         GridMetrics(baseFontPx: 16, dpr: 1, width: 0, height: 0))
     for kind in [GridFontKind.ruler, GridFontKind.beat, GridFontKind.bold] {
@@ -256,10 +227,6 @@ private func typographyLayoutCheckTabularFeatures(_ report: CheckReport) {
             faces[kind]?.features["tnum"] as? Int == 1, cppID: typographyLayoutFeaturesID,
             message: "the mono face enables tabular figures")
     }
-    // The native measurement path sets the same feature
-    // (`src/ui/songview/quick/swiftroll/native/font_metrics.cpp :: sgf_create`),
-    // so measured digit runs share one advance: the user-observable contract
-    // behind `hasTabularNumbers`.
     let measured = NativeFontMetrics(chip)
     report.expectEqual(
         measured.advance("1"), measured.advance("8"), cppID: typographyLayoutFeaturesID,
@@ -274,11 +241,6 @@ private func typographyLayoutCheckTabularFeatures(_ report: CheckReport) {
 
 @MainActor
 private func typographyLayoutCheckFittedMaximality(_ report: CheckReport) {
-    // `src/ui/typography.cpp:49-57,159-163` fitted: the largest face at most
-    // the base size that fits the height. The canvas fit
-    // (`font_metrics.cpp :: sgf_fit`) owns the same loop; the check mirrors
-    // the original heights 1 through caption height + 4
-    // (`tst_themelayout_font.cpp:115`).
     func spec(size: Int) -> GridFontSpec {
         GridFontSpec(family: "Atkinson Hyperlegible Next", pixelSize: size, weight: 400,
                      letterSpacing: 0)
@@ -294,18 +256,12 @@ private func typographyLayoutCheckFittedMaximality(_ report: CheckReport) {
             fitted >= 1 && fitted <= 16, cppID: typographyLayoutFittedID,
             message: "the fit at height \(height) stays within the face size")
         if fitted < 16 {
-            // Maximality: one pixel larger overflows the height. `height`
-            // over-approximates the ascent-plus-descent criterion the fit
-            // uses, so this direction is sound.
             let larger = NativeFontMetrics(spec(size: fitted + 1))
             report.expect(
                 larger.extents.height > Double(height), cppID: typographyLayoutFittedID,
                 message: "one pixel larger overflows height \(height)")
         }
     }
-    // Below every fittable height the canvas fit floors at 1. The C++ fitted
-    // reports a missing face there instead; the canvas never does, so body
-    // text always has a size to render.
     report.expectEqual(
         1, full.fittedSize(rowHeight: 0), cppID: typographyLayoutFittedID,
         what: "a zero height floors at the minimum size")

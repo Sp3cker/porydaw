@@ -6,13 +6,6 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import "../../ui/shell"
 
-// Port of the typography/startup assertions in
-// src/checks/themelayout/tst_themelayout_font.cpp (face contracts, bundled
-// Next/Mono families, body 1.125 scale, tabular figures, selected-title
-// glyph centering) and src/ui/applicationstartup.cpp (sp3cker organization
-// identity) to the production Swift shell: the bundled FontLoaders, the
-// resolved base font threaded into bodyFontPx and window geometry, the
-// header title centering loop, and the body-text binding.
 TestCase {
     id: testCase
     name: "Typography"
@@ -30,9 +23,6 @@ TestCase {
     FontMetrics { id: boldTitleCheck }
 
     function initTestCase() {
-        // Private native domain like the shellwindow lane: the production
-        // shell restores its theme through genuine QtCore.Settings without
-        // touching the caller's preferences.
         Qt.application.name = bootstrap.settingsApplicationName
         Qt.application.organization = "sp3cker"
         Qt.application.domain = ""
@@ -50,8 +40,6 @@ TestCase {
         wait(0)
     }
 
-    // Qt Quick Test waits pump Qt events but not Swift MainActor tasks.
-    // Service the native event loop while observing session state.
     function waitForNative(predicate, timeoutMs) {
         var deadline = Date.now() + timeoutMs
         while (!predicate() && Date.now() < deadline) {
@@ -113,8 +101,6 @@ TestCase {
         compare(Qt.application.organization, "sp3cker",
                 "the shell keeps the production organization identity")
         compare(shell.title, "Porydaw", "the shell keeps the production title")
-        // The three bundled FontLoaders resolve asynchronously; the root
-        // font binding then carries the Next family (typography.cpp setFace).
         tryVerify(function() {
             return shell.font.family === "Atkinson Hyperlegible Next"
         }, 5000, "the resolved base font carries the bundled Next family")
@@ -129,8 +115,6 @@ TestCase {
                 "window width threads the body size into geometry")
         compare(shell.height, shell.bodyFontPx * 48,
                 "window height threads the body size into geometry")
-        // Production body text renders through `font: root.font`; the probe
-        // uses the same binding the footer and empty-state labels use.
         var label = bodyTextComponent.createObject(shell.contentItem)
         verify(label !== null, "a body-text probe mounts in the real window")
         label.font = shell.font
@@ -145,9 +129,6 @@ TestCase {
         verify(surface && surface.visible, "the selected production EditorSurface is visible")
         var headers = findChild(surface, "timelineTrackHeaderRows")
         verify(headers && headers.count > 0, "the original track header delegates are mounted")
-        // The production band measures the elided label with its own
-        // FontMetrics and publishes the normal-minus-bold center delta; the
-        // check recomputes the same delta with the production font maps.
         normalTitleCheck.font = Qt.font(surface.headersModel.normalTitleFont)
         boldTitleCheck.font = Qt.font(surface.headersModel.boldTitleFont)
         tryVerify(function() {
@@ -184,5 +165,11 @@ TestCase {
         verify(row !== null, "a selected bold title row is mounted")
         compare(row.titleFont.features["tnum"], 1,
                 "the title map emits tabular figures")
+        var rendered = bodyTextComponent.createObject(shell.contentItem)
+        verify(rendered !== null, "a map-rendered probe mounts in the real window")
+        rendered.font = Qt.font(row.titleFont)
+        compare(rendered.font.hintingPreference, Font.PreferNoHinting,
+                "the rendered title carries the unhinted preference")
+        rendered.destroy()
     }
 }

@@ -36,7 +36,7 @@ src/checks/themelayout/themelayoutcheck.cpp) launches the editor-layout-12/16/18
 lanes with base font sizes 12, 16, and 18; ThemeLayoutScaleTest::init-style
 setup is the lane runner pinning the application font pixel size before
 ui::initializeApplication. Swift execution: runTypographyLayoutChecks
-(src/checks/themelayout/TypographyLayoutChecks.swift:53) via
+(src/checks/themelayout/TypographyLayoutChecks.swift:34) via
 runProjectSessionSuite (src/checks/workspace/SessionChecks.swift:16) into the
 projectSession slot (swiftcore suite 10 via pdcSuiteRun); the counterpart is
 compiled in src/checks/CMakeLists.txt :: swift_core_check. Suite
@@ -278,34 +278,34 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:65
+S001 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:46
 Swift expression:
   report.expectEqual(
           typographyLayoutFontPxExpected[lane][row], fontPx(base, multiplier),
           cppID: typographyLayoutScaleID,
           what: "fontPx pins clamped row \(row) at base \(Int(base))")
 
-S002 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:71
+S002 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:52
 Swift expression:
   report.expectEqual(
           typographyLayoutSpaceExpected[lane][token], fontPx(base, multiplier),
           cppID: typographyLayoutScaleID,
           what: "space token \(token) pins its multiplier row at base \(Int(base))")
 
-S003 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:80
+S003 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:59
 Swift expression:
   report.expect(
           abs(actual - base * multiplier) < 1e-9, cppID: typographyLayoutScaleID,
           message: "fontPxF keeps the unclamped product at base \(Int(base))")
 
-S004 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:88
+S004 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:65
 Swift expression:
   report.expectEqual(
           1, EditorDrawerMetrics.resolve(baseFontPx: base, appFontLineSpacing: 0).pixel,
           cppID: typographyLayoutScaleID,
           what: "drawer metrics keep the unit hairline at base \(Int(base))")
 
-S005 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:92
+S005 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:69
 Swift expression:
   report.expectEqual(
           1.0, GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0).pixel,
