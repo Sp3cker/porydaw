@@ -202,7 +202,7 @@ func drawerVelocityRulerUnlockKeepsRaw(_ report: CheckReport, session: DocumentS
     page.setUseDetents(enabled: true)
     let waveMap = VelocityMap(voiceKind: .wave)
     let waveAxis = VelocityAxisModel(map: waveMap, geometry: page.axisModel.geometry)
-    report.expectEqual(73, Int(VelocityGesturePolicy.resolvedVelocity(axis: waveAxis, noteMap: waveMap, detentUnlock: true, y: waveAxis.velocityToY(73))), cppID: drawerVelocityRulerUnlockID, what: "the unlocked wave ruler keeps the raw velocity")
+    report.expect(Int(VelocityGesturePolicy.resolvedVelocity(axis: waveAxis, noteMap: waveMap, detentUnlock: true, y: waveAxis.velocityToY(73))) == 73 && Int(VelocityGesturePolicy.resolvedVelocity(axis: waveAxis, noteMap: waveMap, detentUnlock: false, y: waveAxis.velocityToY(73))) == 64, cppID: drawerVelocityRulerUnlockID, message: "the unlock bypasses the wave detent the locked ruler canonicalizes onto")
 }
 
 @MainActor
@@ -419,12 +419,13 @@ func drawerVelocityUnlockedRelativeKeepsOffsets(_ report: CheckReport, session: 
         report.fail(drawerVelocityUnlockedRelativeID, "the square pair published no handles")
         return
     }
-    let moveY = page.axisModel.velocityToY(page.axisModel.yToVelocity(firstHandle.y) + 7)
+    let moveY = firstHandle.y - 24
+    let moveDelta = page.axisModel.yToVelocity(moveY) - page.axisModel.yToVelocity(firstHandle.y)
     let baseline = drawerVelocityDocumentSnapshot(document)
     _ = page.pointerPress(x: firstHandle.x, y: firstHandle.y, surface: 1, button: 1, modifiers: unlock)
     _ = page.pointerMove(x: firstHandle.x, y: moveY, buttons: 1)
-    report.expectEqual(40, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked quiet note previews its raw offset")
-    report.expectEqual(94, Int(page.frozenPreview[notes[1].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked later note keeps its own raw offset")
+    report.expectEqual(33 + moveDelta, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked quiet note takes the shared raw delta")
+    report.expectEqual(87 + moveDelta, Int(page.frozenPreview[notes[1].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked later note takes the same raw delta")
     report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityUnlockedRelativeID, message: "the unselected note previews nothing")
     report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked drag stages no revision before release")
     report.expectEqual(33, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the document keeps the quiet origin during preview")
@@ -432,8 +433,8 @@ func drawerVelocityUnlockedRelativeKeepsOffsets(_ report: CheckReport, session: 
     _ = page.pointerRelease(x: firstHandle.x, y: moveY, button: 1)
     report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityUnlockedRelativeID, what: "one unlocked drag release commits one revision")
     report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityUnlockedRelativeID, message: "the release clears its preview")
-    report.expectEqual(40, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the quiet raw offset")
-    report.expectEqual(94, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the later raw offset")
+    report.expectEqual(33 + moveDelta, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the shared raw delta")
+    report.expectEqual(87 + moveDelta, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the same raw delta on every target")
     report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release leaves the unselected note alone")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityUnlockedRelativeID, message: "the release keeps the drag selection")
     guard let secondNoise = drawerVelocityPaintAddNote(report, cppID: drawerVelocityUnlockedRelativeID, document: document, page: page, tick: 120, pitch: 60, duration: 12, velocity: 50) else {
@@ -446,17 +447,19 @@ func drawerVelocityUnlockedRelativeKeepsOffsets(_ report: CheckReport, session: 
         report.fail(drawerVelocityUnlockedRelativeID, "the noise pair published no handles")
         return
     }
-    let noiseMoveY = page.axisModel.velocityToY(page.axisModel.yToVelocity(noiseHandle.y) + 7)
+    let noiseMoveY = noiseHandle.y - 24
+    let noiseMoveDelta = page.axisModel.yToVelocity(noiseMoveY) - page.axisModel.yToVelocity(noiseHandle.y)
     let noiseBaseline = drawerVelocityDocumentSnapshot(document)
     _ = page.pointerPress(x: noiseHandle.x, y: noiseHandle.y, surface: 1, button: 1, modifiers: unlock)
     _ = page.pointerMove(x: noiseHandle.x, y: noiseMoveY, buttons: 1)
-    report.expectEqual(40, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked noise note previews its raw offset")
-    report.expectEqual(94, Int(page.frozenPreview[secondNoise.id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked second noise note keeps its own raw offset")
+    report.expectEqual(33 + noiseMoveDelta, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked noise note takes the shared raw delta")
+    report.expectEqual(87 + noiseMoveDelta, Int(page.frozenPreview[secondNoise.id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked second noise note takes the same raw delta")
+    report.expect(page.frozenPreview[notes[0].id] == nil, cppID: drawerVelocityUnlockedRelativeID, message: "the outside note previews nothing")
     report.expectEqual(noiseBaseline.revision, document.revision, cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked noise drag stages no revision before release")
     _ = page.pointerRelease(x: noiseHandle.x, y: noiseMoveY, button: 1)
     report.expectEqual(noiseBaseline.revision + 1, document.revision, cppID: drawerVelocityUnlockedRelativeID, what: "one unlocked noise release commits one revision")
-    report.expectEqual(40, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the noise raw offset")
-    report.expectEqual(94, Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the second noise raw offset")
+    report.expectEqual(33 + noiseMoveDelta, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the shared noise delta")
+    report.expectEqual(87 + noiseMoveDelta, Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the same noise delta on every target")
     let waveMap = VelocityMap(voiceKind: .wave)
     let waveAxis = VelocityAxisModel(map: waveMap, geometry: page.axisModel.geometry)
     let pressWaveY = waveAxis.velocityToY(40)

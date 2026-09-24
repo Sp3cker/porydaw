@@ -95,13 +95,13 @@ src/checks/velocity/velocityroll.cpp:286 | QSignalSpy edited(m_tab.get(), &SongT
 src/checks/velocity/velocityroll.cpp:290 | focusVelocityBand();
 src/checks/velocity/velocityroll.cpp:294 | QTest::keyClick(m_quickWindow, Qt::Key_Up, Qt::ShiftModifier);
 
-Tally: MATCHED 55, PARTIAL 29, GAP 5, NATIVE-SETUP 0, RETIRED-REPRESENTATION 21
+Tally: MATCHED 52, PARTIAL 32, GAP 5, NATIVE-SETUP 0, RETIRED-REPRESENTATION 21
 
 Original assertion inventory
 
 A001 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:72
-Disposition: MATCHED
-Mapping/reason: S083 (VelocityRollCoreChecks.swift:44) asserts the shared fixture's three notes hold pairwise distinct identities, and the roll-core drag selects notes[0]+notes[1] as its pair, so this distinct-drag-pair precondition is asserted and executed.
+Disposition: PARTIAL
+Mapping/reason: S083 asserts the shared Swift fixture's three notes hold pairwise distinct identities, but that fixture's notes sit at ticks 0/24/96 with distinct pitches and contain no stacked duplicates, so the original's stacked-pair identity clause (the later note's id differing from a same-tick stacked duplicate's id) is unproved; only the non-stacked distinct-drag-pair precondition is asserted.
 Source context since previous assertion:
 #include "checks/velocity/tst_velocityediting.h"
 
@@ -179,8 +179,8 @@ Original expression:
   QVERIFY(m_later.noteId != m_quietStacked.noteId)
 
 A002 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:73
-Disposition: MATCHED
-Mapping/reason: S083 asserts the same distinct-identity precondition for the fixture the roll-core drag runs on; this second pair-comparison site is covered by it.
+Disposition: PARTIAL
+Mapping/reason: As A001: S083 asserts pairwise distinct identities for the Swift fixture's three non-stacked notes, but this second stacked comparison (later note vs loud duplicate) has no same-tick duplicate to distinguish in the Swift fixture, so the stacked-pair identity clause remains unproved.
 Source context since previous assertion:
 ;
 
@@ -188,8 +188,8 @@ Original expression:
   QVERIFY(m_later.noteId != m_loudStacked.noteId)
 
 A003 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:77
-Disposition: MATCHED
-Mapping/reason: S216/S217 (runKeybindingRegistryChecks, src/checks/keyboard/KeybindingRegistryChecks.swift:60/64) assert the production registry arms velocity drag with Control and that Shift alone does not arm it; both are reported through report.expect at src/checks/workspace/SessionChecks.swift:11-13 inside runProjectSessionSuite, which the swiftcore harness executes (CoreCheckSupport.swift:137). That entails this site's roll.velocity_drag hold binding is not NoModifier. The Swift registry resolves the binding to Control while the original asserted only that some hold chord exists, so equivalence is claimed for the binding's declaration and resolution, not for a specific chord value.
+Disposition: PARTIAL
+Mapping/reason: S216/S217 (runKeybindingRegistryChecks, src/checks/keyboard/KeybindingRegistryChecks.swift:60/64) assert the production registry's roll.velocity_drag chord, but they execute under the keymap cppID KeymapCheckTest::keymapSettingsSeedsAreIgnored rather than under this roll site's cppID or through the roll gesture path, so this guard is unexecuted for the site. Unproved: the roll velocity-drag modifier evaluated as a precondition of the roll drag; the Swift registry also resolves it to Control where the original asserted only that some hold chord exists.
 Source context since previous assertion:
 ;
 

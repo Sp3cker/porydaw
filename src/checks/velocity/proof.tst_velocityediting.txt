@@ -8,7 +8,7 @@ Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
 Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
 Additional Swift SHA-256: 32986d8646ef96c6c49749f5d0eedeea025ac18a89ff2027900f96ae396267e2
 Additional Swift counterpart: src/checks/velocity/VelocityPaintDetentChecks.swift
-Additional Swift SHA-256: c7b49bf857f61eb48beec3f9f9d5f5eccaa36c5f9cb87ffa837b547697cb5ab3
+Additional Swift SHA-256: 9c6f9389d6da12297ae6600087b5d8ffb5ab60b5a7275b422b4e655e6afebe8d
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.

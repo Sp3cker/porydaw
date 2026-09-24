@@ -10,7 +10,7 @@ Additional Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5a
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
 Additional Swift SHA-256: 04386e845a0fc186c7ec5336906c1f2e96e0dffcad6af8e6deeba39f5f829ccf
 Additional Swift counterpart: src/checks/velocity/VelocityPaintDetentChecks.swift
-Additional Swift SHA-256: f6c899a39ed3de9d53fd30f4421c1ee87bb36515f3e8c2afc0f2e6f3a02807aa
+Additional Swift SHA-256: 9c6f9389d6da12297ae6600087b5d8ffb5ab60b5a7275b422b4e655e6afebe8d
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -202,8 +202,8 @@ Original expression:
   QVERIFY(chrome.detentEnabled())
 
 A005 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:43
-Disposition: PARTIAL
-Mapping/reason: The Swift page has no chrome checkbox; S083/S086 exercise the modifier-unlock branch and S091/S093 the detents-disabled branch. Unproved: a readback of the control checked state equal to the row column.
+Disposition: GAP
+Mapping/reason: No Swift predicate reads the detent control checked state: the legacy chrome checkbox has no Swift ingress, and S083/S086 (modifier-unlock branch) and S091/S093 (detents-disabled branch) assert only the resulting ruler velocity. The checked-state observation itself has no equivalent assertion.
 Source context since previous assertion:
 ;
     chrome.setDetentChecked(unlockOnPress);
@@ -212,8 +212,8 @@ Original expression:
   QTRY_COMPARE(chrome.detentChecked(), unlockOnPress)
 
 A006 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:44
-Disposition: PARTIAL
-Mapping/reason: page.setUseDetents is the page own ingress and its detent-free outcome is asserted (S093/S094 keep raw 73; the sibling case asserts the continuous rendering after toggling, S041). Unproved: a readback that the page use-detents flag equals the row column.
+Disposition: GAP
+Mapping/reason: No Swift predicate reads the page use-detents flag back: page.setUseDetents is the ingress and S093/S094 assert only the detent-free outcome (S041 reads the rendering in the sibling case). The flag-equality observation has no equivalent assertion.
 Source context since previous assertion:
 ;
 
@@ -1384,9 +1384,11 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Swift executable assertion index
-Tally: MATCHED 43, PARTIAL 68, NATIVE-SETUP 4, RETIRED-REPRESENTATION 6, GAP 0. All 121
-sites are dispositioned; every PARTIAL names the unproved condition and no site claims
-coverage from a related case alone.
+Tally: MATCHED 43, PARTIAL 66, NATIVE-SETUP 4, RETIRED-REPRESENTATION 6, GAP 2. All 121
+sites are dispositioned; every PARTIAL names the unproved condition, and no MATCHED claim
+rests on a related case alone. The two remaining GAPs are the legacy chrome detent-checkbox
+checked-state readbacks (A005, A006): the control has no Swift ingress, and the paired
+cases assert only the resulting ruler velocity, not the toggle state.
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
@@ -1788,7 +1790,7 @@ S101 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDete
   report.expectEqual(73, Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityRulerUnlockID, what: "the detents-disabled noise click sets every selected note raw")
 
 S102 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:205
-  report.expectEqual(73, Int(VelocityGesturePolicy.resolvedVelocity(axis: waveAxis, noteMap: waveMap, detentUnlock: true, y: waveAxis.velocityToY(73))), cppID: drawerVelocityRulerUnlockID, what: "the unlocked wave ruler keeps the raw velocity")
+  report.expect(Int(VelocityGesturePolicy.resolvedVelocity(axis: waveAxis, noteMap: waveMap, detentUnlock: true, y: waveAxis.velocityToY(73))) == 73 && Int(VelocityGesturePolicy.resolvedVelocity(axis: waveAxis, noteMap: waveMap, detentUnlock: false, y: waveAxis.velocityToY(73))) == 64, cppID: drawerVelocityRulerUnlockID, message: "the unlock bypasses the wave detent the locked ruler canonicalizes onto")
 
 S103 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:212-213
   guard notes.count >= 3 else {

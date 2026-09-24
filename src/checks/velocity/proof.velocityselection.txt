@@ -56,7 +56,7 @@ the filter), and verify:qml editorqml-drawer PASS (1/1 ok). Structure only below
 deno task proof check validates metadata, entries and the Tally line, never source
 freshness, execution or parity.
 
-Tally: MATCHED 36 / PARTIAL 16 / GAP 2 / RETIRED-REPRESENTATION 14 (site dispositions
+Tally: MATCHED 36 / PARTIAL 16 / GAP 4 / RETIRED-REPRESENTATION 12 (site dispositions
 below; deno task proof:edit keeps this line reconciled as entries change)
 
 Fixture, sequence and row constraints
@@ -531,8 +531,8 @@ Original expression:
   QVERIFY(m_velocityInput->bounds().contains(bandStart))
 
 A040 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:115
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Same QQuickItem-geometry retirement as A039; the Swift case issues the expanded move but observes nothing from it, because an intermediate band extent has no asserted effect, so only the contracted resolution that follows is asserted, by S083 (src/checks/velocity/VelocityClickSelectionChecks.swift:183).
+Disposition: GAP
+Mapping/reason: The intermediate band extent is unobserved: the Swift case issues the expanded move but asserts nothing about the preview it produces, and no predicate covers the intermediate selection preview. The contracted resolution that follows is asserted by S083 (src/checks/velocity/VelocityClickSelectionChecks.swift:183) but does not prove this site. Open assertion obligation.
 Source context since previous assertion:
 ;
 
@@ -540,8 +540,8 @@ Original expression:
   QVERIFY(m_velocityInput->bounds().contains(expandedEnd))
 
 A041 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:116
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Same QQuickItem-geometry retirement as A039; the release at the contracted end is observed through the resolved selection, asserted by S083 (src/checks/velocity/VelocityClickSelectionChecks.swift:183).
+Disposition: GAP
+Mapping/reason: No predicate covers the intermediate selection preview at the contracted band end: the case observes only the final resolved selection (S083, src/checks/velocity/VelocityClickSelectionChecks.swift:183), so the intermediate preview this site guards remains unproved. Open assertion obligation.
 Source context since previous assertion:
 ;
 

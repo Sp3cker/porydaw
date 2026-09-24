@@ -6,7 +6,7 @@ Original SHA-256: 6626e06ff84d0561d4bb68a6fdbbd16c94347c2e3fd0780312d480ca241c8e
 Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
 Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5ad4a2fac12b
 Additional Swift counterpart: src/checks/velocity/VelocityPaintDetentChecks.swift
-Additional Swift SHA-256: f6c899a39ed3de9d53fd30f4421c1ee87bb36515f3e8c2afc0f2e6f3a02807aa
+Additional Swift SHA-256: 9c6f9389d6da12297ae6600087b5d8ffb5ab60b5a7275b422b4e655e6afebe8d
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
 Additional Swift SHA-256: 04386e845a0fc186c7ec5336906c1f2e96e0dffcad6af8e6deeba39f5f829ccf
 Additional Swift counterpart: src/checks/drawerpresentation/velocity.swift
@@ -46,7 +46,7 @@ the controller handoff for this tree; not re-run by the ledger writer.
 Command: deno task verify:qml
 Result: PASS - editorqml-drawer 1/1 ok. Provided by the controller handoff for this tree; not
 re-run by the ledger writer.
-Tally: MATCHED 18, PARTIAL 109, GAP 0, NATIVE-SETUP 4, RETIRED-REPRESENTATION 9.
+Tally: MATCHED 15, PARTIAL 112, GAP 0, NATIVE-SETUP 4, RETIRED-REPRESENTATION 9.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -414,8 +414,8 @@ Original expression:
   QVERIFY(m_velocityInput->bounds().contains(deliveredMoveLocal))
 
 A054 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:163
-Disposition: MATCHED
-Mapping/reason: MATCHED: S056 and S057 assert the raw offsets 40 (33 plus 7) and 94 (87 plus 7) for the pressed and later notes; the Swift fixture derives the move y with the page's own yToVelocity plus kRawDelta 7 (drawerVelocityUnlockedRelativeKeepsOffsets), so the asserted raw offset is exactly this delta.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the unlocked drag's raw delta is derived from the page's own axis mapping (moveDelta = yToVelocity(firstHandle.y - 24) - yToVelocity(firstHandle.y)), and S056/S057 pin both targets to origin plus that shared delta (33 + moveDelta, 87 + moveDelta); the legacy kRawDelta 7 literal and its delivered-geometry quantization guard are no longer asserted, so the delta's concrete magnitude stays unproved.
 Original expression:
   QCOMPARE(m_area->axis().yToVelocity(deliveredMoveLocal.y()) -
                    m_area->axis().yToVelocity(deliveredPressLocal.y()),
@@ -441,31 +441,31 @@ Original expression:
 
 A058 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:185
 Disposition: MATCHED
-Mapping/reason: MATCHED: S056 asserts the unlocked quiet preview exists and equals 40 (absence fails the ?? 0 equality); S069 repeats 40 for the noise pair and the wave value-layer pin asserts 40 (S075).
+Mapping/reason: MATCHED: S056 asserts the unlocked square preview exists and equals the pressed origin plus the shared raw delta (absence fails the ?? 0 equality); S069 repeats the shared-delta form for the noise pair and the wave value-layer pin asserts its own raw preview 40 (S075).
 Original expression:
   QVERIFY(quietPreview.has_value())
 
 A059 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:186
 Disposition: MATCHED
-Mapping/reason: MATCHED: S057 asserts the unlocked later preview exists and equals 94; S070 repeats 94 for the noise pair and the wave value-layer pin asserts 94 (S076).
+Mapping/reason: MATCHED: S057 asserts the unlocked later preview exists and equals 87 plus the shared raw delta; S070 repeats the shared-delta form for the noise pair and the wave value-layer pin asserts its own raw preview 94 (S076).
 Original expression:
   QVERIFY(laterPreview.has_value())
 
 A060 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:187
-Disposition: MATCHED
-Mapping/reason: MATCHED: the unlocked quiet preview equals the row's expectedQuiet 40 - square (S056), noise (S069) and wave value layer (S075).
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S056/S069 assert the quiet preview equals 33 plus the shared raw delta for the square and noise rows, and the wave value-layer pin asserts 40 (S075); the page rows' independent fixture literal expectedQuiet 40 is no longer asserted, so the concrete row value stays unproved.
 Original expression:
   QCOMPARE(int(*quietPreview), expectedQuiet)
 
 A061 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:188
-Disposition: MATCHED
-Mapping/reason: MATCHED: the unlocked later preview equals the row's expectedLater 94 - square (S057), noise (S070) and wave value layer (S076).
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S057/S070 assert the later preview equals 87 plus the shared raw delta for the square and noise rows, and the wave value-layer pin asserts 94 (S076); the page rows' independent fixture literal expectedLater 94 is no longer asserted, so the concrete row value stays unproved.
 Original expression:
   QCOMPARE(int(*laterPreview), expectedLater)
 
 A062 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:189
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S058 asserts an unselected note previews nothing for the square pair only; the noise and wave rows do not re-assert an unselected note's absence of preview.
+Mapping/reason: PARTIAL: the local predicates assert an unselected note previews nothing for the square flow (S058, the pair's third note) and the noise flow (S114, the outside note); the wave value-layer pin carries only its two selected notes, so the wave row's instance stays unproved.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
@@ -507,7 +507,7 @@ Original expression:
 
 A069 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:196
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S066 asserts the unselected note's post-release value equals its fixture velocity for the square pair (S074 for the noise pair); an unselected note's mid-preview document value is not asserted.
+Mapping/reason: PARTIAL: S066 asserts the unselected note's post-release value equals its fixture velocity for the square pair; the noise pair's other notes are not asserted and an unselected note's mid-preview document value stays unproved.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
@@ -579,13 +579,13 @@ Original expression:
 
 A081 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:211
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S064 asserts the release commits the quiet raw offset 40 for the square pair (S073 for the noise pair); the wave row's commit is not executed.
+Mapping/reason: PARTIAL: S064/S073 assert the release commits 33 plus the shared delta for the square and noise rows; the legacy literal 40 is no longer asserted for the page rows and the wave row's commit is not executed.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), expectedQuiet)
 
 A082 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:212
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S065 asserts the release commits the later raw offset 94 for the square pair (S074 for the noise pair); the wave row's commit is not executed.
+Mapping/reason: PARTIAL: S065/S074 assert the release commits 87 plus the shared delta for the square and noise rows; the legacy literal 94 is no longer asserted for the page rows and the wave row's commit is not executed.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), expectedLater)
 
@@ -1199,207 +1199,207 @@ S055 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/Velocity
 Swift expression:
   report.fail(drawerVelocityUnlockedRelativeID, "the square pair published no handles")
 
-S056 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:426
+S056 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:427
 Swift expression:
-  report.expectEqual(40, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked quiet note previews its raw offset")
+  report.expectEqual(33 + moveDelta, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked quiet note takes the shared raw delta")
 
-S057 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:427
+S057 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:428
 Swift expression:
-  report.expectEqual(94, Int(page.frozenPreview[notes[1].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked later note keeps its own raw offset")
+  report.expectEqual(87 + moveDelta, Int(page.frozenPreview[notes[1].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked later note takes the same raw delta")
 
-S058 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:428
+S058 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:429
 Swift expression:
   report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityUnlockedRelativeID, message: "the unselected note previews nothing")
 
-S059 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:429
+S059 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:430
 Swift expression:
   report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked drag stages no revision before release")
 
-S060 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:430
+S060 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:431
 Swift expression:
   report.expectEqual(33, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the document keeps the quiet origin during preview")
 
-S061 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:431
+S061 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:432
 Swift expression:
   report.expectEqual(87, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the document keeps the later origin during preview")
 
-S062 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:433
+S062 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:434
 Swift expression:
   report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityUnlockedRelativeID, what: "one unlocked drag release commits one revision")
 
-S063 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:434
+S063 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:435
 Swift expression:
   report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityUnlockedRelativeID, message: "the release clears its preview")
 
-S064 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:435
+S064 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:436
 Swift expression:
-  report.expectEqual(40, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the quiet raw offset")
+  report.expectEqual(33 + moveDelta, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the shared raw delta")
 
-S065 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:436
+S065 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:437
 Swift expression:
-  report.expectEqual(94, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the later raw offset")
+  report.expectEqual(87 + moveDelta, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the same raw delta on every target")
 
-S066 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:437
+S066 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:438
 Swift expression:
   report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release leaves the unselected note alone")
 
-S067 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:438
+S067 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:439
 Swift expression:
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityUnlockedRelativeID, message: "the release keeps the drag selection")
 
-S068 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:446
+S068 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:447
 Swift expression:
   report.fail(drawerVelocityUnlockedRelativeID, "the noise pair published no handles")
 
-S069 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:453
+S069 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:455
 Swift expression:
-  report.expectEqual(40, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked noise note previews its raw offset")
+  report.expectEqual(33 + noiseMoveDelta, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked noise note takes the shared raw delta")
 
-S070 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:454
+S070 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:456
 Swift expression:
-  report.expectEqual(94, Int(page.frozenPreview[secondNoise.id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked second noise note keeps its own raw offset")
+  report.expectEqual(87 + noiseMoveDelta, Int(page.frozenPreview[secondNoise.id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked second noise note takes the same raw delta")
 
-S071 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:455
+S071 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:458
 Swift expression:
   report.expectEqual(noiseBaseline.revision, document.revision, cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked noise drag stages no revision before release")
 
-S072 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:457
+S072 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:460
 Swift expression:
   report.expectEqual(noiseBaseline.revision + 1, document.revision, cppID: drawerVelocityUnlockedRelativeID, what: "one unlocked noise release commits one revision")
 
-S073 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:458
+S073 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:461
 Swift expression:
-  report.expectEqual(40, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the noise raw offset")
+  report.expectEqual(33 + noiseMoveDelta, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the shared noise delta")
 
-S074 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:459
+S074 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:462
 Swift expression:
-  report.expectEqual(94, Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the second noise raw offset")
+  report.expectEqual(87 + noiseMoveDelta, Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the same noise delta on every target")
 
-S075 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:465
+S075 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:468
 Swift expression:
   report.expectEqual(40, Int(waveGesture.preview[NoteID(107)] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked wave quiet note previews its raw offset")
 
-S076 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:466
+S076 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:469
 Swift expression:
   report.expectEqual(94, Int(waveGesture.preview[NoteID(108)] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked wave later note keeps its own raw offset")
 
-S077 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:473
+S077 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:476
 Swift expression:
   report.fail(drawerVelocityUnlockedRampID, "the detent unlock hold resolved to no modifier")
 
-S078 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:480
+S078 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:483
 Swift expression:
   report.fail(drawerVelocityUnlockedRampID, "the synthetic fixture published fewer than three notes")
 
-S079 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:490
+S079 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:493
 Swift expression:
   report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode, cppID: drawerVelocityUnlockedRampID, what: "the square triple presents the intrinsic ruler")
 
-S080 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:492
+S080 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:495
 Swift expression:
   report.fail(drawerVelocityUnlockedRampID, "the square triple published no handles")
 
-S081 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:497
+S081 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:500
 Swift expression:
   report.expect(middleHandle.x > min(firstHandle.x, lastHandle.x) && middleHandle.x < max(firstHandle.x, lastHandle.x), cppID: drawerVelocityUnlockedRampID, message: "the square middle note sits inside the swept span")
 
-S082 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:502
+S082 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:505
 Swift expression:
   report.expectEqual(37, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked square ramp starts raw")
 
-S083 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:503
+S083 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:506
 Swift expression:
   report.expectEqual(squareMiddleExpected, Int(page.frozenPreview[middle.id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked square middle interpolates raw")
 
-S084 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:504
+S084 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:507
 Swift expression:
   report.expectEqual(93, Int(page.frozenPreview[notes[1].id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked square ramp ends raw")
 
-S085 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:505
+S085 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:508
 Swift expression:
   report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityUnlockedRampID, message: "the note outside the triple previews nothing")
 
-S086 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:506
+S086 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:509
 Swift expression:
   report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityUnlockedRampID, what: "the deferred unlocked ramp stages no revision before release")
 
-S087 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:508
+S087 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:511
 Swift expression:
   report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityUnlockedRampID, what: "one unlocked ramp release commits one revision")
 
-S088 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:509
+S088 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:512
 Swift expression:
   report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityUnlockedRampID, message: "the release clears its preview")
 
-S089 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:510
+S089 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:513
 Swift expression:
   report.expectEqual(37, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the first raw ramp velocity")
 
-S090 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:511
+S090 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:514
 Swift expression:
   report.expectEqual(squareMiddleExpected, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the interpolated raw velocity")
 
-S091 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:512
+S091 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:515
 Swift expression:
   report.expectEqual(93, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the last raw ramp velocity")
 
-S092 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:513
+S092 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:516
 Swift expression:
   report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release leaves the outside note alone")
 
-S093 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:522
+S093 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:525
 Swift expression:
   report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode, cppID: drawerVelocityUnlockedRampID, what: "the noise triple presents the intrinsic ruler")
 
-S094 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:524
+S094 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:527
 Swift expression:
   report.fail(drawerVelocityUnlockedRampID, "the noise triple published no handles")
 
-S095 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:527
+S095 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:530
 Swift expression:
   report.expect(noiseMiddleHandle.x > min(noiseFirstHandle.x, noiseLastHandle.x) && noiseMiddleHandle.x < max(noiseFirstHandle.x, noiseLastHandle.x), cppID: drawerVelocityUnlockedRampID, message: "the noise middle note sits inside the swept span")
 
-S096 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:531
+S096 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:534
 Swift expression:
   report.expectEqual(37, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked noise ramp starts raw")
 
-S097 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:533
+S097 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:536
 Swift expression:
   report.expectEqual(noiseMiddleExpected, Int(page.frozenPreview[noiseMiddle.id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked noise middle interpolates raw")
 
-S098 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:534
+S098 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:537
 Swift expression:
   report.expectEqual(93, Int(page.frozenPreview[noiseLast.id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked noise ramp ends raw")
 
-S099 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:535
+S099 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:538
 Swift expression:
   report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityUnlockedRampID, what: "the deferred noise ramp stages no revision before release")
 
-S100 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:537
+S100 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:540
 Swift expression:
   report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityUnlockedRampID, what: "one unlocked noise release commits one revision")
 
-S101 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:538
+S101 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:541
 Swift expression:
   report.expectEqual(37, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the first noise raw velocity")
 
-S102 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:539
+S102 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:542
 Swift expression:
   report.expectEqual(noiseMiddleExpected, Int(document.note(noiseMiddle.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the interpolated noise velocity")
 
-S103 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:540
+S103 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:543
 Swift expression:
   report.expectEqual(93, Int(document.note(noiseLast.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the last noise raw velocity")
 
-S104 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:547
+S104 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:550
 Swift expression:
   report.expectEqual(37, Int(waveGesture.preview[NoteID(109)] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked wave ramp starts raw")
 
-S105 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:548
+S105 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:551
 Swift expression:
   report.expectEqual(65, Int(waveGesture.preview[NoteID(110)] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked wave middle interpolates raw")
 
-S106 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:549
+S106 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:552
 Swift expression:
   report.expectEqual(93, Int(waveGesture.preview[NoteID(111)] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked wave ramp ends raw")
 
@@ -1432,3 +1432,8 @@ Swift expression:
 S113 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:123
 Swift expression:
   report.expectEqual(56, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the middle velocity during preview")
+
+
+S114 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:457
+Swift expression:
+  report.expect(page.frozenPreview[notes[0].id] == nil, cppID: drawerVelocityUnlockedRelativeID, message: "the outside note previews nothing")

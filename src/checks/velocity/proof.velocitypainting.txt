@@ -10,7 +10,7 @@ Additional Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5a
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
 Additional Swift SHA-256: 04386e845a0fc186c7ec5336906c1f2e96e0dffcad6af8e6deeba39f5f829ccf
 Additional Swift counterpart: src/checks/velocity/VelocityPaintDetentChecks.swift
-Additional Swift SHA-256: f6c899a39ed3de9d53fd30f4421c1ee87bb36515f3e8c2afc0f2e6f3a02807aa
+Additional Swift SHA-256: 9c6f9389d6da12297ae6600087b5d8ffb5ab60b5a7275b422b4e655e6afebe8d
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -45,7 +45,7 @@ Command: deno task verify --filter swiftcore
 Result: PASS — 1/14 harnesses selected, 13 sibling harnesses skipped by the filter.
 Provenance: provided by the controller with the settled handoff for the pre-freeze source,
 and re-reported PASS by the GapsVelocity lane after the final edit of
-src/checks/velocity/VelocityPaintDetentChecks.swift (SHA-256 f6c899a3…). This ledger did
+src/checks/velocity/VelocityPaintDetentChecks.swift (SHA-256 9c6f9389…). This ledger did
 not rerun the build or the suite; structural proof checking is not execution evidence
 and no parity or source-freshness claim follows from it.
 
