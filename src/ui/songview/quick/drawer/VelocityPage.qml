@@ -155,6 +155,10 @@ FocusScope {
     // A live gesture or an open prompt claims Escape; everything else passes on
     // to the window, so the shared routing keeps owning Escape.
     Keys.onEscapePressed: (event) => event.accepted = page.pageModel.handleEscape()
+    onActiveFocusChanged: {
+        if (!activeFocus)
+            page.pageModel.cancelSectionInteraction()
+    }
 
     // ---- ruler column -------------------------------------------------------
 

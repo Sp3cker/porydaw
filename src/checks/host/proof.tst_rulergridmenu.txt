@@ -3,8 +3,8 @@ Assertion correspondence: host/tst_rulergridmenu.cpp
 Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/host/tst_rulergridmenu.cpp
 Original SHA-256: 050bc30d7fe744c91d1f084885730ecd67915e58ed95f823bb1dc063a4dc9876
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/editorqml/tst_ShellGridMenu.qml :: test_gridDivisionAndFeelMenusDispatchAndDismiss + test_actionRowsCloseBeforePromptAndDisabledRowsStayOpen
+Swift SHA-256: f14886994ed1fff10ad5674f007b8aad697571b8a28719d20aea1cc445a01ed2
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -19,11 +19,11 @@ deletion or claims whole-case equivalence. Native passes do not prove any Swift
 replacement.
 
 Dispositions and no-ingress evidence
-NATIVE is no longer used. Sites that observed division/feel menu values through the retired QuickPopupSession, popup, action, or signal machinery are canonical GAPs: no Swift counterpart covers the ruler grid menu (the active src/ui/songview/quick/swiftroll/EditorSurface.qml ruler menu exposes only `Edit Time Signature`; the legacy RulerControls.qml division/feel controls are not mounted by the active surface). Sites that asserted pure popup-session, QML-control, focus, or raster mechanics are RETIRED-REPRESENTATION: this check is uncompiled in all CMake targets and unregistered in checkcatalog (re-verified 2026-09-24), while its source remains on disk and still matches the pinned Original SHA-256 (git show a1244957:src/checks/host/tst_rulergridmenu.cpp | shasum -a 256).
+NATIVE is no longer used. The Swift counterpart above now covers the ruler grid menu (division, feel, timeSig, and header menus through the Swift gridMenuLoader and menu models); the legacy RulerControls.qml division/feel controls are not mounted by the active surface. Sites that asserted pure popup-session, QML-control, focus, or raster mechanics are RETIRED-REPRESENTATION: this check is uncompiled in all CMake targets and unregistered in checkcatalog (re-verified 2026-09-24), while its source remains on disk and still matches the pinned Original SHA-256 (git show a1244957:src/checks/host/tst_rulergridmenu.cpp | shasum -a 256).
 
 Verification
-Command: deno task proof check
-Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity. No integrated verification result was provided for this snapshot and no lane executes this harness, so execution evidence is unknown.
+Command: deno task verify:shell --filter shell-grid-menu
+Result: PASS 1/12 ok (post-merge fc39ba34, quoted; lanes not re-run during reconciliation). Proof structural validation: deno task proof check (structure, entry IDs, metadata, tallies only; not execution or parity).
 
 Execution and ownership
 runRulerGridMenuCheck (src/checks/host/tst_rulergridmenu.cpp:679) owns the
@@ -33,9 +33,8 @@ rulerGridMenuDismissalSwallowsOutsideClickAndEscape,
 rulerGridMenusSurviveSelectionAndCursorChanges,
 rulerGridClosePopupsCancelsOwnedNotForeignPopups, and
 actionBackedQuickRowsCloseBeforeTriggerAndRetire. Helpers awaitRulerGridMenu,
-openRulerGridMenu, and rulerGridSurface carry no assertion sites. No Swift
-entry point executes these checks. No shared fixture file carries expects for
-this suite.
+openRulerGridMenu, and rulerGridSurface carry no assertion sites. No shared fixture file carries expects for
+this suite. Swift execution: shell lane entry shell-grid-menu runs src/checks/editorqml/tst_ShellGridMenu.qml :: test_gridDivisionAndFeelMenusDispatchAndDismiss and test_actionRowsCloseBeforePromptAndDisabledRowsStayOpen against Swift owners src/swift/app/roll/PianoGrid.swift (gridMenuRows/gridMenuKind/openGridMenu/dismissGridMenu/activateGridMenuRow/GridSubdivisionMenuItem), src/swift/app/headers/TrackHeaders.swift (activateHeaderMenuAction close-before-trigger plus invalid-id guard), and src/ui/songview/quick/swiftroll/EditorSurface.qml (division/feel controls, gridMenuLoader, guarded activateRow).
 
 Fixture, sequence and row constraints
 Every slot builds a SyntheticHost under a quick_popup::PromptGuard. Division
@@ -50,8 +49,9 @@ submenu, reset, stay-open). QTRY_VERIFY2 sites wait on real event delivery
 (focus return, insertTimePrompt rendering, submenu navigation). Target ids come
 from checks::support::alternateGridMenuId and the live view state, so
 re-execution order is fixed by the suite sequence.
+Swift sequence: the shell lane opens mus_route101 in a ShellWindow, drives division (kind 1, nine snapScale rows -4..4) and feel (kind 2, rows 0/1) menus through real mouseClick/keyClick, then drives timeSig (one row, actionId 9) and header (five rows, actionIds 1..5) menus; waits use tryCompare/tryVerify plus the native pump (waitForNative).
 
-Tally: MATCHED 0, PARTIAL 0, GAP 113, NATIVE 0, RETIRED-REPRESENTATION 53.
+Tally: MATCHED 38, PARTIAL 0, GAP 28, NATIVE 0, RETIRED-REPRESENTATION 100.
 
 Original assertion inventory and source sequence
 
@@ -256,15 +256,15 @@ QVERIFY2(!view.findChild<QMenu *>(),
 
 A009 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:148
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: division rowCount 6 for old denominator ids (-1, 4, 8, 16, 32, 0) - Swift division rows are nine snapScale ids -4..4 (tst_ShellGridMenu.qml:165,168); the old-id count has no Swift equivalent. Open obligation.
 Source context since previous assertion:
         static constexpr std::array<int, 6> divisionIds{-1, 4, 8, 16, 32, 0};
 Original expression:
 QCOMPARE(divisionMenu.model->rowCount(), int(divisionIds.size()));
 
 A010 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:152
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: division rows exist - assertRows rowItem non-null per row (tst_ShellGridMenu.qml:147-148) with rowCount (144), executed at 168 for nine snapScale rows; row-existence observable is identical, only the id domain changed.
 Source context since previous assertion:
         int divisionChecked = 0;
         for (int row = 0; row < divisionMenu.model->rowCount(); ++row) {
@@ -274,31 +274,31 @@ QVERIFY(item);
 
 A011 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:153
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: per-row id equals old denominator literals - Swift per-row actionId compares run against snapScale ids -4..4 (tst_ShellGridMenu.qml:149,168); the old-id-to-new-row difference leaves this literal unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(item->id, divisionIds[std::size_t(row)]);
 
 A012 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:154
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: division rows enabled - compare(row.itemData.enabled, true) per row (tst_ShellGridMenu.qml:150), executed at 168; identical observable.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(item->enabled);
 
 A013 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:155
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: division rows checkable - compare(row.itemData.checkable, true) per row (tst_ShellGridMenu.qml:151), executed at 168; identical observable.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(item->checkable);
 
 A014 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:158
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: exactly one division row checked - checkedCount tally with compare(checkedCount, 1) (tst_ShellGridMenu.qml:145,153-156), executed at 168; identical observable.
 Source context since previous assertion:
             divisionChecked += item->checked ? 1 : 0;
         }
@@ -307,7 +307,7 @@ QCOMPARE(divisionChecked, 1);
 
 A015 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:161
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: current grid denominator found via GridSelection::toMenuId row lookup - Swift locates the checked row by snapScale value (tst_ShellGridMenu.qml:152,168); the old toMenuId mapping has no Swift equivalent. Open obligation.
 Source context since previous assertion:
         const int currentDivisionRow =
             divisionMenu.model->rowForId(initial.gridSelection.toMenuId());
@@ -315,8 +315,8 @@ Original expression:
 QVERIFY2(currentDivisionRow >= 0, "the division menu omitted the current grid denominator");
 
 A016 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:164
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: current division row checked - per-row compare(row.itemData.checked, id === checkedId) (tst_ShellGridMenu.qml:152) with exactly-one-checked (156), executed at 168 for the initial snap (checked 0); identical observable in the snapScale domain.
 Source context since previous assertion:
         const songview::QuickMenuItem *const currentDivision =
             divisionMenu.model->itemAt(currentDivisionRow);
@@ -325,7 +325,7 @@ QVERIFY(currentDivision && currentDivision->checked);
 
 A017 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:165
 Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: current division row text equals control text - Swift asserts gridDivisionControlText values (tst_ShellGridMenu.qml:169) but never reads row text; the row-text coupling is unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -333,7 +333,7 @@ QCOMPARE(currentDivision->text, surface.division->property("controlText").toStri
 
 A018 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:168
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: alternate denominator from checks::support::alternateGridMenuId present - Swift picks snapScale row 1 from -4..4 rows (tst_ShellGridMenu.qml:170) with no alternateGridMenuId; the old-id difference leaves this unproved. Open obligation.
 Source context since previous assertion:
         const int targetDivision = checks::support::alternateGridMenuId(initial.gridSelection);
         const int targetDivisionRow = divisionMenu.model->rowForId(targetDivision);
@@ -342,7 +342,7 @@ QVERIFY2(targetDivisionRow >= 0, "the division menu omitted the chosen denominat
 
 A019 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:171
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: alternate-denominator row item from the old-id lookup - follows A018; no Swift equivalent for the old denominator row. Open obligation.
 Source context since previous assertion:
         const songview::QuickMenuItem *const targetDivisionItem =
             divisionMenu.model->itemAt(targetDivisionRow);
@@ -359,8 +359,8 @@ QVERIFY2(quick_popup::clickMenuRow(*divisionMenu.session, targetDivisionRow),
                  "the division row did not receive a real click");
 
 A021 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:176
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu closed after the row pick); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
+Disposition: MATCHED
+Mapping/reason: MATCHED: division pick closes the menu - clickRow(divisionMenu, 1) then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml:170-171); retired QuickPopupSession isOpen replaced by Swift gridMenuKind, same user-visible close.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
@@ -376,7 +376,7 @@ QVERIFY(!QApplication::activePopupWidget());
 
 A023 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:178
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: GridSelection::musical(targetDivision) identity after pick - Swift asserts snapTicks decrease plus control text (tst_ShellGridMenu.qml:172-173) but has no GridSelection::musical value; the old identity has no Swift equivalent. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -384,8 +384,8 @@ QCOMPARE(view.viewState().gridSelection,
                  songview::GridSelection::musical(uint32_t(targetDivision)));
 
 A024 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:180
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the rendered division control text after the pick); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
+Disposition: GAP
+Mapping/reason: GAP: division control text equals the picked row text - Swift asserts gridDivisionControlText values (Auto on open, picked value after dispatch at tst_ShellGridMenu.qml:169,172) but never reads row text; the row-text coupling is unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -400,8 +400,8 @@ Original expression:
 QVERIFY2(divisionReopened.session, qUtf8Printable(divisionReopened.diagnostic));
 
 A026 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:186
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: reopened division rows exist - assertRows rowItem non-null per row (tst_ShellGridMenu.qml:147-148), executed at 176 on reopen; identical observable.
 Source context since previous assertion:
         for (int row = 0; row < divisionReopened.model->rowCount(); ++row) {
             const songview::QuickMenuItem *const item = divisionReopened.model->itemAt(row);
@@ -409,8 +409,8 @@ Original expression:
 QVERIFY(item);
 
 A027 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:187
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: reopen re-checks the picked row - per-row checked-iff-picked compare (tst_ShellGridMenu.qml:152) executed at 176 as assertRows(ids, -3); same checked pattern in the snapScale domain.
 Source context since previous assertion:
   ;
 Original expression:
@@ -453,16 +453,16 @@ Original expression:
 QVERIFY2(!view.findChild<QMenu *>(), "opening the feel menu left a QMenu under SongView");
 
 A032 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:201
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: feel rowCount 2 - tryCompare(menu, rowCount, ids.length) (tst_ShellGridMenu.qml:144), executed at 183 for [0,1]; identical count and ids.
 Source context since previous assertion:
         static constexpr std::array<int, 2> feelIds{0, 1};
 Original expression:
 QCOMPARE(feelMenu.model->rowCount(), int(feelIds.size()));
 
 A033 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:205
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: feel rows exist - assertRows rowItem non-null per row (tst_ShellGridMenu.qml:147-148), executed at 183; identical observable.
 Source context since previous assertion:
         int feelChecked = 0;
         for (int row = 0; row < feelMenu.model->rowCount(); ++row) {
@@ -471,32 +471,32 @@ Original expression:
 QVERIFY(item);
 
 A034 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:206
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: feel row ids 0,1 - compare(row.itemData.actionId, ids[index]) per row (tst_ShellGridMenu.qml:149), executed at 183 for [0,1]; identical ids.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(item->id, feelIds[std::size_t(row)]);
 
 A035 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:207
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: feel rows enabled - compare(row.itemData.enabled, true) (tst_ShellGridMenu.qml:150), executed at 183; identical observable.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(item->enabled);
 
 A036 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:208
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: feel rows checkable - compare(row.itemData.checkable, true) (tst_ShellGridMenu.qml:151), executed at 183; identical observable.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(item->checkable);
 
 A037 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:211
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: exactly one feel row checked - checkedCount compare(checkedCount, 1) (tst_ShellGridMenu.qml:156), executed at 183; identical observable.
 Source context since previous assertion:
             feelChecked += item->checked ? 1 : 0;
         }
@@ -504,8 +504,8 @@ Original expression:
 QCOMPARE(feelChecked, 1);
 
 A038 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:214
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: current feel row present - rowCount 2 plus per-row actionId compares (tst_ShellGridMenu.qml:144,149), executed at 183 for [0,1]; both feels present, same observable.
 Source context since previous assertion:
         const int currentFeelId = afterDivision.gridTriplet ? 1 : 0;
         const int currentFeelRow = feelMenu.model->rowForId(currentFeelId);
@@ -513,8 +513,8 @@ Original expression:
 QVERIFY2(currentFeelRow >= 0, "the feel menu omitted the current grid feel");
 
 A039 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:216
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: current feel row checked - per-row checked compare (tst_ShellGridMenu.qml:152), executed at 183 as assertRows(feelMenu, [0,1], 0) with Straight text (184); identical observable.
 Source context since previous assertion:
         const songview::QuickMenuItem *const currentFeel = feelMenu.model->itemAt(currentFeelRow);
 Original expression:
@@ -522,15 +522,15 @@ QVERIFY(currentFeel && currentFeel->checked);
 
 A040 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:217
 Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: current feel row text equals control text - Swift asserts gridFeelControlText Straight (tst_ShellGridMenu.qml:184) but never reads row text; unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(currentFeel->text, surface.feel->property("controlText").toString());
 
 A041 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:221
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: alternate feel row present - rowCount 2 plus per-row actionId compares (tst_ShellGridMenu.qml:144,149), executed at 183; identical observable.
 Source context since previous assertion:
         const int targetFeel = afterDivision.gridTriplet ? 0 : 1;
         const int targetFeelRow = feelMenu.model->rowForId(targetFeel);
@@ -538,16 +538,16 @@ Original expression:
 QVERIFY2(targetFeelRow >= 0, "the feel menu omitted the alternate grid feel");
 
 A042 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:223
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: alternate feel row exists - assertRows rowItem non-null (tst_ShellGridMenu.qml:147-148), executed at 183; identical observable.
 Source context since previous assertion:
         const songview::QuickMenuItem *const targetFeelItem = feelMenu.model->itemAt(targetFeelRow);
 Original expression:
 QVERIFY(targetFeelItem);
 
 A043 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:225
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickPopupSession row-click delivery return (quick_popup::clickMenuRow bool); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift drives rows with real mouseClick and asserts effects, never a delivery return value).
 Source context since previous assertion:
         const QString targetFeelText = targetFeelItem->text;
 Original expression:
@@ -555,16 +555,16 @@ QVERIFY2(quick_popup::clickMenuRow(*feelMenu.session, targetFeelRow),
                  "the feel row did not receive a real click");
 
 A044 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:228
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: feel pick closes the menu - clickRow(feelMenu, 1) then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml:185-186); same user-visible close in the Swift gridMenuKind domain.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
 QVERIFY2(!feelMenu.session->isOpen(), "a feel pick left the shared menu open");
 
 A045 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:229
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: feel pick toggles triplet - tryCompare(grid, tripletGrid, true) after the pick (tst_ShellGridMenu.qml:187); Swift tripletGrid is the gridTriplet observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -572,7 +572,7 @@ QCOMPARE(view.viewState().gridTriplet, targetFeel == 1);
 
 A046 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:230
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: TimeRuler::feelText equals the picked row text - retired TimeRuler API plus row-text coupling with no Swift predicate; unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -580,23 +580,23 @@ QCOMPARE(surface.ruler->feelText(), targetFeelText);
 
 A047 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:231
 Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feel control text equals the picked row text - Swift asserts the Triplet value (tst_ShellGridMenu.qml:188) but never reads row text; unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(surface.feel->property("controlText").toString(), targetFeelText);
 
 A048 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:234
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickPopupSession handle acquisition (session/diagnostic guard); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts gridMenuKind/menuOpen/panel, never a session pointer).
 Source context since previous assertion:
         const RulerGridMenu feelReopened = openRulerGridMenu(view, *surface.feel);
 Original expression:
 QVERIFY2(feelReopened.session, qUtf8Printable(feelReopened.diagnostic));
 
 A049 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:237
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: reopened feel rows exist - assertRows rowItem non-null (tst_ShellGridMenu.qml:147-148), executed at 190 on reopen; identical observable.
 Source context since previous assertion:
         for (int row = 0; row < feelReopened.model->rowCount(); ++row) {
             const songview::QuickMenuItem *const item = feelReopened.model->itemAt(row);
@@ -604,8 +604,8 @@ Original expression:
 QVERIFY(item);
 
 A050 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:238
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: reopened feel menu re-checks the picked feel - per-row checked compare (tst_ShellGridMenu.qml:152), executed at 190 as assertRows(feelMenu, [0,1], 1); identical observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -648,7 +648,7 @@ QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
 
 A054 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:257
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: checked division row found via toMenuId - Swift checked-noop clicks the assertRows-checked snapScale row (tst_ShellGridMenu.qml:176,178) with no toMenuId lookup; the old-id difference leaves this unproved. Open obligation.
 Source context since previous assertion:
         const int checkedRow = opened.model->rowForId(before.gridSelection.toMenuId());
 Original expression:
@@ -664,16 +664,16 @@ QVERIFY2(quick_popup::clickMenuRow(*opened.session, checkedRow),
                  "the checked division row did not receive a real click");
 
 A056 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:261
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu closed after the checked-row click); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
+Disposition: MATCHED
+Mapping/reason: MATCHED: checked-row click closes without change - clickRow on the checked division row then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml:178-179) with snapTicks unchanged (180); same user-visible close, retired session isOpen replaced by gridMenuKind.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
 QVERIFY2(!opened.session->isOpen(), "clicking the checked division row left the menu open");
 
 A057 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:262
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: checked-noop leaves selection unchanged - compare(grid.snapTicks, settledSnap) (tst_ShellGridMenu.qml:180); Swift snapTicks is the gridSelection observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -681,7 +681,7 @@ QCOMPARE(view.viewState().gridSelection, before.gridSelection);
 
 A058 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:263
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: gridTriplet unchanged by the division checked-noop - Swift asserts snapTicks unchanged (tst_ShellGridMenu.qml:180) but no triplet predicate surrounds the division noop. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -689,15 +689,15 @@ QCOMPARE(view.viewState().gridTriplet, before.gridTriplet);
 
 A059 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:264
 Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: division control text unchanged by the checked-noop - Swift asserts no control-text predicate around the noop click (tst_ShellGridMenu.qml:178-180); unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(surface.division->property("controlText").toString(), divisionText);
 
 A060 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:268
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: QML-control focus return after the checked-row click (hasActiveFocus QTRY wait); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts no focus routing).
 Source context since previous assertion:
         // Ordinary activation restores the invoking QML control, even when its
         // owner setter correctly early-returns for an already-checked value.
@@ -707,7 +707,7 @@ QTRY_VERIFY2(surface.division->hasActiveFocus(),
 
 A061 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:273
 Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: Return key on the focused division control reopens its menu - Swift has no keyboard-reopen predicate (keyboard coverage is outside-click and Escape dismissal only); unproved. Open obligation.
 Source context since previous assertion:
         QTest::keyClick(opened.session->window(), Qt::Key_Return);
         const RulerGridMenu keyboardReopened = awaitRulerGridMenu(
@@ -717,7 +717,7 @@ QVERIFY2(keyboardReopened.session, qUtf8Printable(keyboardReopened.diagnostic));
 
 A062 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:274
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: keyboard-reopened division rowCount 6 - Swift division rows are nine snapScale ids (tst_ShellGridMenu.qml:165,168); the old-count difference leaves this unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -725,7 +725,7 @@ QCOMPARE(keyboardReopened.model->rowCount(), 6);
 
 A063 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:277
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: keyboard-reopened checked row via toMenuId - no Swift keyboard-reopen and no toMenuId mapping; unproved. Open obligation.
 Source context since previous assertion:
         const int reopenedCheckedRow =
             keyboardReopened.model->rowForId(before.gridSelection.toMenuId());
@@ -734,7 +734,7 @@ QVERIFY(reopenedCheckedRow >= 0);
 
 A064 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:280
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: keyboard-reopened row checked - follows A063; no Swift equivalent. Open obligation.
 Source context since previous assertion:
         const songview::QuickMenuItem *const reopenedChecked =
             keyboardReopened.model->itemAt(reopenedCheckedRow);
@@ -852,8 +852,8 @@ Original expression:
 QVERIFY2(!probe.isNull(), "no ruler point lies outside the division menu frame");
 
 A074 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:339
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu closed by the outside click); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
+Disposition: MATCHED
+Mapping/reason: MATCHED: outside click dismisses the division menu - mouseClick on the ruler outside the menu frame then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml:205-206); same user-visible dismissal, retired session isOpen replaced by gridMenuKind.
 Source context since previous assertion:
         QTest::mouseClick(surface.quick->quickWindow(), Qt::LeftButton, Qt::NoModifier, probe);
         QCoreApplication::processEvents();
@@ -862,32 +862,32 @@ QVERIFY2(!divisionMenu.session->isOpen(),
                  "an outside click did not dismiss the division menu");
 
 A075 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:341
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: outside-click dismissal leaves selection unchanged - compare(grid.snapTicks, beforeSnap) (tst_ShellGridMenu.qml:209); Swift snapTicks is the gridSelection observable.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(view.viewState().gridSelection, beforeDismissal.gridSelection);
 
 A076 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:342
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: outside-click dismissal leaves feel unchanged - compare(grid.tripletGrid, true) (tst_ShellGridMenu.qml:207); Swift tripletGrid is the gridTriplet observable.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(view.viewState().gridTriplet, beforeDismissal.gridTriplet);
 
 A077 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:343
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: outside-click dismissal moves no cursor - compare(grid.editCursorTick, beforeCursor) (tst_ShellGridMenu.qml:208); identical observable.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(view.editCursorTick(), leftTick);
 
 A078 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:344
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired TimeRuler gesture flag (gestureActive) after dismissal; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts the user-visible cursor preservation instead).
 Source context since previous assertion:
   ;
 Original expression:
@@ -895,32 +895,32 @@ QVERIFY2(!surface.ruler->gestureActive(),
                  "the dismissed outside press leaked into the ruler as an active gesture");
 
 A079 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:346
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: native-popup-widget absence (QApplication::activePopupWidget) after dismissal; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (the Swift shell owns menus; no QWidget popups exist).
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(!QApplication::activePopupWidget());
 
 A080 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:347
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: QMenu-under-SongView absence after dismissal; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift menus are Quick rows, never QMenu).
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(!view.findChild<QMenu *>());
 
 A081 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:350
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickPopupSession handle acquisition (session/diagnostic guard); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts gridMenuKind/menuOpen/panel, never a session pointer).
 Source context since previous assertion:
         const RulerGridMenu feelMenu = openRulerGridMenu(view, *surface.feel);
 Original expression:
 QVERIFY2(feelMenu.session, qUtf8Printable(feelMenu.diagnostic));
 
 A082 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:353
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: Escape dismisses the grid menu - openGrid division then keyClick(Escape) with tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml:211-213); same user-visible dismissal through the same gridMenuLoader.
 Source context since previous assertion:
         QTest::keyClick(feelMenu.session->window(), Qt::Key_Escape);
         QCoreApplication::processEvents();
@@ -928,24 +928,24 @@ Original expression:
 QVERIFY2(!feelMenu.session->isOpen(), "Escape did not dismiss the feel menu");
 
 A083 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:354
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: Escape dismissal preserves selection - gridDivisionControlText still shows the picked value after Escape (tst_ShellGridMenu.qml:214); same selection-preserved observable.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(view.viewState().gridSelection, beforeDismissal.gridSelection);
 
 A084 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:355
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: Escape dismissal preserves feel - compare(grid.tripletGrid, true) after Escape (tst_ShellGridMenu.qml:215); identical observable.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(view.viewState().gridTriplet, beforeDismissal.gridTriplet);
 
 A085 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:356
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the edit cursor tick after the dismissed outside press); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
+Disposition: GAP
+Mapping/reason: GAP: edit cursor tick preserved across Escape dismissal - Swift asserts cursor preservation only for outside-click (tst_ShellGridMenu.qml:208); no cursor predicate surrounds the Escape dismissal (211-215). Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1025,7 +1025,7 @@ QVERIFY2(divisionMenu.session && divisionMenu.session->isOpen(),
 
 A092 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:400
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: alternate denominator present after selection and cursor changes - old-id lookup with no Swift equivalent (Swift has no survival probe); unproved. Open obligation.
 Source context since previous assertion:
         const int targetDivision =
             checks::support::alternateGridMenuId(view.viewState().gridSelection);
@@ -1034,8 +1034,8 @@ Original expression:
 QVERIFY2(targetDivisionRow >= 0, "the division menu omitted the chosen denominator");
 
 A093 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:401
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickPopupSession row-click delivery return (quick_popup::clickMenuRow bool); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift drives rows with real mouseClick and asserts effects, never a delivery return value).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1043,8 +1043,8 @@ QVERIFY2(quick_popup::clickMenuRow(*divisionMenu.session, targetDivisionRow),
                  "the division row did not receive a real click");
 
 A094 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:404
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: division pick closes the menu after selection and cursor changes - clickRow then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml:170-171) with dispatch (172-173); same pick-close observable.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
@@ -1052,7 +1052,7 @@ QVERIFY2(!divisionMenu.session->isOpen(), "a division pick left the shared menu 
 
 A095 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:405
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: GridSelection::musical(targetDivision) identity after the survival-probe pick - no GridSelection value exists in Swift; unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1120,7 +1120,7 @@ QVERIFY(!view.findChild<QMenu *>());
 
 A102 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:428
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: gridSelection preserved across closePopups - Swift has no closePopups predicate; unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1128,15 +1128,15 @@ QCOMPARE(view.viewState().gridSelection, before.gridSelection);
 
 A103 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:429
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: gridTriplet preserved across closePopups - Swift has no closePopups predicate; unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(view.viewState().gridTriplet, before.gridTriplet);
 
 A104 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:437
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired Quick-canvas roll-input discovery guard (timelineRollInput findChild) scaffolding the foreign-popup probe; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift has no shared-session ownership probe).
 Source context since previous assertion:
         // A roll-owned shared-session menu is a foreign owner: closePopups()
         // must leave it alone (the owns() guard) instead of stealing another
@@ -1149,7 +1149,7 @@ QVERIFY(rollInput);
 
 A105 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:461
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: empty roll row found for the foreign-menu probe - retired foreign-popup probe scaffolding with no Swift equivalent menu; unproved. Open obligation.
 Source context since previous assertion:
         // The shared time-selection menu only exists while a range is active,
         // and the roll opens it from an empty-plot release without drag
@@ -1178,8 +1178,8 @@ Original expression:
 QVERIFY2(emptyKey >= 0, "the fixture left no empty roll row for the foreign menu");
 
 A106 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:470
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickPopupSession handle acquisition (session/diagnostic guard); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts gridMenuKind/menuOpen/panel, never a session pointer).
 Source context since previous assertion:
         const QPointF foreignMenuPoint(qRound(view.camera().displayX(6.0, 0.0, rows.dpr())),
                                        rows.centerY(emptyKey));
@@ -1193,8 +1193,8 @@ Original expression:
 QVERIFY2(foreignMenu.session, qUtf8Printable(foreignMenu.diagnostic));
 
 A107 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:471
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired shared-session model swap (foreignMenu.model != gridMenu.model pointer comparison); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift has no shared popup session).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1238,7 +1238,7 @@ QVERIFY2(reopenedGrid.session, qUtf8Printable(reopenedGrid.diagnostic));
 
 A112 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:486
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: reopened grid rowCount 6 after foreign takeover - Swift division rows are nine snapScale ids (tst_ShellGridMenu.qml:165,168); the old-count difference leaves this unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1246,15 +1246,15 @@ QCOMPARE(reopenedGrid.model->rowCount(), 6);
 
 A113 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:488
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: reopened checked row via toMenuId after foreign takeover - old-id mapping with no Swift equivalent; unproved. Open obligation.
 Source context since previous assertion:
         const int reusedCheckedRow = reopenedGrid.model->rowForId(before.gridSelection.toMenuId());
 Original expression:
 QVERIFY(reusedCheckedRow >= 0);
 
 A114 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:489
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: reopened menu still re-checks current - openGrid plus assertRows re-check (tst_ShellGridMenu.qml:175-176) with per-row checked compare (152); same re-check observable after the foreign-probe reuse.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1262,7 +1262,7 @@ QVERIFY(reopenedGrid.model->itemAt(reusedCheckedRow)->checked);
 
 A115 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:490
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: gridSelection preserved across the foreign-popup probe - Swift never opens a foreign menu; unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1270,7 +1270,7 @@ QCOMPARE(view.viewState().gridSelection, before.gridSelection);
 
 A116 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:491
 Disposition: GAP
-Mapping/reason: No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: gridTriplet preserved across the foreign-popup probe - Swift never opens a foreign menu; unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1309,8 +1309,8 @@ Original expression:
 QVERIFY2(session && session->window(), "the timeline Quick canvas has no popup session");
 
 A120 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:525
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickMenuItem::fromAction model scaffolding (itemAt pointer); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift rows are value items and header actionIds, never QAction mirrors).
 Source context since previous assertion:
         songview::QuickMenuHost actionHost;
         actionHost.setPopupSession(session);
@@ -1335,64 +1335,64 @@ Original expression:
 QVERIFY(formItem);
 
 A121 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:526
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QAction-backed flag mirror (isActionBacked); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift has no QAction-backed rows).
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(formItem->isActionBacked());
 
 A122 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:527
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QAction identity mirror (action pointer comparison); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(formItem->action.data() == &formAction);
 
 A123 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:528
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QAction text mirror (mnemonic-stripped Insert and Time label); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts no row text).
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(formItem->text, QStringLiteral("Insert & Time"));
 
 A124 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:529
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QAction shortcut-text mirror; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts no shortcuts).
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(formItem->shortcutText, formAction.shortcut().toString(QKeySequence::NativeText));
 
 A125 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:530
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QAction enabled-flag mirror (probe setup); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(formItem->enabled);
 
 A126 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:531
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QAction checkable-flag mirror (probe setup); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(formItem->checkable);
 
 A127 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:532
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QAction checked-flag mirror (probe setup); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(formItem->checked);
 
 A128 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:536
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: QAction and QuickMenuHost signal-spy validity setup (formTriggered and actionActivated isValid); signal-accounting scaffolding uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         QSignalSpy formTriggered(&formAction, &QAction::triggered);
         QSignalSpy actionActivated(&actionHost, &songview::QuickMenuHost::actionActivated);
@@ -1400,16 +1400,16 @@ Original expression:
 QVERIFY(formTriggered.isValid());
 
 A129 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:537
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: QAction and QuickMenuHost signal-spy validity setup (formTriggered and actionActivated isValid); signal-accounting scaffolding uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(actionActivated.isValid());
 
 A130 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:548
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickMenuHost open return (qWaitFor open bool) for the QAction form menu; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts menuOpen and prompt-open, never a host open return).
 Source context since previous assertion:
         bool menuClosedBeforeForm = false;
         bool completionFollowedTrigger = false;
@@ -1425,8 +1425,8 @@ Original expression:
 QVERIFY2(openActionMenu(formModel), "the QAction row did not render as a Quick menu");
 
 A131 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:549
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickPopupSession row-click delivery return (quick_popup::clickMenuRow bool); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift drives rows with real mouseClick and asserts effects, never a delivery return value).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1434,8 +1434,8 @@ QVERIFY2(quick_popup::clickMenuRow(*session, 0),
                  "the rendered QAction row did not receive a real click");
 
 A132 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:551
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: action row opens its prompt - clickRow(timeMenu, 0) then tryCompare(session, timeSigPromptOpen, true) with promptOpenCount 1 (tst_ShellGridMenu.qml:227-230); the Swift timeSig prompt is the Insert Time form analogue.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1443,48 +1443,48 @@ QTRY_VERIFY2(quick_popup::promptItem(*session, QLatin1String("insertTimePrompt")
                      "triggering the QAction row did not open the Insert Time form");
 
 A133 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:553
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: menu closes before the prompt opens - Connections harness records menuClosedBeforePrompt (tst_ShellGridMenu.qml:33-41) with compare(menuClosedBeforePrompt, true) after menu-closed (228) then prompt-open (229) at 231; same close-before-trigger observable, exactly-once via 230.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(menuClosedBeforeForm);
 
 A134 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:554
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickMenuHost actionActivated-after-triggered completion ordering; QAction-signal accounting uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(completionFollowedTrigger);
 
 A135 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:555
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: action dispatched exactly once - tryCompare(testCase, promptOpenCount, 1) (tst_ShellGridMenu.qml:230); same exactly-once observable as the single QAction trigger.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(formTriggered.count(), 1);
 
 A136 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:556
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickMenuHost::actionActivated signal count; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts promptOpenCount once instead).
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(actionActivated.count(), 1);
 
 A137 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:557
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QAction check-state mirror (toggle-off after trigger); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(!formAction.isChecked());
 
 A138 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:560
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickPopupSession cancel mechanics (session->isOpen after cancel); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift cancels via cancelTimeSigPrompt and gridMenuKind, never session->cancel).
 Source context since previous assertion:
         session->cancel();
         QCoreApplication::processEvents();
@@ -1492,8 +1492,8 @@ Original expression:
 QVERIFY2(!session->isOpen(), "cancelling the form left the shared popup session open");
 
 A139 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:574
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired post-close-destruction QAction probe scaffolding (openActionMenu return); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (destroyed-action lifecycle has no Swift counterpart).
 Source context since previous assertion:
         QAction *closeDestroyedAction = new QAction(QStringLiteral("Destroy after close"));
         songview::QuickMenuModel closeDestroyedModel;
@@ -1512,8 +1512,8 @@ QVERIFY2(openActionMenu(closeDestroyedModel),
                  "the post-close destruction row did not render as a Quick menu");
 
 A140 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:576
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickPopupSession row-click delivery return (quick_popup::clickMenuRow bool); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift drives rows with real mouseClick and asserts effects, never a delivery return value).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1521,32 +1521,32 @@ QVERIFY2(quick_popup::clickMenuRow(*session, 0),
                  "the post-close destruction row did not receive a real click");
 
 A141 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:579
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired destroyed-action pointer guard (QPointer null after post-close delete); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
 QVERIFY(!closeDestroyedGuard);
 
 A142 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:580
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired post-close-destruction zero trigger count; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(closeDestroyedTriggered.count(), 0);
 
 A143 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:581
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired post-close-destruction zero actionActivated count; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(closeDestroyedActivated.count(), 0);
 
 A144 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:589
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired destruction-observed QAction probe scaffolding (openActionMenu return); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         QObject::disconnect(destroyAfterClose);
 
@@ -1560,8 +1560,8 @@ QVERIFY2(openActionMenu(destroyedModel),
                  "the destruction-observed QAction row did not render as a Quick menu");
 
 A145 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:593
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired destroyed-action pointer guard (QPointer null after delete); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         delete destroyedAction;
         QCoreApplication::processEvents();
@@ -1569,24 +1569,24 @@ Original expression:
 QVERIFY(!destroyedGuard);
 
 A146 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:594
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired session auto-cancel on action destruction (session->isOpen false after delete); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY2(!session->isOpen(), "destroying an action-backed row did not cancel its menu");
 
 A147 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:595
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired zero trigger count after action destruction; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(destroyedTriggered.count(), 0);
 
 A148 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:602
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickMenuHost open return for the disabled QAction row; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (the disabled-stays-open outcome itself is MATCHED at A150).
 Source context since previous assertion:
         QAction disabledAction(QStringLiteral("Disabled"));
         disabledAction.setEnabled(false);
@@ -1598,8 +1598,8 @@ QVERIFY2(openActionMenu(disabledModel),
                  "the disabled QAction row did not render as a Quick menu");
 
 A149 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:604
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickPopupSession row-click delivery return (quick_popup::clickMenuRow bool); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift drives rows with real mouseClick and asserts effects, never a delivery return value).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1607,24 +1607,24 @@ QVERIFY2(quick_popup::clickMenuRow(*session, 0),
                  "the disabled QAction row did not receive a real click");
 
 A150 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:607
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: disabled row keeps the menu open - clickRow(headerMenu, 3) on the disabled duplicate row with tryCompare(headers, menuOpen, true) (tst_ShellGridMenu.qml:270-271); same disabled-stays-open observable.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
 QVERIFY2(session->isOpen(), "clicking a disabled QAction row closed its menu");
 
 A151 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:608
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: MATCHED: disabled row dispatches nothing - compare(appliedRevisionText, beforeRevision) after the disabled click (tst_ShellGridMenu.qml:269,272); same no-trigger observable as the zero trigger count.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(disabledTriggered.count(), 0);
 
 A152 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:619
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired action-backed submenu root model (children and fromAction nesting, openActionMenu return); Swift has no submenus; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         session->cancel();
         QCoreApplication::processEvents();
@@ -1641,8 +1641,8 @@ QVERIFY2(openActionMenu(submenuModel),
                  "the unopened-submenu QAction row did not render its root menu");
 
 A153 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:623
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired unopened-submenu action text-change retirement guard; Swift has no submenus or QAction text mirrors; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         submenuAction.setText(QStringLiteral("Changed while unopened"));
         QCoreApplication::processEvents();
@@ -1651,8 +1651,8 @@ QVERIFY2(session->isOpen(),
                  "changing an unopened submenu action retired its unobserved root");
 
 A154 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:626
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired reopened submenu QAction root (openActionMenu return); Swift has no submenus; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1660,8 +1660,8 @@ QVERIFY2(openActionMenu(submenuModel),
                  "the reopened submenu QAction root did not render as a Quick menu");
 
 A155 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:630
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired submenu keyboard navigation (Down/Right moves currentModel off the root); Swift has no submenus; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         QTest::keyClick(session->window(), Qt::Key_Down);
         QTest::keyClick(session->window(), Qt::Key_Right);
@@ -1670,16 +1670,16 @@ QTRY_VERIFY2(actionHost.currentModel() != &submenuModel,
                      "the action-backed submenu did not open");
 
 A156 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:633
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired submenu pop (Left returns currentModel to the root); Swift has no submenus; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         QTest::keyClick(session->window(), Qt::Key_Left);
 Original expression:
 QCOMPARE(actionHost.currentModel(), &submenuModel);
 
 A157 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:636
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired popped-submenu action text-change guard for the detached level; Swift has no submenus; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         submenuAction.setText(QStringLiteral("Changed after submenu pop"));
         QCoreApplication::processEvents();
@@ -1688,8 +1688,8 @@ QVERIFY2(session->isOpen(),
                  "changing a popped submenu action retired its detached level's former root");
 
 A158 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:642
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired action-backed reset root model (openActionMenu return); Swift has no reset-root concept; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         QAction resetAction(QStringLiteral("Reset root"));
         songview::QuickMenuModel resetModel;
@@ -1699,8 +1699,8 @@ QVERIFY2(openActionMenu(resetModel),
                  "the action-backed reset root did not render as a Quick menu");
 
 A159 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:646
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired root-reset rebuild-in-place semantics (session stays open across setItems); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         resetModel.setItems({songview::QuickMenuItem::fromAction(resetAction, 106)});
         QCoreApplication::processEvents();
@@ -1709,8 +1709,8 @@ QVERIFY2(session->isOpen(),
                  "resetting an action-backed root rebuilt it in place instead of cancelling");
 
 A160 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:658
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired value-only stay-open row open return (stayOpen flag model); Swift stay-open is disabled-row-based (MATCHED at A150), never a stayOpen flag; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         songview::QuickMenuItem stayOpenItem;
         stayOpenItem.id = 107;
@@ -1726,8 +1726,8 @@ QVERIFY2(openActionMenu(stayOpenModel),
                  "the value-only stay-open row did not render as a Quick menu");
 
 A161 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:662
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired value-root reset semantics (session stays open across setItems); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         stayOpenModel.setItems({stayOpenItem});
         QCoreApplication::processEvents();
@@ -1735,8 +1735,8 @@ Original expression:
 QVERIFY2(session->isOpen(), "resetting a value-only root unexpectedly cancelled its menu");
 
 A162 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:663
-Disposition: GAP
-Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickPopupSession row-click delivery return (quick_popup::clickMenuRow bool); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift drives rows with real mouseClick and asserts effects, never a delivery return value).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1744,8 +1744,8 @@ QVERIFY2(quick_popup::clickMenuRow(*session, 0),
                  "the value-only stay-open row did not receive a real click");
 
 A163 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:667
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired value-row model pointer (itemAt) scaffolding; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
         QCoreApplication::processEvents();
         const songview::QuickMenuItem *const stayOpenResult = stayOpenModel.itemAt(0);
@@ -1753,8 +1753,8 @@ Original expression:
 QVERIFY(stayOpenResult);
 
 A164 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:668
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired value-row checked-state toggle mirror (unchecked after click); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts checked patterns only for division/feel picks and noops).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1762,8 +1762,8 @@ QVERIFY2(!stayOpenResult->checked,
                  "the value-only stay-open row did not retain its checked-state behavior");
 
 A165 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:670
-Disposition: GAP
-Mapping/reason: No Swift counterpart covers action-backed Quick rows; no equivalent Swift assertion is established for this action-model/signal accounting. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: retired QuickMenuModel::activated signal count; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1778,8 +1778,7 @@ Original expression:
 QVERIFY2(session->isOpen(), "the value-only stay-open row unexpectedly closed its menu");
 
 Swift assertion predicates
-None: no Swift counterpart was identified, so no report.expect*/expectEqual
-calls pair with this file.
+The 38 MATCHED mappings cite tst_ShellGridMenu.qml line predicates directly: S01 assertRows(menu, ids, checkedId) (143-157): rowCount, per-row actionId/enabled/checkable/checked, exactly-one-checked. S02 division dispatch (167-173): open kind 1, Auto text, pick row 1 closes, picked text, snapTicks decreases. S03 division reopen + checked-noop (175-180): re-check -3, checked click closes, snapTicks unchanged. S04 feel dispatch (182-188): open kind 2, Straight text, pick row 1 closes, tripletGrid true, Triplet text. S05 feel reopen + checked-noop (189-193): re-check 1, checked click closes, tripletGrid stays true. S06 outside-click dismissal (198-209): off-frame point verified, click closes, triplet/cursor/snapTicks unchanged. S07 Escape dismissal (211-215): Escape closes, division text and triplet preserved. S08 timeSig close-before-prompt (221-233): one row actionId 9, click closes menu, prompt opens exactly once with menuClosedBeforePrompt true. S09 header dispatch + disabled stays open (238-274): five rows actionIds 1..5, duplicate dispatch closes with count+1, disabled row keeps menu open with no revision change, Escape closes.
 
 Remaining original source (closing sequence and helper bodies):
         session->cancel();

@@ -343,7 +343,7 @@ public final class TrackHeadersPresenter {
     }
 
     public func activateHeaderMenuAction(actionId: Int) {
-        guard let target = pendingMenu else { return }
+        guard let target = pendingMenu, (1...5).contains(actionId) else { return }
         if actionId == 4, session?.document.canAddTrack != true { return }
         dismissHeaderMenu()
         guard let session, target.matches(session.document), validTrack(target.track) else { return }

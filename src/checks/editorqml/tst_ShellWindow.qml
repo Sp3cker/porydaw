@@ -973,6 +973,115 @@ TestCase {
         compare(grid.noteSummary, notesBefore, "a Volume-only deletion preserves all notes")
     }
 
+    function test_kVelocityGestureTermination_data() {
+        return [
+            { tag: "page-switch", route: "page-switch" },
+            { tag: "drawer-hide", route: "drawer-hide" },
+            { tag: "focus-loss", route: "focus-loss" },
+            { tag: "tab-switch", route: "tab-switch" },
+            { tag: "last-tab-close", route: "last-tab-close" },
+            { tag: "song-reload", route: "song-reload" },
+            { tag: "escape", route: "escape" }
+        ]
+    }
+
+    function test_kVelocityGestureTermination(data) {
+        var firstId = openTwoSongShell()
+        var session = shell.shellPresenter.session
+        if (data.route === "last-tab-close") {
+            session.songTabs.requestClose(firstId)
+            compare(session.songTabs.tabCount, 1,
+                    "closing the inactive tab leaves one selected song")
+        }
+        var surface = selectedSurface()
+        selectDrawnVelocityNote(surface)
+        var grid = surface.gridModel
+        var page = session.velocityPage()
+        var plot = findChild(surface, "velocityPlotInput")
+        var node = findChild(surface, "velocityNodeFill")
+        var focusPlot = findChild(surface, "velocityPlot")
+        verify(plot && node && focusPlot, "the production velocity input and node exist")
+        focusPlot.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(focusPlot, "activeFocus", true, 3000)
+        var terminalRoute = data.route === "last-tab-close"
+                || data.route === "song-reload"
+        var hit = node.mapToItem(plot, node.width / 2, node.height / 2)
+        var dragY = hit.y < plot.height / 2 ? hit.y + 30 : hit.y - 30
+        if (terminalRoute) {
+            var initialRevision = grid.appliedRevisionText
+            mousePress(plot, hit.x, hit.y, Qt.LeftButton)
+            mouseMove(plot, hit.x, dragY, -1, Qt.LeftButton)
+            mouseRelease(plot, hit.x, dragY, Qt.LeftButton)
+            tryVerify(function() { return grid.appliedRevisionText !== initialRevision },
+                      3000, "a committed edit makes the real close gate hold the tab")
+            tryCompare(session, "documentDirty", true, 3000)
+            node = findChild(surface, "velocityNodeFill")
+            hit = node.mapToItem(plot, node.width / 2, node.height / 2)
+            dragY = hit.y < plot.height / 2 ? hit.y + 30 : hit.y - 30
+        }
+        var beforeNotes = grid.noteSummary
+        var beforeRevision = grid.appliedRevisionText
+        mousePress(plot, hit.x, hit.y, Qt.LeftButton)
+        mouseMove(plot, hit.x, dragY, -1, Qt.LeftButton)
+        tryCompare(page, "interactionActive", true, 3000)
+        tryCompare(plot, "pressed", true, 3000)
+        var closingId = session.songTabs.selectedId
+        if (data.route === "page-switch") {
+            surface.drawerPresenter.toggleSection(0, true)
+        } else if (data.route === "drawer-hide") {
+            surface.drawerPresenter.setSectionVisible(
+                        bootstrap.velocitySectionKind(), false, true)
+        } else if (data.route === "focus-loss") {
+            var roll = findChild(surface, "swiftRollInput")
+            verify(roll, "the roll focus destination exists")
+            roll.forceActiveFocus(Qt.OtherFocusReason)
+            tryCompare(roll, "activeFocus", true, 3000)
+        } else if (data.route === "tab-switch") {
+            session.songTabs.selectTab(firstId)
+            compare(session.songTabs.selectedId, firstId,
+                    "the real tab controller selects the other song")
+        } else if (data.route === "last-tab-close") {
+            session.songTabs.requestClose(closingId)
+        } else if (data.route === "song-reload") {
+            session.openSong("mus_littleroot_test")
+        } else {
+            keyClick(Qt.Key_Escape)
+        }
+        if (terminalRoute) {
+            tryCompare(session.songTabs, "pendingCloseId", closingId, 3000)
+            tryCompare(page, "interactionActive", false, 3000)
+            mouseRelease(plot, hit.x, dragY, Qt.LeftButton)
+            compare(page.selectedCount, 1, "the close gate preserves the selected note")
+            compare(grid.noteSummary, beforeNotes, "the close gate writes no velocity")
+            compare(grid.appliedRevisionText, beforeRevision,
+                    "the close gate does not advance document revision")
+            compare(session.documentDirty, true,
+                    "the earlier setup edit remains unsaved until Discard")
+            session.songTabs.confirmDiscard()
+            if (data.route === "last-tab-close") {
+                tryCompare(session.songTabs, "tabCount", 0, 3000)
+            } else {
+                verify(waitForNative(function() {
+                    return session.songTabs.tabCount === 2
+                            || session.lastSaveError.length > 0
+                }, 30000), "the reload completion returns through the native run loop")
+                compare(session.songTabs.tabCount, 2,
+                        "the replacement song rejoins the surviving tab")
+                verify(session.songTabs.selectedId !== closingId,
+                       "reload installs a different workspace for the song")
+            }
+            return
+        }
+        tryCompare(page, "interactionActive", false, 3000)
+        mouseRelease(plot, hit.x, dragY, Qt.LeftButton)
+        tryCompare(plot, "pressed", false, 3000)
+        compare(page.selectedCount, 1, "cancellation keeps the selected note")
+        compare(grid.noteSummary, beforeNotes, "a cancelled drag never writes note values")
+        compare(grid.appliedRevisionText, beforeRevision,
+                "a cancelled drag never increments the document revision")
+        compare(session.documentDirty, false, "a cancelled drag never dirties the document")
+    }
+
     function test_kParameterTabActivationAndTapCession() {
         openTwoSongShell()
         var surface = selectedSurface()

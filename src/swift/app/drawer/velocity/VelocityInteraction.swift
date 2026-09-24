@@ -377,14 +377,14 @@ extension VelocityPage {
     }
 
     private func cancelGesture() {
-        guard gesture != nil else { return }
+        guard let gesture else { return }
         let selectionBefore = selectionBeforePress
-        gesture = nil
+        self.gesture = nil
         paintCandidates = []
         pressedNote = nil
         selectionBeforePress = []
-        if let session, session.selectedNoteOrder != selectionBefore {
-            // A cancelled gesture restores both membership and press-time order.
+        if let session, gesture.track == (session.selectedTrack ?? -1),
+           session.selectedNoteOrder != selectionBefore {
             session.setSelectedNotes(selectionBefore)
         }
         refreshInteractionPublished()

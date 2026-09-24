@@ -24,6 +24,7 @@ Item {
     readonly property int noteCount: gridModel.renderedNoteCount
     readonly property var timeSigHost: applicationSession.timeSigHost
     property point timeSigMenuPosition: Qt.point(0, 0)
+    property point gridMenuPosition: Qt.point(0, 0)
     property point headerMenuPosition: Qt.point(0, 0)
     readonly property var rulerMenuRows: [
         { actionId: 9, text: qsTr("Edit Time Signature"), enabled: true }
@@ -31,16 +32,18 @@ Item {
 
     function hoverRow(panel, row) { panel.highlightedRow = row }
     function activateRow(panel, row) {
+        const item = panel.rowItem(row)
+        if (!item || !item.active)
+            return
+        const actionId = item.itemData.actionId
         if (panel.rowObjectNamePrefix === "headerMenuRow_") {
-            const item = panel.rowItem(row)
-            if (item && item.active)
-                headersModel.activateHeaderMenuAction(item.itemData.actionId)
-            return
+            headersModel.activateHeaderMenuAction(actionId)
+        } else if (panel.rowObjectNamePrefix === "gridMenuRow_") {
+            gridModel.activateGridMenuRow(actionId)
+        } else if (actionId === 9 && root.applicationSession.timeSigMenuOpen) {
+            timeSigHost.closeTimeSigMenu()
+            rulerInput.editTimeSignatureAtCursor()
         }
-        if (row !== 0)
-            return
-        timeSigHost.closeTimeSigMenu()
-        rulerInput.editTimeSignatureAtCursor()
     }
 
     Connections {
@@ -51,6 +54,15 @@ Item {
         }
         function onTimeSigMenuOpenChanged() {
             if (!root.applicationSession.timeSigMenuOpen
+                && !root.applicationSession.timeSigPromptOpen)
+                rulerInput.forceActiveFocus(Qt.OtherFocusReason)
+        }
+    }
+
+    Connections {
+        target: root.gridModel
+        function onGridMenuKindChanged() {
+            if (root.gridModel.gridMenuKind === 0
                 && !root.applicationSession.timeSigPromptOpen)
                 rulerInput.forceActiveFocus(Qt.OtherFocusReason)
         }
@@ -143,6 +155,54 @@ Item {
                     width: root.gridModel.keyboardWidth
                     height: parent.height
                     rects: root.gridModel.scene.rulerGutterChrome
+                }
+                Item {
+                    objectName: "timelineRulerDivisionControl"
+                    width: root.gridModel.keyboardWidth
+                    height: parent.height / 2
+                    Text {
+                        anchors.fill: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        text: root.gridModel.gridDivisionControlText
+                        color: root.gridModel.palette.primaryText
+                        font: Qt.font({ family: root.applicationFont.family,
+                                        pixelSize: Math.round(root.gridModel.baseFontPx * 0.8),
+                                        hintingPreference: Font.PreferNoHinting })
+                        elide: Text.ElideRight
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            root.gridMenuPosition = mapToItem(root, width / 2, height)
+                            root.gridModel.openGridMenu(1)
+                        }
+                    }
+                }
+
+                Item {
+                    objectName: "timelineRulerFeelControl"
+                    y: parent.height / 2
+                    width: root.gridModel.keyboardWidth
+                    height: parent.height - y
+                    Text {
+                        anchors.fill: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        text: root.gridModel.gridFeelControlText
+                        color: root.gridModel.palette.primaryText
+                        font: Qt.font({ family: root.applicationFont.family,
+                                        pixelSize: Math.round(root.gridModel.baseFontPx * 0.8),
+                                        hintingPreference: Font.PreferNoHinting })
+                        elide: Text.ElideRight
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            root.gridMenuPosition = mapToItem(root, width / 2, height)
+                            root.gridModel.openGridMenu(2)
+                        }
+                    }
                 }
 
                 Item {
@@ -406,6 +466,54 @@ Item {
     }
 
     Loader {
+        id: gridMenuLoader
+        anchors.fill: parent
+        z: 10
+        active: root.gridModel.gridMenuKind !== 0
+        sourceComponent: Component {
+            Item {
+                focus: true
+                Keys.onEscapePressed: (event) => {
+                    root.gridModel.dismissGridMenu()
+                    event.accepted = true
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                    onPressed: root.gridModel.dismissGridMenu()
+                }
+                Original.QuickMenuPanel {
+                    anchors.fill: parent
+                    host: root
+                    menuModel: root.gridModel.gridMenuRows
+                    rootLevel: true
+                    rowObjectNamePrefix: "gridMenuRow_"
+                    appearance: ({
+                        background: root.gridModel.palette.chromeBackground,
+                        outline: root.gridModel.palette.separator,
+                        text: root.gridModel.palette.primaryText,
+                        hoverBackground: root.gridModel.palette.hoverChipFill,
+                        hoverText: root.gridModel.palette.primaryText,
+                        disabledText: root.gridModel.palette.secondaryText,
+                        font: root.applicationFont
+                    })
+                    rowHeight: Math.round(root.gridModel.baseFontPx * 1.8)
+                    checkX: Math.round(root.gridModel.baseFontPx * 0.4)
+                    checkWidth: Math.round(root.gridModel.baseFontPx * 0.8)
+                    textX: Math.round(root.gridModel.baseFontPx * 1.5)
+                    textRight: menuWidth - Math.round(root.gridModel.baseFontPx * 0.5)
+                    menuWidth: Math.min(parent.width, Math.round(root.gridModel.baseFontPx * 16))
+                    menuHeight: Math.min(parent.height, rowCount * rowHeight + 2)
+                    menuOrigin: Qt.point(
+                        Math.max(0, Math.min(root.gridMenuPosition.x, width - menuWidth)),
+                        Math.max(0, Math.min(root.gridMenuPosition.y, height - menuHeight)))
+                }
+                Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)
+            }
+        }
+    }
+
+    Loader {
         id: timeSigMenuLoader
         anchors.fill: parent
         z: 10
@@ -436,13 +544,15 @@ Item {
                         disabledText: root.gridModel.palette.secondaryText,
                         font: Application.font
                     })
-                    rowHeight: 28
+                    rowHeight: Math.round(root.gridModel.baseFontPx * 1.8)
                     separatorHeight: 1
-                    textX: 12
-                    textRight: 200
-                    menuWidth: 220
-                    menuHeight: rowHeight + 2
-                    menuOrigin: root.timeSigMenuPosition
+                    textX: Math.round(root.gridModel.baseFontPx * 0.9)
+                    textRight: menuWidth - Math.round(root.gridModel.baseFontPx * 0.5)
+                    menuWidth: Math.min(parent.width, Math.round(root.gridModel.baseFontPx * 18))
+                    menuHeight: Math.min(parent.height, rowCount * rowHeight + 2)
+                    menuOrigin: Qt.point(
+                        Math.max(0, Math.min(root.timeSigMenuPosition.x, width - menuWidth)),
+                        Math.max(0, Math.min(root.timeSigMenuPosition.y, height - menuHeight)))
                 }
                 Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)
             }

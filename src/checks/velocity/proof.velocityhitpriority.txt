@@ -8,9 +8,9 @@ Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
 Additional Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
 Additional Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5ad4a2fac12b
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
-Additional Swift SHA-256: 04386e845a0fc186c7ec5336906c1f2e96e0dffcad6af8e6deeba39f5f829ccf
+Additional Swift SHA-256: cb49bddf735ed93df3d0faaa0e9a76e46cf989d3c6498ac05faff54de3d48b6e
 Additional Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift
-Additional Swift SHA-256: 9559522bab026f298f201dbaa9db58af6f2b9a148d26879f219592ba95c93235
+Additional Swift SHA-256: aa19a567b5814cabcc2f47eb8d613cd1ac19e34efeef5461d02dd0d8fcc26dd0
 Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
 Additional Swift SHA-256: 32986d8646ef96c6c49749f5d0eedeea025ac18a89ff2027900f96ae396267e2
 
@@ -1068,150 +1068,150 @@ S069 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdra
   report.expect(thirdHandle.hitRadius > 0, cppID: drawerVelocityGestureID,
                 message: "the published hit radius is font-relative and positive")
 
-S070 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:195
+S070 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:225
   report.expect(!grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
                 message: "Set Velocity is unavailable with no selection")
 
-S071 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:209
+S071 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:239
   report.expect(grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
                 message: "Set Velocity becomes available with a selection")
 
-S072 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:213
+S072 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:243
   report.expectEqual(1, requested, cppID: drawerVelocityCommandID,
                      what: "the existing command row asks its owner for the prompt")
 
-S073 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:215
+S073 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:245
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                 message: "the command commits no value before prompt acceptance")
 
-S074 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:220
+S074 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:250
   report.expectEqual(2, requested, cppID: drawerVelocityCommandID,
                      what: "the command routes every execution through the same owner")
 
-S075 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:222
+S075 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:252
   report.expect(fixture.page.promptOpen, cppID: drawerVelocityCommandID,
                 message: "the routed command opened the page's captured prompt")
 
-S076 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:225
+S076 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:255
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                 message: "cancelling the routed prompt still commits nothing")
 
-S077 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:229
+S077 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:259
   report.expectEqual(EditNotesOperation.setVelocity.rawValue,
                      row?.notesOperation.rawValue ?? -1, cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity on the notes arm")
 
-S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:232
+S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:262
   report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
                      cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity's consume route")
-S079 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:312
+S079 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:468
   report.fail(drawerVelocityHitPriorityID, "the synthetic fixture published fewer than three notes")
-S080 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:319
+S080 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:475
   report.fail(drawerVelocityHitPriorityID, "the overlap note was not inserted")
-S081 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:324
+S081 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:480
   report.fail(drawerVelocityHitPriorityID, "the overlap note did not resolve")
-S082 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:328
+S082 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:484
   report.fail(drawerVelocityHitPriorityID, "the stacked notes have no published handles")
-S083 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:332
+S083 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:488
   report.fail(drawerVelocityHitPriorityID, "the overlap published off the target level")
-S084 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:338
+S084 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:494
   report.fail(drawerVelocityHitPriorityID, "the overlap circle covers the target node")
-S085 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:342
+S085 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:498
   report.fail(drawerVelocityHitPriorityID, "the overlap sits outside the target stem")
-S086 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:345
+S086 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:501
   report.expectEqual(Int(notes[0].velocity), Int(document.note(overlapID)?.velocity ?? 0), cppID: drawerVelocityHitPriorityID, what: "the overlap note carries the target velocity")
-S087 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:353
+S087 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:509
   report.expect(selectedPress, cppID: drawerVelocityHitPriorityID, message: "pressing the selected circle is consumed")
-S088 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:354
+S088 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:510
   report.expect(page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "pressing the selected circle holds a live gesture")
-S089 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:355
+S089 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:511
   report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "pressing the selected circle keeps it over the stem")
-S090 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:357
+S090 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:513
   report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "releasing the selected circle keeps it")
-S091 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:358
+S091 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:514
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a circle-over-stem click writes nothing")
-S092 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:365
+S092 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:521
   report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "an unselected circle wins over a selected stem")
-S093 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:367
+S093 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:523
   report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "releasing the winning circle keeps it")
-S094 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:368
+S094 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:524
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a circle-over-stem reselect writes nothing")
-S095 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:369
+S095 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:525
   report.expectEqual(capturedOverlap, document.note(overlapID)?.velocity, cppID: drawerVelocityHitPriorityID, what: "hit-priority clicks leave the overlap velocity captured")
-S096 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:371
+S096 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:527
   report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityHitPriorityID, what: "hit-priority clicks leave every velocity captured")
-S097 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:380
+S097 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:536
   report.fail(drawerVelocityHitPriorityID, "the synthetic fixture published fewer than three notes")
-S098 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:388
+S098 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:544
   report.fail(drawerVelocityHitPriorityID, "the press-time selection did not latch")
-S099 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:392
+S099 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:548
   report.fail(drawerVelocityHitPriorityID, "the fixture's target note has no published handle")
-S100 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:397
+S100 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:553
   report.fail(drawerVelocityHitPriorityID, "the target stem spans less than one hit diameter")
-S101 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:404
+S101 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:560
   report.fail(drawerVelocityHitPriorityID, "the stem point touches another node")
-S102 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:411
+S102 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:567
   report.expect(consumed, cppID: drawerVelocityHitPriorityID, message: "a stem-only press is consumed")
-S103 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:412
+S103 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:568
   report.expect(page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "a stem-only press holds a live gesture")
-S104 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:413
+S104 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:569
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityHitPriorityID, message: "a stem-only press keeps the selected stem")
-S105 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:415
+S105 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:571
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityHitPriorityID, message: "releasing the stem keeps it")
-S106 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:416
+S106 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:572
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a stem-only click writes nothing")
-S107 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:418
+S107 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:574
   report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityHitPriorityID, what: "a stem-only click leaves every velocity captured")
-S108 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:427
+S108 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:583
   report.fail(drawerVelocityHitPriorityID, "the synthetic fixture published fewer than three notes")
-S109 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:435
+S109 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:591
   report.fail(drawerVelocityHitPriorityID, "the selection did not clear")
-S110 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:439
+S110 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:595
   report.fail(drawerVelocityHitPriorityID, "the fixture's notes have no published handles")
-S111 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:445
+S111 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:601
   report.expect(fixture.session.selectedNoteOrder == [notes[2].id], cppID: drawerVelocityHitPriorityID, message: "pressing a node selects it")
-S112 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:446
+S112 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:602
   report.expect(page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "pressing a node holds a live gesture")
-S113 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:455
+S113 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:611
   report.fail(drawerVelocityHitPriorityID, "no same-level step leaves the activation distance")
-S114 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:461
+S114 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:617
   report.expectEqual(Int(notes[2].velocity), Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityHitPriorityID, what: "a same-level move previews the captured velocity")
-S115 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:463
+S115 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:619
   report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityHitPriorityID, message: "a same-value move ends the gesture with no preview left")
-S116 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:464
+S116 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:620
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityTransactionID, message: "a same-value move writes nothing")
-S117 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:465
+S117 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:621
   report.expect(fixture.session.selectedNoteOrder == [notes[2].id], cppID: drawerVelocityHitPriorityID, message: "releasing over another column does not click through")
-S118 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:467
+S118 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:623
   report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityHitPriorityID, what: "a moved node leaves every velocity captured")
-S119 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:476
+S119 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:632
   report.fail(drawerVelocityHitPriorityID, "the synthetic fixture published fewer than three notes")
-S120 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:484
+S120 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:640
   report.fail(drawerVelocityHitPriorityID, "the press-time selection did not latch")
-S121 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:488
+S121 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:644
   report.fail(drawerVelocityHitPriorityID, "the fixture's lead note has no published handle")
-S122 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:494
+S122 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:650
   report.expect(consumed, cppID: drawerVelocityHitPriorityID, message: "a secondary press on the group is consumed")
-S123 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:495
+S123 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:651
   report.expect(page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "a secondary press holds a live gesture")
-S124 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:496
+S124 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:652
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityHitPriorityID, message: "a secondary press preserves the selected group")
-S125 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:498
+S125 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:654
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityHitPriorityID, message: "a secondary release preserves the selected group")
-S126 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:499
+S126 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:655
   report.expect(!page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "a secondary release ends the gesture")
-S127 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:500
+S127 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:656
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a secondary click writes nothing")
-S128 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:502
+S128 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:658
   report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityHitPriorityID, what: "a secondary click leaves every velocity captured")
 S129 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:43
   report.expectEqual([100, 64, 32], notes.map { Int($0.velocity) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes carry their literal velocities")
-S130 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:351
+S130 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:507
   report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "the overlap selection latches before the press")
-S131 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:361
+S131 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:517
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityHitPriorityID, message: "the stem selection latches before the press")
-S132 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:363
+S132 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:519
   report.expect(unselectedPress, cppID: drawerVelocityHitPriorityID, message: "pressing the unselected circle is consumed")
-S133 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:364
+S133 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:520
   report.expect(page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "pressing the unselected circle holds a live gesture")

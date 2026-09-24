@@ -106,6 +106,102 @@ TestCase {
         return Math.abs(actual - expected) <= testCase.tolerance
     }
 
+    function rectOnSurface(item, s) {
+        var origin = item.mapToItem(s, 0, 0)
+        return Qt.rect(origin.x, origin.y, item.width, item.height)
+    }
+
+    function test_mountedRulerRollVelocityAndDrawerChromeGeometry() {
+        var s = surface()
+        var h = s.headersModel
+        var drawer = item("editorDrawer")
+        drawer.presenter.restoreStoredPreferences(1, 160, 0, 240, 0, 90, 1)
+        try {
+            var ruler = item("timelineQuickRuler")
+            var rulerInput = item("timelineRulerInput")
+            var rollGutter = item("timelineQuickRollGutter")
+            var rollPlot = item("timelineQuickRollPlot")
+            var rollInput = item("swiftRollInput")
+            var headers = item("timelineQuickTrackHeaders")
+            var headerInput = item("timelineTrackHeadersInput")
+            var rows = item("timelineTrackHeaderRows")
+            var scroll = item("timelineTrackHeaderScrollBar")
+            var thumb = item("timelineTrackHeaderScrollThumb")
+            var body = item("drawerBody_velocity")
+            var velocityHandle = item("drawerHandle_velocity")
+            var automationHandle = item("drawerHandle_automation")
+            var voiceHandle = item("drawerHandle_voiceChanges")
+            var bar = item("drawerBarInput").parent
+            var voiceToggle = item("drawerToggle_voiceChanges")
+            var automationToggle = item("drawerToggle_automation")
+            var velocityToggle = item("drawerToggle_velocity")
+            var split = h.trackHeaderWidth + s.gridModel.keyboardWidth
+            tryVerify(function() {
+                return body.visible && velocityHandle.visible
+                    && findChild(body, "velocityPage") !== null
+            })
+            var page = findChild(body, "velocityPage")
+            var velocityPlot = findChild(page, "velocityPlot")
+            verify(velocityPlot !== null)
+            var bodyRect = rectOnSurface(body, s)
+            var pageRect = rectOnSurface(page, s)
+            var velocityPlotRect = rectOnSurface(velocityPlot, s)
+            var rulerRect = rectOnSurface(ruler, s)
+            var rulerPlot = rectOnSurface(rulerInput, s)
+            var rollRect = Qt.rect(rectOnSurface(rollGutter.parent, s).x,
+                                   rectOnSurface(rollGutter, s).y,
+                                   rollGutter.parent.width, rollGutter.height)
+            var rollPlotRect = rectOnSurface(rollPlot, s)
+            var headerRect = rectOnSurface(headers, s)
+
+            verify(ruler.visible && rulerInput.visible && rollGutter.visible
+                   && rollPlot.visible && rollInput.visible && headers.visible)
+            verify(rulerRect.width > 0 && rulerRect.height > 0
+                   && rollRect.width > 0 && rollRect.height > 0
+                   && bodyRect.width > 0 && bodyRect.height > 0)
+            verify(rulerPlot.width > 0 && rulerPlot.height > 0
+                   && rollPlotRect.width > 0 && rollPlotRect.height > 0
+                   && velocityPlotRect.width > 0 && velocityPlotRect.height > 0)
+            verify(near(rulerPlot.x, split) && near(rollPlotRect.x, split)
+                   && near(velocityPlotRect.x, split))
+            verify(near(rulerPlot.x + rulerPlot.width, rulerRect.x + rulerRect.width)
+                   && near(rollPlotRect.x + rollPlotRect.width,
+                           rollRect.x + rollRect.width)
+                   && near(velocityPlotRect.x + velocityPlotRect.width,
+                           bodyRect.x + bodyRect.width))
+            verify(headerRect.x + headerRect.width <= rulerPlot.x
+                   && headerRect.x + headerRect.width <= rollPlotRect.x
+                   && headerRect.x + headerRect.width <= velocityPlotRect.x)
+            verify(near(rollPlotRect.x - rollRect.x, s.gridModel.keyboardWidth))
+            verify(near(rollInput.width, rollPlotRect.width)
+                   && near(rollInput.height, rollPlotRect.height),
+                   "roll input " + rollInput.width + "x" + rollInput.height
+                   + " plot " + rollPlotRect.width + "x" + rollPlotRect.height)
+            verify(near(pageRect.x, bodyRect.x) && near(pageRect.y, bodyRect.y)
+                   && near(pageRect.width, bodyRect.width)
+                   && near(pageRect.height, bodyRect.height))
+            verify(!automationHandle.visible && !voiceHandle.visible)
+            verify(near(rectOnSurface(velocityHandle, s).y + velocityHandle.height,
+                        bodyRect.y))
+            verify(near(bodyRect.y + bodyRect.height, rectOnSurface(bar, s).y))
+            verify(voiceToggle.visible && automationToggle.visible && velocityToggle.visible)
+            verify(voiceToggle.x < automationToggle.x
+                   && automationToggle.x < velocityToggle.x)
+            verify(near(automationToggle.x - voiceToggle.x - voiceToggle.width,
+                        velocityToggle.x - automationToggle.x - automationToggle.width))
+            verify(near(automationToggle.x - voiceToggle.x - voiceToggle.width,
+                        voiceToggle.y - bar.y))
+            verify(rows.count > 0 && h.rowHeight > 0)
+            compare(h.contentHeight, rows.count * h.rowHeight)
+            compare(scroll.width, h.scrollbarWidth)
+            compare(scroll.visible, h.maximumScrollY > 0)
+            compare(thumb.visible, h.maximumScrollY > 0)
+            verify(s.Screen.devicePixelRatio > 0)
+        } finally {
+            drawer.presenter.restoreStoredPreferences(0, 160, 1, 240, 1, 90, 0)
+        }
+    }
+
     function test_mountedBandGeometryAndRows() {
         var s = surface()
         var h = s.headersModel

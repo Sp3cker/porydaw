@@ -3,28 +3,28 @@ Assertion correspondence: host/tst_hostintegration.cpp
 Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/host/tst_hostintegration.cpp
 Original SHA-256: 4083b59bbb5e88019ed164c1296e3f8ea36e3a6fe6673d8b0ef74316dbdbae10
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift (drawerVelocityPrimaryTrackSwitchCancels :267-312; drawerVelocityLifecycleCancellation :315-383 plus bank route :384-461); src/checks/velocity/VelocityPageChecks.swift:191 call-list entry; src/checks/editorqml/tst_ShellWindow.qml test_kVelocityGestureTermination plus data (:976-1083)
+Swift SHA-256: aa19a567b5814cabcc2f47eb8d613cd1ac19e34efeef5461d02dd0d8fcc26dd0 (VelocityClickSelectionChecks.swift); cb49bddf735ed93df3d0faaa0e9a76e46cf989d3c6498ac05faff54de3d48b6e (VelocityPageChecks.swift); 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3 (tst_ShellWindow.qml)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
-The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. No Swift counterpart was identified for this deleted host suite. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Nothing here is marked MATCHED or PARTIAL; unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove any Swift replacement.
+The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. Velocity-gesture termination counterparts were identified for this deleted host suite (see Swift counterpart): A114 through A120 carry partial presenter plus production-shell correspondence with explicit unproved song and voice route conditions, and A105, A108, A111, A113, A121 retire QQuick delivery and SongView focus-band mechanics. Production owners: DocumentWorkspace bank-domain and hidden cancel, VelocityInteraction cancelGesture selection rule, VelocityPage.qml focus-loss and Escape routing, TrackHeaders menu guard. All other families retain their prior dispositions. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Nothing here is marked MATCHED or PARTIAL; unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove any Swift replacement.
 
 Dispositions and no-ingress evidence
 NATIVE is no longer used: every site that observed a native-window, embedding, delivery, framebuffer, settings, popup, or harness obligation is RETIRED-REPRESENTATION, because the mechanism that carried it is gone (this C++ file was deleted at 31ea635f, appears in no CMake target, and checkcatalog.cpp registers no host entry; re-verified 2026-09-24). GAP sites are behavior assertions whose Swift owners exist but whose original predicates have no executed Swift equivalent; each mapping names the owner verified under src/swift/app. The Reference revision and Original SHA-256 below were re-verified against each other (git show <revision>:<path> | shasum -a 256) before any retirement claim.
 
 Verification
 Command: deno task proof check
-Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity. No integrated verification result was provided for this snapshot, and no lane executes this deleted harness, so execution evidence is unknown.
+Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity. Quoted post-merge verification (not re-executed here): deno task verify --filter swiftcore PASS 1/6; deno task verify:shell --filter shellwindow PASS 1/12; deno task verify:qml PASS editorqml-drawer 1/1. No lane executes the deleted harness itself.
 
 Execution ownership
-No Swift entry point executes the deleted host checks; no Swift fixture is paired.
+Velocity-termination predicates execute under swiftcore/VelocityPage::cancellationPaths through the runVelocityPageChecks call list plus the shellwindow editorqml lane (test_kVelocityGestureTermination); no Swift entry point executes the deleted host harness itself.
 
 Fixture, sequence and row constraints
 A two-note track fixture anchors the velocity-gesture cases: begin, update, preview, commit, and undo stages expand one site per gesture phase, with framebuffer captures (baseline, committed, undone, deselected, zoomed) guarding each rendering stage. Focus-band and pan-delivery cases iterate timeline bands, expanding mouse-grabber and isPanning sites per band.
 Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Tally: MATCHED 0, PARTIAL 0, GAP 100, NATIVE 0, RETIRED-REPRESENTATION 85.
+Tally: MATCHED 0, PARTIAL 7, GAP 89, NATIVE 0, RETIRED-REPRESENTATION 89.
 
 Original assertion inventory and source sequence
 
@@ -1320,8 +1320,8 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Velocity, Qt::OtherFocusReason))
 
 A105 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:461
-Disposition: GAP
-Mapping/reason: Swift VelocityPage owns the focused timeline band after the drag focus request; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SongView timeline-band focus identity (focusedTimelineBand() == Velocity); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift focus-loss cancellation travels through EditorDrawerPresenter.inputCancelled with GridCancelReason plus QML activeFocus; no focusTimelineBand or focusedTimelineBand symbol under src/swift, src/ui or src/checks).
 Source context since previous assertion:
   ;
 
@@ -1350,8 +1350,8 @@ Original expression:
   QVERIFY(velocityInput->bounds().contains(drag))
 
 A108 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:480
-Disposition: GAP
-Mapping/reason: Swift VelocityPage owns the mouse-grabber identity during the velocity drag; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old QQuickWindow mouse-grabber delivery identity during the velocity drag (quickWindow->mouseGrabberItem()); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts press delivery through page interactionActive and plot pressed predicates; no mouseGrabberItem symbol under src/swift, src/ui or src/checks).
 Source context since previous assertion:
   ;
           const QPoint pressWindow = velocityInput->mapToScene(press).toPoint();
@@ -1392,8 +1392,8 @@ Original expression:
   QVERIFY(view.userGestureActive())
 
 A111 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:505
-Disposition: GAP
-Mapping/reason: Swift VelocityPage owns the mouse grabber cleared after the drag; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old QQuickWindow mouse-grabber delivery cleared by ungrabMouse(); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress at QQuick delivery level (the presenter level pointer-ungrabbed cancel is asserted separately at A114 through A118 via VelocityClickSelectionChecks.swift:354-355,368-382; no mouseGrabberItem symbol under src/swift, src/ui or src/checks; never claims QML event-delivery coverage).
 Source context since previous assertion:
   ;
           const bool clearsSelection = route == QStringLiteral("track-replace") ||
@@ -1431,8 +1431,8 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason))
 
 A113 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:508
-Disposition: GAP
-Mapping/reason: Swift PianoGrid owns the focused timeline band after the roll focus request; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SongView timeline-band focus identity on the focus-loss path (focusedTimelineBand() == Roll); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift focus-loss cancellation travels through EditorDrawerPresenter.inputCancelled with GridCancelReason.focusLost; no focusTimelineBand or focusedTimelineBand symbol under src/swift, src/ui or src/checks).
 Source context since previous assertion:
   ;
 
@@ -1440,8 +1440,8 @@ Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Roll)
 
 A114 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:515
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old userGestureActive cleared after the roll gesture; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift PianoGrid owns the behavior).
+Disposition: PARTIAL
+Mapping/reason: Partial velocity-termination correspondence: gesture teardown asserted at presenter level for page-switch, drawer-hide, pointer-ungrabbed, focus-loss, window-deactivated, hidden and escape (VelocityClickSelectionChecks.swift:368-370), for primary-track switch (ibid.:301), for bank edit through DocumentWorkspace (ibid.:447-449), and through the production shell for page-switch, drawer-hide, focus-loss, tab-switch, last-tab-close, song-reload and escape (tst_ShellWindow.qml:1052,1075 interactionActive false; Swift interactionActive is the analogue of the retired userGestureActive accessor); unproved condition: song-null and song-replacement single-view teardown plus voice-replace and voice-null executions have no Swift equivalent (no voicegroup-switch cancel plumbing, owned by another branch).
 Source context since previous assertion:
   ;
           } else if (route == QStringLiteral("quick-deactivate")) {
@@ -1455,8 +1455,8 @@ Original expression:
   QTRY_VERIFY(!view.userGestureActive())
 
 A115 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:518
-Disposition: GAP
-Mapping/reason: Swift SongDocument state bytes owns the serialized song bytes unchanged by the released drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Partial velocity-termination correspondence: song bytes unchanged by the cancelled drag asserted via coreTimeBytes for the seven presenter routes (VelocityClickSelectionChecks.swift:378-380), via document snapshot for primary-track switch (ibid.:304,307), via revision plus MIDI bytes plus note velocity for bank edit (ibid.:456-460; bank history legitimately advances on applyBankEdit per ibid.:443-446, so the predicate covers song revision, MIDI bytes and note velocity only), and via noteSummary for shell routes including tab-switch, last-tab-close and song-reload (tst_ShellWindow.qml:1055,1079); unproved condition: song-null and song-replacement single-view teardown plus voice-replace and voice-null executions have no Swift equivalent.
 Source context since previous assertion:
   ;
           QTest::mouseRelease(quickWindow, Qt::LeftButton, Qt::NoModifier, dragWindow);
@@ -1466,8 +1466,8 @@ Original expression:
   QCOMPARE(document.smf().write(), midi)
 
 A116 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:519
-Disposition: GAP
-Mapping/reason: Swift DocumentSession.revision owns the revision unchanged by the released drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Partial velocity-termination correspondence: revision unchanged by the cancelled drag asserted via document snapshot for the seven presenter routes (VelocityClickSelectionChecks.swift:378-380), for primary-track switch (ibid.:304,307), and for bank edit (ibid.:456-458; bank history legitimately advances on applyBankEdit per ibid.:443-446, so the predicate covers song revision, MIDI bytes and note velocity only), and via appliedRevisionText for shell routes including tab-switch, last-tab-close and song-reload (tst_ShellWindow.qml:1056-1057,1080-1081); unproved condition: song-null and song-replacement single-view teardown plus voice-replace and voice-null executions have no Swift equivalent.
 Source context since previous assertion:
   ;
 
@@ -1475,8 +1475,8 @@ Original expression:
   QCOMPARE(document.revision(), revision)
 
 A117 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:520
-Disposition: GAP
-Mapping/reason: Swift DocumentSession history owns the history depth unchanged by the released drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Partial velocity-termination correspondence: history depth unchanged asserted via undoCount for the seven presenter routes (VelocityClickSelectionChecks.swift:379) and corroborated for primary-track switch by snapshot reachability (ibid.:304 canUndo/canRedo); shell routes assert revision text only and the bank route asserts revision, bytes and velocity only, so undo-depth for bank, tab-switch, last-tab-close and song-reload executions is unproved; unproved condition also includes song-null, song-replacement, voice-replace and voice-null executions (no Swift equivalent).
 Source context since previous assertion:
   ;
 
@@ -1484,8 +1484,8 @@ Original expression:
   QCOMPARE(document.undoStack()->count(), undo)
 
 A118 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:521
-Disposition: GAP
-Mapping/reason: Swift VelocityPage owns the preview cleared after the released drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Partial velocity-termination correspondence: preview cleared asserted via frozenPreview.isEmpty for the seven presenter routes (VelocityClickSelectionChecks.swift:368-370), primary-track switch (ibid.:302) and bank edit (ibid.:447-449); shell routes assert gesture teardown via interactionActive false (tst_ShellWindow.qml:1052,1075) without a frozenPreview-emptiness predicate; unproved condition: song-null and song-replacement single-view teardown plus voice-replace and voice-null executions have no Swift equivalent.
 Source context since previous assertion:
   ;
 
@@ -1493,8 +1493,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(notes[0].noteId))
 
 A119 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:523
-Disposition: GAP
-Mapping/reason: Swift note selection owns the selection cleared by the drag when it should clear; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Partial velocity-termination correspondence: the track-replace execution is matched by the primary-track-switch cancel clearing the selection (VelocityClickSelectionChecks.swift:303 selectedNoteOrder.isEmpty); unproved condition: song-null and song-replacement executions (legacy single reused view retired; the Swift tab model preserves outgoing selection across tab-switch, close and reload per tst_ShellWindow.qml:1054,1078 selectedCount 1); never MATCHED.
 Source context since previous assertion:
   ;
           if (clearsSelection)
@@ -1503,8 +1503,8 @@ Original expression:
   QVERIFY(view.selectionModel().noteSelection().empty())
 
 A120 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:525
-Disposition: GAP
-Mapping/reason: Swift note selection owns the selection retained by the drag when it should clear; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Partial velocity-termination correspondence: selection preserved for page-switch, drawer-hide, pointer-ungrabbed, focus-loss, window-deactivated, hidden and escape (VelocityClickSelectionChecks.swift:371-373), for bank edit (ibid.:450-452), and for shell routes (tst_ShellWindow.qml:1054,1078 selectedCount 1); unproved condition: voice-replace and voice-null executions (no voicegroup-switch cancel plumbing, owned by another branch).
 Source context since previous assertion:
   ;
           else
@@ -1513,8 +1513,8 @@ Original expression:
   QVERIFY(!view.selectionModel().noteSelection().empty())
 
 A121 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:526
-Disposition: GAP
-Mapping/reason: Swift VelocityPage owns the mouse grabber cleared before the next stage; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old QQuickWindow mouse-grabber delivery cleared at the end of the slot (quickWindow->mouseGrabberItem()); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts gesture teardown through page interactionActive and plot pressed predicates; no mouseGrabberItem symbol under src/swift, src/ui or src/checks).
 Source context since previous assertion:
   ;
 

@@ -103,6 +103,10 @@ public final class PianoGrid {
     @QtTracked public var lastCancelReason = -1
     @QtTracked public var pencilMode = false
     @QtTracked public var tripletGrid = false
+    public var gridMenuRows: QListModel<GridSubdivisionMenuItem> = QListModel()
+    @QtTracked public var gridMenuKind = 0
+    @QtTracked public var gridDivisionControlText = "Auto"
+    @QtTracked public var gridFeelControlText = "Straight"
     @QtTracked public var editCursorTick = 0
     @QtTracked public var lastVelocity = 100
     @QtTracked public var hoverKey = -1
@@ -379,13 +383,16 @@ public final class PianoGrid {
             pencilMode.toggle()
         case .gridNarrow:
             metrics.snapScale = max(-4, metrics.snapScale - 1)
+            refreshGridMenuPresentation()
             refreshFromSession()
         case .gridWiden:
             metrics.snapScale = min(4, metrics.snapScale + 1)
+            refreshGridMenuPresentation()
             refreshFromSession()
         case .gridTriplet:
             metrics.tripletGrid.toggle()
             tripletGrid = metrics.tripletGrid
+            refreshGridMenuPresentation()
             refreshFromSession()
         default:
             let grid = UInt32(max(1, metrics.snapTicks(camera: session.camera)))
@@ -396,6 +403,56 @@ public final class PianoGrid {
                     TimeDefaults.shiftTickClamped(
                         tick, by: Int64(grid - tick % grid))
                 })
+        }
+    }
+
+    public func openGridMenu(kind: Int) {
+        guard kind == 1 || kind == 2 else { return }
+        gridMenuKind = kind
+        refreshGridMenuPresentation()
+    }
+
+    public func dismissGridMenu() {
+        gridMenuKind = 0
+    }
+
+    public func activateGridMenuRow(actionId: Int) {
+        let kind = gridMenuKind
+        guard (kind == 1 && (-4...4).contains(actionId))
+            || (kind == 2 && (0...1).contains(actionId)) else { return }
+        dismissGridMenu()
+        if kind == 1 {
+            guard metrics.snapScale != actionId else { return }
+            metrics.snapScale = actionId
+        } else {
+            guard metrics.tripletGrid != (actionId == 1) else { return }
+            metrics.tripletGrid = actionId == 1
+            tripletGrid = metrics.tripletGrid
+        }
+        refreshGridMenuPresentation()
+        refreshFromSession()
+    }
+
+    private func refreshGridMenuPresentation() {
+        let scale = metrics.snapScale
+        gridDivisionControlText = scale == 0 ? "Auto"
+            : scale < 0 ? "÷\(1 << -scale)" : "×\(1 << scale)"
+        gridFeelControlText = metrics.tripletGrid ? "Triplet" : "Straight"
+        if gridMenuKind == 1 {
+            gridMenuRows.reset(to: (-4...4).map { value in
+                let text = value == 0 ? "Adaptive"
+                    : value < 0 ? "Adaptive ÷\(1 << -value)"
+                    : "Adaptive ×\(1 << value)"
+                return GridSubdivisionMenuItem(actionId: value, text: text,
+                                               checked: value == scale)
+            })
+        } else if gridMenuKind == 2 {
+            gridMenuRows.reset(to: [
+                GridSubdivisionMenuItem(actionId: 0, text: "Straight",
+                                        checked: !metrics.tripletGrid),
+                GridSubdivisionMenuItem(actionId: 1, text: "Triplet",
+                                        checked: metrics.tripletGrid),
+            ])
         }
     }
 
@@ -1082,3 +1139,19 @@ public final class PianoGrid {
     }
 }
 
+
+@MainActor
+@QtBridgeable
+public final class GridSubdivisionMenuItem {
+    public let actionId: Int
+    public let text: String
+    public var enabled: Bool = true
+    public var checkable: Bool = true
+    public let checked: Bool
+
+    init(actionId: Int, text: String, checked: Bool) {
+        self.actionId = actionId
+        self.text = text
+        self.checked = checked
+    }
+}
