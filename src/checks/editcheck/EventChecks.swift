@@ -280,8 +280,6 @@ private func laneEditing(_ report: CheckReport) {
 
 
 
-// These import rows retain their onboardcheck cppIds as an oracle-lineage
-// exception: the C++ importer exposes them only through the onboarding workflow.
 private func importAnalysis(_ report: CheckReport) {
     let file = MidiFile(division: 25, chunks: [MidiChunk(), MidiChunk(events: [
         .channel(status: 0xB0, data0: 0x1E, data1: 0x08),
@@ -304,6 +302,46 @@ private func importAnalysis(_ report: CheckReport) {
     report.expect(analysis.tracks[0].notesBeforeProgram,
                   cppID: "onboardcheck/OnboardingTest::importAnalysis",
                   message: "notes before instrument are reported")
+    let importID = "onboardcheck/OnboardingTest::importAnalysis"
+    guard let path = CheckEnvironment.fixturePath("test_midis/external_import.mid") else {
+        report.fail(importID, "missing --swiftcore fixture root")
+        return
+    }
+    do {
+        let external = try MidiFile.decode(Array(Data(contentsOf: URL(fileURLWithPath: path))))
+        for budget in [16, 1, -1] {
+            let row = "budget \(budget)"
+            let result = MidiImport.analyze(external, trackBudget: budget,
+                                            playerName: "MUSIC_PLAYER_BGM")
+            report.expectEqual(2, result.mappedTracks, cppID: importID,
+                               what: "\(row) maps two tracks")
+            report.expectEqual(7, result.peakConcurrentNotes, cppID: importID,
+                               what: "\(row) peak concurrent notes")
+            report.expectEqual(5, result.sampleNoteLimit, cppID: importID,
+                               what: "\(row) sample note limit")
+            report.expect(result.warnings.contains { $0.contains("note timing") },
+                          cppID: importID, message: "\(row) warns of timing adjustment")
+            report.expect(result.warnings.contains { $0.contains("same time") },
+                          cppID: importID, message: "\(row) warns of polyphony")
+            report.expectEqual(budget == 1 ? 1 : 0, result.silentTracks, cppID: importID,
+                               what: "\(row) silent tracks")
+            report.expectEqual(budget == 1, result.warnings.contains {
+                $0.contains("MUSIC_PLAYER_BGM") && $0.contains("will not play")
+            }, cppID: importID, what: "\(row) budget warning")
+            report.expectEqual(2, result.tracks.count, cppID: importID,
+                               what: "\(row) analyzed tracks")
+            report.expectEqual(2, result.tracks.dropFirst().first?.programs.count,
+                               cppID: importID, what: "\(row) second track programs")
+            report.expectEqual(.supported, result.controllers.first {
+                $0.controller == 1
+            }?.support, cppID: importID, what: "\(row) modulation exports")
+            report.expectEqual(.notExported, result.controllers.first {
+                $0.controller == 91
+            }?.support, cppID: importID, what: "\(row) reverb is not exported")
+        }
+    } catch {
+        report.fail(importID, "external_import.mid read/decode failed: \(error)")
+    }
 }
 
 private func importSmfReportRows(_ report: CheckReport) {
@@ -417,6 +455,148 @@ private func importTransforms(_ report: CheckReport) {
         report.expectEqual(baseline, overflow,
                            cppID: "onboardcheck/OnboardingTest::importRescaleOverflow",
                            what: "overflow rejection leaves file untouched")
+    }
+    let rescaleID = "onboardcheck/OnboardingTest::importRescale"
+    let roundtripID = "onboardcheck/OnboardingTest::importRoundtrip"
+    if let path = CheckEnvironment.fixturePath("test_midis/external_import.mid") {
+        do {
+            var imported = try MidiFile.decode(Array(Data(contentsOf: URL(fileURLWithPath: path))))
+            try MidiImport.rescaleDivision(&imported, to: 24)
+            report.expectEqual(UInt16(24), imported.division, cppID: rescaleID,
+                               what: "external import division after rescale")
+            guard imported.chunks.count > 2, imported.chunks[1].events.count > 11,
+                  !imported.chunks[2].events.isEmpty else {
+                report.fail(rescaleID, "external import has missing chunks or events")
+                return
+            }
+            report.expectEqual(Tick(28), imported.chunks[1].events[4].tick,
+                               cppID: rescaleID, what: "external import event 4 tick")
+            report.expectEqual(Tick(57), imported.chunks[1].events[11].tick,
+                               cppID: rescaleID, what: "external import event 11 tick")
+            report.expectEqual(Tick(230), imported.chunks[1].endTick,
+                               cppID: rescaleID, what: "external import second chunk end")
+            report.expectEqual(Tick(0), imported.chunks[2].events[0].tick,
+                               cppID: rescaleID, what: "external import third chunk first tick")
+            for (chunkIndex, chunk) in imported.chunks.enumerated() {
+                var previous: Tick = 0
+                for (eventIndex, event) in chunk.events.enumerated() {
+                    report.expect(event.tick >= previous, cppID: rescaleID,
+                                  message: "chunk \(chunkIndex) event \(eventIndex) remains monotonic")
+                    previous = event.tick
+                }
+            }
+            do {
+                let serialized = try imported.encoded()
+                let reread = try MidiFile.decode(serialized)
+                report.expectEqual(serialized, try reread.encoded(), cppID: roundtripID,
+                                   what: "rescaled fixture re-encodes byte-identically")
+                report.expectEqual(UInt16(24), reread.division, cppID: roundtripID,
+                                   what: "rescaled fixture reload division")
+                report.expectEqual(imported.chunks.count, reread.chunks.count,
+                                   cppID: roundtripID, what: "rescaled fixture reload chunk count")
+            } catch {
+                report.fail(roundtripID, "rescaled fixture roundtrip failed: \(error)")
+            }
+        } catch {
+            report.fail(rescaleID, "external_import.mid read/decode/rescale failed: \(error)")
+            report.fail(roundtripID, "roundtrip source read/decode/rescale failed: \(error)")
+        }
+    } else {
+        report.fail(rescaleID, "missing --swiftcore fixture root")
+    }
+
+    let dedupID = "onboardcheck/OnboardingTest::importDedup"
+    if let path = CheckEnvironment.fixturePath("test_midis/duplicate_setters.mid") {
+        do {
+            var duplicate = try MidiFile.decode(Array(Data(contentsOf: URL(fileURLWithPath: path))))
+            report.expectEqual(8, MidiImport.removeRedundantSetters(&duplicate),
+                               cppID: dedupID, what: "duplicate fixture removes eight setters")
+            report.expectEqual(0, MidiImport.removeRedundantSetters(&duplicate),
+                               cppID: dedupID, what: "duplicate fixture second pass is idempotent")
+            guard duplicate.chunks.count > 1 else {
+                report.fail(dedupID, "duplicate fixture has no lead chunk")
+                return
+            }
+            let lead = duplicate.chunks[1]
+            func count(_ type: UInt8, _ data0: UInt8? = nil) -> Int {
+                lead.events.reduce(into: 0) { total, event in
+                    guard case let .channel(status, value, _) = event.payload else { return }
+                    if status >> 4 == type && (data0 == nil || value == data0) { total += 1 }
+                }
+            }
+            let expectedCounts: [(UInt8, UInt8?, Int, String)] = [
+                (0xC, nil, 2, "program"), (0xB, 7, 3, "cc7"),
+                (0xE, nil, 1, "pitch bend"), (0xB, 101, 1, "cc101"),
+                (0xB, 0x0D, 2, "cc13"), (0xB, 0x11, 2, "labels"),
+                (0xA, 60, 1, "key 60 pressure"), (0xA, 61, 1, "key 61 pressure"),
+                (0x9, nil, 2, "note on"), (0x8, nil, 2, "note off"),
+            ]
+            for (type, controller, expected, name) in expectedCounts {
+                report.expectEqual(expected, count(type, controller), cppID: dedupID,
+                                   what: "deduplicated \(name) event count")
+            }
+            let conductor = duplicate.chunks[0].events
+            let tempos = conductor.filter { $0.metaType == 0x51 }
+            for tempo in tempos {
+                guard case let .meta(_, data) = tempo.payload else { continue }
+                report.expectEqual([UInt8(0x07), 0xA1, 0x20], data, cppID: dedupID,
+                                   what: "tempo meta payload remains intact")
+            }
+            report.expectEqual(1, tempos.count, cppID: dedupID, what: "tempo event count")
+            report.expectEqual(2, conductor.filter { $0.metaType == 0x01 }.count,
+                               cppID: dedupID, what: "text event count")
+            var labelCount = 0
+            var previousLabel: UInt8 = 0
+            var programIndex: Int?
+            var firstNote: Int?
+            var hasCC7 = false
+            var hasBend = false
+            for (index, event) in lead.events.enumerated() {
+                if event.tick != 0 { break }
+                guard case let .channel(status, value, data1) = event.payload else { continue }
+                if status >> 4 == 0xC && value == 12 { programIndex = index }
+                if status >> 4 == 0xB && value == 7 && data1 == 80 { hasCC7 = true }
+                if status >> 4 == 0xE && data1 == 0x40 { hasBend = true }
+                if status >> 4 == 0xB && value == 0x11 {
+                    report.expect(data1 > previousLabel, cppID: dedupID,
+                                  message: "tick-zero label \(labelCount) increases")
+                    previousLabel = data1
+                    labelCount += 1
+                }
+                if status >> 4 == 0x9 && firstNote == nil { firstNote = index }
+            }
+            report.expect(programIndex != nil && hasCC7 && hasBend, cppID: dedupID,
+                          message: "tick-zero program, volume and bend survive")
+            report.expectEqual(2, labelCount, cppID: dedupID, what: "tick-zero label count")
+            report.expectEqual(UInt8(3), previousLabel, cppID: dedupID,
+                               what: "last tick-zero label value")
+            report.expect(programIndex.flatMap { program in
+                firstNote.map { program < $0 }
+            } == true, cppID: dedupID, message: "tick-zero program precedes first note")
+        } catch {
+            report.fail(dedupID, "duplicate_setters.mid read/decode failed: \(error)")
+        }
+    } else {
+        report.fail(dedupID, "missing --swiftcore fixture root")
+    }
+
+    let overflowID = "onboardcheck/OnboardingTest::importRescaleOverflow"
+    let boundaryEvent = MidiEvent.channel(tick: TimeDefaults.maxTick,
+                                          status: 0x90, data0: 60, data1: 100)
+    var boundary = MidiFile(division: 24, chunks: [
+        MidiChunk(events: [boundaryEvent], endTick: TimeDefaults.maxTick),
+    ])
+    do {
+        try MidiImport.rescaleDivision(&boundary, to: 48)
+        report.fail(overflowID, "boundary rescale unexpectedly succeeded")
+    } catch {
+        report.expectEqual(UInt16(24), boundary.division, cppID: overflowID,
+                           what: "overflow keeps original division")
+        report.expectEqual(TimeDefaults.maxTick, boundary.chunks[0].events[0].tick,
+                           cppID: overflowID, what: "overflow keeps boundary event tick")
+        report.expectEqual("Tick rescale to division 48 exceeds 32-bit tick range",
+                           String(describing: error), cppID: overflowID,
+                           what: "overflow describes the division and tick limit")
     }
 }
 

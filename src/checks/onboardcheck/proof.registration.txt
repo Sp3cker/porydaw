@@ -16,11 +16,11 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-All 88 sites in this file are GAP: newSongRegistration, registrationBackfill, and registrationAliases exercise pure SongRegistry/DecompProject/SongDocument helpers against project files on a copied fixture. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them.
+All 88 sites in this file are GAP: newSongRegistration, registrationBackfill, and registrationAliases exercise pure SongRegistry/DecompProject/SongDocument helpers against project files on a copied fixture. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them — feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift. The native harness is uncompiled in all CMake targets and unregistered in checkcatalog, so these sites never execute in any lane.
 Site tally: 88 sites (88 GAP).
 
 Execution and ownership
-The retained native harness owns this file: runOnboardCheck (support.cpp) QTest::qExecs OnboardingTest. No Swift entry point executes these checks; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf) and the file-local songPath/tablePath/songsHeaderPath/define/song helpers, which carry no assertion sites.
+The native harness runOnboardCheck (support.cpp) is the only owner of these checks (QTest::qExec of OnboardingTest), but the file is uncompiled in all CMake targets and unregistered in checkcatalog, so no lane executes it. No Swift entry point executes these checks either; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf) and the file-local songPath/tablePath/songsHeaderPath/define/song helpers, which carry no assertion sites.
 
 Fixture, sequence and row constraints
 newSongRegistration_data expands normal, aligned, heal-songs-h, heal-charmap, and reregister rows; the aligned row rewrites the charmap with aligned columns and re-plans, while the healing rows corrupt songs.h/charmap bytes and assert re-registration restores them. registrationBackfill_data expands charmap and songs.h stripped-line backfills. registrationAliases_data expands complete-alias and drift-heals-first. Reload loops re-resolve the created/registered SongInfo after project.reload(). Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
@@ -41,7 +41,7 @@ Original assertion inventory and source sequence
 
 A001 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:50
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
   #include "checks/onboardcheck/onboardingtest.h"
 
@@ -98,7 +98,7 @@ Original expression:
 
 A002 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:53
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const QString root = fixture->root();
@@ -109,7 +109,7 @@ Original expression:
 
 A003 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:56
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const int baseline = registeredCount(project);
@@ -120,7 +120,7 @@ Original expression:
 
 A004 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:59
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const QString label = QStringLiteral("mus_onboardcheck");
@@ -131,7 +131,7 @@ Original expression:
 
 A005 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:60
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -140,7 +140,7 @@ Original expression:
 
 A006 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:61
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -150,7 +150,7 @@ Original expression:
 
 A007 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:63
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -159,7 +159,7 @@ Original expression:
 
 A008 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:69
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -173,7 +173,7 @@ Original expression:
 
 A009 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:70
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -182,7 +182,7 @@ Original expression:
 
 A010 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:71
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -191,7 +191,7 @@ Original expression:
 
 A011 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:72
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -200,7 +200,7 @@ Original expression:
 
 A012 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:73
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -209,7 +209,7 @@ Original expression:
 
 A013 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:74
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -218,7 +218,7 @@ Original expression:
 
 A014 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:75
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -227,7 +227,7 @@ Original expression:
 
 A015 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:77
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       SongDocument document;
@@ -237,7 +237,7 @@ Original expression:
 
 A016 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:80
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -248,7 +248,7 @@ Original expression:
 
 A017 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:83
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       RegistrationPlan plan =
@@ -259,7 +259,7 @@ Original expression:
 
 A018 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:84
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -268,7 +268,7 @@ Original expression:
 
 A019 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:85
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -277,7 +277,7 @@ Original expression:
 
 A020 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:86
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -286,7 +286,7 @@ Original expression:
 
 A021 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:90
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -298,7 +298,7 @@ Original expression:
 
 A022 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:91
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -307,7 +307,7 @@ Original expression:
 
 A023 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:96
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const QString bytes = QStringLiteral("%1 %2")
@@ -320,7 +320,7 @@ Original expression:
 
 A024 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:101
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       if (alignedCharmap) {
@@ -333,7 +333,7 @@ Original expression:
 
 A025 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:104
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
           const RegistrationPlan alignedPlan =
@@ -346,7 +346,7 @@ Original expression:
 
 A026 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:107
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -355,7 +355,7 @@ Original expression:
 
 A027 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:112
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
           plan = SongRegistry::makePlan(root, label, constant, QStringLiteral("MUSIC_PLAYER_BGM"));
@@ -370,7 +370,7 @@ Original expression:
 
 A028 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:115
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -379,7 +379,7 @@ Original expression:
 
 A029 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:116
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -388,7 +388,7 @@ Original expression:
 
 A030 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:119
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       if (plan.ldApplicable) {
@@ -399,7 +399,7 @@ Original expression:
 
 A031 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:120
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -408,7 +408,7 @@ Original expression:
 
 A032 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:123
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       }
@@ -419,7 +419,7 @@ Original expression:
 
 A033 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:124
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -428,7 +428,7 @@ Original expression:
 
 A034 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:127
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -439,7 +439,7 @@ Original expression:
 
 A035 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:129
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const QByteArray header = readFile(songsHeaderPath(root), error);
@@ -449,7 +449,7 @@ Original expression:
 
 A036 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:132
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const QByteArray linker =
@@ -460,7 +460,7 @@ Original expression:
 
 A037 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:136
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       if (healing == QStringLiteral("songs.h")) {
@@ -472,7 +472,7 @@ Original expression:
 
 A038 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:138
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
           const int end = corrupted.indexOf('\n', at);
@@ -482,7 +482,7 @@ Original expression:
 
 A039 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:140
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
           corrupted.replace(at, end - at, QByteArrayLiteral("#define MUS_ONBOARDCHECK 9999"));
@@ -492,7 +492,7 @@ Original expression:
 
 A040 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:141
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -501,7 +501,7 @@ Original expression:
 
 A041 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:146
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       } else if (healing == QStringLiteral("charmap")) {
@@ -514,7 +514,7 @@ Original expression:
 
 A042 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:148
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
           corrupted.replace(plan.charmapLine.toUtf8(), replacement);
@@ -524,7 +524,7 @@ Original expression:
 
 A043 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:149
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -533,7 +533,7 @@ Original expression:
 
 A044 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:151
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       }
@@ -545,7 +545,7 @@ Original expression:
 
 A045 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:154
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -554,7 +554,7 @@ Original expression:
 
 A046 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:155
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -563,7 +563,7 @@ Original expression:
 
 A047 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:156
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -572,7 +572,7 @@ Original expression:
 
 A048 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:157
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -581,7 +581,7 @@ Original expression:
 
 A049 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:158
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -590,7 +590,7 @@ Original expression:
 
 A050 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:160
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       if (plan.ldApplicable) {
@@ -600,7 +600,7 @@ Original expression:
 
 A051 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:161
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -609,7 +609,7 @@ Original expression:
 
 A052 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:163
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       }
@@ -619,7 +619,7 @@ Original expression:
 
 A053 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:164
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -628,7 +628,7 @@ Original expression:
 
 A054 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:165
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -637,7 +637,7 @@ Original expression:
 
 A055 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:170
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const SongInfo *registered = nullptr;
@@ -650,7 +650,7 @@ Original expression:
 
 A056 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:171
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -659,7 +659,7 @@ Original expression:
 
 A057 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:172
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -668,7 +668,7 @@ Original expression:
 
 A058 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:187
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
   }
@@ -691,7 +691,7 @@ Original expression:
 
 A059 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:199
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const QString root = fixture->root();
@@ -711,7 +711,7 @@ Original expression:
 
 A060 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:200
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -720,7 +720,7 @@ Original expression:
 
 A061 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:201
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -729,7 +729,7 @@ Original expression:
 
 A062 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:206
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const QString label = QStringLiteral("mus_first");
@@ -742,7 +742,7 @@ Original expression:
 
 A063 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:211
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const QByteArray needle = file == QStringLiteral("charmap")
@@ -755,7 +755,7 @@ Original expression:
 
 A064 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:213
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const int end = original.indexOf('\n', start);
@@ -765,7 +765,7 @@ Original expression:
 
 A065 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:216
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       QByteArray stripped = original;
@@ -776,7 +776,7 @@ Original expression:
 
 A066 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:218
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const RegistrationStatus status = SongRegistry::checkRegistration(root, label, constant);
@@ -786,7 +786,7 @@ Original expression:
 
 A067 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:220
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       int id = -1;
@@ -798,7 +798,7 @@ Original expression:
 
 A068 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:223
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -807,7 +807,7 @@ Original expression:
 
 A069 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:224
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -816,7 +816,7 @@ Original expression:
 
 A070 | OnboardingTest::registrationBackfill | src/checks/onboardcheck/registration.cpp:225
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -825,7 +825,7 @@ Original expression:
 
 A071 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:240
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
   }
@@ -848,7 +848,7 @@ Original expression:
 
 A072 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:244
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const QString root = fixture->root();
@@ -860,7 +860,7 @@ Original expression:
 
 A073 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:246
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       int firstId = -1;
@@ -872,7 +872,7 @@ Original expression:
 
 A074 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:252
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const RegistrationPlan plan =
@@ -884,7 +884,7 @@ Original expression:
 
 A075 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:254
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const QByteArray header = readFile(songsHeaderPath(root), error);
@@ -894,7 +894,7 @@ Original expression:
 
 A076 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:256
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       const QByteArray charmap = readFile(root + QStringLiteral("/charmap.txt"), error);
@@ -904,7 +904,7 @@ Original expression:
 
 A077 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:257
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -914,7 +914,7 @@ Original expression:
 
 A078 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:259
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -923,7 +923,7 @@ Original expression:
 
 A079 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:260
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -934,7 +934,7 @@ Original expression:
 
 A080 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:266
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       if (drift) {
@@ -946,7 +946,7 @@ Original expression:
 
 A081 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:269
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
           const int end = corrupted.indexOf('\n', at);
@@ -957,7 +957,7 @@ Original expression:
 
 A082 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:270
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -966,7 +966,7 @@ Original expression:
 
 A083 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:273
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
       }
@@ -979,7 +979,7 @@ Original expression:
 
 A084 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:276
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -988,7 +988,7 @@ Original expression:
 
 A085 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:277
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -997,7 +997,7 @@ Original expression:
 
 A086 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:278
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -1006,7 +1006,7 @@ Original expression:
 
 A087 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:279
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 
@@ -1015,7 +1015,7 @@ Original expression:
 
 A088 | OnboardingTest::registrationAliases | src/checks/onboardcheck/registration.cpp:280
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift.
 Source context since previous assertion:
 
 

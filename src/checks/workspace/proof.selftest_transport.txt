@@ -35,14 +35,18 @@ Swift predicates in the paired counterpart, listed after the inventory.
 MATCHED identifies an equivalent Swift predicate that would execute for the
 original site; PARTIAL identifies a related Swift predicate with an explicit
 unproved condition; GAP identifies an original predicate with no equivalent
-Swift assertion established; NATIVE identifies a native window, workspace,
-tab, audio engine, settings, widget, dialog, timer, or rendering/harness
-observation that a presenter-level Swift check cannot establish as executed
-here. NATIVE marks sites whose expression names native-harness objects or
-values produced through them; GAP marks portable value/codec/model
-comparisons a presenter-level check could in principle establish.
+Swift assertion established; RETIRED-REPRESENTATION identifies a site whose
+native check-harness mechanism no longer has production ingress. The
+WorkspaceTransportSelfTest harness declared in
+src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target
+(src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and
+is unregistered in src/checks/checkcatalog.cpp, so no site below executes
+natively and no site carries NATIVE. The GAP sites are the user-visible live
+transport, settings, seek, pause/resume and tab-close behavior the dead
+MainWindow harness observed; the retired sites are the fixture and wait
+helpers that stand it up.
 WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport is a single long live-transport flow: mixer-settings updates that must not drop playback, pause stability, paused seek with playhead sync, resume, loop-disabled mid-song seek, stop/start, pause, restart-from-pause rewind, and final tab close.
-selftest_transport.cpp contributes 20 sites: 0 MATCHED, 0 PARTIAL, 0 GAP, 20 NATIVE. The paired
+selftest_transport.cpp contributes 20 sites: 0 MATCHED, 0 PARTIAL, 14 GAP, 6 RETIRED-REPRESENTATION. The paired
 counterpart drives the disjoint DocumentSession/ProjectService/bank-history
 suite; it never opens a MainWindow, workspace tab, transport, scale control,
 or editor-codec flow, so no workspace-flow predicate is matched here.
@@ -54,11 +58,14 @@ Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution and ownership
-Native execution owns every site below: the QtTest suites declared in
-src/checks/workspace/tst_workspacesessions.h (WorkspaceTransportSelfTest) run against a real
-MainWindow with the Null audio backend and a staged fixture project copy
-(workspace_test::ProjectCopy; fixture.h/fixture.cpp carries no assertion
-sites). On the Swift side, pdcSuiteRun in
+No native execution remains: the QtTest suites declared in
+src/checks/workspace/tst_workspacesessions.h (WorkspaceTransportSelfTest)
+would run against a real MainWindow with the Null audio backend and a staged
+fixture project copy (workspace_test::ProjectCopy; fixture.h/fixture.cpp
+carries no assertion sites), but the harness is compiled into no CMake target
+and is unregistered in src/checks/checkcatalog.cpp, so each native site was
+reconciled to GAP (user-visible behavior) or RETIRED-REPRESENTATION (fixture
+and wait plumbing). On the Swift side, pdcSuiteRun in
 src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 to
 runProjectSessionSuite and runBankHistorySuite; no Swift entry point opens a
 workspace, tab, transport, scale control, or editor-codec flow. The 185
@@ -78,8 +85,8 @@ No _data rows. SettingsRestore/LoopRestore RAII guards bound the mixer-settings 
 Original assertion inventory
 
 A001 | WorkspaceTransportSelfTest::init | src/checks/workspace/selftest_transport.cpp:57
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the init fixture guard (QSettings clear plus ProjectCopy reset). Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   #include "checks/workspace/tst_workspacesessions.h"
 
@@ -141,8 +148,8 @@ Original expression:
   QVERIFY2(m_project.reset(error), qPrintable(error))
 
 A002 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:117
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the openNull tab-readiness guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
   }
@@ -208,16 +215,16 @@ Original expression:
   QVERIFY(tab)
 
 A003 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:118
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the openNull view handle. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(view)
 
 A004 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:128
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the startObserved wait-for-playback helper. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       const SongSettings original = window.songSettingsFor(*tab);
@@ -233,8 +240,8 @@ Original expression:
   QVERIFY(startObserved(window, *tab, *view))
 
 A005 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:131
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.updateSettings with the transport projection exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const uint64_t beforeSettings = window.m_audio.playheadSamples();
@@ -248,8 +255,8 @@ Original expression:
                   window.m_audio.playheadSamples() > beforeSettings)
 
 A006 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:139
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the startObserved wait-for-playback helper. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       window.m_audio.updateSettings(original);
@@ -257,8 +264,8 @@ Original expression:
   QVERIFY(startObserved(window, *tab, *view))
 
 A007 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:144
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.pause with the transport projection exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       window.pausePlayback();
@@ -276,8 +283,8 @@ Original expression:
       }())
 
 A008 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:156
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner SharedPlayheadPresenter (src/swift/app/timeline/SharedPlayhead.swift) with the host synchronize path exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       window.synchronizePlayhead();
@@ -288,8 +295,8 @@ Original expression:
   QVERIFY(std::abs(view->playheadTick() - pausedTick) <= toleranceTicks)
 
 A009 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:163
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner SharedPlayheadPresenter (src/swift/app/timeline/SharedPlayhead.swift) with the edit-cursor seek exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const MidiTimeline *const timeline = window.m_audio.timeline();
@@ -302,8 +309,8 @@ Original expression:
   QVERIFY(std::abs(view->playheadTick() - double(target)) <= toleranceTicks)
 
 A010 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:164
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner SharedPlayheadPresenter (src/swift/app/timeline/SharedPlayhead.swift) with the NativeAudio transport position exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -312,8 +319,8 @@ Original expression:
                    double(target)) <= toleranceTicks)
 
 A011 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:170
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.play exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 
@@ -324,8 +331,8 @@ Original expression:
                   window.m_audio.playheadSamples() > beforeResume)
 
 A012 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:176
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the startObserved wait-for-playback helper. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 
@@ -336,8 +343,8 @@ Original expression:
   QVERIFY(startObserved(window, *tab, *view))
 
 A013 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:181
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.play with the edit-cursor seek exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const uint64_t seekTick =
@@ -349,8 +356,8 @@ Original expression:
                   window.m_audio.playheadSamples() >= seekSample)
 
 A014 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:184
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.stop exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       window.stopPlayback();
@@ -358,8 +365,8 @@ Original expression:
   QTRY_COMPARE(window.m_audio.transport(), Transport::Stopped)
 
 A015 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:186
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.play with the edit-cursor seek exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       window.startPlayback();
@@ -369,8 +376,8 @@ Original expression:
                       seekSample + uint64_t(window.m_audio.sampleRate() * 0.25))
 
 A016 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:190
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.pause exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       window.pausePlayback();
@@ -378,8 +385,8 @@ Original expression:
   QTRY_COMPARE(window.m_audio.transport(), Transport::Paused)
 
 A017 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:193
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.play(true) resume-from-pause exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const uint64_t pausedAt = window.m_audio.playheadSamples();
@@ -392,8 +399,8 @@ Original expression:
       }())
 
 A018 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:200
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.stop exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 
@@ -402,8 +409,8 @@ Original expression:
   QTRY_COMPARE(window.m_audio.transport(), Transport::Stopped)
 
 A019 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:203
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner SongTabsController.requestClose exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const SongName name = tab->name();
@@ -412,8 +419,8 @@ Original expression:
   QTRY_VERIFY(!window.m_workspace->songTabFor(name))
 
 A020 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:204
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner SongTabsController tab retirement (tabCount) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:

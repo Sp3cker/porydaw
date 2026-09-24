@@ -16,11 +16,11 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-All 82 sites in this file are GAP: regionedValueLayouts and regionedAliasLayouts exercise pure SongRegistry register/unregister/makePlan helpers against regioned song_table.inc/songs.h fixtures on a copied project. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them.
+All 82 sites in this file are GAP: regionedValueLayouts and regionedAliasLayouts exercise pure SongRegistry register/unregister/makePlan helpers against regioned song_table.inc/songs.h fixtures on a copied project. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them — feature not yet ported: regioned song-table layout checks. The native harness is uncompiled in all CMake targets and unregistered in checkcatalog, so these sites never execute in any lane.
 Site tally: 82 sites (82 GAP).
 
 Execution and ownership
-The retained native harness owns this file: runOnboardCheck (support.cpp) QTest::qExecs OnboardingTest. No Swift entry point executes these checks; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf) and the file-local define/song/regionFixture layout helpers, which carry no assertion sites.
+The native harness runOnboardCheck (support.cpp) is the only owner of these checks (QTest::qExec of OnboardingTest), but the file is uncompiled in all CMake targets and unregistered in checkcatalog, so no lane executes it. No Swift entry point executes these checks either; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf) and the file-local define/song/regionFixture layout helpers, which carry no assertion sites.
 
 Fixture, sequence and row constraints
 regionedValueLayouts_data expands markerless, music, se, and delete into distinct runs; regionedAliasLayouts_data expands insert, stranded, and overflow. The markerless and se branches return early after asserting plan ids and header edits; the delete branch asserts repointing of PH_ONE/PH_TWO across table, header, and charmap snapshots; the stranded branch migrates a straggler entry and asserts refill reuse of id 8; the overflow branch asserts SE id allocation (4, then 9 past the music region) and END_MUS aliasing. Per-path snapshot loops expand single sites into per-file instances. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
@@ -41,7 +41,7 @@ Original assertion inventory and source sequence
 
 A001 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:78
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
   #include "checks/onboardcheck/onboardingtest.h"
 
@@ -126,7 +126,7 @@ Original expression:
 
 A002 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:80
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       const QString root = fixture->root();
@@ -136,7 +136,7 @@ Original expression:
 
 A003 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:88
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       const QStringList fixturePaths = {
@@ -152,7 +152,7 @@ Original expression:
 
 A004 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:92
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       }
@@ -164,7 +164,7 @@ Original expression:
 
 A005 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:96
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           header.replace(define("END_SE", "SE_LAST"), QByteArray());
@@ -177,7 +177,7 @@ Original expression:
 
 A006 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:98
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -190,7 +190,7 @@ Original expression:
 
 A007 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:107
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           return;
@@ -206,7 +206,7 @@ Original expression:
 
 A008 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:111
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -215,7 +215,7 @@ Original expression:
 
 A009 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:113
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           const QByteArray table = readFile(root + QStringLiteral("/sound/song_table.inc"), error);
@@ -225,7 +225,7 @@ Original expression:
 
 A010 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:114
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -235,7 +235,7 @@ Original expression:
 
 A011 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:119
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           QByteArray expectedHeader = fixtureBytes[1];
@@ -248,7 +248,7 @@ Original expression:
 
 A012 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:121
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -257,7 +257,7 @@ Original expression:
 
 A013 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:123
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           const QByteArray debug = readFile(root + QStringLiteral("/src/debug.c"), error);
@@ -267,7 +267,7 @@ Original expression:
 
 A014 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:124
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -276,7 +276,7 @@ Original expression:
 
 A015 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:127
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           return;
@@ -290,7 +290,7 @@ Original expression:
 
 A016 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:131
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -299,7 +299,7 @@ Original expression:
 
 A017 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:133
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       const QString headerPath = root + QStringLiteral("/include/constants/songs.h");
@@ -309,7 +309,7 @@ Original expression:
 
 A018 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:134
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -318,7 +318,7 @@ Original expression:
 
 A019 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:136
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       if (operation == QStringLiteral("delete")) {
@@ -330,7 +330,7 @@ Original expression:
 
 A020 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:139
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -339,7 +339,7 @@ Original expression:
 
 A021 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:140
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -348,7 +348,7 @@ Original expression:
 
 A022 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:150
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           QByteArray expectedTable = fixtureBytes[0];
@@ -366,7 +366,7 @@ Original expression:
 
 A023 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:151
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -375,7 +375,7 @@ Original expression:
 
 A024 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:152
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -384,7 +384,7 @@ Original expression:
 
 A025 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:153
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -393,7 +393,7 @@ Original expression:
 
 A026 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:154
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -402,7 +402,7 @@ Original expression:
 
 A027 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:155
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -411,7 +411,7 @@ Original expression:
 
 A028 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:156
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -420,7 +420,7 @@ Original expression:
 
 A029 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:157
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -429,7 +429,7 @@ Original expression:
 
 A030 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:158
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -438,7 +438,7 @@ Original expression:
 
 A031 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:159
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -447,7 +447,7 @@ Original expression:
 
 A032 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:160
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -460,7 +460,7 @@ Original expression:
 
 A033 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:181
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       }
@@ -485,7 +485,7 @@ Original expression:
 
 A034 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:183
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       const QString root = fixture->root();
@@ -495,7 +495,7 @@ Original expression:
 
 A035 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:185
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       int id = -1;
@@ -508,7 +508,7 @@ Original expression:
 
 A036 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:189
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -517,7 +517,7 @@ Original expression:
 
 A037 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:191
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       QByteArray header = readFile(root + QStringLiteral("/include/constants/songs.h"), error);
@@ -527,7 +527,7 @@ Original expression:
 
 A038 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:192
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -536,7 +536,7 @@ Original expression:
 
 A039 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:193
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -546,7 +546,7 @@ Original expression:
 
 A040 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:195
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -555,7 +555,7 @@ Original expression:
 
 A041 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:196
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -566,7 +566,7 @@ Original expression:
 
 A042 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:200
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       if (operation == QStringLiteral("insert")) {
@@ -579,7 +579,7 @@ Original expression:
 
 A043 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:204
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -588,7 +588,7 @@ Original expression:
 
 A044 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:205
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -597,7 +597,7 @@ Original expression:
 
 A045 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:206
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -606,7 +606,7 @@ Original expression:
 
 A046 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:209
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           return;
@@ -620,7 +620,7 @@ Original expression:
 
 A047 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:219
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       if (operation == QStringLiteral("stranded")) {
@@ -635,7 +635,7 @@ Original expression:
 
 A048 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:220
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -645,7 +645,7 @@ Original expression:
 
 A049 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:223
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           header = readFile(headerPath, error);
@@ -655,7 +655,7 @@ Original expression:
 
 A050 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:226
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           header.replace(define("MUS_OLDCHECK", "7"),
@@ -666,7 +666,7 @@ Original expression:
 
 A051 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:228
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           const QByteArray charmap = readFile(charmapPath, error);
@@ -676,7 +676,7 @@ Original expression:
 
 A052 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:229
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -687,7 +687,7 @@ Original expression:
 
 A053 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:233
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           QByteArray debugBeforeMigration = readFile(debugPath, error);
@@ -697,7 +697,7 @@ Original expression:
 
 A054 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:237
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           debugBeforeMigration.replace(
@@ -709,7 +709,7 @@ Original expression:
 
 A055 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:238
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -720,7 +720,7 @@ Original expression:
 
 A056 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:241
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -732,7 +732,7 @@ Original expression:
 
 A057 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:245
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -741,7 +741,7 @@ Original expression:
 
 A058 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:246
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -750,7 +750,7 @@ Original expression:
 
 A059 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:247
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -759,7 +759,7 @@ Original expression:
 
 A060 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:248
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -770,7 +770,7 @@ Original expression:
 
 A061 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:251
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -781,7 +781,7 @@ Original expression:
 
 A062 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:254
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -790,7 +790,7 @@ Original expression:
 
 A063 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:255
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -799,7 +799,7 @@ Original expression:
 
 A064 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:256
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -812,7 +812,7 @@ Original expression:
 
 A065 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:261
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -824,7 +824,7 @@ Original expression:
 
 A066 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:265
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -833,7 +833,7 @@ Original expression:
 
 A067 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:266
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -843,7 +843,7 @@ Original expression:
 
 A068 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:268
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -852,7 +852,7 @@ Original expression:
 
 A069 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:271
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
           return;
@@ -866,7 +866,7 @@ Original expression:
 
 A070 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:275
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -875,7 +875,7 @@ Original expression:
 
 A071 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:276
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -886,7 +886,7 @@ Original expression:
 
 A072 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:279
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -899,7 +899,7 @@ Original expression:
 
 A073 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:284
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -911,7 +911,7 @@ Original expression:
 
 A074 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:288
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -920,7 +920,7 @@ Original expression:
 
 A075 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:289
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -932,7 +932,7 @@ Original expression:
 
 A076 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:293
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -941,7 +941,7 @@ Original expression:
 
 A077 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:294
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -952,7 +952,7 @@ Original expression:
 
 A078 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:297
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -961,7 +961,7 @@ Original expression:
 
 A079 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:299
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       const QByteArray debug = readFile(root + QStringLiteral("/src/debug.c"), error);
@@ -971,7 +971,7 @@ Original expression:
 
 A080 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:300
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 
@@ -980,7 +980,7 @@ Original expression:
 
 A081 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:302
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
       header = readFile(root + QStringLiteral("/include/constants/songs.h"), error);
@@ -990,7 +990,7 @@ Original expression:
 
 A082 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:303
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: regioned song-table layout checks.
 Source context since previous assertion:
 
 

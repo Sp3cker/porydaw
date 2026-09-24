@@ -3,8 +3,8 @@ Assertion correspondence: onboardcheck/import.cpp
 Reference revision: f7a01dba0d8595d9fc4070f1767d69d8d9ed76a8
 Original: src/checks/onboardcheck/import.cpp
 Original SHA-256: b0831014eeca2f2069d1bbf87af241322c7c51b605133d45381b76c72800ac48
-Swift counterpart: src/checks/editcheck/EventChecks.swift (partial lineage: importAnalysis/importDedup/importRescale/importRescaleOverflow predicates only)
-Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
+Swift counterpart: src/checks/editcheck/EventChecks.swift (importAnalysis/importTransforms, the onboardcheck import predicates executed by runMidiImportSuite)
+Swift SHA-256: c03861d87d2573623c795dfb0f589b1f4bc3a1d1b8c840eedc92091d794fb492
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -16,23 +16,24 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-This file has partial Swift lineage only. importAnalysis, importRescale, importDedup, and importRescaleOverflow share function-level behavior with Swift predicates in EventChecks.swift (runMidiImportSuite), but those predicates run on synthetic fixtures with different inputs and narrower assertions; four function-outcome sites are PARTIAL with explicit unproved conditions, and every other site in those methods is GAP. importWizardOverflow and importWizard are NATIVE (NewSongWizard QWidget state), compilesThroughMid2agb is NATIVE (external mid2agb tool harness), and importRoundtrip is GAP (portable project/document/file logic with no Swift predicate).
-Site tally: 102 sites (4 PARTIAL, 59 GAP, 39 NATIVE).
+importAnalysis and importTransforms are ported: runMidiImportSuite executes both against test_midis/external_import.mid and test_midis/duplicate_setters.mid, so A001-A045 and A080/A081/A086/A088/A090/A091 are MATCHED (51 sites) and PARTIAL is zero. The new-song/MIDI-import wizard methods (importWizardOverflow, importWizard) have no Swift counterpart and no executing native harness, so their 33 sites (A046-A078) are GAP with the canonical reason "feature not yet ported: new-song/MIDI-import wizard". compilesThroughMid2agb (A097-A102) is GAP: no executing harness asserts mid2agb compilation of these fixtures. importRoundtrip keeps 6 MATCHED model sites and 12 GAP sites (A079, A082-A085, A087, A089, A092-A096) for native fixture-copy, midi.cfg, disk write/read and DecompProject/SongDocument-load behavior outside MidiImport/MidiFile model scope. The former NATIVE dispositions were stale: runOnboardCheck is absent from every CMake target and unregistered in checkcatalog.cpp, so no lane executes it.
+Site tally: 102 sites (51 MATCHED, 51 GAP).
 
 Execution and ownership
-Two owners. The native runOnboardCheck (support.cpp) QTest::qExecs OnboardingTest and executes every method below. In Swift, runMidiImportSuite (src/checks/editcheck/EventChecks.swift, via CoreCheckSupport) executes importAnalysis() and importTransforms(), whose S predicates cover only the four importAnalysis/importDedup/importRescale/importRescaleOverflow behaviors noted below. No Swift entry point executes importWizardOverflow, importWizard, importRoundtrip, or compilesThroughMid2agb. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf) and onboardingtest.h helpers (midiFixture, copyProject, rescaleDivision via core/midiimport.h, NewSongWizard via ui/newsongwizard.h).
+One executing owner. The native runOnboardCheck (support.cpp) QTest::qExecs OnboardingTest, but that harness is absent from every CMake target and from checkcatalog.cpp (which registers only production-startup, audiocheck-backend, swiftcore, vgbankcheck, exportcheck-loop and exportcheck-tail), so nothing executes the native methods below. In Swift, runMidiImportSuite (src/checks/editcheck/EventChecks.swift:45, reached through CoreCheckSupport suite 8 and the QtTest slot midiImport in tst_swiftcore.cpp:61) executes importAnalysis() and importTransforms(), whose report.expect*/report.fail calls carry the onboardcheck cppIDs catalogued below as S001-S053. No Swift entry point executes importWizardOverflow, importWizard, importRoundtrip, or compilesThroughMid2agb. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf) and onboardingtest.h helpers (midiFixture, copyProject, rescaleDivision via core/midiimport.h, NewSongWizard via ui/newsongwizard.h).
 
 Fixture, sequence and row constraints
 importAnalysis_data expands budget rows 16 (default), 1 (tight), and -1 (unknown); warning-category loops fold analysis.warnings into three booleans per row, and CC loops fold analysis.ccs into mod/reverb booleans. importRescale's per-track/per-event loop expands the monotonicity site over every event. importDedup's tick-0 loop folds lead events into program/cc7/bend/label/firstNote accumulators. compilesThroughMid2agb_data expands blank and imported kinds; the imported kind rescales before compiling. importWizardOverflow and importWizard drive wizard checkboxes (rescale, 48-clocks extended), name sanitization, analysis/identity combo-box pairing, and the mute-track warning label. importRoundtrip writes, re-reads, and re-writes the SMF asserting byte stability, then opens the project and loads the document. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-The swiftcore lane covers only the S predicates in EventChecks.swift; it does not execute the native methods inventoried here. The native entry point remains runOnboardCheck (support.cpp) via QTest::qExec. Native harness results support only retained native obligations, not Swift parity.
+Result: PASS (all harnesses in 10.26s) -- controller-run integrated lane against the frozen EventChecks.swift revision pinned above.
+Focused run: deno task verify --filter=swiftcore --verbose --qt midiImport -v2 -> "Totals: 3 passed, 0 failed" with 99 Swift predicate callbacks (implementer-run); deno task lsp:swift clean. Not re-run by this ledger pass.
+The swiftcore lane executes runMidiImportSuite, the only Swift entry point for this file, so the S predicates below execute under the onboardcheck cppIDs. The native methods inventoried here are executed by no lane, so no native result is claimed and their sites are recorded as GAP rather than NATIVE.
 
 Swift sources inspected (SHA-256)
 No same-dir import.swift exists. Related predicates live in
-src/checks/editcheck/EventChecks.swift: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
+src/checks/editcheck/EventChecks.swift: c03861d87d2573623c795dfb0f589b1f4bc3a1d1b8c840eedc92091d794fb492
 Only that file references onboardcheck/ cppIDs in Swift; the S
 entries below are its report.expect*/report.fail calls carrying
 onboardcheck cppIDs. Predicates in the same Swift functions with
@@ -41,8 +42,8 @@ smfcheck cppIDs are execution context, not coverage of this file.
 Original assertion inventory and source sequence
 
 A001 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:28
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S010 (missing --swiftcore fixture root fails the suite) and S011 (throwing MidiFile.decode of test_midis/external_import.mid at EventChecks.swift:309, whose do/catch branch at :340-341 fails the suite); the same fixture the original reads.
 Source context since previous assertion:
   #include "checks/onboardcheck/onboardingtest.h"
 
@@ -77,8 +78,8 @@ Original expression:
                qPrintable(error));
 
 A002 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:32
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S012 (result.mappedTracks == 2 for each budget row 16/1/-1 on test_midis/external_import.mid under the same analyzeForImport contract).
 Source context since previous assertion:
 
       const ImportAnalysis analysis =
@@ -88,8 +89,8 @@ Original expression:
   QCOMPARE(analysis.mappedTracks, 2);
 
 A003 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:33
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S013 (result.peakConcurrentNotes == 7 per budget row on the same fixture).
 Source context since previous assertion:
 
 
@@ -97,8 +98,8 @@ Original expression:
   QCOMPARE(analysis.peakConcurrentNotes, 7);
 
 A004 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:34
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S014 (result.sampleNoteLimit == 5 per budget row on the same fixture).
 Source context since previous assertion:
 
 
@@ -106,8 +107,8 @@ Original expression:
   QCOMPARE(analysis.sampleNoteLimit, 5);
 
 A005 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:44
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S015 (analysis warnings contain note timing per budget row; the divisionCategory fold over analysis.warnings).
 Source context since previous assertion:
 
       bool divisionCategory = false;
@@ -124,8 +125,8 @@ Original expression:
   QVERIFY(divisionCategory);
 
 A006 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:45
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S016 (analysis warnings contain same time per budget row; the polyphonyCategory fold over analysis.warnings).
 Source context since previous assertion:
 
 
@@ -133,8 +134,8 @@ Original expression:
   QVERIFY(polyphonyCategory);
 
 A007 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:46
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (importAnalysis() in EventChecks.swift) asserts silentTracks == 1 on a synthetic two-chunk fixture with trackBudget 0. Unproved: the original budget data rows (16/1/-1), the external_import.mid fixture, and the budget == 1 conditional.
+Disposition: MATCHED
+Mapping/reason: Matched by S017 (result.silentTracks is compared against budget == 1 ? 1 : 0 over the three budget rows 16/1/-1 on external_import.mid, the original conditional); supersedes the earlier PARTIAL, which cited only the budget-0 synthetic predicate S002.
 Source context since previous assertion:
 
 
@@ -142,8 +143,8 @@ Original expression:
   QCOMPARE(analysis.silentTracks, budget == 1 ? 1 : 0);
 
 A008 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:47
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S018 (warnings pair MUSIC_PLAYER_BGM with will not play exactly when budget == 1; the budgetCategory fold).
 Source context since previous assertion:
 
 
@@ -151,8 +152,8 @@ Original expression:
   QCOMPARE(budgetCategory, budget == 1);
 
 A009 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:48
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S019 (result.tracks.count == 2 per budget row; the tracks.size() site).
 Source context since previous assertion:
 
 
@@ -160,8 +161,8 @@ Original expression:
   QCOMPARE(analysis.tracks.size(), qsizetype{2});
 
 A010 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:49
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S020 (result.tracks.dropFirst().first?.programs.count == 2 per budget row; the tracks[1].programs.size() site).
 Source context since previous assertion:
 
 
@@ -169,8 +170,8 @@ Original expression:
   QCOMPARE(analysis.tracks[1].programs.size(), qsizetype{2});
 
 A011 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:58
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S021 (controllers.first { $0.controller == 1 }?.support == .supported per budget row; the modExported fold).
 Source context since previous assertion:
 
       bool modExported = false;
@@ -186,8 +187,8 @@ Original expression:
   QVERIFY(modExported);
 
 A012 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:59
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S022 (controllers.first { $0.controller == 91 }?.support == .notExported per budget row; the reverbDropped fold).
 Source context since previous assertion:
 
 
@@ -195,8 +196,8 @@ Original expression:
   QVERIFY(reverbDropped);
 
 A013 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:66
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (do/catch at EventChecks.swift:422-424 fails the suite when the external_import.mid read/decode/rescale fails) over the same fixture decode at :385.
 Source context since previous assertion:
 
   }
@@ -211,8 +212,8 @@ Original expression:
                qPrintable(error));
 
 A014 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:68
-Disposition: PARTIAL
-Mapping/reason: Related predicates S006/S007 (importTransforms() in EventChecks.swift) execute MidiImport.rescaleDivision(to: 24) successfully with floor semantics on a synthetic fixture. Unproved: the external_import.mid exact tick mapping (28/57/230) and the per-track monotonicity loop.
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (MidiImport.rescaleDivision(to: 24) at EventChecks.swift:386, whose failure branch :422-424 fails the suite) plus S006/S007 for the floor rescale arithmetic; the exact ticks and monotonicity continue in S025-S029. Supersedes the earlier PARTIAL.
 Source context since previous assertion:
 
 
@@ -220,8 +221,8 @@ Original expression:
   QVERIFY2(rescaleDivision(&imported, 24, &error), qPrintable(error));
 
 A015 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:69
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S023 (imported.division == 24 after the rescale).
 Source context since previous assertion:
 
 
@@ -229,8 +230,8 @@ Original expression:
   QCOMPARE(imported.division, 24);
 
 A016 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:70
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S025 (imported.chunks[1].events[4].tick == 28).
 Source context since previous assertion:
 
 
@@ -238,8 +239,8 @@ Original expression:
   QCOMPARE(imported.tracks[1].events[4].tick, uint64_t(28));
 
 A017 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:71
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S026 (imported.chunks[1].events[11].tick == 57).
 Source context since previous assertion:
 
 
@@ -247,8 +248,8 @@ Original expression:
   QCOMPARE(imported.tracks[1].events[11].tick, uint64_t(57));
 
 A018 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:72
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S027 (imported.chunks[1].endTick == 230).
 Source context since previous assertion:
 
 
@@ -256,8 +257,8 @@ Original expression:
   QCOMPARE(imported.tracks[1].endTick, uint64_t(230));
 
 A019 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:73
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S028 (imported.chunks[2].events[0].tick == 0).
 Source context since previous assertion:
 
 
@@ -265,8 +266,8 @@ Original expression:
   QCOMPARE(imported.tracks[2].events[0].tick, uint64_t(0));
 
 A020 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:77
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S029 (every event stays >= its predecessor with previous reset per chunk; the same per-track monotonicity loop).
 Source context since previous assertion:
 
       for (const SmfTrack &track : imported.tracks) {
@@ -277,8 +278,8 @@ Original expression:
   QVERIFY(event.tick >= previous);
 
 A021 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:87
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S048 (do/catch at EventChecks.swift:498-500 fails the suite when duplicate_setters.mid read/decode fails) and S035 (missing fixture root).
 Source context since previous assertion:
 
               previous = event.tick;
@@ -295,8 +296,8 @@ Original expression:
   QVERIFY2(midiFixture(QStringLiteral("duplicate_setters.mid"), midi, error), qPrintable(error));
 
 A022 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:88
-Disposition: PARTIAL
-Mapping/reason: Related predicate S004 (importTransforms() in EventChecks.swift) executes MidiImport.removeRedundantSetters on a synthetic fixture (removes 1). Unproved: the duplicate_setters.mid 8-removal count, the idempotent second pass, per-type setter counts, the tempo blob, and label ordering.
+Disposition: MATCHED
+Mapping/reason: Matched by S036 (removeRedundantSetters returns 8 on duplicate_setters.mid); the per-type counts, tempo blob and label ordering follow in S037-S047. Supersedes the earlier PARTIAL, which cited only the synthetic one-removal predicate S004.
 Source context since previous assertion:
 
 
@@ -304,8 +305,8 @@ Original expression:
   QCOMPARE(removeRedundantSetterEvents(&midi), 8);
 
 A023 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:89
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S037 (a second pass returns 0 on the same fixture; the idempotence site).
 Source context since previous assertion:
 
 
@@ -313,8 +314,8 @@ Original expression:
   QCOMPARE(removeRedundantSetterEvents(&midi), 0);
 
 A024 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:98
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S039 row (0xC, nil, 2, program); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
 Source context since previous assertion:
 
       const SmfTrack &lead = midi.tracks[1];
@@ -330,8 +331,8 @@ Original expression:
   QCOMPARE(count(0xc, -1), 2);
 
 A025 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:99
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S039 row (0xB, 7, 3, cc7); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
 Source context since previous assertion:
 
 
@@ -339,8 +340,8 @@ Original expression:
   QCOMPARE(count(0xb, 7), 3);
 
 A026 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:100
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S039 row (0xE, nil, 1, pitch bend); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
 Source context since previous assertion:
 
 
@@ -348,8 +349,8 @@ Original expression:
   QCOMPARE(count(0xe, -1), 1);
 
 A027 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:101
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S039 row (0xB, 101, 1, cc101); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
 Source context since previous assertion:
 
 
@@ -357,8 +358,8 @@ Original expression:
   QCOMPARE(count(0xb, 101), 1);
 
 A028 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:102
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S039 row (0xB, 0x0D, 2, cc13); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
 Source context since previous assertion:
 
 
@@ -366,8 +367,8 @@ Original expression:
   QCOMPARE(count(0xb, 0x0d), 2);
 
 A029 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:103
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S039 row (0xB, 0x11, 2, labels); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
 Source context since previous assertion:
 
 
@@ -375,8 +376,8 @@ Original expression:
   QCOMPARE(count(0xb, 0x11), 2);
 
 A030 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:104
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S039 row (0xA, 60, 1, key 60 pressure); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
 Source context since previous assertion:
 
 
@@ -384,8 +385,8 @@ Original expression:
   QCOMPARE(count(0xa, 60), 1);
 
 A031 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:105
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S039 row (0xA, 61, 1, key 61 pressure); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
 Source context since previous assertion:
 
 
@@ -393,8 +394,8 @@ Original expression:
   QCOMPARE(count(0xa, 61), 1);
 
 A032 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:106
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S039 row (0x9, nil, 2, note on); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
 Source context since previous assertion:
 
 
@@ -402,8 +403,8 @@ Original expression:
   QCOMPARE(count(0x9, -1), 2);
 
 A033 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:107
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S039 row (0x8, nil, 2, note off); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
 Source context since previous assertion:
 
 
@@ -411,8 +412,8 @@ Original expression:
   QCOMPARE(count(0x8, -1), 2);
 
 A034 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:113
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S040 (the 0x51 meta payload equals [0x07, 0xA1, 0x20] on the conductor chunk).
 Source context since previous assertion:
 
       int tempo = 0;
@@ -425,8 +426,8 @@ Original expression:
   QCOMPARE(event.blob, QByteArray("\x07\xA1\x20", 3));
 
 A035 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:117
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S041 (tempo event count == 1).
 Source context since previous assertion:
 
           }
@@ -437,8 +438,8 @@ Original expression:
   QCOMPARE(tempo, 1);
 
 A036 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:118
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S042 (text (0x01 meta) event count == 2).
 Source context since previous assertion:
 
 
@@ -446,8 +447,8 @@ Original expression:
   QCOMPARE(text, 2);
 
 A037 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:133
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S043 (each tick-zero 0xB/0x11 label data1 exceeds previousLabel, accumulated in the same loop).
 Source context since previous assertion:
 
       int labelCount = 0;
@@ -469,8 +470,8 @@ Original expression:
   QVERIFY(event.data1 > previousLabel);
 
 A038 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:140
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S044 (tick-zero program 12, CC7 = 80 and bend data1 = 0x40 all survive).
 Source context since previous assertion:
 
               previousLabel = event.data1;
@@ -484,8 +485,8 @@ Original expression:
   QVERIFY(program && cc7 && bend);
 
 A039 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:141
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S045 (labelCount == 2).
 Source context since previous assertion:
 
 
@@ -493,8 +494,8 @@ Original expression:
   QCOMPARE(labelCount, 2);
 
 A040 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:142
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S046 (last tick-zero label value == 3).
 Source context since previous assertion:
 
 
@@ -502,8 +503,8 @@ Original expression:
   QCOMPARE(previousLabel, 3);
 
 A041 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:143
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S047 (programIndex is recorded and the first note index is greater; both from the same tick-zero prefix loop).
 Source context since previous assertion:
 
 
@@ -511,8 +512,8 @@ Original expression:
   QVERIFY(programIndex >= 0 && firstNote > programIndex);
 
 A042 | OnboardingTest::importRescaleOverflow | src/checks/onboardcheck/import.cpp:164
-Disposition: PARTIAL
-Mapping/reason: Related predicates S008/S009 (importTransforms() in EventChecks.swift) reject an overflowing rescale and assert the file is left untouched on a synthetic fixture. Unproved: the original kMaxTick at division 24 rescaled to 48, division preservation, and the exact error text.
+Disposition: MATCHED
+Mapping/reason: Matched by S050 (do/catch rejection of rescaleDivision(to: 48) on the division-24 kMaxTick boundary fixture built at EventChecks.swift:505-510). Supersedes the earlier PARTIAL, which cited only the division-1/.max predicate S008.
 Source context since previous assertion:
 
   }
@@ -540,8 +541,8 @@ Original expression:
   QVERIFY(!rescaleDivision(&smf, 48, &error));
 
 A043 | OnboardingTest::importRescaleOverflow | src/checks/onboardcheck/import.cpp:165
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S051 (boundary.division stays 24 after the rejection).
 Source context since previous assertion:
 
 
@@ -549,8 +550,8 @@ Original expression:
   QCOMPARE(smf.division, 24);
 
 A044 | OnboardingTest::importRescaleOverflow | src/checks/onboardcheck/import.cpp:166
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S052 (boundary.chunks[0].events[0].tick stays TimeDefaults.maxTick, the CoreTimeDefaults::kMaxTick site).
 Source context since previous assertion:
 
 
@@ -558,8 +559,8 @@ Original expression:
   QCOMPARE(smf.tracks[0].events[0].tick, CoreTimeDefaults::kMaxTick);
 
 A045 | OnboardingTest::importRescaleOverflow | src/checks/onboardcheck/import.cpp:167
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S053 (the error description equals Tick rescale to division 48 exceeds 32-bit tick range).
 Source context since previous assertion:
 
 
@@ -569,8 +570,8 @@ Original expression:
           qPrintable(error));
 
 A046 | OnboardingTest::importWizardOverflow | src/checks/onboardcheck/import.cpp:181
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. checks::ProjectFixture::copyOf staging for the wizard flow; no Swift predicate observes the copy.
 Source context since previous assertion:
 
   }
@@ -589,8 +590,8 @@ Original expression:
   QVERIFY2(fixture, qPrintable(error));
 
 A047 | OnboardingTest::importWizardOverflow | src/checks/onboardcheck/import.cpp:183
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. DecompProject::open for the wizard flow; no Swift predicate opens the decomp project.
 Source context since previous assertion:
 
       DecompProject project;
@@ -599,8 +600,8 @@ Original expression:
   QVERIFY2(project.open(fixture->root(), &error), qPrintable(error));
 
 A048 | OnboardingTest::importWizardOverflow | src/checks/onboardcheck/import.cpp:198
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard rescale checkbox state for a dividing-12 boundary SMF is not asserted in Swift.
 Source context since previous assertion:
 
       SmfFile smf;
@@ -622,8 +623,8 @@ Original expression:
   QVERIFY(rescale && rescale->isChecked());
 
 A049 | OnboardingTest::importWizardOverflow | src/checks/onboardcheck/import.cpp:203
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the 48-clocks-per-beat checkbox lookup is not asserted in Swift.
 Source context since previous assertion:
 
       QCheckBox *extended = nullptr;
@@ -635,8 +636,8 @@ Original expression:
   QVERIFY(extended);
 
 A050 | OnboardingTest::importWizardOverflow | src/checks/onboardcheck/import.cpp:206
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard refusing to produce a song on the overflow path is not asserted in Swift.
 Source context since previous assertion:
 
       extended->setChecked(true);
@@ -646,8 +647,8 @@ Original expression:
   QVERIFY(!wizard.songFile(&out, &error));
 
 A051 | OnboardingTest::importWizardOverflow | src/checks/onboardcheck/import.cpp:207
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the empty output song after the wizard refusal is not asserted in Swift.
 Source context since previous assertion:
 
 
@@ -655,8 +656,8 @@ Original expression:
   QVERIFY(out.tracks.empty());
 
 A052 | OnboardingTest::importWizardOverflow | src/checks/onboardcheck/import.cpp:208
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard overflow error text is not asserted in Swift.
 Source context since previous assertion:
 
 
@@ -666,8 +667,8 @@ Original expression:
           qPrintable(error));
 
 A053 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:217
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. fixture copy guarding importWizard; no Swift predicate observes it.
 Source context since previous assertion:
 
   }
@@ -681,8 +682,8 @@ Original expression:
   QVERIFY2(fixture, qPrintable(error));
 
 A054 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:219
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. DecompProject::open in importWizard; no Swift predicate opens the decomp project.
 Source context since previous assertion:
 
       DecompProject project;
@@ -691,8 +692,8 @@ Original expression:
   QVERIFY2(project.open(fixture->root(), &error), qPrintable(error));
 
 A055 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:221
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the fixture decode has an import-model predicate (S011), but nothing executes under the importWizard cppID.
 Source context since previous assertion:
 
       SmfFile external;
@@ -702,8 +703,8 @@ Original expression:
                qPrintable(error));
 
 A056 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:224
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. SongRegistry::voicegroupArgs enumeration is not asserted in Swift.
 Source context since previous assertion:
 
       const QStringList voicegroups = SongRegistry::voicegroupArgs(fixture->root());
@@ -712,8 +713,8 @@ Original expression:
   QVERIFY(!voicegroups.isEmpty());
 
 A057 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:227
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard rescale checkbox lookup is not asserted in Swift.
 Source context since previous assertion:
 
       NewSongWizard wizard(&project, external, QStringLiteral("ext.mid"), voicegroups);
@@ -723,8 +724,8 @@ Original expression:
   QVERIFY(rescale);
 
 A058 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:228
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the default-checked rescale checkbox for a dividing-400 SMF is not asserted in Swift.
 Source context since previous assertion:
 
 
@@ -732,8 +733,8 @@ Original expression:
   QVERIFY(rescale->isChecked());
 
 A059 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:230
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard song emission is not asserted in Swift.
 Source context since previous assertion:
 
       SmfFile rescaledSmf;
@@ -742,8 +743,8 @@ Original expression:
   QVERIFY2(wizard.songFile(&rescaledSmf, &error), qPrintable(error));
 
 A060 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:231
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard-rescaled division is not asserted in Swift.
 Source context since previous assertion:
 
 
@@ -751,8 +752,8 @@ Original expression:
   QCOMPARE(rescaledSmf.division, 24);
 
 A061 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:234
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the unrescaled wizard emission is not asserted in Swift.
 Source context since previous assertion:
 
       rescale->setChecked(false);
@@ -762,8 +763,8 @@ Original expression:
   QVERIFY2(wizard.songFile(&unrescaledSmf, &error), qPrintable(error));
 
 A062 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:235
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard passthrough division is not asserted in Swift.
 Source context since previous assertion:
 
 
@@ -771,8 +772,8 @@ Original expression:
   QCOMPARE(unrescaledSmf.division, 400);
 
 A063 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:240
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard song-name line edit is not asserted in Swift.
 Source context since previous assertion:
 
       QLineEdit *name = nullptr;
@@ -784,8 +785,8 @@ Original expression:
   QVERIFY(name);
 
 A064 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:243
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. name sanitization (mixed case becomes lower case) is not asserted in Swift.
 Source context since previous assertion:
 
       name->clear();
@@ -795,8 +796,8 @@ Original expression:
   QCOMPARE(name->text(), QStringLiteral("mus_loud_3"));
 
 A065 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:246
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the second sanitization case (invalid characters clear the field) is not asserted in Swift.
 Source context since previous assertion:
 
       name->clear();
@@ -806,8 +807,8 @@ Original expression:
   QVERIFY(name->text().isEmpty());
 
 A066 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:247
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. SongCfg reverb defaults through the wizard are not asserted in Swift.
 Source context since previous assertion:
 
 
@@ -815,8 +816,8 @@ Original expression:
   QCOMPARE(wizard.cfg().reverb, SongCfg::kDefaultReverb);
 
 A067 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:248
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard rawFlags -R50 line is not asserted in Swift.
 Source context since previous assertion:
 
 
@@ -824,8 +825,8 @@ Original expression:
   QVERIFY(wizard.cfg().rawFlags.contains(QStringLiteral("-R50")));
 
 A068 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:251
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. SongSettingsWidget reverb handling is not asserted in Swift.
 Source context since previous assertion:
 
       SongCfg bare;
@@ -835,8 +836,8 @@ Original expression:
   QCOMPARE(settings.cfg().reverb, bare.reverb);
 
 A069 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:254
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the analysis and identity combo boxes are not asserted in Swift.
 Source context since previous assertion:
 
       QComboBox *analysis = wizard.page(0)->findChild<QComboBox *>();
@@ -846,8 +847,8 @@ Original expression:
   QVERIFY(analysis && identity);
 
 A070 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:257
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. analysis and identity combo-box data pairing is not asserted in Swift.
 Source context since previous assertion:
 
       for (int index = 0; index < analysis->count(); ++index) {
@@ -857,8 +858,8 @@ Original expression:
   QCOMPARE(identity->currentData(), analysis->currentData());
 
 A071 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:267
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the mute-track warning label is not asserted in Swift.
 Source context since previous assertion:
 
       }
@@ -875,8 +876,8 @@ Original expression:
   QVERIFY(muteWarning);
 
 A072 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:268
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the wizard player selection is not asserted in Swift.
 Source context since previous assertion:
 
 
@@ -884,8 +885,8 @@ Original expression:
   QCOMPARE(wizard.player(), player.name);
 
 A073 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:272
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the fixture decode has an import-model predicate (S048), but nothing executes under the importWizard cppID.
 Source context since previous assertion:
 
           break;
@@ -897,8 +898,8 @@ Original expression:
                qPrintable(error));
 
 A074 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:276
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the dedup wizard song emission is not asserted in Swift.
 Source context since previous assertion:
 
       NewSongWizard dedupWizard(&project, duplicateSetters, QStringLiteral("dups.mid"), voicegroups);
@@ -908,8 +909,8 @@ Original expression:
   QVERIFY2(dedupWizard.songFile(&cleaned, &error), qPrintable(error));
 
 A075 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:277
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the cleaned wizard output track count is not asserted in Swift.
 Source context since previous assertion:
 
 
@@ -917,8 +918,8 @@ Original expression:
   QCOMPARE(cleaned.tracks.size(), qsizetype{2});
 
 A076 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:284
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the cleaned wizard output CC7 count is not asserted in Swift.
 Source context since previous assertion:
 
       int cc7 = 0;
@@ -932,8 +933,8 @@ Original expression:
   QCOMPARE(cc7, 3);
 
 A077 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:285
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. the cleaned wizard output program count is not asserted in Swift.
 Source context since previous assertion:
 
 
@@ -941,8 +942,8 @@ Original expression:
   QCOMPARE(programs, 2);
 
 A078 | OnboardingTest::importWizard | src/checks/onboardcheck/import.cpp:287
-Disposition: NATIVE
-Mapping/reason: Original native NewSongWizard widget obligation (checkbox/line-edit/combo-box/label state observed through QWidget children). A presenter-level Swift check cannot establish this observation; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard. analysis and identity combo-box index synchronisation is not asserted in Swift.
 Source context since previous assertion:
 
       identity->setCurrentIndex(0);
@@ -952,7 +953,7 @@ Original expression:
 
 A079 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:294
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: checks::ProjectFixture::copyOf staging (temporary project copy) has native-only ingress in this suite; coreEditCorpusSongs stages through the Deno fixture staging instead, and no Swift predicate asserts that the copy succeeds.
 Source context since previous assertion:
 
   }
@@ -966,8 +967,8 @@ Original expression:
   QVERIFY2(fixture, qPrintable(error));
 
 A080 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:297
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (do/catch at EventChecks.swift:422-424 fails the suite by the roundtrip cppID when the fixture read/decode/rescale fails) over the decode at :385 of test_midis/external_import.mid, the same fixture; the native disk hop stays GAP with A083/A085/A087/A089.
 Source context since previous assertion:
 
       const QString root = fixture->root();
@@ -978,8 +979,8 @@ Original expression:
                qPrintable(error));
 
 A081 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:299
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (rescaleDivision(to: 24) at EventChecks.swift:386, whose failure branch :423-424 reports the roundtrip cppID).
 Source context since previous assertion:
 
 
@@ -988,7 +989,7 @@ Original expression:
 
 A082 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:301
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: defaultCfg(root, cfg) reads the project midi.cfg through the native fixture; midi.cfg parsing is outside MidiImport/MidiFile model scope and no Swift predicate asserts it.
 Source context since previous assertion:
 
       SongCfg cfg;
@@ -998,7 +999,7 @@ Original expression:
 
 A083 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:304
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: writeFile of the rescaled SMF into the project midi directory is native disk and project-directory plumbing outside MidiImport/MidiFile model scope; no Swift predicate writes that path.
 Source context since previous assertion:
 
       const QString label = QStringLiteral("mus_onboardcheck_import");
@@ -1009,7 +1010,7 @@ Original expression:
 
 A084 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:305
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: SongRegistry::writeMidiCfgLine registers the label in midi.cfg; no Swift predicate writes or verifies a midi.cfg line.
 Source context since previous assertion:
 
 
@@ -1019,7 +1020,7 @@ Original expression:
 
 A085 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:308
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: readFile(mid) plus error.isEmpty is native disk read-back; the Swift roundtrip predicates cover only the in-memory encode/decode (S030-S032).
 Source context since previous assertion:
 
       const QByteArray serialized = readFile(mid, error);
@@ -1028,8 +1029,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A086 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:310
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (MidiFile.decode of the serialized bytes at EventChecks.swift:411-412 inside the roundtrip do-block, whose catch at :419-420 fails the suite by the roundtrip cppID over the same rescaled fixture); the native disk hop stays GAP with A083/A085/A087/A089.
 Source context since previous assertion:
 
       SmfFile reread;
@@ -1039,7 +1040,7 @@ Original expression:
 
 A087 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:313
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: writeFile of the reread SMF to the _repeat.mid path is native disk plumbing outside MidiImport/MidiFile model scope; no Swift predicate writes a second file.
 Source context since previous assertion:
 
       const QString repeatPath =
@@ -1049,8 +1050,8 @@ Original expression:
   QVERIFY2(reread.writeFile(repeatPath, &error), qPrintable(error));
 
 A088 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:314
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S030 (the re-encoded reread bytes equal the serialized bytes - the byte-stability observable of readFile(repeatPath) == serialized, without the native disk hop).
 Source context since previous assertion:
 
 
@@ -1059,7 +1060,7 @@ Original expression:
 
 A089 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:315
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: error.isEmpty() after the second readFile is the native disk error channel; no Swift predicate observes it.
 Source context since previous assertion:
 
 
@@ -1067,8 +1068,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A090 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:316
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S031 (reread.division == 24).
 Source context since previous assertion:
 
 
@@ -1076,8 +1077,8 @@ Original expression:
   QCOMPARE(reread.division, 24);
 
 A091 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:317
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Matched by S032 (reread.chunks.count equals imported.chunks.count, the tracks.size() site).
 Source context since previous assertion:
 
 
@@ -1086,7 +1087,7 @@ Original expression:
 
 A092 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:319
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: DecompProject::open(root) is native project-database startup outside MidiImport/MidiFile model scope; no Swift predicate opens the decomp project in this suite.
 Source context since previous assertion:
 
       DecompProject project;
@@ -1096,7 +1097,7 @@ Original expression:
 
 A093 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:324
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: project.songs() enumeration must surface the newly written label; DecompProject song-list behavior has no Swift predicate here.
 Source context since previous assertion:
 
       const SongInfo *song = nullptr;
@@ -1109,7 +1110,7 @@ Original expression:
 
 A094 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:325
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: song->isPlayable() && !song->registered is native SongInfo capability classification from the project view; no Swift predicate classifies this label.
 Source context since previous assertion:
 
 
@@ -1118,7 +1119,7 @@ Original expression:
 
 A095 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:327
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: SongDocument::load(*song) loads through the native project SongInfo; Swift builds SongDocument from a decoded MidiFile, so no predicate exercises this path.
 Source context since previous assertion:
 
       SongDocument document;
@@ -1128,7 +1129,7 @@ Original expression:
 
 A096 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:328
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: document.engineTrackCount() == 2 after that load; no Swift predicate loads this song and counts engine tracks.
 Source context since previous assertion:
 
 
@@ -1136,8 +1137,8 @@ Original expression:
   QCOMPARE(document.engineTrackCount(), 2);
 
 A097 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:343
-Disposition: NATIVE
-Mapping/reason: Original native external-tool harness obligation: compile() shells out to the mid2agb binary. A presenter-level Swift check cannot establish this observation without the native tool harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. The compilesThroughMid2agb job has no executor: the onboardcheck native harness is absent from every CMake target and from checkcatalog.cpp.
 Source context since previous assertion:
 
   }
@@ -1159,8 +1160,8 @@ Original expression:
   QVERIFY2(fixture, qPrintable(error));
 
 A098 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:346
-Disposition: NATIVE
-Mapping/reason: Original native external-tool harness obligation: compile() shells out to the mid2agb binary. A presenter-level Swift check cannot establish this observation without the native tool harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. defaultCfg(root, cfg) reads the project midi.cfg for the compile job; no executing lane asserts it.
 Source context since previous assertion:
 
       const QString root = fixture->root();
@@ -1170,8 +1171,8 @@ Original expression:
   QVERIFY2(defaultCfg(root, cfg, error), qPrintable(error));
 
 A099 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:352
-Disposition: NATIVE
-Mapping/reason: Original native external-tool harness obligation: compile() shells out to the mid2agb binary. A presenter-level Swift check cannot establish this observation without the native tool harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. The imported row fixture read has an import-model predicate (S011), but the blank row (SongRegistry::blankSong()) and this compile-job staging execute in no lane.
 Source context since previous assertion:
 
       const QString label = QStringLiteral("mus_onboardcheck_compile_") + kind;
@@ -1185,8 +1186,8 @@ Original expression:
                    qPrintable(error));
 
 A100 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:355
-Disposition: NATIVE
-Mapping/reason: Original native external-tool harness obligation: compile() shells out to the mid2agb binary. A presenter-level Swift check cannot establish this observation without the native tool harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. This row-conditional rescale to division 24 runs only inside the uncompiled mid2agb job; no lane asserts it.
 Source context since previous assertion:
 
       if (kind == QStringLiteral("imported"))
@@ -1195,8 +1196,8 @@ Original expression:
   QVERIFY2(rescaleDivision(&midi, 24, &error), qPrintable(error));
 
 A101 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:357
-Disposition: NATIVE
-Mapping/reason: Original native external-tool harness obligation: compile() shells out to the mid2agb binary. A presenter-level Swift check cannot establish this observation without the native tool harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. Writing the compile fixture into the project midi directory is disk plumbing with no executing harness.
 Source context since previous assertion:
 
       const QString mid = midiDirectory(root) + QStringLiteral("/") + label + QStringLiteral(".mid");
@@ -1205,8 +1206,8 @@ Original expression:
   QVERIFY2(midi.writeFile(mid, &error), qPrintable(error));
 
 A102 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:358
-Disposition: NATIVE
-Mapping/reason: Original native external-tool harness obligation: compile() shells out to the mid2agb binary. A presenter-level Swift check cannot establish this observation without the native tool harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. compile() shells out to the mid2agb binary; no lane compiles SongRegistry::blankSong() or the rescaled external_import.mid (the swiftcore mid2agb runner at MidiChecks.swift:763-780 compiles project songs and synthetic XCMD traffic only).
 Source context since previous assertion:
 
 
@@ -1219,73 +1220,293 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-S identifiers below are the report.expect*/report.fail calls in src/checks/editcheck/EventChecks.swift carrying onboardcheck cppIDs. All execute under runMidiImportSuite, except S001 which executes under the event-edits suite path (trackNameRoles) and carries its cppID as oracle lineage only: it observes document track-name queries, not the analyzeForImport budgets/warnings asserted in importAnalysis.
+S identifiers below are the report.expect*/report.fail calls in
+src/checks/editcheck/EventChecks.swift carrying onboardcheck cppIDs. S001-S053
+all execute under runMidiImportSuite (CoreCheckSupport suite 8, QtTest slot
+midiImport), except S001, which executes under the event-edits suite path
+(trackNameRoles) and carries its cppID as oracle lineage only: it observes
+document track-name queries, not the analyzeForImport budgets or warnings
+asserted in importAnalysis.
 
-S001 | trackNameRoles | src/checks/editcheck/EventChecks.swift:170
+S001 | trackNameRoles | src/checks/editcheck/EventChecks.swift:174
 Verbatim call:
-  report.expectEqual("Bare", imported.tracks.first?.name,
-                         cppID: "onboardcheck/OnboardingTest::importAnalysis[default]",
-                         what: "import and document queries select the same bare name")
+    report.expectEqual("Bare", imported.tracks.first?.name,
+                       cppID: "onboardcheck/OnboardingTest::importAnalysis[default]",
+                       what: "import and document queries select the same bare name")
 
-
-S002 | importAnalysis | src/checks/editcheck/EventChecks.swift:295
+S002 | importAnalysis | src/checks/editcheck/EventChecks.swift:297
 Verbatim call:
-  report.expectEqual(1, analysis.silentTracks,
-                         cppID: "onboardcheck/OnboardingTest::importAnalysis",
-                         what: "player track budget identifies silent tracks")
+    report.expectEqual(1, analysis.silentTracks,
+                       cppID: "onboardcheck/OnboardingTest::importAnalysis",
+                       what: "player track budget identifies silent tracks")
 
-
-S003 | importAnalysis | src/checks/editcheck/EventChecks.swift:298
+S003 | importAnalysis | src/checks/editcheck/EventChecks.swift:300
 Verbatim call:
-  report.expect(analysis.tracks[0].notesBeforeProgram,
-                    cppID: "onboardcheck/OnboardingTest::importAnalysis",
-                    message: "notes before instrument are reported")
+    report.expect(analysis.tracks[0].notesBeforeProgram,
+                  cppID: "onboardcheck/OnboardingTest::importAnalysis",
+                  message: "notes before instrument are reported")
 
-
-S004 | importTransforms | src/checks/editcheck/EventChecks.swift:310
+S004 | importTransforms | src/checks/editcheck/EventChecks.swift:352
 Verbatim call:
-  report.expectEqual(1, MidiImport.removeRedundantSetters(&file),
-                         cppID: "onboardcheck/OnboardingTest::importDedup",
-                         what: "only eligible same-tick setter is removed")
+    report.expectEqual(1, MidiImport.removeRedundantSetters(&file),
+                       cppID: "onboardcheck/OnboardingTest::importDedup",
+                       what: "only eligible same-tick setter is removed")
 
-
-S005 | importTransforms | src/checks/editcheck/EventChecks.swift:313
+S005 | importTransforms | src/checks/editcheck/EventChecks.swift:355
 Verbatim call:
-  report.expectEqual([UInt8(2), 8, 9], file.chunks[0].events.map {
-          if case let .channel(status, data0, data1) = $0.payload {
-              return status >> 4 == 0xC ? data0 : data1
-          }
-          return 0
-      }, cppID: "onboardcheck/OnboardingTest::importDedup",
-      what: "action-like XCMD selectors are preserved")
+    report.expectEqual([UInt8(2), 8, 9], file.chunks[0].events.map {
+        if case let .channel(status, data0, data1) = $0.payload {
+            return status >> 4 == 0xC ? data0 : data1
+        }
+        return 0
+    }, cppID: "onboardcheck/OnboardingTest::importDedup",
+    what: "action-like XCMD selectors are preserved")
 
-
-S006 | importTransforms | src/checks/editcheck/EventChecks.swift:321
+S006 | importTransforms | src/checks/editcheck/EventChecks.swift:363
 Verbatim call:
-  report.expectEqual([Tick(0), 0, 0], file.chunks[0].events.map(\.tick),
-                         cppID: "onboardcheck/OnboardingTest::importRescale",
-                         what: "rescale uses floor arithmetic")
+    report.expectEqual([Tick(0), 0, 0], file.chunks[0].events.map(\.tick),
+                       cppID: "onboardcheck/OnboardingTest::importRescale",
+                       what: "rescale uses floor arithmetic")
 
-
-S007 | importTransforms | src/checks/editcheck/EventChecks.swift:324
+S007 | importTransforms | src/checks/editcheck/EventChecks.swift:366
 Verbatim call:
-  report.expectEqual(Tick(1), file.chunks[0].endTick,
-                         cppID: "onboardcheck/OnboardingTest::importRescale",
-                         what: "end tick uses the same floor arithmetic")
+    report.expectEqual(Tick(1), file.chunks[0].endTick,
+                       cppID: "onboardcheck/OnboardingTest::importRescale",
+                       what: "end tick uses the same floor arithmetic")
 
-
-S008 | importTransforms | src/checks/editcheck/EventChecks.swift:332
+S008 | importTransforms | src/checks/editcheck/EventChecks.swift:374
 Verbatim call:
-  report.fail("onboardcheck/OnboardingTest::importRescaleOverflow",
-                      "overflowing rescale unexpectedly succeeded")
+        report.fail("onboardcheck/OnboardingTest::importRescaleOverflow",
+                    "overflowing rescale unexpectedly succeeded")
 
-
-S009 | importTransforms | src/checks/editcheck/EventChecks.swift:335
+S009 | importTransforms | src/checks/editcheck/EventChecks.swift:377
 Verbatim call:
-  report.expectEqual(baseline, overflow,
-                             cppID: "onboardcheck/OnboardingTest::importRescaleOverflow",
-                             what: "overflow rejection leaves file untouched")
+        report.expectEqual(baseline, overflow,
+                           cppID: "onboardcheck/OnboardingTest::importRescaleOverflow",
+                           what: "overflow rejection leaves file untouched")
 
+S010 | importAnalysis | src/checks/editcheck/EventChecks.swift:305
+Verbatim call:
+        report.fail(importID, "missing --swiftcore fixture root")
+
+S011 | importAnalysis | src/checks/editcheck/EventChecks.swift:341
+Verbatim call:
+        report.fail(importID, "external_import.mid read/decode failed: \(error)")
+
+S012 | importAnalysis | src/checks/editcheck/EventChecks.swift:314
+Verbatim call:
+            report.expectEqual(2, result.mappedTracks, cppID: importID,
+                               what: "\(row) maps two tracks")
+
+S013 | importAnalysis | src/checks/editcheck/EventChecks.swift:316
+Verbatim call:
+            report.expectEqual(7, result.peakConcurrentNotes, cppID: importID,
+                               what: "\(row) peak concurrent notes")
+
+S014 | importAnalysis | src/checks/editcheck/EventChecks.swift:318
+Verbatim call:
+            report.expectEqual(5, result.sampleNoteLimit, cppID: importID,
+                               what: "\(row) sample note limit")
+
+S015 | importAnalysis | src/checks/editcheck/EventChecks.swift:320
+Verbatim call:
+            report.expect(result.warnings.contains { $0.contains("note timing") },
+                          cppID: importID, message: "\(row) warns of timing adjustment")
+
+S016 | importAnalysis | src/checks/editcheck/EventChecks.swift:322
+Verbatim call:
+            report.expect(result.warnings.contains { $0.contains("same time") },
+                          cppID: importID, message: "\(row) warns of polyphony")
+
+S017 | importAnalysis | src/checks/editcheck/EventChecks.swift:324
+Verbatim call:
+            report.expectEqual(budget == 1 ? 1 : 0, result.silentTracks, cppID: importID,
+                               what: "\(row) silent tracks")
+
+S018 | importAnalysis | src/checks/editcheck/EventChecks.swift:326
+Verbatim call:
+            report.expectEqual(budget == 1, result.warnings.contains {
+                $0.contains("MUSIC_PLAYER_BGM") && $0.contains("will not play")
+            }, cppID: importID, what: "\(row) budget warning")
+
+S019 | importAnalysis | src/checks/editcheck/EventChecks.swift:329
+Verbatim call:
+            report.expectEqual(2, result.tracks.count, cppID: importID,
+                               what: "\(row) analyzed tracks")
+
+S020 | importAnalysis | src/checks/editcheck/EventChecks.swift:331
+Verbatim call:
+            report.expectEqual(2, result.tracks.dropFirst().first?.programs.count,
+                               cppID: importID, what: "\(row) second track programs")
+
+S021 | importAnalysis | src/checks/editcheck/EventChecks.swift:333
+Verbatim call:
+            report.expectEqual(.supported, result.controllers.first {
+                $0.controller == 1
+            }?.support, cppID: importID, what: "\(row) modulation exports")
+
+S022 | importAnalysis | src/checks/editcheck/EventChecks.swift:336
+Verbatim call:
+            report.expectEqual(.notExported, result.controllers.first {
+                $0.controller == 91
+            }?.support, cppID: importID, what: "\(row) reverb is not exported")
+
+S023 | importTransforms | src/checks/editcheck/EventChecks.swift:387
+Verbatim call:
+            report.expectEqual(UInt16(24), imported.division, cppID: rescaleID,
+                               what: "external import division after rescale")
+
+S024 | importTransforms | src/checks/editcheck/EventChecks.swift:391
+Verbatim call:
+                report.fail(rescaleID, "external import has missing chunks or events")
+
+S025 | importTransforms | src/checks/editcheck/EventChecks.swift:394
+Verbatim call:
+            report.expectEqual(Tick(28), imported.chunks[1].events[4].tick,
+                               cppID: rescaleID, what: "external import event 4 tick")
+
+S026 | importTransforms | src/checks/editcheck/EventChecks.swift:396
+Verbatim call:
+            report.expectEqual(Tick(57), imported.chunks[1].events[11].tick,
+                               cppID: rescaleID, what: "external import event 11 tick")
+
+S027 | importTransforms | src/checks/editcheck/EventChecks.swift:398
+Verbatim call:
+            report.expectEqual(Tick(230), imported.chunks[1].endTick,
+                               cppID: rescaleID, what: "external import second chunk end")
+
+S028 | importTransforms | src/checks/editcheck/EventChecks.swift:400
+Verbatim call:
+            report.expectEqual(Tick(0), imported.chunks[2].events[0].tick,
+                               cppID: rescaleID, what: "external import third chunk first tick")
+
+S029 | importTransforms | src/checks/editcheck/EventChecks.swift:405
+Verbatim call:
+                    report.expect(event.tick >= previous, cppID: rescaleID,
+                                  message: "chunk \(chunkIndex) event \(eventIndex) remains monotonic")
+
+S030 | importTransforms | src/checks/editcheck/EventChecks.swift:413
+Verbatim call:
+                report.expectEqual(serialized, try reread.encoded(), cppID: roundtripID,
+                                   what: "rescaled fixture re-encodes byte-identically")
+
+S031 | importTransforms | src/checks/editcheck/EventChecks.swift:415
+Verbatim call:
+                report.expectEqual(UInt16(24), reread.division, cppID: roundtripID,
+                                   what: "rescaled fixture reload division")
+
+S032 | importTransforms | src/checks/editcheck/EventChecks.swift:417
+Verbatim call:
+                report.expectEqual(imported.chunks.count, reread.chunks.count,
+                                   cppID: roundtripID, what: "rescaled fixture reload chunk count")
+
+S033 | importTransforms | src/checks/editcheck/EventChecks.swift:420
+Verbatim call:
+                report.fail(roundtripID, "rescaled fixture roundtrip failed: \(error)")
+
+S034 | importTransforms | src/checks/editcheck/EventChecks.swift:422-424
+Verbatim call:
+            report.fail(rescaleID, "external_import.mid read/decode/rescale failed: \(error)")
+            report.fail(roundtripID, "roundtrip source read/decode/rescale failed: \(error)")
+
+S035 | importTransforms | src/checks/editcheck/EventChecks.swift:427
+Verbatim call:
+        report.fail(rescaleID, "missing --swiftcore fixture root")
+
+S036 | importTransforms | src/checks/editcheck/EventChecks.swift:434
+Verbatim call:
+            report.expectEqual(8, MidiImport.removeRedundantSetters(&duplicate),
+                               cppID: dedupID, what: "duplicate fixture removes eight setters")
+
+S037 | importTransforms | src/checks/editcheck/EventChecks.swift:436
+Verbatim call:
+            report.expectEqual(0, MidiImport.removeRedundantSetters(&duplicate),
+                               cppID: dedupID, what: "duplicate fixture second pass is idempotent")
+
+S038 | importTransforms | src/checks/editcheck/EventChecks.swift:439
+Verbatim call:
+                report.fail(dedupID, "duplicate fixture has no lead chunk")
+
+S039 | importTransforms | src/checks/editcheck/EventChecks.swift:449-459
+Verbatim call:
+            let expectedCounts: [(UInt8, UInt8?, Int, String)] = [
+                (0xC, nil, 2, "program"), (0xB, 7, 3, "cc7"),
+                (0xE, nil, 1, "pitch bend"), (0xB, 101, 1, "cc101"),
+                (0xB, 0x0D, 2, "cc13"), (0xB, 0x11, 2, "labels"),
+                (0xA, 60, 1, "key 60 pressure"), (0xA, 61, 1, "key 61 pressure"),
+                (0x9, nil, 2, "note on"), (0x8, nil, 2, "note off"),
+            ]
+            for (type, controller, expected, name) in expectedCounts {
+                report.expectEqual(expected, count(type, controller), cppID: dedupID,
+                                   what: "deduplicated \(name) event count")
+            }
+
+S040 | importTransforms | src/checks/editcheck/EventChecks.swift:464
+Verbatim call:
+                report.expectEqual([UInt8(0x07), 0xA1, 0x20], data, cppID: dedupID,
+                                   what: "tempo meta payload remains intact")
+
+S041 | importTransforms | src/checks/editcheck/EventChecks.swift:467
+Verbatim call:
+            report.expectEqual(1, tempos.count, cppID: dedupID, what: "tempo event count")
+
+S042 | importTransforms | src/checks/editcheck/EventChecks.swift:468
+Verbatim call:
+            report.expectEqual(2, conductor.filter { $0.metaType == 0x01 }.count,
+                               cppID: dedupID, what: "text event count")
+
+S043 | importTransforms | src/checks/editcheck/EventChecks.swift:483
+Verbatim call:
+                    report.expect(data1 > previousLabel, cppID: dedupID,
+                                  message: "tick-zero label \(labelCount) increases")
+
+S044 | importTransforms | src/checks/editcheck/EventChecks.swift:490
+Verbatim call:
+            report.expect(programIndex != nil && hasCC7 && hasBend, cppID: dedupID,
+                          message: "tick-zero program, volume and bend survive")
+
+S045 | importTransforms | src/checks/editcheck/EventChecks.swift:492
+Verbatim call:
+            report.expectEqual(2, labelCount, cppID: dedupID, what: "tick-zero label count")
+
+S046 | importTransforms | src/checks/editcheck/EventChecks.swift:493
+Verbatim call:
+            report.expectEqual(UInt8(3), previousLabel, cppID: dedupID,
+                               what: "last tick-zero label value")
+
+S047 | importTransforms | src/checks/editcheck/EventChecks.swift:495
+Verbatim call:
+            report.expect(programIndex.flatMap { program in
+                firstNote.map { program < $0 }
+            } == true, cppID: dedupID, message: "tick-zero program precedes first note")
+
+S048 | importTransforms | src/checks/editcheck/EventChecks.swift:499
+Verbatim call:
+            report.fail(dedupID, "duplicate_setters.mid read/decode failed: \(error)")
+
+S049 | importTransforms | src/checks/editcheck/EventChecks.swift:502
+Verbatim call:
+        report.fail(dedupID, "missing --swiftcore fixture root")
+
+S050 | importTransforms | src/checks/editcheck/EventChecks.swift:513
+Verbatim call:
+            report.fail(overflowID, "boundary rescale unexpectedly succeeded")
+
+S051 | importTransforms | src/checks/editcheck/EventChecks.swift:515
+Verbatim call:
+        report.expectEqual(UInt16(24), boundary.division, cppID: overflowID,
+                           what: "overflow keeps original division")
+
+S052 | importTransforms | src/checks/editcheck/EventChecks.swift:517
+Verbatim call:
+        report.expectEqual(TimeDefaults.maxTick, boundary.chunks[0].events[0].tick,
+                           cppID: overflowID, what: "overflow keeps boundary event tick")
+
+S053 | importTransforms | src/checks/editcheck/EventChecks.swift:519
+Verbatim call:
+        report.expectEqual("Tick rescale to division 48 exceeds 32-bit tick range",
+                           String(describing: error), cppID: overflowID,
+                           what: "overflow describes the division and tick limit")
 
 Shared helper:
 None. No Swift fixture file carries expects for this suite; MidiImport, MidiFile, and SongDocument are production types, not expectation-bearing fixtures.

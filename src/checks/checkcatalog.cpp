@@ -100,7 +100,9 @@ const std::vector<CheckDefinition> &catalog()
                           .scratchKind = ScratchKind::ExistingDirectory,
                           .fixtureRootKind = FixtureRootKind::DecompProject,
                           .fixtureFiles = project + fixtures::decompMidiFiles() +
-                                          strings({"test_midis/smf/valid/opaque_sysex.mid",
+                                          strings({"test_midis/external_import.mid",
+                                                   "test_midis/duplicate_setters.mid",
+                                                   "test_midis/smf/valid/opaque_sysex.mid",
                                                    "test_midis/smf/valid/vlq_running_status.mid",
                                                    "test_midis/smf/valid/note_lifecycle.mid",
                                                    "test_midis/smf/malformed/duplicate_eot.mid",

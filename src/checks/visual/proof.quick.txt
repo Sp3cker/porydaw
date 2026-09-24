@@ -15,13 +15,15 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-This file: 17 assertion sites, all NATIVE. Dispositions tally: 17 NATIVE. 17/17 NATIVE; the Quick timeline captures are pure framebuffer comparisons plus native scene/layout/focus guards.
+This file: 17 assertion sites: 5 GAP, 12 RETIRED-REPRESENTATION. Dispositions tally: 5 GAP, 12 RETIRED-REPRESENTATION. The shared pixel-baseline compare (A004), the drum-row visibility scan (A005), the drum label content (A010/A011) and the pitch-bend popup behavior (A013) are GAP: no executing QML grabToImage/baseline predicate covers them and the frozen QQuick framebuffer PNGs have no converted-window owner (the shell QML lane asserts drawer state, not these baselines). Fixture, scene/model, region-pinning, grab and focus plumbing stay RETIRED-REPRESENTATION of an uncompiled harness whose runVisualQuickCheck entry point has no callsite and which is unregistered in checkcatalog.
 
 Verification
 Command: deno task verify --filter visual --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 The visual-* harnesses compare against frozen baselines under
-src/checks/fixtures/visual and are not registered in any Swift lane.
+src/checks/fixtures/visual; the harness sources are uncompiled in all CMake
+targets, their runVisual*Check entry points have zero callsites, and they are
+unregistered in src/checks/checkcatalog.cpp and in every Swift lane.
 
 Execution ownership
 runVisualQuickCheck QTest::qExec's VisualQuickTest as "visual-quick". init builds the fixture via createFixture (SongTab with visualSmf, LoadedBankView lease, voice-change lane point, track 0 selected) and cleanup cancels any open popup session. All seven baselines capture the real Quick window framebuffer through the shared expectBaseline helper. src/checks/editorqml/EditorQmlTests.swift reads the frozen fixtures/visual track-headers.json geometry as reference data but establishes no predicates pairing with these sites. No Swift entry point executes these captures.
@@ -34,8 +36,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | VisualQuickTest::init | src/checks/visual/quick.cpp:142
-Disposition: NATIVE
-Mapping/reason: SongTab Quick fixture (1280x800, 48 kHz, deterministic SMF, voicegroup lease, exposed Quick window) must build; retained native fixture path for every baseline below.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (shell-chrome-visuals entry, src/checks/editorqml/tst_ShellChromeVisuals.qml), not these frozen QQuick framebuffer PNGs. Original observation: SongTab Quick fixture (1280x800, 48 kHz, deterministic SMF, voicegroup lease, exposed Quick window) must build; retained native fixture path for every baseline below.
 Source context since previous assertion:
   // Visual baseline check for the production Qt Quick timeline surfaces.
   // Captures the real SongTab Quick window framebuffer and freezes semantic
@@ -182,8 +184,8 @@ Original expression:
   QVERIFY2(createFixture(error), qPrintable(error));
 
 A002 | VisualQuickTest::expectBaseline | src/checks/visual/quick.cpp:300
-Disposition: NATIVE
-Mapping/reason: Shared grab helper: Quick framebuffer must be non-null. One site executes all seven baselines: timeline-ruler, piano-roll, track-headers, velocity-lane, editor-drawer, drum-keyboard, pitch-bend-popup; native framebuffer state throughout.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (shell-chrome-visuals entry, src/checks/editorqml/tst_ShellChromeVisuals.qml), not these frozen QQuick framebuffer PNGs. Original observation: Shared grab helper: Quick framebuffer must be non-null. One site executes all seven baselines: timeline-ruler, piano-roll, track-headers, velocity-lane, editor-drawer, drum-keyboard, pitch-bend-popup; native framebuffer state throughout.
 Source context since previous assertion:
 
   }
@@ -347,8 +349,8 @@ Original expression:
   QVERIFY2(!image.isNull(), qPrintable(error));
 
 A003 | VisualQuickTest::expectBaseline | src/checks/visual/quick.cpp:302
-Disposition: NATIVE
-Mapping/reason: Every pinned region must have visible bounds before the compare; per-region native layout guard inside the shared helper.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (shell-chrome-visuals entry, src/checks/editorqml/tst_ShellChromeVisuals.qml), not these frozen QQuick framebuffer PNGs. Original observation: Every pinned region must have visible bounds before the compare; per-region native layout guard inside the shared helper.
 Source context since previous assertion:
 
       for (const checks::visual::Region &entry : regions)
@@ -356,16 +358,16 @@ Original expression:
   QVERIFY2(!entry.bounds.isEmpty(), qPrintable(entry.name + " has no visible bounds"));
 
 A004 | VisualQuickTest::expectBaseline | src/checks/visual/quick.cpp:303
-Disposition: NATIVE
-Mapping/reason: Shared screenshot helper: frozen semantic-region bounds + rendered pixels through checks::visual::compare; a presenter-level Swift check cannot establish the native Quick render.
+Disposition: GAP
+Mapping/reason: GAP: no executing QML grabToImage/baseline predicate covers this piano-roll/drum rendering; frozen QQuick framebuffer PNG has no converted-window owner. No-ingress fact retained: quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Shared screenshot helper: frozen semantic-region bounds + rendered pixels through checks::visual::compare; a presenter-level Swift check cannot establish the native Quick render.
 Source context since previous assertion:
 
 Original expression:
   QVERIFY2(checks::visual::compare(id, image, regions, &error), qPrintable(error));
 
 A005 | VisualQuickTest::drumKeyboardBaseline | src/checks/visual/quick.cpp:409
-Disposition: NATIVE
-Mapping/reason: Visible accidental + two natural pad rows must exist under the native pitch projection and camera; row scan over real layout state a Swift check cannot establish.
+Disposition: GAP
+Mapping/reason: GAP: no executing QML grabToImage/baseline predicate covers this piano-roll/drum rendering; frozen QQuick framebuffer PNG has no converted-window owner. No-ingress fact retained: quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Visible accidental + two natural pad rows must exist under the native pitch projection and camera; row scan over real layout state a Swift check cannot establish.
 Source context since previous assertion:
 
   }
@@ -478,8 +480,8 @@ Original expression:
                "fixture must expose an accidental and two natural pad rows");
 
 A006 | VisualQuickTest::drumKeyboardBaseline | src/checks/visual/quick.cpp:449
-Disposition: NATIVE
-Mapping/reason: Quick scene must exist to publish the drum keyboard text model; native scene state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (shell-chrome-visuals entry, src/checks/editorqml/tst_ShellChromeVisuals.qml), not these frozen QQuick framebuffer PNGs. Original observation: Quick scene must exist to publish the drum keyboard text model; native scene state.
 Source context since previous assertion:
 
 
@@ -524,8 +526,8 @@ Original expression:
   QVERIFY(scene);
 
 A007 | VisualQuickTest::drumKeyboardBaseline | src/checks/visual/quick.cpp:451
-Disposition: NATIVE
-Mapping/reason: Piano keyboard text model must exist; native scene state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (shell-chrome-visuals entry, src/checks/editorqml/tst_ShellChromeVisuals.qml), not these frozen QQuick framebuffer PNGs. Original observation: Piano keyboard text model must exist; native scene state.
 Source context since previous assertion:
 
       QAbstractItemModel *const model = scene->pianoKeyboardTextModel();
@@ -533,8 +535,8 @@ Original expression:
   QVERIFY(model);
 
 A008 | VisualQuickTest::drumKeyboardBaseline | src/checks/visual/quick.cpp:453
-Disposition: NATIVE
-Mapping/reason: Named accidental key must map to a visible row; native projection state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (shell-chrome-visuals entry, src/checks/editorqml/tst_ShellChromeVisuals.qml), not these frozen QQuick framebuffer PNGs. Original observation: Named accidental key must map to a visible row; native projection state.
 Source context since previous assertion:
 
       const int namedRow = projection.rowForPitch(namedKey);
@@ -542,8 +544,8 @@ Original expression:
   QVERIFY(namedRow >= 0);
 
 A009 | VisualQuickTest::drumKeyboardBaseline | src/checks/visual/quick.cpp:467
-Disposition: NATIVE
-Mapping/reason: A text-model row must cover the named pad's vertical center; native model observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (shell-chrome-visuals entry, src/checks/editorqml/tst_ShellChromeVisuals.qml), not these frozen QQuick framebuffer PNGs. Original observation: A text-model row must cover the named pad's vertical center; native model observation.
 Source context since previous assertion:
 
       const QRectF padRect = projection.rowRect(
@@ -563,8 +565,8 @@ Original expression:
   QVERIFY(namedIndex.isValid());
 
 A010 | VisualQuickTest::drumKeyboardBaseline | src/checks/visual/quick.cpp:468
-Disposition: NATIVE
-Mapping/reason: Named pad row must read "Kick"; native text-model content observation.
+Disposition: GAP
+Mapping/reason: GAP: no executing QML predicate covers this drum-keyboard label content; frozen QQuick baseline has no converted-window owner. No-ingress fact retained: quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Named pad row must read "Kick"; native text-model content observation.
 Source context since previous assertion:
 
 Original expression:
@@ -572,8 +574,8 @@ Original expression:
                QStringLiteral("Kick"));
 
 A011 | VisualQuickTest::drumKeyboardBaseline | src/checks/visual/quick.cpp:472
-Disposition: NATIVE
-Mapping/reason: Named pad must publish a non-empty label plate; native plate geometry observation.
+Disposition: GAP
+Mapping/reason: GAP: no executing QML predicate covers this drum-keyboard label content; frozen QQuick baseline has no converted-window owner. No-ingress fact retained: quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Named pad must publish a non-empty label plate; native plate geometry observation.
 Source context since previous assertion:
 
       const QRectF plate =
@@ -582,8 +584,8 @@ Original expression:
   QVERIFY2(!plate.isEmpty(), "named drum pad must publish a label plate");
 
 A012 | VisualQuickTest::pitchBendPopupBaseline | src/checks/visual/quick.cpp:498
-Disposition: NATIVE
-Mapping/reason: Deterministic note selection must exist; native fixture state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (shell-chrome-visuals entry, src/checks/editorqml/tst_ShellChromeVisuals.qml), not these frozen QQuick framebuffer PNGs. Original observation: Deterministic note selection must exist; native fixture state.
 Source context since previous assertion:
 
       regions.push_back(
@@ -615,16 +617,16 @@ Original expression:
   QVERIFY(m_hasNote);
 
 A013 | VisualQuickTest::pitchBendPopupBaseline | src/checks/visual/quick.cpp:499
-Disposition: NATIVE
-Mapping/reason: Same semantic PitchBend command the G key routes to must open the popup without depending on desktop focus or synthetic keys; native popup-session state.
+Disposition: GAP
+Mapping/reason: GAP: no executing QML predicate covers this pitch-bend popup behavior; frozen QQuick baseline has no converted-window owner. No-ingress fact retained: quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Same semantic PitchBend command the G key routes to must open the popup without depending on desktop focus or synthetic keys; native popup-session state.
 Source context since previous assertion:
 
 Original expression:
   QVERIFY2(openPitchBendPopup(), "pitch-bend popup did not open in the Quick canvas");
 
 A014 | VisualQuickTest::pitchBendPopupBaseline | src/checks/visual/quick.cpp:501
-Disposition: NATIVE
-Mapping/reason: Popup session must exist; native session state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (shell-chrome-visuals entry, src/checks/editorqml/tst_ShellChromeVisuals.qml), not these frozen QQuick framebuffer PNGs. Original observation: Popup session must exist; native session state.
 Source context since previous assertion:
 
       songview::QuickPopupSession *session = quick_popup::popupSession(m_tab->view());
@@ -632,8 +634,8 @@ Original expression:
   QVERIFY(session);
 
 A015 | VisualQuickTest::pitchBendPopupBaseline | src/checks/visual/quick.cpp:503
-Disposition: NATIVE
-Mapping/reason: Popup content form must exist to pin the form region; native item state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (shell-chrome-visuals entry, src/checks/editorqml/tst_ShellChromeVisuals.qml), not these frozen QQuick framebuffer PNGs. Original observation: Popup content form must exist to pin the form region; native item state.
 Source context since previous assertion:
 
       QQuickItem *const form = session->contentItem();
@@ -641,8 +643,8 @@ Original expression:
   QVERIFY(form);
 
 A016 | VisualQuickTest::pitchBendPopupBaseline | src/checks/visual/quick.cpp:512
-Disposition: NATIVE
-Mapping/reason: pitchBendGraph item must exist; native item-tree observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (shell-chrome-visuals entry, src/checks/editorqml/tst_ShellChromeVisuals.qml), not these frozen QQuick framebuffer PNGs. Original observation: pitchBendGraph item must exist; native item-tree observation.
 Source context since previous assertion:
 
       const QPointF formScene = form->mapToScene(QPointF{});
@@ -657,8 +659,8 @@ Original expression:
   QVERIFY(graph);
 
 A017 | VisualQuickTest::pitchBendPopupBaseline | src/checks/visual/quick.cpp:518
-Disposition: NATIVE
-Mapping/reason: Graph must stay unfocused for the canonical capture: the focus frame is input-routing appearance, not size/color baseline; native focus state asserted as the renderer precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): quick.cpp uncompiled in all CMake targets, runVisualQuickCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (shell-chrome-visuals entry, src/checks/editorqml/tst_ShellChromeVisuals.qml), not these frozen QQuick framebuffer PNGs. Original observation: Graph must stay unfocused for the canonical capture: the focus frame is input-routing appearance, not size/color baseline; native focus state asserted as the renderer precondition.
 Source context since previous assertion:
 
       // Canonical fixture state is explicitly unfocused, like the other

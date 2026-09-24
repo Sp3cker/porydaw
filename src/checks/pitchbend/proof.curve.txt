@@ -15,6 +15,11 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
+Every site below is GAP under one canonical reason, "feature not yet ported:
+pitch-bend editor": the Swift app has no pitch-bend editor surface (the
+roll.pitch_bend/G keybinding and the EditCommand row are inert registrations)
+and the original native pitch-bend harness is neither built nor registered, so
+no site executes.
 No Swift counterpart covers this suite: src/checks/pitchbend/ holds no .swift
 file; src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not
 Swift; swiftcore/*.swift and automation Swift touch only unrelated parameter
@@ -27,10 +32,14 @@ Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution ownership
-No Swift entry point executes these checks. The C++ suite entry points are
-runPitchBendEditingCheck (PitchBendEditingTest::init/cleanup drive the fixture);
-PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve and
-the PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with
+No Swift entry point executes these checks, and no native one either: the T7A
+runtime cutover removed every pitchbend source from src/checks/CMakeLists.txt
+and src/checks/checkcatalog.cpp registers no pitch-bend entry, so no site below
+executes. The original C++ suite entry point
+runPitchBendEditingCheck (PitchBendEditingTest::init/cleanup drive the fixture)
+belongs to that unbuilt harness; the
+PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve
+and PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with
 declarations in src/checks/pitchbend/tst_pitchbendediting.h
 (SHA-256 7580a8bae6dab536e3f3a4ceeb170a23d047ee5cf3459bb5e1584e4b2e64b895).
 
@@ -55,7 +64,7 @@ Original assertion inventory and source sequence
 
 A001 | PitchBendEditingTest::bendrFixtureUndoPreservation | src/checks/pitchbend/curve.cpp:36
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   #include "checks/pitchbend/tst_pitchbendediting.h"
 
@@ -97,7 +106,7 @@ Original expression:
 
 A002 | PitchBendEditingTest::bendrFixtureUndoPreservation | src/checks/pitchbend/curve.cpp:37
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -105,7 +114,7 @@ Original expression:
 
 A003 | PitchBendEditingTest::bendrFixtureUndoPreservation | src/checks/pitchbend/curve.cpp:39
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       m_fixture.document().undoStack()->undo();
 Original expression:
@@ -113,7 +122,7 @@ Original expression:
 
 A004 | PitchBendEditingTest::bendrFixtureUndoPreservation | src/checks/pitchbend/curve.cpp:40
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -121,7 +130,7 @@ Original expression:
 
 A005 | PitchBendEditingTest::bendrFixtureUndoPreservation | src/checks/pitchbend/curve.cpp:41
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -129,7 +138,7 @@ Original expression:
 
 A006 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:47
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -141,7 +150,7 @@ Original expression:
 
 A007 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:49
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendGraph *graphResult = pitchGraph();
 Original expression:
@@ -149,7 +158,7 @@ Original expression:
 
 A008 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:53
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendGraph &graph = *graphResult;
       const int index = m_fixture.document().undoStack()->index();
@@ -160,7 +169,7 @@ Original expression:
 
 A009 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:55
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -168,7 +177,7 @@ Original expression:
 
 A010 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:60
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       // Rendering the Shift line can race a dismissed popup; assert liveness
       // instead of dereferencing a dead editor.
@@ -179,7 +188,7 @@ Original expression:
 
 A011 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:62
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       const std::vector<DocLanePoint> interior = m_fixture.interiorPoints(DOC_CC_BEND);
 Original expression:
@@ -187,7 +196,7 @@ Original expression:
 
 A012 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:63
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -198,7 +207,7 @@ Original expression:
 
 A013 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:68
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       m_fixture.document().undoStack()->undo();
 Original expression:
@@ -206,7 +215,7 @@ Original expression:
 
 A014 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:74
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -218,7 +227,7 @@ Original expression:
 
 A015 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:76
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendGraph *graph = pitchGraph();
 Original expression:
@@ -226,7 +235,7 @@ Original expression:
 
 A016 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:78
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       const int index = m_fixture.document().undoStack()->index();
 Original expression:
@@ -234,7 +243,7 @@ Original expression:
 
 A017 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:79
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -242,7 +251,7 @@ Original expression:
 
 A018 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:81
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       QPointer<songview::PitchBendEditor> alive = editorResult;
 Original expression:
@@ -250,7 +259,7 @@ Original expression:
 
 A019 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:83
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_Enter);
 Original expression:
@@ -258,7 +267,7 @@ Original expression:
 
 A020 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:84
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -266,7 +275,7 @@ Original expression:
 
 A021 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:90
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -278,7 +287,7 @@ Original expression:
 
 A022 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:92
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendGraph *graphResult = pitchGraph();
 Original expression:
@@ -286,7 +295,7 @@ Original expression:
 
 A023 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:96
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendGraph &graph = *graphResult;
       const QByteArray before = m_fixture.smf();
@@ -296,7 +305,7 @@ Original expression:
 
 A024 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:97
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -304,7 +313,7 @@ Original expression:
 
 A025 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:98
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -312,7 +321,7 @@ Original expression:
 
 A026 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:99
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -320,7 +329,7 @@ Original expression:
 
 A027 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:104
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       // Acquiring Undo focus can dismiss a closing popup; guard the liveness
       // assertions.
@@ -330,8 +339,8 @@ Original expression:
       QVERIFY(alive && alive->isOpen());
 
 A028 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:105
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering observation. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -339,7 +348,7 @@ Original expression:
 
 A029 | PitchBendEditingTest::navigationKeysDoNotModifyCurve | src/checks/pitchbend/curve.cpp:128
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -368,7 +377,7 @@ Original expression:
 
 A030 | PitchBendEditingTest::navigationKeysDoNotModifyCurve | src/checks/pitchbend/curve.cpp:133
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       const QByteArray before = m_fixture.smf();
@@ -379,7 +388,7 @@ Original expression:
 
 A031 | PitchBendEditingTest::navigationKeysDoNotModifyCurve | src/checks/pitchbend/curve.cpp:134
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -387,7 +396,7 @@ Original expression:
 
 A032 | PitchBendEditingTest::navigationKeysDoNotModifyCurve | src/checks/pitchbend/curve.cpp:135
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -395,7 +404,7 @@ Original expression:
 
 A033 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:140
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -406,7 +415,7 @@ Original expression:
 
 A034 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:142
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendGraph *graphResult = pitchGraph();
 Original expression:
@@ -414,7 +423,7 @@ Original expression:
 
 A035 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:146
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendGraph &graph = *graphResult;
       const QByteArray baseline = m_fixture.smf();
@@ -424,7 +433,7 @@ Original expression:
 
 A036 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:149
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       const QByteArray first = m_fixture.smf();
       const int firstIndex = m_fixture.document().undoStack()->index();
@@ -433,7 +442,7 @@ Original expression:
 
 A037 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:150
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -442,7 +451,7 @@ Original expression:
 
 A038 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:152
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -450,7 +459,7 @@ Original expression:
 
 A039 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:153
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -458,7 +467,7 @@ Original expression:
 
 A040 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:155
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       m_fixture.document().undoStack()->undo();
 Original expression:
@@ -466,7 +475,7 @@ Original expression:
 
 A041 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:156
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -474,7 +483,7 @@ Original expression:
 
 A042 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:158
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       m_fixture.document().undoStack()->undo();
 Original expression:
@@ -482,7 +491,7 @@ Original expression:
 
 A043 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:159
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -490,7 +499,7 @@ Original expression:
 
 A044 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:164
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -501,7 +510,7 @@ Original expression:
 
 A045 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:166
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendGraph *graph = pitchGraph();
 Original expression:
@@ -509,7 +518,7 @@ Original expression:
 
 A046 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:169
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       const int endValue = m_fixture.effectiveLaneValue(DOC_CC_BEND, m_fixture.endTick(), 0);
       const std::vector<DocLanePoint> before = m_fixture.document().lanePoints(0, DOC_CC_BEND);
@@ -518,7 +527,7 @@ Original expression:
 
 A047 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:178
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       bool wroteInside = false;
       for (const DocLanePoint &point : m_fixture.document().lanePoints(0, DOC_CC_BEND)) {
@@ -533,7 +542,7 @@ Original expression:
 
 A048 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:179
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -541,7 +550,7 @@ Original expression:
 
 A049 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:183
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
           if (point.tick < m_fixture.endTick() && point.value != 0)
               wroteInside = true;
@@ -551,7 +560,7 @@ Original expression:
 
 A050 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:184
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -559,7 +568,7 @@ Original expression:
 
 A051 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:189
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -570,7 +579,7 @@ Original expression:
 
 A052 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:191
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendGraph *graph = pitchGraph();
 Original expression:
@@ -578,7 +587,7 @@ Original expression:
 
 A053 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:192
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -586,7 +595,7 @@ Original expression:
 
 A054 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:194
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       const int smfTrack = m_fixture.document().smfTrackFor(0);
 Original expression:
@@ -594,7 +603,7 @@ Original expression:
 
 A055 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:200
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       bool found = false;
       for (const SmfEvent &event : m_fixture.document().smf().tracks[size_t(smfTrack)].events) {
@@ -606,7 +615,7 @@ Original expression:
 
 A056 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:201
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -614,7 +623,7 @@ Original expression:
 
 A057 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:204
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
           }
       }
@@ -623,7 +632,7 @@ Original expression:
 
 A058 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:210
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -635,7 +644,7 @@ Original expression:
 
 A059 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:213
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
 
       const std::vector<DocNote> notes = m_fixture.document().notesForTrack(0);
@@ -644,7 +653,7 @@ Original expression:
 
 A060 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:216
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       const DocNote selected = notes.front();
       const DocNote sameTickImpostor = notes.back();
@@ -653,7 +662,7 @@ Original expression:
 
 A061 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:217
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -661,7 +670,7 @@ Original expression:
 
 A062 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:218
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -669,7 +678,7 @@ Original expression:
 
 A063 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:219
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -677,7 +686,7 @@ Original expression:
 
 A064 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:220
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -685,7 +694,7 @@ Original expression:
 
 A065 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:227
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
 
       const int index = m_fixture.document().undoStack()->index();
@@ -698,7 +707,7 @@ Original expression:
 
 A066 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:228
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -706,7 +715,7 @@ Original expression:
 
 A067 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:232
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
 
       QPointer<songview::PitchBendEditor> guardedEditor = editor;
@@ -716,7 +725,7 @@ Original expression:
 
 A068 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:234
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       m_fixture.drainDeferredDeletes();
 Original expression:
@@ -724,7 +733,7 @@ Original expression:
 
 A069 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:237
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
 
       DocNote survivingImpostor;
@@ -733,7 +742,7 @@ Original expression:
 
 A070 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:238
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -741,7 +750,7 @@ Original expression:
 
 A071 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:241
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
 
       m_fixture.document().undoStack()->undo();
@@ -750,7 +759,7 @@ Original expression:
 
 A072 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:242
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -758,7 +767,7 @@ Original expression:
 
 A073 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:243
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -766,7 +775,7 @@ Original expression:
 
 A074 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:249
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -778,7 +787,7 @@ Original expression:
 
 A075 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:251
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       QPointer<songview::PitchBendGraph> graph = pitchGraph();
 Original expression:
@@ -786,7 +795,7 @@ Original expression:
 
 A076 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:258
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       const QPoint start = canvasPoint(*graph, 0.25, 0.70);
       const QPoint finish = canvasPoint(*graph, 0.75, 0.30);
@@ -799,7 +808,7 @@ Original expression:
 
 A077 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:267
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       const auto preview = graph->curvePoints();
       const QByteArray beforeExternalEdit = m_fixture.smf();
@@ -814,7 +823,7 @@ Original expression:
 
 A078 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:268
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -822,7 +831,7 @@ Original expression:
 
 A079 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:269
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -830,7 +839,7 @@ Original expression:
 
 A080 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:273
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       // Undoing the real external lane edit restores the exact pre-edit SMF
       // while the pending preview stays live; redo re-applies it the same way.
@@ -840,7 +849,7 @@ Original expression:
 
 A081 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:274
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -848,7 +857,7 @@ Original expression:
 
 A082 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:275
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -856,7 +865,7 @@ Original expression:
 
 A083 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:276
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -864,7 +873,7 @@ Original expression:
 
 A084 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:278
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       m_fixture.document().undoStack()->redo();
 Original expression:
@@ -872,7 +881,7 @@ Original expression:
 
 A085 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:279
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -880,7 +889,7 @@ Original expression:
 
 A086 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:280
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -888,7 +897,7 @@ Original expression:
 
 A087 | PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit | src/checks/pitchbend/curve.cpp:284
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       if (editor)
           QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_Escape);
@@ -898,7 +907,7 @@ Original expression:
 
 A088 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:290
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -910,7 +919,7 @@ Original expression:
 
 A089 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:293
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       songview::PitchBendGraph *graph = modGraph();
@@ -919,7 +928,7 @@ Original expression:
 
 A090 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:297
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       const QByteArray before = m_fixture.smf();
       const int endValue = m_fixture.effectiveLaneValue(1, m_fixture.endTick(), 0);
@@ -929,7 +938,7 @@ Original expression:
 
 A091 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:298
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -937,7 +946,7 @@ Original expression:
 
 A092 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:300
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       const std::vector<DocLanePoint> interior = m_fixture.interiorPoints(1);
 Original expression:
@@ -946,7 +955,7 @@ Original expression:
 
 A093 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:302
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -954,7 +963,7 @@ Original expression:
 
 A094 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:303
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -962,7 +971,7 @@ Original expression:
 
 A095 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:304
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -970,7 +979,7 @@ Original expression:
 
 A096 | PitchBendEditingTest::modWheelFreehandStrokeAndUndo | src/checks/pitchbend/curve.cpp:305
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -978,7 +987,7 @@ Original expression:
 
 A097 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:311
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -990,7 +999,7 @@ Original expression:
 
 A098 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:314
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       songview::PitchBendGraph *graphResult = pitchGraph();
@@ -999,7 +1008,7 @@ Original expression:
 
 A099 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:318
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendGraph &graph = *graphResult;
       const QByteArray before = m_fixture.smf();
@@ -1010,7 +1019,7 @@ Original expression:
 
 A100 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:320
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1018,7 +1027,7 @@ Original expression:
 
 A101 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:322
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       const std::vector<DocLanePoint> points = m_fixture.interiorPoints(DOC_CC_BEND);
 Original expression:
@@ -1026,7 +1035,7 @@ Original expression:
 
 A102 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:324
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       for (size_t i = 1; i < points.size(); ++i) {
 Original expression:
@@ -1034,7 +1043,7 @@ Original expression:
 
 A103 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:325
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1042,7 +1051,7 @@ Original expression:
 
 A104 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:328
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       }
       m_fixture.document().undoStack()->undo();
@@ -1051,7 +1060,7 @@ Original expression:
 
 A105 | PitchBendEditingTest::altDragCreatesFineGridRamp | src/checks/pitchbend/curve.cpp:329
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1059,7 +1068,7 @@ Original expression:
 
 A106 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:340
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -1076,7 +1085,7 @@ Original expression:
 
 A107 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:344
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       m_fixture.view().selectionModel().setNoteSelection({boundaryNote.noteId});
       m_fixture.rollInput().forceActiveFocus(Qt::OtherFocusReason);
@@ -1086,7 +1095,7 @@ Original expression:
 
 A108 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:346
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendEditor *editor = m_fixture.popup();
 Original expression:
@@ -1094,7 +1103,7 @@ Original expression:
 
 A109 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:347
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1102,7 +1111,7 @@ Original expression:
 
 A110 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:349
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendGraph *graph = m_fixture.graph(QStringLiteral("pitchBendGraph"));
 Original expression:
@@ -1110,7 +1119,7 @@ Original expression:
 
 A111 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:350
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1119,7 +1128,7 @@ Original expression:
 
 A112 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:359
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       bool before = false;
       bool after = false;
@@ -1133,7 +1142,7 @@ Original expression:
 
 A113 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:363
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
           before |= point.tick < boundary;
           after |= point.tick > boundary;
@@ -1143,7 +1152,7 @@ Original expression:
 
 A114 | PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid | src/checks/pitchbend/curve.cpp:364
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1151,7 +1160,7 @@ Original expression:
 
 A115 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:370
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -1163,7 +1172,7 @@ Original expression:
 
 A116 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:373
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       songview::PitchBendGraph *graph = modGraph();
@@ -1172,7 +1181,7 @@ Original expression:
 
 A117 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:374
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1180,7 +1189,7 @@ Original expression:
 
 A118 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:378
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       const int endValue = m_fixture.effectiveLaneValue(1, m_fixture.endTick(), 0);
       const int index = m_fixture.document().undoStack()->index();
@@ -1190,7 +1199,7 @@ Original expression:
 
 A119 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:379
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1198,7 +1207,7 @@ Original expression:
 
 A120 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:380
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1206,7 +1215,7 @@ Original expression:
 
 A121 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:382
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
       for (const DocLanePoint &point : m_fixture.interiorPoints(1))
 Original expression:
@@ -1214,7 +1223,7 @@ Original expression:
 
 A122 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:383
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1222,7 +1231,7 @@ Original expression:
 
 A123 | PitchBendEditingTest::modWheelResetZeroesLane | src/checks/pitchbend/curve.cpp:384
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1243,4 +1252,4 @@ Swift assertion predicates
 None: no Swift counterpart file carries report.expect*/expectEqual predicates
 for this suite.
 
-Tally: 123 sites: MATCHED 0, PARTIAL 0, GAP 122, NATIVE 1.
+Tally: 123 sites: MATCHED 0, PARTIAL 0, GAP 123, NATIVE 0.
