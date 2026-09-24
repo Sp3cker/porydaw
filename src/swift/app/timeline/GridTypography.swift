@@ -10,9 +10,6 @@ struct GridFontSpec {
     let pixelSize: Int
     let weight: Int
     let letterSpacing: Double
-    // Tabular figures on every face (typography.cpp enableTabularNumbers):
-    // ruler readouts, velocity values, tempos and prompts show numbers, so
-    // the Swift canvas and QML text keep the same digit widths.
     let features: [String: QVariantSettable] = ["tnum": 1]
 
     var map: [String: QVariantSettable] {
@@ -22,9 +19,12 @@ struct GridFontSpec {
             "weight": weight,
             "letterSpacing": letterSpacing,
             "features": features,
+            "hintingPreference": fontPreferNoHinting,
         ]
     }
 }
+
+let fontPreferNoHinting = 1
 
 @MainActor
 struct GridTypography {

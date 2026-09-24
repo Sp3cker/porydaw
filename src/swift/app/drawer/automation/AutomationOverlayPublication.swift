@@ -345,7 +345,8 @@ final class AutomationCaption {
     init(pixelSize: Int, weight: Int) {
         let family = AutomationPage.fontFamily
         fontMap = ["family": family, "pixelSize": pixelSize, "weight": weight,
-                   "letterSpacing": 0.0, "features": ["tnum": 1]]
+                   "letterSpacing": 0.0, "features": ["tnum": 1],
+                   "hintingPreference": fontPreferNoHinting]
         session = family.withCString { sgf_create($0, Int32(pixelSize), Int32(weight), 0)! }
         height = sgf_extents(session).height
     }
