@@ -304,7 +304,7 @@ Original expression:
 
 A014 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:142
 Disposition: MATCHED
-Mapping/reason: No QPalette layer exists in the Swift app; the vanilla item surface is pinned by S003 (menuBackground == item literal) and bound by the production context menu (ShellWindow.qml:289).
+Mapping/reason: No QPalette layer exists in the Swift app; the vanilla item surface is pinned by S003 (menuBackground == item literal) and bound by the production context menu (ShellWindow.qml:288).
 Source context since previous assertion:
   ;
 Original expression:
