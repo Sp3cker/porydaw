@@ -118,6 +118,7 @@ if(APPLE)
         playback/tst_xcmd.swift
         keyboard/tst_velocitymodel.swift
         keyboard/KeybindingRegistryChecks.swift
+        themecolor/ThemeColorChecks.swift
         editcheck/tst_songdocument_songraw.swift
         editcheck/tst_songdocument_runner.swift
         editcheck/tst_songdocument_songranges.swift

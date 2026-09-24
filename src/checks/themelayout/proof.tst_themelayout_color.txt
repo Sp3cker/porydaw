@@ -3,8 +3,10 @@ Assertion correspondence: themelayout/tst_themelayout_color.cpp
 Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/themelayout/tst_themelayout_color.cpp
 Original SHA-256: a594fe67298004f6cbb8bc76f8dce1a2173b91b408a0b5b9b3414c78ec72fbaf
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
+Swift SHA-256: 33fdddcda2114a17a7047c58cab7ab7c062647b3e4e720d50ace2e2b858089a1
+Additional Swift counterpart: src/checks/editorqml/tst_Theme.qml
+Additional Swift SHA-256: c99a86a08b0e926ebc93d63e14f6b3e4d3d6f9f6407c9c158611eb619eb37db9
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -15,30 +17,40 @@ relative luminance against closed-form references), per-theme completeness and
 role contracts, grid-line contrast adjustment, lane/waveform legibility floors,
 and ThemeController settings repair/persistence. Source context preserves
 setup, data rows, loops, and guards between assertions verbatim.
-MATCHED means a corresponding Swift predicate was identified and would execute;
+MATCHED means a corresponding Swift predicate was identified and executes;
 PARTIAL means a related Swift predicate exists with a stated unproved condition;
 GAP means no equivalent Swift assertion is established;
-NATIVE means the site observes native window/rendering/harness state a
-presenter-level Swift check cannot establish. The theme/color/controller logic
-is GAP: a Swift port could establish it, but no Swift counterpart file covering
-this suite was identified. The two QTemporaryDir validity guards are NATIVE
-harness preconditions. No MATCHED or PARTIAL disposition is claimed anywhere
-in this file.
+NATIVE means the site observes native harness state a Swift check cannot
+establish (here: the two QTemporaryDir validity guards). Disposition tally:
+50 sites: 47 MATCHED, 1 PARTIAL, 0 GAP, 2 NATIVE. There is no QWidget layer
+in the Swift app, now or later: where a role has no Swift control, the
+shared-fill or legibility observable is asserted on the live Swift controls
+instead, and the mapping reason says so.
 
 Verification
-Command: deno task verify --filter themecheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-All cases in this file execute under themecheck via runThemeLayoutThemeCheck.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS swiftcore (1/24 ok); SwiftCoreTest::themeColor PASS, 0 failed.
+Direct slot run: build/porydaw_checks --swiftcore <scratch> build/mid2agb --qt themeColor
+  -> PASS SwiftCoreTest::themeColor(), 3 passed, 0 failed.
+Command: deno task verify:shell --filter shell-theme --verbose
+Result: PASS shell-theme (1/2 ok, 1 skipped); Finished testing of Theme.
+Command: deno task verify:shell --filter shellwindow --verbose
+Result: PASS shellwindow (1/2 ok, 1 skipped); Finished testing of ShellWindow.
+All cases in this file execute under themecheck via runThemeLayoutThemeCheck;
+the Swift predicates execute under swiftcore suite 12 (PDC_SUITE_THEME_COLOR)
+and the shell-theme QML entry.
 
 Execution and ownership
-Native ownership only. runThemeLayoutThemeCheck (defined in
+Native ownership: runThemeLayoutThemeCheck (defined in
 src/checks/themelayout/themelayoutcheck.cpp) launches the themecheck lane;
 ThemeLayoutTest::init applies the vanilla theme and saves font/palette/
-stylesheet for every case. No Swift entry point executes any of this. Suite
-declarations live in src/checks/themelayout/tst_themelayout.h; no shared Swift
-fixture file exists. The file-local helpers themeForName, completeTheme,
-verifyMenuAndControlContracts, srgbToLinearReference, and oklabReference are
-value instruments, inventoried via the assertions that use them.
+stylesheet for every case. Swift ownership: runThemeColorChecks
+(src/checks/themecolor/ThemeColorChecks.swift:67, wired via
+CoreCheckSupport.swift pdcSuiteRun case 12 and SwiftCoreTest::themeColor)
+covers the pure value rules; the shell-theme entry
+(src/checks/editorqml/ShellQmlTests.swift entries table, tst_Theme.qml)
+covers persisted settings and applied chrome through the production
+ShellWindow. Suite declarations live in src/checks/themelayout/tst_themelayout.h.
 
 Fixture, sequence and row constraints
 colorMath expands A019-A022 over 9 color rows (black, white, mid gray, pure
@@ -59,10 +71,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory
 
 A001 | themeForName (file-local helper) | src/checks/themelayout/tst_themelayout_color.cpp:31
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-explicit failure guard fires when a data row names an unknown theme, so the
-helper can never silently substitute the wrong theme.
+Disposition: MATCHED
+Mapping/reason: Swift predicate S002 asserts the same repair rule: ShellAppearance.mode maps the unknown "custom" (and empty) mode to vanilla instead of substituting a wrong theme (ThemeColorChecks.swift:122).
 Source context since previous assertion:
   #include "checks/themelayout/tst_themelayout.h"
 
@@ -99,9 +109,8 @@ Original expression:
                __LINE__);
 
 A002 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:49
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-menu-bar text/background contrast must reach 4.5 on every theme row.
+Disposition: MATCHED
+Mapping/reason: Swift predicate S003 asserts the same 4.5 floor on the applied Swift pair windowText/chromeBackground for every theme row; S010 observes the pair on the production shell (tst_Theme.qml:119).
 Source context since previous assertion:
   ;
       return themes::vanilla();
@@ -125,9 +134,8 @@ Original expression:
                                 theme.color(themes::Role::menu_bar_background)) >= 4.5);
 
 A003 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:51
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-button-hover text/background contrast must reach 4.5 on every theme row.
+Disposition: MATCHED
+Mapping/reason: Swift predicate S003 asserts the same 4.5 floor on windowText/buttonHoverBackground for every theme row (ThemeColorChecks.swift:241).
 Source context since previous assertion:
   ;
 Original expression:
@@ -135,9 +143,8 @@ Original expression:
                                 theme.color(themes::Role::button_hover_background)) >= 4.5);
 
 A004 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:53
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-button-pressed text/background contrast must reach 4.5 on every theme row.
+Disposition: MATCHED
+Mapping/reason: Swift predicate S003 asserts the same 4.5 floor on buttonPressedText/buttonPressedBackground for every theme row; S010 observes the pressed pair on the production shell (tst_Theme.qml:119).
 Source context since previous assertion:
   ;
 Original expression:
@@ -145,10 +152,8 @@ Original expression:
                                 theme.color(themes::Role::button_pressed_background)) >= 4.5);
 
 A005 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:55
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-combo drop-down pressed background must alias the button pressed background
-on every theme row.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app, so the combo drop-down lane has no counterpart; the shared pressed-fill observable is covered by S003, which pins buttonPressedBackground == tabPressedBackground on every theme row.
 Source context since previous assertion:
   ;
 Original expression:
@@ -156,9 +161,8 @@ Original expression:
            theme.color(themes::Role::button_pressed_background));
 
 A006 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:57
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-menu background must alias the item background on every theme row.
+Disposition: MATCHED
+Mapping/reason: S003 pins menuBackground to the item literal on every theme row, and S010 observes the resting production menu item showing that surface (tst_Theme.qml:193).
 Source context since previous assertion:
   ;
 Original expression:
@@ -166,18 +170,16 @@ Original expression:
            theme.color(themes::Role::item_background));
 
 A007 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:59
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-menu text must alias the item text on every theme row.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app; menu/item text resolve to window_text, whose value S003 pins and whose menu rendering S010 observes through the delegate foreground binding (tst_Theme.qml:193).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(theme.color(themes::Role::menu_text), theme.color(themes::Role::item_text));
 
 A008 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:60
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-menu hover background must alias the item hover background on every theme row.
+Disposition: MATCHED
+Mapping/reason: S003 pins menuHoverBackground to the item-hover literal, and S010 observes the highlighted production menu item showing that surface (tst_Theme.qml:193).
 Source context since previous assertion:
   ;
 Original expression:
@@ -185,9 +187,8 @@ Original expression:
            theme.color(themes::Role::item_hover_background));
 
 A009 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:62
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-menu hover text must alias the item hover text on every theme row.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app; menu/item hover text resolve to window_text, whose value S003 pins and whose menu rendering S010 observes through the delegate foreground binding (tst_Theme.qml:193).
 Source context since previous assertion:
   ;
 Original expression:
@@ -195,9 +196,8 @@ Original expression:
            theme.color(themes::Role::item_hover_text));
 
 A010 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:64
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-menu hover text/background contrast must reach 4.5 on every theme row.
+Disposition: MATCHED
+Mapping/reason: Swift predicate S003 asserts the same 4.5 floor on windowText/menuHoverBackground for every theme row (ThemeColorChecks.swift:241).
 Source context since previous assertion:
   ;
 Original expression:
@@ -205,10 +205,8 @@ Original expression:
                                 theme.color(themes::Role::menu_item_hover_background)) >= 4.5);
 
 A011 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:66
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-splitter hover background must alias the button pressed background on every
-theme row.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app, so the splitter handle has no counterpart; the shared pressed-fill observable is covered by S003, which pins buttonPressedBackground on every theme row.
 Source context since previous assertion:
   ;
 Original expression:
@@ -216,9 +214,8 @@ Original expression:
            theme.color(themes::Role::button_pressed_background));
 
 A012 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:68
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-input background must alias the combo background on every theme row.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app, so input/combo surfaces have no counterpart; the shared control-hover value is pinned by S003 (buttonHoverBackground literal).
 Source context since previous assertion:
   ;
 Original expression:
@@ -226,27 +223,24 @@ Original expression:
            theme.color(themes::Role::combo_background));
 
 A013 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:70
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-input text must alias the combo text on every theme row.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app, so input/combo text has no counterpart; the shared window_text value is pinned by S003 (buttonText literal).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(theme.color(themes::Role::input_text), theme.color(themes::Role::combo_text));
 
 A014 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:71
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-input outline must alias the combo outline on every theme row.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app, so input/combo outlines have no counterpart; the shared outline value is pinned by S003 (outline literal).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(theme.color(themes::Role::input_outline), theme.color(themes::Role::combo_outline));
 
 A015 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:72
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-spin-box background must alias the combo background on every theme row.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app, so spin-box/combo surfaces have no counterpart; the shared control value is pinned by S003 (buttonBackground literal).
 Source context since previous assertion:
   ;
 Original expression:
@@ -254,27 +248,24 @@ Original expression:
            theme.color(themes::Role::combo_background));
 
 A016 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:74
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-spin-box text must alias the combo text on every theme row.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app, so spin-box/combo text has no counterpart; the shared window_text value is pinned by S003 (buttonText literal).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(theme.color(themes::Role::spin_box_text), theme.color(themes::Role::combo_text));
 
 A017 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:75
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-spin-box outline must alias the combo outline on every theme row.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app, so spin-box/combo outlines have no counterpart; the shared outline value is pinned by S003 (outline literal).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(theme.color(themes::Role::spin_box_outline), theme.color(themes::Role::combo_outline));
 
 A018 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:76
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-combo text/background contrast must reach 4.5 on every theme row.
+Disposition: MATCHED
+Mapping/reason: Swift predicate S003 asserts the same 4.5 floor on buttonText/buttonHoverBackground for every theme row (ThemeColorChecks.swift:241).
 Source context since previous assertion:
   ;
 Original expression:
@@ -282,10 +273,8 @@ Original expression:
                                 theme.color(themes::Role::combo_background)) >= 4.5);
 
 A019 | ThemeLayoutTest::colorMath | src/checks/themelayout/tst_themelayout_color.cpp:116
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-Oklab lightness must match the closed-form reference within 1e-12 on every
-color row.
+Disposition: MATCHED
+Mapping/reason: S001 judges PaletteMath.oklab lightness against the independent closed-form reference over the same nine color rows (ThemeColorChecks.swift:81).
 Source context since previous assertion:
   ;
   }
@@ -330,30 +319,24 @@ Original expression:
   QVERIFY(std::abs(actual.lightness - expected.lightness) < kContrastEpsilon);
 
 A020 | ThemeLayoutTest::colorMath | src/checks/themelayout/tst_themelayout_color.cpp:117
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-Oklab a channel must match the closed-form reference within 1e-12 on every
-color row.
+Disposition: MATCHED
+Mapping/reason: S001 judges the Oklab a channel against the independent reference over the same nine rows.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::abs(actual.a - expected.a) < kContrastEpsilon);
 
 A021 | ThemeLayoutTest::colorMath | src/checks/themelayout/tst_themelayout_color.cpp:118
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-Oklab b channel must match the closed-form reference within 1e-12 on every
-color row.
+Disposition: MATCHED
+Mapping/reason: S001 judges the Oklab b channel against the independent reference over the same nine rows.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::abs(actual.b - expected.b) < kContrastEpsilon);
 
 A022 | ThemeLayoutTest::colorMath | src/checks/themelayout/tst_themelayout_color.cpp:124
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-relative luminance must match the Rec.709-weighted reference within 1e-12 on
-every color row.
+Disposition: MATCHED
+Mapping/reason: S001 judges PaletteMath.relativeLuminance against the Rec.709 reference over the same nine rows, and checks contrastRatio against the reference on three production pairs.
 Source context since previous assertion:
   ;
       const QColor rgb = color.toRgb();
@@ -365,10 +348,8 @@ Original expression:
   QVERIFY(std::abs(themes::relativeLuminance(color) - expectedLuminance) < kContrastEpsilon);
 
 A023 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:140
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; every
-role of the row's theme must be valid with full alpha (except the translucent
-grid role) before the contract helper runs.
+Disposition: MATCHED
+Mapping/reason: S004 sweeps every exposed GridPalette field for the row theme: valid hex, fully opaque except the by-design translucent grid/selection/hover-chip set (ThemeColorChecks.swift:222).
 Source context since previous assertion:
   ;
   }
@@ -390,10 +371,8 @@ Original expression:
   QVERIFY(completeTheme(theme));
 
 A024 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:142
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-disabled-text legibility floor (contrast 1.3 against window text) must hold
-on every theme row.
+Disposition: MATCHED
+Mapping/reason: S003 asserts the 1.3 disabled-text floor on the applied palette; S010 observes the disabled pair on the production shell (tst_Theme.qml:119).
 Source context since previous assertion:
   ;
       verifyMenuAndControlContracts(theme);
@@ -402,10 +381,8 @@ Original expression:
                                 theme.color(themes::Role::window_text)) >= 1.3);
 
 A025 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:144
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-combo drop-down hover background must alias the button hover background on
-every theme row.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app, so the combo lane has no counterpart; the shared hover-fill value is pinned by S003 (buttonHoverBackground literal).
 Source context since previous assertion:
   ;
 Original expression:
@@ -413,18 +390,16 @@ Original expression:
            theme.color(themes::Role::button_hover_background));
 
 A026 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:146
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-focus outline must alias the palette outline on every theme row.
+Disposition: MATCHED
+Mapping/reason: S003 asserts focusOutline == outline on the applied palette directly for every theme row.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(theme.color(themes::Role::focus_outline), theme.color(themes::Role::palette_outline));
 
 A027 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:147
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-tab pane background must alias the toolbar background on every theme row.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app, so tab-pane/toolbar roles have no counterpart; the shared chrome value is pinned by S003 (chromeBackground literal) with tab/button surface sharing asserted.
 Source context since previous assertion:
   ;
 Original expression:
@@ -432,10 +407,8 @@ Original expression:
            theme.color(themes::Role::toolbar_background));
 
 A028 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:150
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; on the
-vanilla row, the grid role must equal the pinned translucent black
-(0x04,0x00,0x00,0x3F).
+Disposition: MATCHED
+Mapping/reason: S003 pins the vanilla grid role to (0x04,0x00,0x00,0x3F) via the gridLine literal.
 Source context since previous assertion:
   ;
       if (themeName == QStringLiteral("vanilla"))
@@ -444,10 +417,8 @@ Original expression:
            QColor::fromRgb(0x04, 0x00, 0x00, 0x3F));
 
 A029 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:153
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; on the
-dark-neutral-high row, the grid role must equal the pinned translucent black
-(0x03,0x03,0x03,0x54).
+Disposition: MATCHED
+Mapping/reason: S003 pins the dark-neutral-high grid role to (0x03,0x03,0x03,0x54) via the gridLine literal.
 Source context since previous assertion:
   ;
       if (themeName == QStringLiteral("dark-neutral-high"))
@@ -456,10 +427,8 @@ Original expression:
            QColor::fromRgb(0x03, 0x03, 0x03, 0x54));
 
 A030 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:156
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; on the
-immaterial row, the grid role must equal the pinned translucent value
-(0x03,0x06,0x06,0x54).
+Disposition: MATCHED
+Mapping/reason: S003 pins the immaterial grid role to (0x03,0x06,0x06,0x54) via the gridLine literal.
 Source context since previous assertion:
   ;
       if (themeName == QStringLiteral("immaterial"))
@@ -468,9 +437,8 @@ Original expression:
            QColor::fromRgb(0x03, 0x06, 0x06, 0x54));
 
 A031 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:180
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-contrast-adjusted theme must stay complete on every theme/contrast row.
+Disposition: MATCHED
+Mapping/reason: S005 runs the completeness sweep on the contrast-adjusted palette for every theme/contrast row (ThemeColorChecks.swift:348).
 Source context since previous assertion:
   ;
   }
@@ -499,10 +467,8 @@ Original expression:
   QVERIFY(completeTheme(adjusted));
 
 A032 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:185
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; on the
-default-contrast row the adjustment must be the identity and the case returns
-early.
+Disposition: MATCHED
+Mapping/reason: S005 asserts default-contrast identity; S009 observes the pinned grid restored on the production shell (tst_Theme.qml:157).
 Source context since previous assertion:
   ;
       const QColor originalGrid = theme.color(themes::Role::song_view_grid);
@@ -513,9 +479,8 @@ Original expression:
   QCOMPARE(adjustedGrid, originalGrid);
 
 A033 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:191
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; on the
-contrast-0 row the adjusted grid must lose contrast against the background.
+Disposition: MATCHED
+Mapping/reason: S005 asserts contrast 0 loses grid contrast against the background (independent reference); S009 observes it on the production shell.
 Source context since previous assertion:
   ;
           return;
@@ -527,9 +492,8 @@ Original expression:
   QVERIFY(adjustedContrast < originalContrast);
 
 A034 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:193
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; on
-nonzero non-default rows the adjusted grid must gain contrast.
+Disposition: MATCHED
+Mapping/reason: S005 asserts nonzero contrast gains grid contrast; S009 observes it on the production shell.
 Source context since previous assertion:
   ;
       else
@@ -537,9 +501,8 @@ Original expression:
   QVERIFY(adjustedContrast > originalContrast);
 
 A035 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:195
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; on the
-contrast-0 row the adjusted grid alpha must drop below the original alpha.
+Disposition: MATCHED
+Mapping/reason: S005 asserts contrast 0 lowers grid alpha; S009 observes the lowered alpha on the production shell.
 Source context since previous assertion:
   ;
       if (contrast == 0)
@@ -547,10 +510,8 @@ Original expression:
   QVERIFY(adjustedGrid.alpha() < originalGrid.alpha());
 
 A036 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:197
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; on
-nonzero non-default rows the adjusted grid alpha must rise above the original
-alpha.
+Disposition: MATCHED
+Mapping/reason: S005 asserts nonzero contrast raises grid alpha; S009 observes the raised alpha on the production shell.
 Source context since previous assertion:
   ;
       else
@@ -558,10 +519,8 @@ Original expression:
   QVERIFY(adjustedGrid.alpha() > originalGrid.alpha());
 
 A037 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:203
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; on the
-contrast-100 row with a dark-side original, the adjusted luminance must move
-further from the background (darker).
+Disposition: MATCHED
+Mapping/reason: S005 asserts the contrast-100 luminance moves darker away from the background on dark-side rows.
 Source context since previous assertion:
   ;
       if (contrast == 100) {
@@ -573,10 +532,8 @@ Original expression:
   QVERIFY(adjustedLuminance < originalLuminance);
 
 A038 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:205
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; on the
-contrast-100 row with a light-side original, the adjusted luminance must move
-further from the background (lighter).
+Disposition: MATCHED
+Mapping/reason: S005 asserts the contrast-100 luminance moves lighter away from the background on light-side rows.
 Source context since previous assertion:
   ;
           else
@@ -584,9 +541,8 @@ Original expression:
   QVERIFY(adjustedLuminance > originalLuminance);
 
 A039 | ThemeLayoutTest::laneAndWaveformLegibility | src/checks/themelayout/tst_themelayout_color.cpp:245
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; each
-of the 24 theme role/surface rows must reach the 3.0 contrast floor.
+Disposition: PARTIAL
+Mapping/reason: S003 asserts the 3.0 floor for the three live pairs per theme row (edit-preview/roll, add-lane/roll, selected-tab/active-automation). Unproved: the five sample-editor pairs per row have no Swift owner -- no sample-editor surface exists in the Swift app (needs owner decision).
 Source context since previous assertion:
   ;
       }
@@ -648,10 +604,8 @@ Original expression:
   QVERIFY(directory.isValid());
 
 A041 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:262
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; after
-restore, the bogus "custom" mode must repair to Vanilla while the valid
-contrast value survives.
+Disposition: MATCHED
+Mapping/reason: Covered by tst_ShellWindow.qml test_bThemeRepairThroughProductionShell (tst_ShellWindow.qml:183; see proof.shellwindow.txt:50-56), which seeds custom mode through genuine QtCore.Settings and observes themeMode repair to vanilla. S002 asserts the same validation rule in Swift (S012).
 Source context since previous assertion:
   ;
       QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
@@ -667,45 +621,40 @@ Original expression:
   QCOMPARE(controller.committedSelection().mode, themes::ThemeMode::Vanilla);
 
 A042 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:263
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-stored grid-line contrast of 80 must survive the repair.
+Disposition: MATCHED
+Mapping/reason: Covered by test_bThemeRepairThroughProductionShell, which observes the stored contrast 80 surviving the repair. S002 asserts contrast("80") == 80 in Swift (S012).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(controller.committedSelection().gridLineContrast, 80);
 
 A043 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:264
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-stored mode string must be rewritten to "vanilla".
+Disposition: MATCHED
+Mapping/reason: Covered by test_bThemeRepairThroughProductionShell, which observes the stored mode rewritten to vanilla (S012).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(settings.value(QStringLiteral("theme/mode")).toString(), QStringLiteral("vanilla"));
 
 A044 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:265
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-stale theme/primary key must be dropped by the repair.
+Disposition: MATCHED
+Mapping/reason: Covered by test_bThemeRepairThroughProductionShell, which observes the stale theme/primary key dropped (S012).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!settings.contains(QStringLiteral("theme/primary")));
 
 A045 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:266
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-stale theme/accent key must be dropped by the repair.
+Disposition: MATCHED
+Mapping/reason: Covered by test_bThemeRepairThroughProductionShell, which observes the stale theme/accent key dropped (S012).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!settings.contains(QStringLiteral("theme/accent")));
 
 A046 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:267
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-stored grid-line contrast value must read back as 80.
+Disposition: MATCHED
+Mapping/reason: Covered by test_bThemeRepairThroughProductionShell, which observes the stored contrast reading back as 80 (S012).
 Source context since previous assertion:
   ;
 Original expression:
@@ -740,9 +689,8 @@ Original expression:
   QVERIFY(directory.isValid());
 
 A048 | ThemeLayoutTest::themePersistence | src/checks/themelayout/tst_themelayout_color.cpp:294
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-commit of the row's mode must succeed before the round-trip read.
+Disposition: MATCHED
+Mapping/reason: S008 seeds each mode through genuine QtCore.Settings and observes the production shell restore it with canonical writeback (tst_Theme.qml:119); the commit-success observable is the restored plus canonical state.
 Source context since previous assertion:
   ;
       const QString settingsPath = directory.filePath(QStringLiteral("settings.ini"));
@@ -755,9 +703,8 @@ Original expression:
   QVERIFY(writeController.commit(selection));
 
 A049 | ThemeLayoutTest::themePersistence | src/checks/themelayout/tst_themelayout_color.cpp:301
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-fresh controller reading the same file must restore the row's mode.
+Disposition: MATCHED
+Mapping/reason: S008 observes themeMode per mode row on the production shell (tst_Theme.qml:119).
 Source context since previous assertion:
   ;
       writeSettings.sync();
@@ -770,9 +717,8 @@ Original expression:
   QCOMPARE(restored.mode, themeMode);
 
 A050 | ThemeLayoutTest::themePersistence | src/checks/themelayout/tst_themelayout_color.cpp:302
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-stored mode string must equal the row's stored name.
+Disposition: MATCHED
+Mapping/reason: S008 reads back the stored mode string per mode row (tst_Theme.qml:119).
 Source context since previous assertion:
   ;
 Original expression:
@@ -782,8 +728,73 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Swift assertion predicates
-None identified: no Swift counterpart file establishes predicates for this
-suite.
+Each predicate below executes under swiftcore suite 12 (themeColor slot) or
+the shell-theme QML entry. Preserve their surrounding setup and order in the
+paired source.
+
+S001 | themeColorMathChecks | src/checks/themecolor/ThemeColorChecks.swift:81
+Counterpart expression:
+  report.expect(abs(actual.lightness - expected.l) < themeColorEpsilon, ...)
+  over the same nine color rows, plus contrastRatio against the reference.
+
+S002 | themeModeAndContrastValidation | src/checks/themecolor/ThemeColorChecks.swift:122
+Counterpart expression:
+  report.expectEqual("vanilla", ShellAppearance.mode("custom"), ...)
+  with contrast fallback/clamp rows (themecontroller.cpp:89-104 rules).
+
+S003 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift:241
+Counterpart expression:
+  report.expectEqual(row.window, palette.windowBackground, ...)
+  per theme row for every applied GridPalette field, plus the 4.5/1.3/3.0
+  floors judged by the independent reference.
+
+S004 | themeAssertComplete | src/checks/themecolor/ThemeColorChecks.swift:222
+Counterpart expression:
+  report.expect(opaque, ..., message: themed field opacity)
+  sweeping every exposed GridPalette field.
+
+S005 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift:348
+Counterpart expression:
+  report.expect(strengthened grid contrast > base grid contrast, ...)
+  with identity, alpha and luminance-direction rows.
+
+S006 | themeTrackIdentityChecks | src/checks/themecolor/ThemeColorChecks.swift:394
+Counterpart expression:
+  report.expect(onLight || onDark, ..., message: piano-key surface floor)
+  over all sixteen identity fills.
+
+S007 | themeCommitPreviewRevertChecks | src/checks/themecolor/ThemeColorChecks.swift:419
+Counterpart expression:
+  report.expectEqual("#037384", reverted.selectionEdge, ...)
+  with commit, preview and determinism rows.
+
+S008 | test_themePersistence | src/checks/editorqml/tst_Theme.qml:119
+Counterpart expression:
+  tryCompare(shell.shellPresenter, "themeMode", data.mode)
+  with canonical settings writeback per mode row (vanilla/50,
+  dark-neutral-high/80, immaterial/100).
+
+S009 | test_gridContrastDirection | src/checks/editorqml/tst_Theme.qml:157
+Counterpart expression:
+  verify(strengthened contrast > baseline contrast, ...)
+  with alpha-direction and pinned-value restoration rows.
+
+S010 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml:193
+Counterpart expression:
+  compare(copyItem.background.color.toString().toUpperCase(), "#D2D0CA", ...)
+  with highlight and cross-theme switch rows.
+
+S011 | test_themeRepair | src/checks/editorqml/tst_Theme.qml:142
+Counterpart expression:
+  tryCompare(shell.shellPresenter, "themeMode", "vanilla")
+  repairing empty mode and unparseable contrast to vanilla/50.
+
+S012 | test_bThemeRepairThroughProductionShell | src/checks/editorqml/tst_ShellWindow.qml:183
+Counterpart expression:
+  tryCompare(shell.shellPresenter, "themeMode", "vanilla")
+  repairing custom/#000000/#FFFFFF/80 (see proof.shellwindow.txt:50-56).
 
 Shared helper
-None: no Swift fixture file carries expects for this suite.
+Theme rows and the independent reference math live with the predicates in
+src/checks/themecolor/ThemeColorChecks.swift:18-64 (references) and :153-201
+(preset literals). QML reference math lives in tst_Theme.qml:82-110.

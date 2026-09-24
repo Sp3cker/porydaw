@@ -1,0 +1,82 @@
+Assertion correspondence: editorqml/tst_Theme.qml
+
+Reference revision: 03a190a0bf1bba3a007f31bf74eb01ed362b92ce
+Original: src/checks/editorqml/tst_Theme.qml
+Original SHA-256: c99a86a08b0e926ebc93d63e14f6b3e4d3d6f9f6407c9c158611eb619eb37db9
+Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
+Swift SHA-256: 33fdddcda2114a17a7047c58cab7ab7c062647b3e4e720d50ace2e2b858089a1
+Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
+Additional Swift SHA-256: 3e3636072c86d9645ecf359a4af726fcdfeb5642aae9b67fb3c93ef4f97c1ebe
+
+No assertion sites.
+
+Status and evidence
+This is a crosswalk for the shell-theme lane entry, not an original-site
+inventory: it records which themelayout assertion sites the production
+ShellWindow observes through genuine QtCore.Settings and applied GridPalette
+values. The inventoried sites and their dispositions live in
+proof.tst_themelayout_color.txt, proof.tst_themelayout_chrome.txt and
+proof.tst_themelayout_settings.txt; the Swift value predicates live in
+src/checks/themecolor/ThemeColorChecks.swift (swiftcore suite 12).
+Production surface: src/ui/shell/ShellWindow.qml (appearanceStore restore +
+canonical writeback, ShellWindow.qml:52-70; Basic context-menu delegate
+bindings, ShellWindow.qml:283-341) driven by ShellPresenter.restoreAppearance
+and ShellAppearance.apply. The TestCase is src/checks/editorqml/tst_Theme.qml;
+the lane entry is shell-theme in src/checks/editorqml/ShellQmlTests.swift
+(inputFileName tst_Theme.qml, fixture mus_route101 staged but never opened).
+Its standalone manifest stages an existing decomp-project scratch directory
+through tools/run_checks.ts. No test-only production visual controls.
+
+Verification
+Command: deno task verify:shell --filter shell-theme --verbose
+Result: PASS shell-theme (1/2 ok, 1 skipped); Finished testing of Theme.
+Command: deno task verify:shell --filter shellwindow --verbose
+Result: PASS shellwindow (1/2 ok, 1 skipped); Finished testing of ShellWindow.
+
+Execution and ownership
+The entry runs offscreen with a private native Settings domain per run
+(bootstrap.settingsApplicationName under the sp3cker organization, removed at
+teardown like tst_ShellWindow.qml). Four test functions execute in order:
+test_themePersistence (three mode rows), test_themeRepair, test_gridContrast-
+Direction and test_menuChromeFollowsTheme. No songs open, so teardown destroys
+the shell directly with no close-all walk.
+
+Source-to-new-observation mapping (source predicate remains authoritative):
+
+* tst_themelayout_color.cpp:282-303, ThemeLayoutTest::themePersistence.
+  test_themePersistence seeds each mode (vanilla/50, dark-neutral-high/80,
+  immaterial/100) through genuine QtCore.Settings, mounts the production
+  shell, and observes themeMode, gridLineContrast, the windowBackground
+  literal, applied legibility floors (menu-bar and pressed pairs 4.5,
+  disabled pair 1.3) and canonical settings writeback. Color proof
+  A048-A050; settings-dialog commit direction A011-A012 (dark/80 row).
+* tst_themelayout_color.cpp:249-267, ThemeLayoutTest::settingsRepair.
+  Deliberately not duplicated: custom/#000000/#FFFFFF/80 stays covered by
+  tst_ShellWindow.qml test_b (see proof.shellwindow.txt:50-56). This lane
+  adds the complementary repair fixture only: test_themeRepair seeds empty
+  mode and unparseable contrast and observes vanilla/50 with canonical
+  writeback.
+* tst_themelayout_color.cpp:160-207 gridContrast and
+  tst_themelayout_settings.cpp:309-311 grid strength rules.
+  test_gridContrastDirection drives the production restoreAppearance path
+  (vanilla 0/100/50) and observes grid alpha and contrast movement plus
+  pinned-value restoration. Color proof A032-A036; settings A039-A040.
+* tst_themelayout_chrome.cpp:78-133 combo raster and :135-193 palette pins,
+  user-observable halves. test_menuChromeFollowsTheme reads the production
+  context-menu delegate's bound background/foreground, drives highlighted,
+  and switches the theme, observing the item surface, the item-hover
+  surface, the disabled ink and cross-theme propagation. Chrome proof
+  A007 (hover fill), A012-A014 (value pins via swiftcore); color menu-alias
+  sites A006-A010.
+* tst_themelayout_settings.cpp:159-193 dialog commit direction.
+  The dark/80 persistence row of test_themePersistence plus
+  themeCommitPreviewRevertChecks in swiftcore observe the committed values;
+  the dialog click mechanics have no Swift counterpart (GAP in the settings
+  proof).
+
+Explicit gaps (not silently counted as covered): theme dialog, wizard and
+polyphony-panel surfaces (GAP in the settings proof, needs owner decision);
+sample-editor legibility rows (PARTIAL in the color proof); the eleven-widget
+grab sweep (PARTIAL in the chrome proof); native macOS MenuBar rendering,
+which is platform-owned and unthemed by the Swift shell; audio, songs and
+drawer behavior, which this song-less lane never stages.

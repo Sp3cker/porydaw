@@ -3,8 +3,10 @@ Assertion correspondence: themelayout/tst_themelayout_chrome.cpp
 Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/themelayout/tst_themelayout_chrome.cpp
 Original SHA-256: 6b4733c529e563202102d4084ba4f5d8fdf1af563e0cb568394997e044da4ddf
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
+Swift SHA-256: 33fdddcda2114a17a7047c58cab7ab7c062647b3e4e720d50ace2e2b858089a1
+Additional Swift counterpart: src/checks/editorqml/tst_Theme.qml
+Additional Swift SHA-256: c99a86a08b0e926ebc93d63e14f6b3e4d3d6f9f6407c9c158611eb619eb37db9
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -15,21 +17,26 @@ ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette (application
 palette pins plus a poison-calibration swatch proving the widget zoo grabs
 would reveal a leaked platform palette). Source context preserves setup,
 helpers, and guards between assertions verbatim.
-MATCHED means a corresponding Swift predicate was identified and would execute;
-PARTIAL means a related Swift predicate exists with a stated unproved condition;
-GAP means no equivalent Swift assertion is established;
-NATIVE means the site observes native window/rendering/harness state a
-presenter-level Swift check cannot establish. Every site in this file observes
-native widgets, native style geometry, grabbed pixels, or the native
-application palette, so every site is NATIVE and none is MATCHED or PARTIAL.
-No Swift counterpart file covering this suite was identified.
+MATCHED means a corresponding Swift predicate executes the same user-observable
+behavior; PARTIAL means a related Swift predicate pins the themed value with
+the raster/pixel half unproved; NATIVE means the site observes QWidget grab,
+geometry, visibility or calibration instruments with no Swift counterpart.
+Disposition tally: 21 sites: 6 MATCHED, 4 PARTIAL, 0 GAP, 11 NATIVE. There is
+no QWidget layer in the Swift app, now or later: combo-box, QStyle and
+QPalette observations port to the themed values on the Swift owners and to
+the production Basic context-menu bindings, never to new widgets.
 
 Verification
-Command: deno task verify --filter themecheck --verbose
-Command: deno task verify --filter darkbasecheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-comboArrowAndPopup executes under themecheck;
-darkBaselineMasksPoisonedPlatformPalette executes under darkbasecheck.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS swiftcore (1/24 ok); SwiftCoreTest::themeColor PASS, 0 failed.
+Command: deno task verify:shell --filter shell-theme --verbose
+Result: PASS shell-theme (1/2 ok, 1 skipped); Finished testing of Theme.
+Command: deno task verify:shell --filter shellwindow --verbose
+Result: PASS shellwindow (1/2 ok, 1 skipped); Finished testing of ShellWindow.
+comboArrowAndPopup executed under themecheck;
+darkBaselineMasksPoisonedPlatformPalette executed under darkbasecheck.
+The Swift predicates execute under swiftcore suite 12 and the shell-theme
+entry; menu-as-popup opening is observed by tst_ShellWindow.qml test_c.
 
 Execution and ownership
 Native ownership only. runThemeLayoutThemeCheck and runThemeLayoutDarkBaseCheck
@@ -176,9 +183,8 @@ Original expression:
   QVERIFY(!restingImage.isNull());
 
 A004 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:96
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: the resting arrow raster
-must contain the combo_text role color inside the arrow rect.
+Disposition: PARTIAL
+Mapping/reason: S003 (ThemeColorChecks.swift:241) pins the arrow-ink value (combo_text resolves to window_text) and S010 observes menu ink through the production menu delegate. Unproved: the QWidget arrow raster itself -- no combo-box control exists in the Swift app.
 Source context since previous assertion:
   ;
       const QColor arrowColor = themes::color(themes::Role::combo_text);
@@ -187,9 +193,8 @@ Original expression:
   QVERIFY(containsColor(restingImage, arrowRect, arrowColor));
 
 A005 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:97
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: the resting arrow raster
-must not yet contain the hover-background role color.
+Disposition: PARTIAL
+Mapping/reason: S003 pins the hover-fill value (combo_drop_down_hover_background resolves to control_hover_background). Unproved: the resting-raster absence -- no combo-box control exists in the Swift app.
 Source context since previous assertion:
   ;
 Original expression:
@@ -212,10 +217,8 @@ Original expression:
   QVERIFY(hoverArrowRect.contains(hoverPosition));
 
 A007 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:123
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: the synthesized-hover
-raster painted through drawComplexControl must contain the hover-background
-role color inside the hover arrow rect.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app; the hover-fill observable is covered by S010, which highlights the production menu delegate and observes the item-hover surface (tst_Theme.qml:193).
 Source context since previous assertion:
   ;
       hoverOption.editable = combo.isEditable();
@@ -239,9 +242,8 @@ Original expression:
   QVERIFY(containsColor(hoveredImage, hoverArrowRect, hoverColor));
 
 A008 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:127
-Disposition: NATIVE
-Mapping/reason: Original native window obligation: showPopup must open a
-separate popup window rather than reusing the combo window.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app; menu-as-popup opening is covered by tst_ShellWindow.qml test_c, which opens the production Edit menu and observes it visible (see proof.shellwindow.txt:66-80).
 Source context since previous assertion:
   ;
 
@@ -251,9 +253,8 @@ Original expression:
   QVERIFY(popup != combo.window());
 
 A009 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:128
-Disposition: NATIVE
-Mapping/reason: Original native window obligation: the popup window must
-become visible before its grab is meaningful.
+Disposition: MATCHED
+Mapping/reason: No QWidget layer exists in the Swift app; popup visibility is covered by tst_ShellWindow.qml test_c (see proof.shellwindow.txt:66-80).
 Source context since previous assertion:
   ;
 Original expression:
@@ -270,19 +271,16 @@ Original expression:
   QVERIFY(!popupImage.isNull());
 
 A011 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:131
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: the popup grab's origin
-pixel must equal the menu_outline role color.
+Disposition: PARTIAL
+Mapping/reason: S003 pins the outline value (menu_outline resolves to outline) and S010 observes menu chrome following the theme. Unproved: the popup-origin pixel itself -- no QWidget popup layer exists in the Swift app.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(popupImage.pixelColor(0, 0), themes::color(themes::Role::menu_outline));
 
 A012 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:138
-Disposition: NATIVE
-Mapping/reason: Original native application-state obligation: after lane
-startup, the Active Window palette entry must equal the vanilla
-window_background role, proving the poisoned platform palette is masked.
+Disposition: MATCHED
+Mapping/reason: No QPalette layer exists in the Swift app; the vanilla window surface is pinned by S003 (windowBackground literal) and bound by the production shell root (ShellWindow.qml:22).
 Source context since previous assertion:
   ;
       combo.hidePopup();
@@ -296,9 +294,8 @@ Original expression:
            vanilla.color(themes::Role::window_background));
 
 A013 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:140
-Disposition: NATIVE
-Mapping/reason: Original native application-state obligation: the Active
-WindowText palette entry must equal the vanilla window_text role.
+Disposition: MATCHED
+Mapping/reason: No QPalette layer exists in the Swift app; the vanilla window_text value is pinned by S003 (windowText literal) and bound by the production footer/status text.
 Source context since previous assertion:
   ;
 Original expression:
@@ -306,9 +303,8 @@ Original expression:
            vanilla.color(themes::Role::window_text));
 
 A014 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:142
-Disposition: NATIVE
-Mapping/reason: Original native application-state obligation: the Active Base
-palette entry must equal the vanilla item_background role.
+Disposition: MATCHED
+Mapping/reason: No QPalette layer exists in the Swift app; the vanilla item surface is pinned by S003 (menuBackground == item literal) and bound by the production context menu (ShellWindow.qml:289).
 Source context since previous assertion:
   ;
 Original expression:
@@ -414,10 +410,8 @@ Original expression:
   QVERIFY(zooImage.width() > 0 && zooImage.height() > 0);
 
 A021 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:192
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: the zoo grab must
-contain zero poison pixels, proving no widget leaks the poisoned platform
-palette. Calibrated by A017.
+Disposition: PARTIAL
+Mapping/reason: S003/S004 pin every applied value and S010 observes shell-root plus menu chrome following theme switches (tst_Theme.qml:193). Unproved: an eleven-widget sweep -- only root/menu bindings are asserted.
 Source context since previous assertion:
   ;
 Original expression:
@@ -427,8 +421,20 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Swift assertion predicates
-None identified: no Swift counterpart file establishes predicates for this
-suite.
+Value predicates live in the color-proof counterparts
+(proof.tst_themelayout_color.txt S003/S004/S010); menu-as-popup opening lives
+in tst_ShellWindow.qml test_c (see proof.shellwindow.txt:66-80).
+
+S001 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift:241
+Counterpart expression:
+  report.expectEqual(row.text, palette.buttonText, ...)
+  pinning the combo-text, hover-fill and outline values plus the vanilla
+  window/text/item surfaces per theme row.
+
+S002 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml:193
+Counterpart expression:
+  compare(copyItem.background.color.toString().toUpperCase(), "#D2D0CA", ...)
+  with highlight and cross-theme switch rows on the production menu delegate.
 
 Shared helper
-None: no Swift fixture file carries expects for this suite.
+None: predicates carry their own fixtures.

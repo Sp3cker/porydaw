@@ -45,8 +45,9 @@ enum ShellQmlLane {
     private static let entries = [
         Entry(name: "shellwindow", inputFileName: "tst_ShellWindow.qml",
               fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
+        Entry(name: "shell-theme", inputFileName: "tst_Theme.qml",
+              fixtureFiles: songs("mus_route101")),
     ]
-
     private static var manifestLine: String {
         let checks = entries.map { entry in
             let files = entry.fixtureFiles.map { "\"" + $0 + "\"" }.joined(separator: ",")
