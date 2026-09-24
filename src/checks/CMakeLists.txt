@@ -190,6 +190,7 @@ if(APPLE)
         workspace/session_support.swift
         workspace/session_fixtures.swift
         workspace/session_editor_semantics.swift
+        workspace/session_time_routing.swift
         workspace/session_io.swift
         workspace/session_playback.swift
         workspace/session_save.swift

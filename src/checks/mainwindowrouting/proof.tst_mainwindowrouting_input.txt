@@ -25,6 +25,8 @@ Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift SHA-256: c4092dcabd070ecb2b17b3551e13c528f3bcb60607c825e5d8a152adb118af6d
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
+Additional Swift counterpart: src/checks/workspace/session_time_routing.swift
+Additional Swift SHA-256: e3fb115cb297132c52da8391197238dc7dcfc2f7c51bed0bac4f3c150229fbb9
 
 Status and evidence
 Eight test methods routing tab readiness/focus handoff, drawer shortcut delivery to the persistent Quick toggle, copy/solo QAction routing including text-field respect, and Insert/Delete Time command fanout with undo-byte restore.
@@ -38,20 +40,22 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native harness obligations;
 it does not establish coverage of a converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 3 / PARTIAL 22 / GAP 93 / NATIVE 89. The MATCHED sites are the
+Tally: MATCHED 3 / PARTIAL 53 / GAP 65 / NATIVE 86. The MATCHED sites are the
 Delete Time action presence and no-selection disablement (A167, A168) and its
 range-selection enablement (A175), crosswalked to the offscreen Qt Quick
-shellwindow lane (S186, S187, S191); no same-dir Swift counterpart exists for the
-rest of this suite, the note-ripple half of the A181-A187 family stays PARTIAL,
-and the paired SessionChecks-suite predicates do not assert these Qt-routing
-observations.
+shellwindow lane (S186, S187, S191); the whole-song insert, routed track-scoped
+insert, and scoped/all-track delete model-effect sites are PARTIAL against the
+executing session_time_routing predicates (S192-S216), while the standalone
+prompt-form ingress, native transport, inactive-tab bytes, fixture/seed guards,
+and Qt delivery stay GAP/NATIVE; no other same-dir Swift counterpart exists for
+the rest of this suite.
 The Swift SHA-256 values pin the worktree content inspected here, which is currently
 modified relative to its HEAD revision.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS — build ok (0.15s); ok swiftcore (10.38s); verify 1/6 ok (5 skipped);
-run_checks PASS. Controller-run on the frozen tree pinned by the hashes above; the
+Result: PASS — build ok; ok swiftcore (10.60s); verify 1/6 ok (5 skipped);
+run_checks PASS. Implementer-run on the frozen tree pinned by the hashes above; the
 ledger agent did not run it.
 Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS — build ok (0.16s); ok shellwindow (3.74s); verify 1/11 ok (10 skipped);
@@ -90,7 +94,7 @@ Related-but-outside suites invoked by the same file — runEditorDrawerChecks
 (EditorDrawerChecks.swift), runTrackHeadersInputChecks
 (TrackHeadersInputChecks.swift), PlaybackChecks, and the camera/page suites —
 carry their own predicates in their own files and are not inventoried here.
-Of these, the router availability/execution (S010–S025), cursor publication (S047–S048), solo publication (S050–S051), and save/dirty-cycle (S057–S063) predicates are the ones cited as PARTIAL mappings below. The offscreen shellwindow lane (src/checks/editorqml/tst_ShellWindow.qml with its src/checks/editorqml/ShellQmlTests.swift bootstrap) owns S186-S191.
+Of these, the router availability/execution (S010–S025), cursor publication (S047–S048), solo publication (S050–S051), and save/dirty-cycle (S057–S063) predicates are the ones cited as PARTIAL mappings below. The offscreen shellwindow lane (src/checks/editorqml/tst_ShellWindow.qml with its src/checks/editorqml/ShellQmlTests.swift bootstrap) owns S186-S191. runTimeRoutingChecks (src/checks/workspace/session_time_routing.swift), invoked from runProjectSessionSuite in SessionChecks.swift, owns the time-routing predicates (S192–S216) cited as PARTIAL mappings below.
 
 Fixture, sequence and row constraints
 Two-song MainWindow session (songs A/B) opened per test; song B is the active tab unless reselected. No QTest _data rows: every case is a straight-line slot. Loops expand single sites: per-track note-search loops seeding the copy, solo, insert, and delete probes; drawer-page loops hiding all sections; the insert() lambda is invoked three times (stopped accept-by-button with a two-beat span, playing accept-by-button with a one-bar span, playing accept-by-Return with a ceiling-rounded quarter fraction) plus separate zero-span, cancel, and stale-prompt sequences; QTRY/async gates order focus and grid readiness.
@@ -1041,8 +1045,8 @@ Original expression:
                     view.grid().segmentAt(source->tick).beatsPerBar == uint64_t{3})
 
 A093 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:499
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S192, S193, S194, S195, S196 in src/checks/workspace/session_time_routing.swift:72-83 (whole-song insertion commits across tracks, shifts both tracks by 24 ticks, advances one revision, records one undo entry, and one undo restores exact bytes); unproved: the standalone Insert Time prompt flow carrying this commit — prompt open, visual defaults, key/Return delivery, advancing-playhead separation, focus restore, and the per-sequence span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S192][S193][S194][S195][S196]
 Source context since previous assertion:
         const songview::Grid::Segment segment = view.grid().segmentAt(source->tick);
 
@@ -1198,8 +1202,8 @@ Original expression:
                  qUtf8Printable(insertDiagnostic))
 
 A094 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:502
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S192, S193, S194, S195, S196 in src/checks/workspace/session_time_routing.swift:72-83 (whole-song insertion commits across tracks, shifts both tracks by 24 ticks, advances one revision, records one undo entry, and one undo restores exact bytes); unproved: the standalone Insert Time prompt flow carrying this commit — prompt open, visual defaults, key/Return delivery, advancing-playhead separation, focus restore, and the per-sequence span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S192][S193][S194][S195][S196]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1208,8 +1212,8 @@ Original expression:
                  qUtf8Printable(insertDiagnostic))
 
 A095 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:505
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S192, S193, S194, S195, S196 in src/checks/workspace/session_time_routing.swift:72-83 (whole-song insertion commits across tracks, shifts both tracks by 24 ticks, advances one revision, records one undo entry, and one undo restores exact bytes); unproved: the standalone Insert Time prompt flow carrying this commit — prompt open, visual defaults, key/Return delivery, advancing-playhead separation, focus restore, and the per-sequence span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S192][S193][S194][S195][S196]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1263,32 +1267,32 @@ Original expression:
         QVERIFY(popup && !popup->isOpen())
 
 A100 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:527
-Disposition: GAP
-Mapping/reason: GAP (feature not yet ported): the standalone no-selection Insert Time bars/beats prompt does not exist in the Swift app — Insert Time is gated on a time selection (ShellPresenter.actionEnabled, matched by S191: an open song without a time selection cannot insert a selected range), so no predicate observes the zero-span accepted prompt leaving the MIDI bytes unchanged.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S204, S216 in src/checks/workspace/session_time_routing.swift:114-121 (zero-span insertion leaves bytes and revision untouched; zero-span insertion records no history); unproved: the standalone Insert Time prompt ingress — no Swift predicate opens the prompt form and accepts a zero span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S204][S216]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(tab.document().smf().write(), beforeZero)
 
 A101 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:528
-Disposition: GAP
-Mapping/reason: GAP (feature not yet ported): the standalone no-selection Insert Time bars/beats prompt does not exist in the Swift app — Insert Time is gated on a time selection (S191), so no predicate observes the zero-span accepted prompt leaving the undo-stack index unchanged.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S204, S216 in src/checks/workspace/session_time_routing.swift:114-121 (zero-span insertion leaves bytes and revision untouched; zero-span insertion records no history); unproved: the standalone Insert Time prompt ingress — no Swift predicate opens the prompt form and accepts a zero span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S204][S216]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(tab.document().undoStack()->index(), zeroUndo)
 
 A102 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:529
-Disposition: GAP
-Mapping/reason: GAP (feature not yet ported): the standalone no-selection Insert Time bars/beats prompt does not exist in the Swift app — Insert Time is gated on a time selection (S191), so no predicate observes the zero-span accepted prompt leaving the undo-stack count unchanged.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S204, S216 in src/checks/workspace/session_time_routing.swift:114-121 (zero-span insertion leaves bytes and revision untouched; zero-span insertion records no history); unproved: the standalone Insert Time prompt ingress — no Swift predicate opens the prompt form and accepts a zero span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S204][S216]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(tab.document().undoStack()->count(), zeroUndoCount)
 
 A103 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:530
-Disposition: GAP
-Mapping/reason: GAP (feature not yet ported): the standalone no-selection Insert Time bars/beats prompt does not exist in the Swift app — Insert Time is gated on a time selection (S191), so no predicate observes the zero-span accepted prompt leaving the document revision unchanged.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S204, S216 in src/checks/workspace/session_time_routing.swift:114-121 (zero-span insertion leaves bytes and revision untouched; zero-span insertion records no history); unproved: the standalone Insert Time prompt ingress — no Swift predicate opens the prompt form and accepts a zero span. Feature not yet ported: standalone Insert Time prompt flow (src/ui/songview/quick/InsertTimePrompt.qml exists but nothing instantiates it). [S204][S216]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1516,7 +1520,7 @@ Original expression:
 
 A126 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:623
 Disposition: GAP
-Mapping/reason: Transport/playhead observation with no corresponding SessionChecks predicate in the counterpart; GAP.
+Mapping/reason: GAP: native transport observation with no corresponding Swift predicate — the Swift check models an advancing playback context (S197) but never the native transport state. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection.
 Source context since previous assertion:
 
         window.m_workspace->selectSongTab(&tab);
@@ -1539,15 +1543,15 @@ Original expression:
 
 A127 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:624
 Disposition: PARTIAL
-Mapping/reason: Related predicates S047, S048 in src/checks/workspace/session_playback.swift (cursor-only mutation publishes exactly the cursor domain; equal assignment publishes nothing); unproved: edit-cursor value anchoring and the Qt view route in this test.
+Mapping/reason: Related predicates S197, S200 in src/checks/workspace/session_time_routing.swift:89-101 (advancing playback context stays away from the selected insertion seam; routed insertion parks the cursor at the selection start); unproved: this pre-trigger cursor value at the Qt view and the Qt view route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S197][S200]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(view.editCursorTick(), source->tick)
 
 A128 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:625
-Disposition: GAP
-Mapping/reason: Transport/playhead observation with no corresponding SessionChecks predicate in the counterpart; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S197 in src/checks/workspace/session_time_routing.swift:89-90 (advancing playback context stays away from the selected insertion seam); unproved: the Qt view playhead route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S197]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1565,24 +1569,24 @@ Original expression:
         QVERIFY(!popup || !popup->isOpen())
 
 A130 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:631
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S202 in src/checks/workspace/session_time_routing.swift:102-104 (routed insertion records one undo entry); unproved: the Qt undo-stack route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S202]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1)
 
 A131 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:632
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S201 in src/checks/workspace/session_time_routing.swift:102-104 (routed insertion advances one revision); unproved: the Qt revision route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S201]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(tab.document().revision(), revision + 1)
 
 A132 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:635
-Disposition: GAP
-Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S200 in src/checks/workspace/session_time_routing.swift:100-101 (routed insertion retains the selected span); unproved: the Qt selection-model route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S200]
 Source context since previous assertion:
         const songview::EditorSelectionModel::TimeSelection retained =
             view.selectionModel().timeSelection();
@@ -1590,24 +1594,24 @@ Original expression:
         QVERIFY(retained.active())
 
 A133 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:636
-Disposition: GAP
-Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S200 in src/checks/workspace/session_time_routing.swift:100-101 (routed insertion retains the selected span); unproved: the Qt selection-model route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S200]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(retained.startTick, selectionStart)
 
 A134 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:637
-Disposition: GAP
-Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S200 in src/checks/workspace/session_time_routing.swift:100-101 (routed insertion retains the selected span); unproved: the Qt selection-model route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S200]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(retained.endTick, selectionEnd)
 
 A135 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:638
-Disposition: GAP
-Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S199, S200 in src/checks/workspace/session_time_routing.swift:95-101 (routed insertion anchors on the programmatic .tracks selection and retains its span); unproved: the Qt track-scope route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S199][S200]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1615,47 +1619,47 @@ Original expression:
 
 A136 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:639
 Disposition: PARTIAL
-Mapping/reason: Related predicates S047, S048 in src/checks/workspace/session_playback.swift (cursor-only mutation publishes exactly the cursor domain; equal assignment publishes nothing); unproved: edit-cursor value anchoring and the Qt view route in this test.
+Mapping/reason: Related predicate S200 in src/checks/workspace/session_time_routing.swift:100-101 (routed insertion parks the cursor at the selection start); unproved: the Qt view route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S200]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(view.editCursorTick(), selectionStart)
 
 A137 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:641
-Disposition: GAP
-Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S199 in src/checks/workspace/session_time_routing.swift:95-99 (routed insertion anchors on the selection and shifts only its track); unproved: the seeded probe-note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S199]
 Source context since previous assertion:
         DocNote probeAfter;
 Original expression:
         QVERIFY(tab.document().findNote(probe.noteId, &probeAfter))
 
 A138 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:642
-Disposition: GAP
-Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S199 in src/checks/workspace/session_time_routing.swift:95-99 (routed insertion anchors on the selection and shifts only its track); unproved: the seeded probe-note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S199]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(probeAfter.tick, selectionEnd + span)
 
 A139 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:643
-Disposition: GAP
-Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S199 in src/checks/workspace/session_time_routing.swift:95-99 (routed insertion anchors on the selection and shifts only its track); unproved: the seeded probe-note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S199]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(probeAfter.key, probe.key)
 
 A140 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:645
-Disposition: GAP
-Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S199 in src/checks/workspace/session_time_routing.swift:95-99 (the unselected track keeps its ticks); unproved: the seeded untouched-note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S199]
 Source context since previous assertion:
         DocNote untouchedAfter;
 Original expression:
         QVERIFY(tab.document().findNote(untouched->noteId, &untouchedAfter))
 
 A141 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:646
-Disposition: GAP
-Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S199 in src/checks/workspace/session_time_routing.swift:95-99 (the unselected track keeps its ticks); unproved: the seeded untouched-note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S199]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1663,15 +1667,15 @@ Original expression:
 
 A142 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:647
 Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP: inactive-tab byte observation with no corresponding Swift predicate — the Swift check is single-document and never observes the inactive song. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(session->a->document().smf().write(), inactiveBefore)
 
 A143 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:651
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S203 in src/checks/workspace/session_time_routing.swift:105-106 (one undo restores exact routed-insertion bytes and the undo index); unproved: the Qt undo-stack route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S203]
 Source context since previous assertion:
 
         window.stopPlayback();
@@ -1680,8 +1684,8 @@ Original expression:
         QCOMPARE(tab.document().undoStack()->index(), undoIndex)
 
 A144 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:652
-Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S203 in src/checks/workspace/session_time_routing.swift:105-106 (one undo restores exact routed-insertion bytes); unproved: the Qt byte route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S203]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1689,7 +1693,7 @@ Original expression:
 
 A145 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:653
 Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP: inactive-tab byte observation with no corresponding Swift predicate — the Swift check is single-document and never observes the inactive song. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2039,24 +2043,24 @@ Original expression:
         QVERIFY(!popup || !popup->isOpen())
 
 A177 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:803
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S209 in src/checks/workspace/session_time_routing.swift:139-141 (scoped removal records one undo entry); unproved: the Qt undo-stack route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S209]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1)
 
 A178 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:804
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S208 in src/checks/workspace/session_time_routing.swift:139-141 (scoped removal advances one revision); unproved: the Qt revision route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S208]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(tab.document().revision(), revision + 1)
 
 A179 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:805
-Disposition: GAP
-Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S207 in src/checks/workspace/session_time_routing.swift:137-138 (routed removal clears the selection); unproved: the Qt selection-model route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S207]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2064,7 +2068,7 @@ Original expression:
 
 A180 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:806
 Disposition: PARTIAL
-Mapping/reason: Related predicates S047, S048 in src/checks/workspace/session_playback.swift (cursor-only mutation publishes exactly the cursor domain; equal assignment publishes nothing); unproved: edit-cursor value anchoring and the Qt view route in this test.
+Mapping/reason: Related predicate S207 in src/checks/workspace/session_time_routing.swift:137-138 (routed removal parks the cursor at the seam); unproved: the Qt view route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S207]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2072,7 +2076,7 @@ Original expression:
 
 A181 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:808
 Disposition: PARTIAL
-Mapping/reason: Related predicates S188 and S189 execute the real window Insert Time shortcut and the Time-menu Delete Time click on the selected Volume lane, so the command route and the ripple span are now proven; unproved: the in-range note removal itself — the Volume-only selection asserts notes are unchanged (S190) and test_j seeds no note inside the deleted range. [S188][S189][S190]
+Mapping/reason: Related predicate S206 in src/checks/workspace/session_time_routing.swift:130-136 (scoped removal deletes in-range notes and ripples only the chosen track); unproved: the Qt action delivery and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S206]
 Source context since previous assertion:
         DocNote scratch;
 Original expression:
@@ -2080,7 +2084,7 @@ Original expression:
 
 A182 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:810
 Disposition: PARTIAL
-Mapping/reason: Related predicates S188 and S189 prove the real Insert and Delete Time command route for written Volume events; unproved: the survival of a note beyond the range — no test_j predicate seeds or reads back a note at wholeEnd, only written Volume events are tracked. [S188][S189]
+Mapping/reason: Related predicate S206 in src/checks/workspace/session_time_routing.swift:130-136 (later notes on the chosen track shift left to the seam); unproved: the seeded later-note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S206]
 Source context since previous assertion:
         DocNote laterAfter;
 Original expression:
@@ -2088,7 +2092,7 @@ Original expression:
 
 A183 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:811
 Disposition: PARTIAL
-Mapping/reason: Related predicate S188 asserts the same-span forward shift for written Volume events (every later tick moves by the one inserted span) and S189 asserts their exact return, the ripple arithmetic this site applies to a note; unproved: the left-shifted note itself — no note at wholeEnd is shifted or read back. [S188][S189]
+Mapping/reason: Related predicate S206 in src/checks/workspace/session_time_routing.swift:130-136 (later notes on the chosen track shift left to the seam); unproved: the seeded later-note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S206]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2096,7 +2100,7 @@ Original expression:
 
 A184 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:813
 Disposition: PARTIAL
-Mapping/reason: Related predicates S188 and S189 execute the scoped Insert and Delete Time route on the selected lane; unproved: the pre-range note lookup itself — test_j reads only the selected lane grid and never inspects a note outside the range. [S188][S189]
+Mapping/reason: Related predicate S206 in src/checks/workspace/session_time_routing.swift:130-136 (the pre-range note stays at its tick); unproved: the seeded source-note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S206]
 Source context since previous assertion:
         DocNote sourceAfter;
 Original expression:
@@ -2104,7 +2108,7 @@ Original expression:
 
 A185 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:814
 Disposition: PARTIAL
-Mapping/reason: Related predicates S188 and S189 shift and restore the written Volume events while S190 asserts the note summary is unchanged for a Volume-only selection; unproved: the untouched pre-range note tick — S190 cannot distinguish a note kept in place from one never inspected. [S188][S190]
+Mapping/reason: Related predicate S206 in src/checks/workspace/session_time_routing.swift:130-136 (the pre-range note stays at its tick); unproved: the seeded source-note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S206]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2112,7 +2116,7 @@ Original expression:
 
 A186 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:816
 Disposition: PARTIAL
-Mapping/reason: Related predicates S188 and S189 exercise the range ripple on a single selected lane; unproved: the other-track note survival — test_j keeps one selected track and never seeds or reads a note on a different track. [S188][S189]
+Mapping/reason: Related predicate S206 in src/checks/workspace/session_time_routing.swift:130-136 (the unselected track keeps every tick); unproved: the seeded other-track note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S206]
 Source context since previous assertion:
         DocNote untouchedAfter;
 Original expression:
@@ -2120,7 +2124,7 @@ Original expression:
 
 A187 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:817
 Disposition: PARTIAL
-Mapping/reason: Related predicate S190 asserts that a Volume-only selection leaves every note unmoved, which is the closest executing observation; unproved: the other-track note tick under a real note ripple — the original ripples the selected track and asserts a different track unmoved, which no test_j predicate distinguishes. [S188][S190]
+Mapping/reason: Related predicate S206 in src/checks/workspace/session_time_routing.swift:130-136 (the unselected track keeps every tick); unproved: the seeded other-track note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S206]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2135,16 +2139,16 @@ Original expression:
         QCOMPARE(session->a->document().smf().write(), inactiveBefore)
 
 A189 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:820
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S210 in src/checks/workspace/session_time_routing.swift:142-143 (one undo restores exact scoped-removal bytes and the undo index); unproved: the Qt undo-stack route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S210]
 Source context since previous assertion:
         tab.document().undoStack()->undo();
 Original expression:
         QCOMPARE(tab.document().undoStack()->index(), undoIndex)
 
 A190 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:821
-Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S210 in src/checks/workspace/session_time_routing.swift:142-143 (one undo restores exact scoped-removal bytes); unproved: the Qt byte route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S210]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2192,8 +2196,8 @@ Original expression:
         QVERIFY(view.selectionModel().timeSelectionCoversTempo(usedMask))
 
 A195 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:840
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S214 in src/checks/workspace/session_time_routing.swift:159-161 (whole selection removal records one undo entry); unproved: the Qt undo-stack route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S214]
 Source context since previous assertion:
         const uint64_t wholeRevision = tab.document().revision();
         action->trigger();
@@ -2202,16 +2206,16 @@ Original expression:
         QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1)
 
 A196 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:841
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S213 in src/checks/workspace/session_time_routing.swift:159-161 (whole selection removal advances one revision); unproved: the Qt revision route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S213]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(tab.document().revision(), wholeRevision + 1)
 
 A197 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:842
-Disposition: GAP
-Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S212 in src/checks/workspace/session_time_routing.swift:157-158 (whole selection removal clears the range); unproved: the Qt selection-model route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S212]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2219,7 +2223,7 @@ Original expression:
 
 A198 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:843
 Disposition: PARTIAL
-Mapping/reason: Related predicates S047, S048 in src/checks/workspace/session_playback.swift (cursor-only mutation publishes exactly the cursor domain; equal assignment publishes nothing); unproved: edit-cursor value anchoring and the Qt view route in this test.
+Mapping/reason: Related predicate S212 in src/checks/workspace/session_time_routing.swift:157-158 (whole selection removal parks the cursor at zero); unproved: the Qt view route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S212]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2227,7 +2231,7 @@ Original expression:
 
 A199 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:844
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/session_editor_semantics.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Mapping/reason: Related predicate S211 in src/checks/workspace/session_time_routing.swift:151-156 (all-track removal deletes in-range notes across tracks); unproved: the seeded note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S211]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2235,7 +2239,7 @@ Original expression:
 
 A200 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:845
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/session_editor_semantics.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Mapping/reason: Related predicate S211 in src/checks/workspace/session_time_routing.swift:151-156 (all-track removal deletes in-range notes across tracks); unproved: the seeded note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S211]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2243,7 +2247,7 @@ Original expression:
 
 A201 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:846
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/session_editor_semantics.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Mapping/reason: Related predicate S211 in src/checks/workspace/session_time_routing.swift:151-156 (all-track removal deletes in-range notes across tracks); unproved: the seeded note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S211]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2251,7 +2255,7 @@ Original expression:
 
 A202 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:848
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/session_editor_semantics.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Mapping/reason: Related predicate S211 in src/checks/workspace/session_time_routing.swift:151-156 (later notes ripple left across tracks); unproved: the seeded later-note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S211]
 Source context since previous assertion:
         DocNote excludedLaterAfter;
 Original expression:
@@ -2259,7 +2263,7 @@ Original expression:
 
 A203 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:849
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/session_editor_semantics.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Mapping/reason: Related predicate S211 in src/checks/workspace/session_time_routing.swift:151-156 (later notes ripple left across tracks); unproved: the seeded later-note identity and the Qt delivery route. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S211]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2267,23 +2271,23 @@ Original expression:
 
 A204 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:850
 Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP: inactive-tab byte observation with no corresponding Swift predicate — the Swift check is single-document and never observes the inactive song. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(session->a->document().smf().write(), inactiveBefore)
 
 A205 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:852
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S215 in src/checks/workspace/session_time_routing.swift:162-163 (one undo restores exact all-track removal bytes and the undo index); unproved: the Qt undo-stack route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S215]
 Source context since previous assertion:
         tab.document().undoStack()->undo();
 Original expression:
         QCOMPARE(tab.document().undoStack()->index(), undoIndex)
 
 A206 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:853
-Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S215 in src/checks/workspace/session_time_routing.swift:162-163 (one undo restores exact all-track removal bytes); unproved: the Qt byte route and the production selection ingress. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection. [S215]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2291,7 +2295,7 @@ Original expression:
 
 A207 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:854
 Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP: inactive-tab byte observation with no corresponding Swift predicate — the Swift check is single-document and never observes the inactive song. Feature not yet ported: ruler sweep + roll right-band track-scoped time selection.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -3300,3 +3304,142 @@ S191 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow
     a time selection cannot insert a selected range") at :529-530 and
     compare(findChild(timeMenu, "shellAction_edit.delete_time").enabled, false, "an open song without
     a time selection cannot delete a selected range") at :531-532.
+
+S192 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:72
+    report.expect(document.insertBlankTime(wholeRange, scope: TimeScope(wholeSong: true)),
+                  cppID: insertID, message: "whole-song insertion commits across tracks")
+
+S193 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:74
+    report.expect(document.note(inside.id)?.tick == 48 &&
+                  document.note(seam.id)?.tick == 72 &&
+                  document.note(otherInside.id)?.tick == 48 &&
+                  document.note(otherLater.id)?.tick == 144,
+                  cppID: insertID, message: "whole-song insertion shifts both tracks by 24 ticks")
+
+S194 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:79
+    expectSingleRevisionEntry(revision: wholeRevision,
+                              revisionWhat: "whole-song insertion advances one revision",
+                              undoWhat: "whole-song insertion records one undo entry", cppID: insertID)
+    at :79-81 via shared helper expectSingleRevisionEntry defined at :59-62 (revision half).
+
+S195 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:79
+    expectSingleRevisionEntry(revision: wholeRevision,
+                              revisionWhat: "whole-song insertion advances one revision",
+                              undoWhat: "whole-song insertion records one undo entry", cppID: insertID)
+    at :79-81 via shared helper expectSingleRevisionEntry defined at :59-62 (undo half).
+
+S196 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:82
+    expectUndoRestoresBytes(cppID: insertID,
+                            message: "one undo restores exact whole-song insertion bytes")
+    at :82-83 via shared helper expectUndoRestoresBytes defined at :63-68.
+
+S197 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:89
+    report.expectEqual(Tick(96), page.contextTick, cppID: selectionID,
+                       what: "advancing playback context stays away from the selected insertion seam")
+
+S198 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:92
+    report.expect(router.isAvailable(.insertTime), cppID: selectionID,
+                  message: "selected track admits routed Insert Time")
+
+S199 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:95
+    report.expect(document.note(seam.id)?.tick == 72 &&
+                  document.note(later.id)?.tick == 120 &&
+                  document.note(otherLater.id)?.tick == 120 &&
+                  document.note(otherInside.id)?.tick == 24,
+                  cppID: selectionID, message: "routed insertion anchors on selection instead of cursor and shifts only its track")
+
+S200 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:100
+    report.expect(page.selection?.range == scopedRange && session.editCursor == 48,
+                  cppID: selectionID, message: "routed insertion retains selected span and parks cursor at its start")
+
+S201 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:102
+    expectSingleRevisionEntry(revision: scopedRevision,
+                              revisionWhat: "routed insertion advances one revision",
+                              undoWhat: "routed insertion records one undo entry", cppID: selectionID)
+    at :102-104 via shared helper expectSingleRevisionEntry defined at :59-62 (revision half).
+
+S202 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:102
+    expectSingleRevisionEntry(revision: scopedRevision,
+                              revisionWhat: "routed insertion advances one revision",
+                              undoWhat: "routed insertion records one undo entry", cppID: selectionID)
+    at :102-104 via shared helper expectSingleRevisionEntry defined at :59-62 (undo half).
+
+S203 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:105
+    expectUndoRestoresBytes(cppID: selectionID,
+                            message: "one undo restores exact routed insertion bytes")
+    at :105-106 via shared helper expectUndoRestoresBytes defined at :63-68.
+
+S204 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:114
+    report.expect(!document.insertBlankTime(TimeRange(startTick: 48, endTick: 48),
+                                            scope: TimeScope(wholeSong: true)) &&
+                  (try? document.state.file.encoded()) == zeroBytes &&
+                  document.revision == zeroRevision,
+                  cppID: insertID, message: "zero-span insertion leaves bytes and revision untouched")
+
+S216 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:119
+    report.expect(document.history.undoIndex == zeroIndex &&
+                  document.history.undoCount == zeroCount,
+                  cppID: insertID, message: "zero-span insertion records no history")
+
+S205 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:127
+    report.expect(router.isAvailable(.deleteTime), cppID: deleteID,
+                  message: "selected track admits routed Delete Time")
+
+S206 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:130
+    report.expect(document.note(inside.id) == nil &&
+                  document.note(seam.id)?.tick == 24 &&
+                  document.note(later.id)?.tick == 72 &&
+                  document.note(source.id)?.tick == 0 &&
+                  document.note(otherInside.id)?.tick == 24 &&
+                  document.note(otherLater.id)?.tick == 120,
+                  cppID: deleteID, message: "scoped removal deletes in-range notes and ripples only the chosen track")
+
+S207 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:137
+    report.expect(page.selection == nil && session.editCursor == 24,
+                  cppID: deleteID, message: "routed removal clears selection and parks cursor at seam")
+
+S208 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:139
+    expectSingleRevisionEntry(revision: scopedDeleteRevision,
+                              revisionWhat: "scoped removal advances one revision",
+                              undoWhat: "scoped removal records one undo entry", cppID: deleteID)
+    at :139-141 via shared helper expectSingleRevisionEntry defined at :59-62 (revision half).
+
+S209 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:139
+    expectSingleRevisionEntry(revision: scopedDeleteRevision,
+                              revisionWhat: "scoped removal advances one revision",
+                              undoWhat: "scoped removal records one undo entry", cppID: deleteID)
+    at :139-141 via shared helper expectSingleRevisionEntry defined at :59-62 (undo half).
+
+S210 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:142
+    expectUndoRestoresBytes(cppID: deleteID,
+                            message: "one undo restores exact scoped removal bytes")
+    at :142-143 via shared helper expectUndoRestoresBytes defined at :63-68.
+
+S211 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:151
+    report.expect(document.note(source.id) == nil && document.note(inside.id) == nil &&
+                  document.note(otherInside.id) == nil &&
+                  document.note(seam.id)?.tick == 0 &&
+                  document.note(later.id)?.tick == 48 &&
+                  document.note(otherLater.id)?.tick == 72,
+                  cppID: deleteID, message: "all-track removal deletes across tracks and ripples later notes")
+
+S212 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:157
+    report.expect(page.selection == nil && session.editCursor == 0,
+                  cppID: deleteID, message: "whole selection removal clears range and parks cursor at zero")
+
+S213 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:159
+    expectSingleRevisionEntry(revision: wholeDeleteRevision,
+                              revisionWhat: "whole selection removal advances one revision",
+                              undoWhat: "whole selection removal records one undo entry", cppID: deleteID)
+    at :159-161 via shared helper expectSingleRevisionEntry defined at :59-62 (revision half).
+
+S214 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:159
+    expectSingleRevisionEntry(revision: wholeDeleteRevision,
+                              revisionWhat: "whole selection removal advances one revision",
+                              undoWhat: "whole selection removal records one undo entry", cppID: deleteID)
+    at :159-161 via shared helper expectSingleRevisionEntry defined at :59-62 (undo half).
+
+S215 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift:162
+    expectUndoRestoresBytes(cppID: deleteID,
+                            message: "one undo restores exact all-track removal bytes")
+    at :162-163 via shared helper expectUndoRestoresBytes defined at :63-68.

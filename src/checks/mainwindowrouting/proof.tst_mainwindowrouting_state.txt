@@ -4,7 +4,7 @@ Reference revision: 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e
 Original: src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp
 Original SHA-256: dafc9e19db3b921e7c33dd8e908f35028b4b3a6d9b23c22cbf4aa673ae2ecf32
 Swift counterpart: src/checks/workspace/SessionChecks.swift
-Swift SHA-256: 8783f082390c2394febe9205babef51ca6ac5b211a9453cffdc171e4f699c520
+Swift SHA-256: 8a39e6257c5fdd3dfc4744b109a3341efbf9f2ebddaad157a93c81f517398dfb
 Additional Swift counterpart: src/checks/workspace/bank_edits.swift
 Additional Swift SHA-256: 4f94c92dec40ec6fb3754697a01105667eb1e9448ada18bd5b40bcb3786be94d
 Additional Swift counterpart: src/checks/workspace/bank_history_probes.swift
@@ -22,9 +22,15 @@ Additional Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f886ff36eec
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: c4092dcabd070ecb2b17b3551e13c528f3bcb60607c825e5d8a152adb118af6d
+Additional Swift SHA-256: 1736e3944298a15c5a69e9a7c8aa96f51944f5109acca86a5d6ecaf230af8003
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
+Additional Swift SHA-256: 6354c47dd5e55e254188d5a7e7556baf6e2cf7e2d923282d46095bfaffab6d10
+Additional Swift counterpart: src/checks/drawerpresentation/drawer_state.swift
+Additional Swift SHA-256: 6a43240c7187acec4711a949fca0a313cba927544d5c680f7ad2a7d4c168b1cf
+Additional Swift counterpart: src/checks/drawerpresentation/drawer_basics.swift
+Additional Swift SHA-256: 2b0985c935710b0c8f98e55ca9f9eacf2f90210d0530dea666c0b33b88ae2fb8
+Additional Swift counterpart: src/checks/editcheck/DocumentTrackChecks.swift
+Additional Swift SHA-256: fc85a019c914537b8c04732629d41faf69b4e3464f68a681a2b2c1ab6602cf3b
 
 Status and evidence
 Sixteen test methods covering drawer seed projection, cross-tab fanout, event-list gating, focus fallback, hide retention, tab-switch refocus, edit-action projection/identity/unbound start, editor-view-state fanout and lane remap/mutation/noop persistence, and four MouseHints scope/layout cases.
@@ -38,15 +44,28 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native harness obligations;
 it does not establish coverage of a converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 14 / PARTIAL 12 / GAP 146 / NATIVE 95. The MATCHED sites are the
+Tally: MATCHED 23 / PARTIAL 14 / GAP 131 / NATIVE 99. The MATCHED sites are the
 Edit-action projection, retarget and enablement rows (A067, A073, A074, A080,
 A081, A086, A092, A093), the window-command presence row A068, and the Time and
 Tracks submenu containment and enablement rows (A075–A079) crosswalked to the
-offscreen Qt Quick shellwindow lane (S186–S197); the un-matched Qt-routing
-observations still have no same-dir Swift counterpart, and the paired
-SessionChecks-suite predicates do not assert them. A069–A072 and A082–A085 stay
-NATIVE pure-QAction pointer-identity rows; A087–A091 stay GAP because no explicit
-unbind seam exists in the Swift app.
+offscreen Qt Quick shellwindow lane (S186–S197); the drawer focus-fallback rows
+(A041, A044, A046) and the all-hidden terminal row A045 crosswalked to the
+drawer focus predicates (S198, S199, S203); the hide-retention rows
+(A050–A052) crosswalked to the drawer visibility and stored-height predicates
+(S201, S203, S204); and the document move-success rows (A123, A145)
+crosswalked to the track-remap publication contract (S205). A142 and A153 stay
+PARTIAL: the move-undo remap publication (S206) is model-level only, with SMF
+byte equality unproved; A143 and A154 stay PARTIAL on the save-lifecycle dirty
+predicates (S030, S057, S060–S063) with the Qt undo-stack dirtiness wiring
+unproved. A069–A072 and A082–A085 stay NATIVE pure-QAction pointer-identity
+rows; A087–A091 stay GAP because no explicit unbind seam exists in the Swift
+app; the session-open fixture rows A100, A121, A155 and A172 are NATIVE native
+harness obligations. A122 stays GAP (track-count guard with no Swift
+predicate); A182–A183 stay GAP (no Swift remapEngineTracks method). The
+remaining drawer, EditorViewState fanout/persistence, signal-count, byte,
+revision and snapshot rows stay GAP: cross-tab fanout plus QSettings
+persistence are not yet ported (the Swift app has no EditorViewState), and the
+single-layout drawer harness has no tab projection or key/action delivery.
 The Swift SHA-256 values pin the worktree content inspected here, which is currently
 modified relative to its HEAD revision.
 
@@ -59,7 +78,10 @@ Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS — build ok (0.16s); ok shellwindow (3.74s); verify 1/11 ok (10 skipped);
 run_checks PASS. Controller-run on the same frozen tree; the ledger agent did not run it.
 The swiftcore lane executes the paired Swift counterparts, including
-runKeybindingRegistryChecks from SessionChecks.swift:11. The MATCHED shell-lane
+runKeybindingRegistryChecks from SessionChecks.swift:11, runEditorDrawerChecks
+(drawer focus/visibility predicates S198–S204) via runProjectSessionSuite, and
+documentTrackContracts (track-remap predicates S205–S206) via the event-edits
+suite in the same lane. The MATCHED shell-lane
 predicates S186–S197 execute in the offscreen Qt Quick shellwindow lane
 (deno task verify:shell over src/checks/editorqml/tst_ShellWindow.qml and its
 ShellQmlTests.swift bootstrap). The original Qt Widget/Quick delivery, Cocoa-gated,
@@ -89,10 +111,14 @@ bankSaveRoundTrip live in bank_saves.swift;
 bankReleaseBoundsAndSharedBank and bankCoordinatorGate live in
 bank_sharing.swift; and historyTransitionRegressions lives in
 bank_history_probes.swift.
-Related-but-outside suites invoked by the same file — runEditorDrawerChecks
-(EditorDrawerChecks.swift), runTrackHeadersInputChecks
+Related-but-outside suites invoked by the same file — runTrackHeadersInputChecks
 (TrackHeadersInputChecks.swift), PlaybackChecks, and the camera/page suites —
 carry their own predicates in their own files and are not inventoried here.
+Previously-outside but now inventoried: runEditorDrawerChecks
+(EditorDrawerChecks.swift) owns the drawer focus predicates S198–S200 in
+drawer_state.swift and the visibility/stored-height predicates S201–S204 in
+drawer_basics.swift; documentTrackContracts (DocumentTrackChecks.swift, run via
+the event-edits suite) owns the track-remap publication predicates S205–S206.
 Of these, the MouseHints ownership predicates (S002–S009) and the dirty-tracking predicates (S030, S057, S060–S063) are the ones cited as PARTIAL mappings below. The offscreen shellwindow lane (src/checks/editorqml/tst_ShellWindow.qml with its src/checks/editorqml/ShellQmlTests.swift bootstrap) owns S186–S197.
 
 Fixture, sequence and row constraints
@@ -204,7 +230,7 @@ Original expression:
 
 A007 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:64
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: Seeded single-view drawer geometry (Velocity section visible) under the Qt MainWindow; GAP: MainWindow seed projection with no Swift counterpart — the Swift drawer harness starts from explicit stored heights and models no MainWindow seed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -212,7 +238,7 @@ Original expression:
 
 A008 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:65
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: Seeded single-view drawer geometry (Automations section hidden) under the Qt MainWindow; GAP: MainWindow seed projection with no Swift counterpart — the Swift drawer harness starts from explicit stored heights and models no MainWindow seed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -220,7 +246,7 @@ Original expression:
 
 A009 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:66
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: Seeded single-view drawer geometry (VoiceChanges section hidden) under the Qt MainWindow; GAP: MainWindow seed projection with no Swift counterpart — the Swift drawer harness starts from explicit stored heights and models no MainWindow seed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -228,7 +254,7 @@ Original expression:
 
 A010 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:67
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: Seeded single-view drawer geometry (Velocity active page) under the Qt MainWindow; GAP: MainWindow seed projection with no Swift counterpart — the Swift drawer harness starts from explicit stored heights and models no MainWindow seed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -236,7 +262,7 @@ Original expression:
 
 A011 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:68
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: Seeded single-view drawer geometry (Velocity stored height 173) under the Qt MainWindow; GAP: MainWindow seed projection with no Swift counterpart — the Swift drawer harness starts from explicit stored heights (60/50/100) and models no MainWindow seed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -264,7 +290,7 @@ Original expression:
 
 A014 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:82
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongView &a = session->a->view();
@@ -277,7 +303,7 @@ Original expression:
 
 A015 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:84
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
         sendKey(window, Qt::Key_A);
 Original expression:
@@ -285,7 +311,7 @@ Original expression:
 
 A016 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:85
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -293,7 +319,7 @@ Original expression:
 
 A017 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:86
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -301,7 +327,7 @@ Original expression:
 
 A018 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:87
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -309,7 +335,7 @@ Original expression:
 
 A019 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:89
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
         sendKey(window, Qt::Key_A);
 Original expression:
@@ -317,7 +343,7 @@ Original expression:
 
 A020 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:90
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -325,7 +351,7 @@ Original expression:
 
 A021 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:92
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
         sendKey(window, Qt::Key_V);
 Original expression:
@@ -333,7 +359,7 @@ Original expression:
 
 A022 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:93
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -341,7 +367,7 @@ Original expression:
 
 A023 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:94
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -349,7 +375,7 @@ Original expression:
 
 A024 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:95
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -357,7 +383,7 @@ Original expression:
 
 A025 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:97
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
         sendKey(window, Qt::Key_P);
 Original expression:
@@ -365,7 +391,7 @@ Original expression:
 
 A026 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:98
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -373,7 +399,7 @@ Original expression:
 
 A027 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:99
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -381,7 +407,7 @@ Original expression:
 
 A028 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:100
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -487,7 +513,7 @@ Original expression:
 
 A039 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:136
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: QAction-triggered drawer visibility transition (VoiceChanges hide); GAP: MainWindow action delivery has no Swift counterpart — the layout end-state is modeled by S201, but the routed trigger observation is not asserted.
 Source context since previous assertion:
         window.m_voiceChangesDrawerAction->trigger();
 Original expression:
@@ -495,15 +521,15 @@ Original expression:
 
 A040 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:137
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: QAction-triggered drawer visibility transition (Velocity still visible); GAP: MainWindow action delivery has no Swift counterpart — the layout end-state is modeled by S201, but the routed trigger observation is not asserted.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(b.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A041 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:138
-Disposition: GAP
-Mapping/reason: SongView timeline-band state observation with no corresponding SessionChecks predicate; GAP.
+Disposition: MATCHED
+Mapping/reason: MATCHED to S198 (drawerLayoutCheckDrawerFocusRequests, src/checks/drawerpresentation/drawer_state.swift:10): hiding the active drawer section requests focus for the first remaining visible section, which is exactly this fallback to the Velocity band after the VoiceChanges section hides. TimelineBand identity is the Qt-side observation of the same fallback decision; real QWidget delivery stays NATIVE at A047-A048.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -511,7 +537,7 @@ Original expression:
 
 A042 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:141
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: QAction-triggered drawer visibility transition (Velocity hide); GAP: MainWindow action delivery has no Swift counterpart — the layout end-state is modeled by S201, but the routed trigger observation is not asserted.
 Source context since previous assertion:
         b.focusTimelineBand(songview::TimelineBand::Velocity, Qt::MouseFocusReason);
         window.m_velocityDrawerAction->trigger();
@@ -520,23 +546,23 @@ Original expression:
 
 A043 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:142
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: QAction-triggered drawer visibility transition (Automations still visible); GAP: MainWindow action delivery has no Swift counterpart — the layout end-state is modeled by S201, but the routed trigger observation is not asserted.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(b.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A044 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:143
-Disposition: GAP
-Mapping/reason: SongView timeline-band state observation with no corresponding SessionChecks predicate; GAP.
+Disposition: MATCHED
+Mapping/reason: MATCHED to S198 (drawerLayoutCheckDrawerFocusRequests, src/checks/drawerpresentation/drawer_state.swift:10): hiding the active drawer section requests focus for the first remaining visible section, which is exactly this fallback to the Automation band after the Velocity section hides. TimelineBand identity is the Qt-side observation of the same fallback decision; real QWidget delivery stays NATIVE at A047-A048.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(b.focusedTimelineBand(), songview::TimelineBand::Automation)
 
 A045 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:146
-Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Disposition: MATCHED
+Mapping/reason: MATCHED to S203 (drawerLayoutCheckDrawerVisibilityAndStoredHeights, src/checks/drawerpresentation/drawer_basics.swift:314): hiding every section leaves none visible with only the bar row showing, which is exactly this all-hidden terminal state after the last visible section hides. The cross-tab fanout of that state stays GAP at A053-A058.
 Source context since previous assertion:
         b.focusTimelineBand(songview::TimelineBand::Automation, Qt::MouseFocusReason);
         window.m_automationDrawerAction->trigger();
@@ -544,8 +570,8 @@ Original expression:
         QVERIFY(!b.hasVisibleDrawerSection())
 
 A046 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:147
-Disposition: GAP
-Mapping/reason: SongView timeline-band state observation with no corresponding SessionChecks predicate; GAP.
+Disposition: MATCHED
+Mapping/reason: MATCHED to S199 (drawerLayoutCheckDrawerFocusRequests, src/checks/drawerpresentation/drawer_state.swift:61): hiding the last visible section requests the roll surface while the bar row and its toggles stay, which is exactly this fallback to the Roll band when no drawer section remains. Real QWidget delivery stays NATIVE at A047-A048.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -580,8 +606,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A050 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:166
-Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Disposition: MATCHED
+Mapping/reason: MATCHED to S203 (drawerLayoutCheckDrawerVisibilityAndStoredHeights, src/checks/drawerpresentation/drawer_basics.swift:314): hiding sections keeps the active page it retains, which is exactly this Velocity active page surviving the hide of both sections. The cross-tab mirror of that page stays GAP at A053.
 Source context since previous assertion:
         SongView &a = session->a->view();
         SongView &b = session->b->view();
@@ -596,16 +622,16 @@ Original expression:
         QCOMPARE(b.drawerActivePage(), EditorDrawerPage::Velocity)
 
 A051 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:167
-Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Disposition: MATCHED
+Mapping/reason: MATCHED to S201 and S204 (drawerLayoutCheckDrawerVisibilityAndStoredHeights, src/checks/drawerpresentation/drawer_basics.swift:218 and :339): hiding a section releases its body and handle while its stored height stays, which is exactly this retained Velocity height after the hide. The cross-tab mirror stays GAP at A054.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(b.drawerSectionHeight(EditorDrawerPage::Velocity), velocityHeight)
 
 A052 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:168
-Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Disposition: MATCHED
+Mapping/reason: MATCHED to S204 (drawerLayoutCheckDrawerVisibilityAndStoredHeights, src/checks/drawerpresentation/drawer_basics.swift:339): toggling hides the voice-changes section and keeps its stored height, which is exactly this retained VoiceChanges height after the hide. The cross-tab mirror stays GAP at A055.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -613,7 +639,7 @@ Original expression:
 
 A053 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:169
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: Cross-tab mirror of the origin-tab hide (active page stays Velocity on the projection tab); GAP: no Swift counterpart projects drawer state across tabs.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -621,7 +647,7 @@ Original expression:
 
 A054 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:170
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: Cross-tab mirror of the origin-tab hide (Velocity stored height on the projection tab); GAP: no Swift counterpart projects drawer state across tabs.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -629,7 +655,7 @@ Original expression:
 
 A055 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:171
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: Cross-tab mirror of the origin-tab hide (VoiceChanges stored height on the projection tab); GAP: no Swift counterpart projects drawer state across tabs.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -649,7 +675,7 @@ Original expression:
 
 A057 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:185
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: Cross-tab mirror of the all-hidden state on the origin tab; GAP: no Swift counterpart projects drawer state across tabs.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongView &a = session->a->view();
@@ -663,7 +689,7 @@ Original expression:
 
 A058 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:186
 Disposition: GAP
-Mapping/reason: SongView drawer presentation state. The paired Swift inventory (the SessionChecks.swift suite files) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Mapping/reason: All-hidden drawer state at the end of the cross-tab hide sequence; GAP: MainWindow routing test with no Swift routing counterpart (the same terminal layout is asserted at model level by S203).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1031,8 +1057,8 @@ Original expression:
         QVERIFY(!window.m_deleteTimeAction->isEnabled())
 
 A100 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:282
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: NATIVE
+Mapping/reason: Native harness fixture obligation: opening the two-song MainWindow session executes only in the Qt check harness; no Swift counterpart opens this Qt session.
 Source context since previous assertion:
     }
 
@@ -1232,8 +1258,8 @@ Original expression:
         QCOMPARE(persisted.count(), persistedBeforeNoop)
 
 A121 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:340
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: NATIVE
+Mapping/reason: Native harness fixture obligation: opening the two-song MainWindow session executes only in the Qt check harness; no Swift counterpart opens this Qt session.
 Source context since previous assertion:
     }
 
@@ -1263,8 +1289,8 @@ Original expression:
         QVERIFY(tracks >= 2)
 
 A123 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:358
-Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
+Disposition: MATCHED
+Mapping/reason: MATCHED to S205 (trackRemapPublicationContract, src/checks/editcheck/DocumentTrackChecks.swift:116): the document move succeeds and publishes exactly one change with the exact track remap, which is exactly this successful moveTrack ahead of the remap fanout. The EditorViewState fanout of that move has no Swift counterpart and stays GAP.
 Source context since previous assertion:
         const int source = 1;
         const int target = source == tracks - 1 ? 0 : tracks - 1;
@@ -1419,8 +1445,8 @@ Original expression:
         QCOMPARE(b.editorViewState(), before)
 
 A142 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:381
-Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S206 (trackRemapPublicationContract, src/checks/editcheck/DocumentTrackChecks.swift:118): the move undo publishes the exact inverse remap at model level; unproved: SMF byte equality after the Qt undoStack undo and the Qt undo-stack wiring in this test.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1443,8 +1469,8 @@ Original expression:
         QCOMPARE(projection.count(), 0)
 
 A145 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:396
-Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
+Disposition: MATCHED
+Mapping/reason: MATCHED to S205 (trackRemapPublicationContract, src/checks/editcheck/DocumentTrackChecks.swift:116): the document move succeeds and publishes exactly one change with the exact track remap, which is exactly this successful quiet moveTrack under the reduced view state. The EditorViewState silence that follows stays GAP at A146-A148.
 Source context since previous assertion:
 
         EditorViewState reduced;
@@ -1519,8 +1545,8 @@ Original expression:
         QCOMPARE(persisted.count(), 0)
 
 A153 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:407
-Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S206 (trackRemapPublicationContract, src/checks/editcheck/DocumentTrackChecks.swift:118): the move undo publishes the exact inverse remap at model level; unproved: SMF byte equality after the quiet-move undo and the Qt undo-stack wiring in this test.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1535,8 +1561,8 @@ Original expression:
         QVERIFY(!b.document().isDirty())
 
 A155 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:414
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: NATIVE
+Mapping/reason: Native harness fixture obligation: opening the two-song MainWindow session executes only in the Qt check harness; no Swift counterpart opens this Qt session.
 Source context since previous assertion:
     }
 
@@ -1693,8 +1719,8 @@ Original expression:
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot)
 
 A172 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:456
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: NATIVE
+Mapping/reason: Native harness fixture obligation: opening the two-song MainWindow session executes only in the Qt check harness; no Swift counterpart opens this Qt session.
 Source context since previous assertion:
     }
 
@@ -1794,7 +1820,7 @@ Original expression:
 
 A182 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:485
 Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: EditorViewState.remapEngineTracks validation-state rejection; GAP: the Swift app has no remapEngineTracks method, so no counterpart asserts this rejection.
 Source context since previous assertion:
         EditorViewState valueCopy = completeSeed();
         const EditorViewState original = valueCopy;
@@ -1803,7 +1829,7 @@ Original expression:
 
 A183 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:486
 Disposition: GAP
-Mapping/reason: Automation-lane identity/remap/mutation or header-model observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: EditorViewState value equality after the rejected remap; GAP: the Swift app has no remapEngineTracks method and no EditorViewState, so no counterpart asserts this noop.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -3673,3 +3699,70 @@ S197 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/
     var insertTime = findChild(timeMenu, "shellAction_edit.insert_time");
     var deleteTime = findChild(timeMenu, "shellAction_edit.delete_time");
     verify(insertTime && deleteTime, "both original time-edit commands exist")
+
+S198 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer_state.swift:10
+    report.expect(hiddenActive.focusRequest?.target == DrawerSectionKind.velocity.rawValue &&
+    hiddenActive.focusRequest?.revision == 1 && hiddenActive.published &&
+    harness.layout.activePage == .automation, cppID: drawerLayoutFocusID
+    ("swiftcore/EditorDrawer::focusRequests"), message: "hiding the active section
+    requests focus for the first remaining visible section". Executed via
+    runEditorDrawerChecks under runProjectSessionSuite in the swiftcore lane.
+
+S199 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer_state.swift:61
+    report.expect(last.focusRequest?.target == -1 && harness.layout.snapshot.barVisible &&
+    harness.layout.snapshot.height == drawerLayoutDrawerBarHeight && toggles stay at 16
+    with no body or handle, cppID: drawerLayoutFocusID, message: "hiding the last
+    visible section requests the roll while the bar and its toggles stay without any
+    body or handle". Executed via runEditorDrawerChecks under runProjectSessionSuite
+    in the swiftcore lane.
+
+S200 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer_state.swift:85
+    report.expect(skipped.focusRequest?.target == DrawerSectionKind.automation.rawValue &&
+    unavailable.layout.activePage == .velocity, cppID: drawerLayoutFocusID, message:
+    "a request never targets a kind that is not available and visible". Executed via
+    runEditorDrawerChecks under runProjectSessionSuite in the swiftcore lane. Cited
+    in ownership only; no A-row claims it alone.
+
+S201 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:218
+    report.expect(hidden.published && harness.layout.storedBodyHeight(.automation) == 100 &&
+    released body/handle geometry with toggle, URL and stored height kept, cppID:
+    drawerLayoutVisibilityID ("swiftcore/EditorDrawer::visibilityAndStoredHeights"),
+    message: "hiding a section releases its body and handle while its toggle, URL and
+    stored height stay". Executed via runEditorDrawerChecks under runProjectSessionSuite
+    in the swiftcore lane.
+
+S202 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:235
+    report.expect(shown.published && restored snapshot height &&
+    harness.layout.snapshot[.automation].bodyHeight == 100, cppID:
+    drawerLayoutVisibilityID, message: "re-showing a hidden section restores its stored
+    body height". Executed via runEditorDrawerChecks under runProjectSessionSuite in
+    the swiftcore lane. Cited in ownership only; no A-row claims it alone.
+
+S203 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:314
+    report.expect(!isVisible(.velocity) && !isVisible(.voiceChanges) &&
+    !isVisible(.automation) && snapshot.height == drawerLayoutDrawerBarHeight &&
+    snapshot.barVisible && activePage kept with every stored height, cppID:
+    drawerLayoutVisibilityID, message: "hiding every section leaves the bar row, keeps
+    every stored height and the active page". Executed via runEditorDrawerChecks under
+    runProjectSessionSuite in the swiftcore lane.
+
+S204 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:339
+    report.expect(voiceHidden.published && !isVisible(.voiceChanges) &&
+    harness.layout.storedBodyHeight(.voiceChanges) == 50, cppID:
+    drawerLayoutVisibilityID, message: "toggling hides the voice-changes section and
+    keeps its stored height", with the re-show restoring 50 at :343-347. Executed via
+    runEditorDrawerChecks under runProjectSessionSuite in the swiftcore lane.
+
+S205 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift:116
+    report.expect(document.moveTrack(0, to: 1), cppID:
+    "editcheck/EditCheckTest::documentRemapsAndRaw", message: "A074 move succeeds",
+    with the exact-remap publication check at :117-119 ("A075 move publishes the exact
+    track remap"). Executed via documentTrackContracts under the event-edits suite in
+    the same swiftcore check binary.
+
+S206 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift:118
+    Move undo at :118-119 and redo at :120-121 each publish exactly one change with
+    the exact track remap (cppID "editcheck/EditCheckTest::documentRemapsAndRaw",
+    "A076 move undo" / "A077 move redo"); model-level restoration only, with no byte
+    or dirty assertion. Executed via documentTrackContracts under the event-edits
+    suite in the same swiftcore check binary.

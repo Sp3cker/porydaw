@@ -31,6 +31,22 @@ TestCase {
         id: shortcutTargetComponent
         Item { width: 24; height: 24; focus: true }
     }
+    Component {
+        id: foreignWindowComponent
+        Window {
+            width: 320
+            height: 120
+            visible: true
+            TextField {
+                objectName: "foreignSoloField"
+                x: 20
+                y: 20
+                width: 220
+                height: 32
+                text: "foreign draft"
+            }
+        }
+    }
 
     function initTestCase() {
         // Preserve the original fixture's private store while exercising the
@@ -166,6 +182,18 @@ TestCase {
         tryCompare(shell.shellPresenter.session.velocityPage(), "selectedCount", 1, 3000)
     }
 
+    function windowShortcut(name) {
+        var delegates = shell.contentItem.children
+        for (var i = 0; i < delegates.length; ++i) {
+            var objects = delegates[i].data
+            for (var j = 0; objects && j < objects.length; ++j) {
+                if (objects[j].objectName === name)
+                    return objects[j]
+            }
+        }
+        return null
+    }
+
     function test_aKeymapNativeSettingsSeeds() {
         // KeymapCheckTest::keymapSettingsSeedsAreIgnored writes these four values
         // through QSettings. This test writes the same values through QtCore.Settings.
@@ -244,17 +272,6 @@ TestCase {
         var menuCopy = findChild(editMenu, "shellAction_roll.copy")
         var menuSolo = findChild(editMenu, "shellAction_roll.solo_tracks")
         verify(menuCopy && menuSolo, "Copy and Solo are real Edit-menu actions")
-        function windowShortcut(name) {
-            var delegates = shell.contentItem.children
-            for (var i = 0; i < delegates.length; ++i) {
-                var objects = delegates[i].data
-                for (var j = 0; objects && j < objects.length; ++j) {
-                    if (objects[j].objectName === name)
-                        return objects[j]
-                }
-            }
-            return null
-        }
         var copyShortcut = windowShortcut("shellShortcut_roll.copy")
         var soloShortcut = windowShortcut("shellShortcut_roll.solo_tracks")
         verify(copyShortcut && soloShortcut, "the real window shortcuts are mounted")
@@ -391,6 +408,43 @@ TestCase {
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", false, 3000,
                    "the second chrome Space stops transport")
+    }
+
+    function test_cForeignWindowKeepsSoloLocal() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        verify(surface && surface.visible, "the selected song page is mounted")
+        var headers = findChild(surface, "timelineTrackHeaderRows")
+        verify(headers && headers.count > 0, "the track headers are mounted")
+        var firstTrack = headers.itemAt(surface.gridModel.trackIndex)
+        verify(firstTrack && !firstTrack.isAddTrack, "the selected track is actionable")
+        selectDrawnVelocityNote(surface)
+        compare(firstTrack.soloChecked, false, "Solo starts off on the selected track")
+        var soloShortcut = windowShortcut("shellShortcut_roll.solo_tracks")
+        verify(soloShortcut, "the production window Solo shortcut is mounted")
+        soloActivatedSpy.target = soloShortcut
+        soloActivatedSpy.clear()
+
+        var foreign = foreignWindowComponent.createObject(null)
+        verify(foreign !== null, "the foreign window loads")
+        try {
+            foreign.requestActivate()
+            tryCompare(foreign, "active", true, 3000)
+            tryCompare(shell, "active", false, 3000)
+            var field = findChild(foreign, "foreignSoloField")
+            verify(field, "the foreign window has its own text field")
+            field.selectAll()
+            field.forceActiveFocus(Qt.OtherFocusReason)
+            tryCompare(field, "activeFocus", true, 3000)
+            keyClick(Qt.Key_S)
+            tryCompare(field, "text", "s", 3000)
+            compare(firstTrack.soloChecked, false,
+                    "a foreign-window S does not Solo the main song")
+            compare(soloActivatedSpy.count, 0,
+                    "a foreign-window S never activates the main window shortcut")
+        } finally {
+            foreign.destroy()
+        }
     }
 
     function test_dCopyFromOneSongTabPastesIntoAnother() {
