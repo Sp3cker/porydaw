@@ -11,7 +11,7 @@
 #include <span>
 
 #include "checks/support/audioengineaccess.h"
-#include "project/voicegroupsource.h"
+#include "project/banklease.h"
 
 namespace checks {
 namespace {

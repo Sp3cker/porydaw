@@ -9,6 +9,7 @@
 // outstanding work has finished.
 
 #include "project/swift_project_service.h"
+#include "project/banklease.h"
 
 #include "project/decompproject.h"
 #include "project/songregistry.h"
@@ -229,12 +230,6 @@ void fillSongResult(DecompProject &project, const SongInfo &song, SongResult &re
 
 } // namespace
 
-struct PdBankLease {
-    VoicegroupId id;
-    VoicegroupLease lease;
-    QString loadName;
-};
-
 struct PdProjectService {
     std::mutex mutex;
     std::condition_variable condition;
@@ -383,7 +378,7 @@ void pd_service_open_song(PdProjectService *service, const char *label, void *co
         result.sourcePath = view->id.sourceRelativePath().toUtf8();
         result.sectionLabel = view->id.sectionLabel().toUtf8();
         result.bankDirty = view->dirty;
-        lease = new PdBankLease{view->id, std::move(view->bank), view->loadName};
+        lease = pd_bank_lease_box(view->id, std::move(view->bank), view->loadName);
         const PdSongMeta meta = metaFor(result);
         PdBankView bank = bankFor(result);
         completion(context, true, reinterpret_cast<const uint8_t *>(result.midiBytes.constData()),
@@ -433,10 +428,10 @@ void pd_service_save(PdProjectService *service, const PdSaveRequest *request, vo
             refreshed.sourcePath = saved->id.sourceRelativePath().toUtf8();
             refreshed.sectionLabel = saved->id.sectionLabel().toUtf8();
             refreshed.bankDirty = saved->dirty;
-            lease = new PdBankLease{saved->id, std::move(saved->bank), saved->loadName};
+            lease = pd_bank_lease_box(saved->id, std::move(saved->bank), saved->loadName);
         }
         if (!writeBytesAtomically(midPath, midiBytes, failure)) {
-            delete lease;
+            pd_bank_lease_release(lease);
             const QByteArray bytes = failure.toUtf8();
             completion(context, false, false, nullptr, nullptr, bytes.constData());
             return;
@@ -445,7 +440,7 @@ void pd_service_save(PdProjectService *service, const PdSaveRequest *request, vo
         if (flagsNeeded) {
             const QStringList merged = SongRegistry::mergeCfgFlags(cfg);
             if (!SongRegistry::writeSongFlags(QFileInfo(midPath).path(), label, merged, &failure)) {
-                delete lease;
+                pd_bank_lease_release(lease);
                 const QByteArray bytes = failure.toUtf8();
                 completion(context, false, false, nullptr, nullptr, bytes.constData());
                 return;
@@ -499,8 +494,8 @@ void deliverBankEdit(PdProjectService *service, VoicegroupId id,
     result.sourcePath = applied.view.id.sourceRelativePath().toUtf8();
     result.sectionLabel = applied.view.id.sectionLabel().toUtf8();
     result.bankDirty = applied.view.dirty;
-    PdBankLease leaseValue = {applied.view.id, std::move(applied.view.bank), applied.view.loadName};
-    auto *lease = new PdBankLease(std::move(leaseValue));
+    auto *lease =
+        pd_bank_lease_box(applied.view.id, std::move(applied.view.bank), applied.view.loadName);
     PdBankView bank = bankFor(result);
     completion(context, PD_BANK_EDIT_APPLIED, &bank, lease, token, nullptr);
 }
@@ -512,7 +507,7 @@ void pd_service_bank_apply(PdProjectService *service, PdBankLease *lease, const 
 {
     if (!service || !lease || !edit || !completion)
         return;
-    const VoicegroupId id = lease->id;
+    const VoicegroupId id = pd_bank_lease_identity(lease);
     const std::optional<VgVoice> value = makeVoice(edit->value);
     const std::optional<VgVoice> expected =
         edit->hasExpected ? makeVoice(edit->expected) : std::optional<VgVoice>{};
@@ -539,7 +534,7 @@ void pd_service_bank_revert(PdProjectService *service, PdBankLease *lease,
 {
     if (!service || !lease || !completion)
         return;
-    const VoicegroupId id = lease->id;
+    const VoicegroupId id = pd_bank_lease_identity(lease);
     service->post([service, id, materializationToken, context, completion] {
         const auto found = service->tokens.find(materializationToken);
         if (found == service->tokens.end()) {
@@ -552,26 +547,4 @@ void pd_service_bank_revert(PdProjectService *service, PdBankLease *lease,
         service->tokens.erase(found);
         deliverBankEdit(service, id, VoicegroupEditOperation{revert}, context, completion);
     });
-}
-
-void pd_bank_lease_release(PdBankLease *lease)
-{
-    delete lease;
-}
-
-uintptr_t pd_bank_lease_bank_token(const PdBankLease *lease)
-{
-    if (!lease || !lease->lease)
-        return 0;
-    return reinterpret_cast<uintptr_t>(lease->lease.get());
-}
-
-const VoicegroupLease &pd_bank_lease_native(const PdBankLease *lease)
-{
-    return lease->lease;
-}
-
-const VoicegroupId &pd_bank_lease_identity(const PdBankLease *lease)
-{
-    return lease->id;
 }

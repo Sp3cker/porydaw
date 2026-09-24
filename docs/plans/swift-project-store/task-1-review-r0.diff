@@ -1,0 +1,531 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 55369aa8..34cd2744 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -187,20 +187,22 @@ qt_add_library(porydaw_app STATIC
+     src/audio/auditionslots.h
+     src/audio/resonance_suppressor.cpp
+     src/audio/resonance_suppressor.h
+     src/audio/swift_playback.h
+     src/audio/timeline_handoff.h
+     src/audio/trackactivitylevel.h
+     src/audio/wavexport.cpp
+     src/audio/wavexport.h
+     src/audio/miniaudio_impl.c
+     src/audio/stb_vorbis_impl.c
++    src/project/banklease.cpp
++    src/project/banklease.h
+     src/project/decompproject.cpp
+     src/project/decompproject.h
+     src/project/projectidentity.cpp
+     src/project/projectidentity.h
+     src/project/songregistry.cpp
+     src/project/songregistry.h
+     src/project/songsmk.cpp
+     src/project/songsmk.h
+     src/project/swift_project_service.cpp
+     src/project/swift_project_service.h
+diff --git a/src/audio/audioengine.h b/src/audio/audioengine.h
+index 387fdfb7..8f88c93e 100644
+--- a/src/audio/audioengine.h
++++ b/src/audio/audioengine.h
+@@ -1,18 +1,18 @@
+ #pragma once
+ 
+ #include "audio/auditionslots.h"
+ #include "audio/resonance_suppressor.h"
+ #include "audio/swift_playback.h"
+ #include "audio/timeline_handoff.h"
+ #include "audio/trackactivitylevel.h"
+-#include "project/voicegroupsource.h"
++#include "project/banklease.h"
+ #include <QString>
+ #include <algorithm>
+ #include <array>
+ #include <atomic>
+ #include <cstdint>
+ #include <memory>
+ #include <utility>
+ #include <vector>
+ 
+ extern "C" {
+diff --git a/src/checks/audio/tst_clicktransport.cpp b/src/checks/audio/tst_clicktransport.cpp
+index f79eda83..48b84da3 100644
+--- a/src/checks/audio/tst_clicktransport.cpp
++++ b/src/checks/audio/tst_clicktransport.cpp
+@@ -4,21 +4,21 @@
+ #include <QFile>
+ #include <QTemporaryFile>
+ #include <QtTest>
+ 
+ #include <algorithm>
+ #include <array>
+ #include <memory>
+ #include <span>
+ 
+ #include "checks/support/audioengineaccess.h"
+-#include "project/voicegroupsource.h"
++#include "project/banklease.h"
+ 
+ namespace checks {
+ namespace {
+ 
+ constexpr uint32_t kRenderChunk = 512; // per-call process granularity (legacy rig; < m_bufCapacity)
+ constexpr uint64_t kRenderChunk64 = kRenderChunk;
+ 
+ enum HardCutScenario { PauseCut = 0, StopCut, PlayOverAuditionCut };
+ 
+ QString evidenceText(const SteadySilence &steady)
+diff --git a/src/project/swift_project_service.cpp b/src/project/swift_project_service.cpp
+index da44127f..b0db648b 100644
+--- a/src/project/swift_project_service.cpp
++++ b/src/project/swift_project_service.cpp
+@@ -2,20 +2,21 @@
+ //
+ // One owning handle fronts a serial worker thread that owns the
+ // DecompProject. Public entry points copy their borrowed inputs, enqueue one
+ // task each, and return immediately; the worker invokes each completion
+ // exactly once on the worker thread with payloads borrowed until the
+ // completion returns. Destroy drains the queue (delivering every completion)
+ // before joining the worker, so close releases the worker only after its
+ // outstanding work has finished.
+ 
+ #include "project/swift_project_service.h"
++#include "project/banklease.h"
+ 
+ #include "project/decompproject.h"
+ #include "project/songregistry.h"
+ 
+ #include <QByteArray>
+ #include <QFile>
+ #include <QFileInfo>
+ #include <QSaveFile>
+ #include <QString>
+ 
+@@ -222,26 +223,20 @@ void fillSongResult(DecompProject &project, const SongInfo &song, SongResult &re
+     result.masterVolume = song.cfg.masterVolume;
+     result.reverb = song.cfg.reverb;
+     result.priority = song.cfg.priority;
+     result.exactGate = song.cfg.exactGate;
+     result.extendedClocks = song.cfg.extendedClocks;
+     result.noCompression = song.cfg.noCompression;
+ }
+ 
+ } // namespace
+ 
+-struct PdBankLease {
+-    VoicegroupId id;
+-    VoicegroupLease lease;
+-    QString loadName;
+-};
+-
+ struct PdProjectService {
+     std::mutex mutex;
+     std::condition_variable condition;
+     std::deque<std::function<void()>> queue;
+     bool stopping = false;
+     std::thread worker;
+     DecompProject project;
+     std::unordered_map<uint64_t, VoicegroupSource::BlankSlotMaterialization> tokens;
+     uint64_t nextToken = 1;
+ 
+@@ -376,21 +371,21 @@ void pd_service_open_song(PdProjectService *service, const char *label, void *co
+             completion(context, false, nullptr, 0, nullptr, nullptr, nullptr,
+                        result.error.constData());
+             return;
+         }
+         fillSongResult(service->project, *song, result);
+         fillSlotViews(*view, result);
+         result.loadName = view->loadName.toUtf8();
+         result.sourcePath = view->id.sourceRelativePath().toUtf8();
+         result.sectionLabel = view->id.sectionLabel().toUtf8();
+         result.bankDirty = view->dirty;
+-        lease = new PdBankLease{view->id, std::move(view->bank), view->loadName};
++        lease = pd_bank_lease_box(view->id, std::move(view->bank), view->loadName);
+         const PdSongMeta meta = metaFor(result);
+         PdBankView bank = bankFor(result);
+         completion(context, true, reinterpret_cast<const uint8_t *>(result.midiBytes.constData()),
+                    size_t(result.midiBytes.size()), &meta, &bank, lease, nullptr);
+     });
+ }
+ 
+ void pd_service_save(PdProjectService *service, const PdSaveRequest *request, void *context,
+                      PdSaveCompletion completion)
+ {
+@@ -426,33 +421,33 @@ void pd_service_save(PdProjectService *service, const PdSaveRequest *request, vo
+             if (!saved.has_value()) {
+                 const QByteArray bytes = failure.toUtf8();
+                 completion(context, false, false, nullptr, nullptr, bytes.constData());
+                 return;
+             }
+             fillSlotViews(*saved, refreshed);
+             refreshed.loadName = saved->loadName.toUtf8();
+             refreshed.sourcePath = saved->id.sourceRelativePath().toUtf8();
+             refreshed.sectionLabel = saved->id.sectionLabel().toUtf8();
+             refreshed.bankDirty = saved->dirty;
+-            lease = new PdBankLease{saved->id, std::move(saved->bank), saved->loadName};
++            lease = pd_bank_lease_box(saved->id, std::move(saved->bank), saved->loadName);
+         }
+         if (!writeBytesAtomically(midPath, midiBytes, failure)) {
+-            delete lease;
++            pd_bank_lease_release(lease);
+             const QByteArray bytes = failure.toUtf8();
+             completion(context, false, false, nullptr, nullptr, bytes.constData());
+             return;
+         }
+         bool flagsWritten = false;
+         if (flagsNeeded) {
+             const QStringList merged = SongRegistry::mergeCfgFlags(cfg);
+             if (!SongRegistry::writeSongFlags(QFileInfo(midPath).path(), label, merged, &failure)) {
+-                delete lease;
++                pd_bank_lease_release(lease);
+                 const QByteArray bytes = failure.toUtf8();
+                 completion(context, false, false, nullptr, nullptr, bytes.constData());
+                 return;
+             }
+             flagsWritten = true;
+             const std::optional<SongName> savedName = SongName::create(label);
+             if (savedName.has_value()) {
+                 const std::optional<SongInfo> savedSong = service->project.playableSong(*savedName);
+                 if (savedSong.has_value())
+                     service->project.setSongCfg(savedSong->id, cfg);
+@@ -492,34 +487,34 @@ void deliverBankEdit(PdProjectService *service, VoicegroupId id,
+     if (applied.materialization.has_value()) {
+         token = service->nextToken++;
+         service->tokens.emplace(token, *applied.materialization);
+     }
+     SongResult result;
+     fillSlotViews(applied.view, result);
+     result.loadName = applied.view.loadName.toUtf8();
+     result.sourcePath = applied.view.id.sourceRelativePath().toUtf8();
+     result.sectionLabel = applied.view.id.sectionLabel().toUtf8();
+     result.bankDirty = applied.view.dirty;
+-    PdBankLease leaseValue = {applied.view.id, std::move(applied.view.bank), applied.view.loadName};
+-    auto *lease = new PdBankLease(std::move(leaseValue));
++    auto *lease =
++        pd_bank_lease_box(applied.view.id, std::move(applied.view.bank), applied.view.loadName);
+     PdBankView bank = bankFor(result);
+     completion(context, PD_BANK_EDIT_APPLIED, &bank, lease, token, nullptr);
+ }
+ 
+ } // namespace
+ 
+ void pd_service_bank_apply(PdProjectService *service, PdBankLease *lease, const PdVoiceEdit *edit,
+                            void *context, PdBankEditCompletion completion)
+ {
+     if (!service || !lease || !edit || !completion)
+         return;
+-    const VoicegroupId id = lease->id;
++    const VoicegroupId id = pd_bank_lease_identity(lease);
+     const std::optional<VgVoice> value = makeVoice(edit->value);
+     const std::optional<VgVoice> expected =
+         edit->hasExpected ? makeVoice(edit->expected) : std::optional<VgVoice>{};
+     if (!value || (edit->hasExpected && !expected)) {
+         service->post([context, completion] {
+             const QByteArray error = QByteArrayLiteral("Voice macro ordinal is out of range.");
+             completion(context, PD_BANK_EDIT_FAILED, nullptr, nullptr, 0, error.constData());
+         });
+         return;
+     }
+@@ -532,46 +527,25 @@ void pd_service_bank_apply(PdProjectService *service, PdBankLease *lease, const
+         deliverBankEdit(service, id, VoicegroupEditOperation{set}, context, completion);
+     });
+ }
+ 
+ void pd_service_bank_revert(PdProjectService *service, PdBankLease *lease,
+                             uint64_t materializationToken, void *context,
+                             PdBankEditCompletion completion)
+ {
+     if (!service || !lease || !completion)
+         return;
+-    const VoicegroupId id = lease->id;
++    const VoicegroupId id = pd_bank_lease_identity(lease);
+     service->post([service, id, materializationToken, context, completion] {
+         const auto found = service->tokens.find(materializationToken);
+         if (found == service->tokens.end()) {
+             const QByteArray bytes =
+                 QStringLiteral("Bank materialization token is spent or unknown.").toUtf8();
+             completion(context, PD_BANK_EDIT_CONFLICT, nullptr, nullptr, 0, bytes.constData());
+             return;
+         }
+         RevertBlankSlot revert = {found->second};
+         service->tokens.erase(found);
+         deliverBankEdit(service, id, VoicegroupEditOperation{revert}, context, completion);
+     });
+ }
+ 
+-void pd_bank_lease_release(PdBankLease *lease)
+-{
+-    delete lease;
+-}
+-
+-uintptr_t pd_bank_lease_bank_token(const PdBankLease *lease)
+-{
+-    if (!lease || !lease->lease)
+-        return 0;
+-    return reinterpret_cast<uintptr_t>(lease->lease.get());
+-}
+-
+-const VoicegroupLease &pd_bank_lease_native(const PdBankLease *lease)
+-{
+-    return lease->lease;
+-}
+-
+-const VoicegroupId &pd_bank_lease_identity(const PdBankLease *lease)
+-{
+-    return lease->id;
+-}
+diff --git a/src/project/voicegroupsource.h b/src/project/voicegroupsource.h
+index 21633a47..af2b482f 100644
+--- a/src/project/voicegroupsource.h
++++ b/src/project/voicegroupsource.h
+@@ -1,106 +1,31 @@
+ #pragma once
+ 
+ #include "projectidentity.h"
++#include "banklease.h"
+ 
+ #include <QByteArray>
+ #include <QHash>
+ #include <QPair>
+ #include <QString>
+ #include <QStringList>
+ #include <QVector>
+ #include <atomic>
+ #include <memory>
+ #include <optional>
+ #include <utility>
+ #include <variant>
+ 
+ extern "C" {
+ #include "voicegroup_loader.h"
+ }
+ 
+-class VoicegroupLease;
+-
+-// Adopts one worker-owned bank exactly once; the last lease releases it with
+-// voicegroup_free.
+-VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw);
+-VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw, std::shared_ptr<void> retained);
+-// Releases a stale worker result without publishing it: the temporary lease
+-// adopts the bank, so no porydaw code frees a bank by hand.
+-void discardVoicegroup(LoadedVoiceGroup *raw);
+-// Borrows a bank porydaw does not own (check fixtures): never frees.
+-VoicegroupLease borrowVoicegroupLease(LoadedVoiceGroup *raw);
+-
+-// A loaded bank owned through plain value semantics. poryaaaa hands out a
+-// mutable LoadedVoiceGroup* and frees it with voicegroup_free, but porydaw
+-// publishes banks as immutable, so the public surface is only the const
+-// borrow. AudioEngine alone may unwrap the legacy mutable borrow to feed
+-// poryaaaa entry points, which only read the bank.
+-class VoicegroupLease
+-{
+-  public:
+-    VoicegroupLease() = default;
+-
+-    const LoadedVoiceGroup *get() const { return m_bank.get(); }
+-    const LoadedVoiceGroup *operator->() const { return m_bank.get(); }
+-    explicit operator bool() const { return m_bank != nullptr; }
+-    void reset() { m_bank.reset(); }
+-
+-  private:
+-    friend class AudioEngine;
+-    friend VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw);
+-    friend VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw,
+-                                               std::shared_ptr<void> retained);
+-    friend void discardVoicegroup(LoadedVoiceGroup *raw);
+-    friend VoicegroupLease borrowVoicegroupLease(LoadedVoiceGroup *raw);
+-
+-    // Legacy mutable borrow required by unchanged poryaaaa; porydaw never
+-    // writes through it.
+-    LoadedVoiceGroup *borrow() const { return m_bank.get(); }
+-
+-    std::shared_ptr<LoadedVoiceGroup> m_bank;
+-};
+-
+-inline VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw)
+-{
+-    VoicegroupLease lease;
+-    if (raw)
+-        lease.m_bank.reset(raw, &voicegroup_free);
+-    return lease;
+-}
+-
+-inline VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw, std::shared_ptr<void> retained)
+-{
+-    VoicegroupLease lease;
+-    if (raw) {
+-        lease.m_bank = std::shared_ptr<LoadedVoiceGroup>(
+-            raw, [retained = std::move(retained)](LoadedVoiceGroup *bank) {
+-                (void)retained;
+-                voicegroup_free(bank);
+-            });
+-    }
+-    return lease;
+-}
+-
+-inline void discardVoicegroup(LoadedVoiceGroup *raw)
+-{
+-    wrapVoicegroupLease(raw);
+-}
+-
+-inline VoicegroupLease borrowVoicegroupLease(LoadedVoiceGroup *raw)
+-{
+-    VoicegroupLease lease;
+-    if (raw)
+-        lease.m_bank = std::shared_ptr<LoadedVoiceGroup>(std::shared_ptr<LoadedVoiceGroup>(), raw);
+-    return lease;
+-}
+-
+ // The editable voice macros: the five basic families and their variants,
+ // plus voice_keysplit (whose sub-voicegroup/table pair is swappable) and
+ // voice_keysplit_all (drumkit; its sub-voicegroup is swappable). Cry voices
+ // stay read-only and round-trip verbatim.
+ enum class VgMacro {
+     DirectSound,
+     DirectSoundNoResample,
+     DirectSoundAlt,
+     Square1,
+     Square1Alt,
+diff --git a/src/project/banklease.h b/src/project/banklease.h
+new file mode 100644
+index 00000000..2b15c39e
+--- /dev/null
++++ b/src/project/banklease.h
+@@ -0,0 +1,94 @@
++#pragma once
++
++#include "projectidentity.h"
++
++#include <QString>
++#include <memory>
++#include <utility>
++
++extern "C" {
++#include "voicegroup_loader.h"
++typedef struct PdBankLease PdBankLease;
++}
++
++class VoicegroupLease;
++
++// Adopts one worker-owned bank exactly once; the last lease releases it with
++// voicegroup_free.
++VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw);
++VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw, std::shared_ptr<void> retained);
++// Releases a stale worker result without publishing it: the temporary lease
++// adopts the bank, so no porydaw code frees a bank by hand.
++void discardVoicegroup(LoadedVoiceGroup *raw);
++// Borrows a bank porydaw does not own (check fixtures): never frees.
++VoicegroupLease borrowVoicegroupLease(LoadedVoiceGroup *raw);
++
++// A loaded bank owned through plain value semantics. poryaaaa hands out a
++// mutable LoadedVoiceGroup* and frees it with voicegroup_free, but porydaw
++// publishes banks as immutable, so the public surface is only the const
++// borrow. AudioEngine alone may unwrap the legacy mutable borrow to feed
++// poryaaaa entry points, which only read the bank.
++class VoicegroupLease
++{
++  public:
++    VoicegroupLease() = default;
++
++    const LoadedVoiceGroup *get() const { return m_bank.get(); }
++    const LoadedVoiceGroup *operator->() const { return m_bank.get(); }
++    explicit operator bool() const { return m_bank != nullptr; }
++    void reset() { m_bank.reset(); }
++
++  private:
++    friend class AudioEngine;
++    friend VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw);
++    friend VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw,
++                                               std::shared_ptr<void> retained);
++    friend void discardVoicegroup(LoadedVoiceGroup *raw);
++    friend VoicegroupLease borrowVoicegroupLease(LoadedVoiceGroup *raw);
++
++    // Legacy mutable borrow required by unchanged poryaaaa; porydaw never
++    // writes through it.
++    LoadedVoiceGroup *borrow() const { return m_bank.get(); }
++
++    std::shared_ptr<LoadedVoiceGroup> m_bank;
++};
++
++inline VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw)
++{
++    VoicegroupLease lease;
++    if (raw)
++        lease.m_bank.reset(raw, &voicegroup_free);
++    return lease;
++}
++
++inline VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw, std::shared_ptr<void> retained)
++{
++    VoicegroupLease lease;
++    if (raw) {
++        lease.m_bank = std::shared_ptr<LoadedVoiceGroup>(
++            raw, [retained = std::move(retained)](LoadedVoiceGroup *bank) {
++                (void)retained;
++                voicegroup_free(bank);
++            });
++    }
++    return lease;
++}
++
++inline void discardVoicegroup(LoadedVoiceGroup *raw)
++{
++    wrapVoicegroupLease(raw);
++}
++
++inline VoicegroupLease borrowVoicegroupLease(LoadedVoiceGroup *raw)
++{
++    VoicegroupLease lease;
++    if (raw)
++        lease.m_bank = std::shared_ptr<LoadedVoiceGroup>(std::shared_ptr<LoadedVoiceGroup>(), raw);
++    return lease;
++}
++
++#ifdef __cplusplus
++PdBankLease *pd_bank_lease_box(const VoicegroupId &id, VoicegroupLease lease,
++                              const QString &loadName);
++#endif
++
+diff --git a/src/project/banklease.cpp b/src/project/banklease.cpp
+new file mode 100644
+index 00000000..49c44539
+--- /dev/null
++++ b/src/project/banklease.cpp
+@@ -0,0 +1,36 @@
++#include "project/banklease.h"
++#include "project/swift_project_service.h"
++
++struct PdBankLease {
++    VoicegroupId id;
++    VoicegroupLease lease;
++    QString loadName;
++};
++
++PdBankLease *pd_bank_lease_box(const VoicegroupId &id, VoicegroupLease lease,
++                              const QString &loadName)
++{
++    return new PdBankLease{id, std::move(lease), loadName};
++}
++
++void pd_bank_lease_release(PdBankLease *lease)
++{
++    delete lease;
++}
++
++uintptr_t pd_bank_lease_bank_token(const PdBankLease *lease)
++{
++    if (!lease || !lease->lease)
++        return 0;
++    return reinterpret_cast<uintptr_t>(lease->lease.get());
++}
++
++const VoicegroupLease &pd_bank_lease_native(const PdBankLease *lease)
++{
++    return lease->lease;
++}
++
++const VoicegroupId &pd_bank_lease_identity(const PdBankLease *lease)
++{
++    return lease->id;
++}

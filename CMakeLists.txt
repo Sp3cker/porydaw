@@ -194,6 +194,8 @@ qt_add_library(porydaw_app STATIC
     src/audio/wavexport.h
     src/audio/miniaudio_impl.c
     src/audio/stb_vorbis_impl.c
+    src/project/banklease.cpp
+    src/project/banklease.h
     src/project/decompproject.cpp
     src/project/decompproject.h
     src/project/projectidentity.cpp
