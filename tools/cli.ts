@@ -34,6 +34,7 @@ type Subcommand =
   | "verify:qml"
   | "verify:qml-roll"
   | "verify:shell"
+  | "verify:bridge"
   | "format";
 
 function help(command?: Subcommand): string {
@@ -53,6 +54,15 @@ function help(command?: Subcommand): string {
         "deno task verify",
         "deno task verify:shell",
       );
+    case "verify:bridge":
+      return `usage: deno task verify:bridge [--update-baseline] [--help]
+  check Swift/QML QtBridge surface against the shrink-only baseline
+  --update-baseline  replace the baseline with current findings
+  --help             show this help without checking
+
+Examples:
+  deno task verify:bridge
+  deno task verify:bridge --update-baseline`;
     case "build:app":
     case "build:checks":
     case "build:render":
@@ -89,6 +99,7 @@ Examples:
   verify:qml    build and run the QML drawer lane
   verify:qml-roll  build and run the QML roll window lane
   verify:shell  build and run the production QML shell lane
+  verify:bridge  check the Swift/QML QtBridge surface
   format        format sources (or --check)
 help: deno task <command> --help`;
   }
@@ -310,6 +321,24 @@ const VERIFY_LANES: Record<
   },
 };
 
+async function runBridge(args: string[]): Promise<void> {
+  if (args.includes("--help")) showHelp("verify:bridge");
+  const unknown = args.find((arg) => arg !== "--update-baseline");
+  if (unknown) usage("verify:bridge", `unknown argument ${unknown}`);
+  const result = await new Deno.Command("deno", {
+    args: [
+      "run",
+      "--allow-read=src,CMakeLists.txt,cmake/QtBridge.cmake,tools",
+      ...(args.includes("--update-baseline") ? ["--allow-write=tools"] : []),
+      "tools/qtbridge_surface.ts",
+      ...args,
+    ],
+    stdout: "inherit",
+    stderr: "inherit",
+  }).output();
+  if (!result.success) Deno.exit(result.code);
+}
+
 async function runVerify(
   rawArgs: string[],
   lane: VerifyLane,
@@ -357,6 +386,7 @@ async function runVerify(
     usage(lane.command, error instanceof Error ? error.message : String(error));
   }
   if (options.help) showHelp(lane.command);
+  await runBridge([]);
   await runBuild(lane.buildTargets(options), false, true);
   const executable = Deno.build.os === "windows"
     ? `${lane.binary}.exe`
@@ -494,6 +524,9 @@ switch (normalized) {
     break;
   case "verify":
     await runVerify(rest, VERIFY_LANES.verify);
+    break;
+  case "verify:bridge":
+    await runBridge(rest);
     break;
   case "verify:qml":
     await runVerify(rest, VERIFY_LANES["verify:qml"]);

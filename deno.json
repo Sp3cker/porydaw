@@ -7,6 +7,7 @@
     "setup": "deno run --allow-read --allow-write --allow-run --allow-env tools/setup.ts",
     "setup:check": "deno check tools/setup.ts && deno test --allow-read --allow-write --allow-run --allow-env tools/setup_test.ts tools/setup_swift_test.ts",
     "verify": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify",
+    "verify:bridge": "deno run --allow-read=src,CMakeLists.txt,cmake/QtBridge.cmake,tools --allow-write=tools --allow-run=deno tools/cli.ts verify:bridge",
     "verify:qml": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify:qml",
     "verify:qml-roll": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify:qml-roll",
     "verify:shell": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify:shell",

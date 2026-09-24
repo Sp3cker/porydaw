@@ -219,11 +219,6 @@ ThemedWindow {
         function onAboutRequested() { aboutDialog.open() }
         function onSettingsRequested(songFirst) { settingsDialog.showSettings(songFirst) }
         function onQuitRequested() { root.close() }
-        function onInformationRequested(title, message) {
-            informationDialog.text = title
-            informationDialog.informativeText = message
-            informationDialog.open()
-        }
         function onCriticalRequested(title, message) {
             criticalDialog.text = title
             criticalDialog.informativeText = message

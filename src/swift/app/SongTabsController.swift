@@ -22,7 +22,7 @@ public final class SongTabSession {
     /// Whether this tab's song has unsaved changes. Document edits and bank
     /// (voicegroup) edits alike count: both are work the close gate must not
     /// discard without an answer.
-    @QtTracked public var dirty: Bool
+    public var dirty: Bool
     /// Whether this tab's song is presented. A tab exists only while its
     /// document is open, so a live tab's own answer is always true. The member
     /// exists because the surface reads one session object: the drawer pages'
@@ -46,7 +46,7 @@ public final class SongTabSession {
     @QtIgnored let workspace: DocumentWorkspace
     /// The application this tab belongs to. The application's tab model owns the
     /// tab, so it cannot outlive its owner.
-    @QtIgnored private unowned let app: ApplicationSession
+    private unowned let app: ApplicationSession
 
     init(tabId: Int, title: String, workspace: DocumentWorkspace,
          app: ApplicationSession) {
@@ -106,10 +106,6 @@ public final class SongTabSession {
 
     public func mouseHintsPresenter() -> MouseHints { app.mouseHintsPresenter() }
 
-    public func requestGridContextMenu(x: Double, y: Double) {
-        app.requestGridContextMenu(x: x, y: y)
-    }
-
     func pullTimeSigFlags() {
         let prompt = app.timeSigPromptOpen
         let menu = app.timeSigMenuOpen
@@ -133,10 +129,10 @@ public final class SongTabsController {
     // Only this controller writes these properties. QtBridge does not expose
     // private(set) properties, so their setters must remain public.
     public var tabs: QListModel<SongTabSession> = QListModel()
-    @QtTracked public var selectedId: Int = -1
-    @QtTracked public var selectedIndex: Int = -1
-    @QtTracked public var tabCount: Int = 0
-    @QtTracked public var pendingCloseId: Int = -1
+    public var selectedId: Int = -1
+    public var selectedIndex: Int = -1
+    public var tabCount: Int = 0
+    public var pendingCloseId: Int = -1
 
     /// The one palette every surface reads. The session owns the instance; the
     /// strip only reads roles through this reference, so the window's single
@@ -155,19 +151,19 @@ public final class SongTabsController {
     /// The application that owns the workspaces. The application owns this
     /// controller, so the reference is weak and is bound once the application's
     /// own stored properties exist.
-    @QtIgnored private weak var app: ApplicationSession?
+    private weak var app: ApplicationSession?
     /// The tab the close gate must reopen in place once the user approves; `-1`
     /// while the gate is asking about a plain close.
-    @QtIgnored private var reloadId = -1
-    @QtIgnored private var replacementLabel: String?
+    private var reloadId = -1
+    private var replacementLabel: String?
     /// The tab whose close-save is in flight. The gate stays up until the
     /// application reports back, so a second Save press starts no second write.
-    @QtIgnored private var savingCloseId = -1
+    private var savingCloseId = -1
     /// Whether a close-all walk still has tabs to ask about.
-    @QtIgnored private var isClosingAll = false
+    private var isClosingAll = false
     /// Whether the walk's next step is already scheduled for the next turn.
-    @QtIgnored private var advancePending = false
-    @QtIgnored private var projectSwitchApprovalIndex: Int?
+    private var advancePending = false
+    private var projectSwitchApprovalIndex: Int?
 
     private var nextTabId = 1
 

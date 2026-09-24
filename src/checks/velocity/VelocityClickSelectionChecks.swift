@@ -401,8 +401,7 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
         session: bankFixture.session, audio: audio, playhead: playhead,
         playheadGuides: guides, eventList: eventList, palette: GridPalette(),
         callbacks: DocumentWorkspace.Callbacks(
-            addTrackRequested: {}, changeTrackVoiceRequested: { _ in },
-            revealTrackVoiceRequested: { _ in }, headerContextMenuRequested: { _, _ in },
+            changeTrackVoiceRequested: { _ in },
             gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
             publicationFailed: { _ in }, timeSignaturePromptInvalidated: { _, _ in }))
     defer {

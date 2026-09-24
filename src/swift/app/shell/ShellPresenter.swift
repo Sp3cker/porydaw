@@ -117,18 +117,18 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     @QtTracked public var session: ApplicationSession
     @QtTracked public var settingsStore: EngineSettingsStore
-    @QtTracked public var actionIds: [String]
-    @QtTracked public var fileActionIds: [String]
-    @QtTracked public var editTopActionIds: [String]
-    @QtTracked public var editClipboardActionIds: [String]
-    @QtTracked public var editNotesActionIds: [String]
-    @QtTracked public var editTailActionIds: [String]
-    @QtTracked public var timeActionIds: [String]
-    @QtTracked public var tracksActionIds: [String]
-    @QtTracked public var transportActionIds: [String]
-    @QtTracked public var viewActionIds: [String]
-    @QtTracked public var windowActionIds: [String]
-    @QtTracked public var contextActionIds: [String]
+    public var actionIds: [String]
+    public var fileActionIds: [String]
+    public var editTopActionIds: [String]
+    public var editClipboardActionIds: [String]
+    public var editNotesActionIds: [String]
+    public var editTailActionIds: [String]
+    public var timeActionIds: [String]
+    public var tracksActionIds: [String]
+    public var transportActionIds: [String]
+    public var viewActionIds: [String]
+    public var windowActionIds: [String]
+    public var contextActionIds: [String]
 
     @QtTracked public var closeReady = false
     @QtTracked public var sceneActive = true
@@ -403,6 +403,5 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtSignal public func settingsRequested(songFirst: Bool)
     @QtSignal public func aboutRequested()
     @QtSignal public func quitRequested()
-    @QtSignal public func informationRequested(title: String, message: String)
     @QtSignal public func criticalRequested(title: String, message: String)
 }

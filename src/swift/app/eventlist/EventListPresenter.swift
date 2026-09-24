@@ -11,8 +11,8 @@ public final class EventListRowHandle {
     public var eventIndex: Int = -1
     public var tick: Int = 0
     public var typeKind: Int = EventListEventType.endOfTrack.rawValue
-    public var isEndOfTrack = false
-    public var rowTint = ""
+    public var isEndOfTrack: Bool = false
+    public var rowTint: String = ""
 
     init(_ source: EventListRow, tint: String) {
         row = source.index
@@ -36,7 +36,7 @@ public final class EventListPresenter {
     @QtTracked public var tableRevision = 0
     @QtTracked public var visible = false
     @QtTracked public var chunk = -1
-    @QtTracked public var chunkLabels: [String] = []
+    public var chunkLabels: [String] = []
     @QtTracked public var filterMask = 127
     @QtTracked public var filterSummary = "All events"
     @QtTracked public var countText = ""
@@ -53,7 +53,7 @@ public final class EventListPresenter {
     public var menuItems: QListModel<EventListMenuItem> = QListModel()
     @QtTracked public var menuX = 0.0
     @QtTracked public var menuY = 0.0
-    @QtTracked public var appearance: [String: QVariantSettable] = [:]
+    public var appearance: [String: QVariantSettable] = [:]
 
     @QtTracked public var attached = false
     @QtTracked public var chunkIndex = -1
@@ -69,12 +69,12 @@ public final class EventListPresenter {
     @QtTracked public var scrollToRowRequested = 0
 
     /// Swift checks and the host can observe the exact row of the last request.
-    @QtIgnored public private(set) var lastScrollToRow = -1
-    @QtIgnored public private(set) var playheadTick = -1.0
-    @QtIgnored public private(set) var playing = false
-    @QtIgnored public private(set) var pointerDown = false
+    public private(set) var lastScrollToRow = -1
+    public private(set) var playheadTick = -1.0
+    public private(set) var playing = false
+    public private(set) var pointerDown = false
     /// Qt's mouse-button bit mask. Zero is the native `NoButton` state.
-    @QtIgnored public private(set) var mouseButtons = 0
+    public private(set) var mouseButtons = 0
     @QtIgnored public internal(set) var model = EventListModel()
     @QtIgnored public var onScrollToRow: ((Int) -> Void)?
 

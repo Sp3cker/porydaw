@@ -49,9 +49,9 @@ public final class PitchBendVertex: QVariantGettable {
 @QtBridgeable
 public final class PitchBendLane {
     @QtIgnored public var kernel: PitchBendKernel
-    @QtIgnored private let palette: GridPalette
-    @QtIgnored private let track: Int
-    @QtTracked public var canvasRect: [String: QVariantSettable] = [:]
+    private let palette: GridPalette
+    private let track: Int
+    public var canvasRect: [String: QVariantSettable] = [:]
     @QtTracked public var liveValueText = ""
     @QtTracked public var upperValueText = ""
     @QtTracked public var lowerValueText = ""
@@ -67,7 +67,7 @@ public final class PitchBendLane {
     @QtIgnored public var onCommit: (() -> Void)?
     @QtIgnored public var onWheelSteps: ((Int) -> Void)?
     @QtIgnored public var bendRange = 2
-    @QtIgnored private var gestureStartingPoints: [Int: Int]?
+    private var gestureStartingPoints: [Int: Int]?
 
     public init(kernel: PitchBendKernel, palette: GridPalette, track: Int) {
         self.kernel = kernel

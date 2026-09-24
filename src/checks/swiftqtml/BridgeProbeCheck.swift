@@ -5,8 +5,8 @@ import SwiftGrid
 @MainActor
 @QtBridgeable
 public final class BridgeRow {
-    @QtTracked public var title: String
-    @QtTracked public var value: Int
+    public var title: String
+    public var value: Int
     public let domainKey: Int
 
     public init(title: String, value: Int, domainKey: Int) {
@@ -19,22 +19,22 @@ public final class BridgeRow {
 @MainActor
 @QtBridgeable
 public final class BridgeProbe: QmlInstantiableStatus {
-    @QtTracked public var statusText: String = "idle"
+    public var statusText: String = "idle"
     // QListModel storage owns every live row until removal or reset.
-    @QtTracked public var rows: QListModel<BridgeRow> = QListModel()
-    @QtTracked public var actionLog: String = ""
+    public var rows: QListModel<BridgeRow> = QListModel()
+    public var actionLog: String = ""
     public var selectedIndex: Int = -1
     // An explicit stale-reference holder. selectedRow() replaces it for a
     // valid index and clears it for an invalid index; model mutations do not
     // clear it, so detached-row scenarios remain alive until the next
     // selection lookup or presenter teardown.
-    @QtIgnored private var selectedReference: BridgeRow?
+    private var selectedReference: BridgeRow?
     // A QML var retains only the C++ proxy for a returned bridged object; it
     // does not retain the Swift instance that owns that proxy. The presenter
     // must therefore retain the harness's single standalone return while QML
     // may dereference it. makeRow() replaces this when QML replaces that
     // return slot, and presenter teardown releases the final retained row.
-    @QtIgnored private var lastReturnedRow: BridgeRow?
+    private var lastReturnedRow: BridgeRow?
 
     required public init() {}
 

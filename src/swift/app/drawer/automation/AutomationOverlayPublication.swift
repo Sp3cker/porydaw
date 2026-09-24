@@ -317,16 +317,6 @@ extension AutomationPage {
         }
     }
 
-    func syncRamps(_ values: [AutomationRampHandle]) {
-        let common = min(ramps.count, values.count)
-        for index in 0..<common where !ramps[index].matches(values[index]) {
-            ramps[index] = values[index]
-        }
-        if ramps.count != values.count {
-            ramps.replaceSubrange(common..<ramps.count, with: values[common...])
-        }
-    }
-
     func syncMenuRows(_ values: [AutomationMenuRowHandle]) {
         let common = min(menuRows.count, values.count)
         for index in 0..<common where !menuRows[index].matches(values[index]) {

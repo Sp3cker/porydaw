@@ -44,42 +44,42 @@ public enum QtScrollPhase: Int {
 @MainActor
 @QtBridgeable
 public final class PianoGrid {
-    @QtIgnored private let session: DocumentSession
-    @QtIgnored private let commands: NoteCommands
-    @QtIgnored private(set) var notes: [GridNote] = []
-    @QtIgnored private var gesture: GridGesture?
-    @QtIgnored private var rightGesture: GridGesture?
-    @QtIgnored private var rightBandDemoted = false
-    @QtIgnored private var suppressedLeftRelease = false
-    @QtIgnored private var pendingDrawInterrupted = false
-    @QtIgnored private var bandAuditioned: [NoteID: (track: Int, pitch: Int)] = [:]
-    @QtIgnored private var pendingControlToggle: NoteID?
-    @QtIgnored private var pendingVelocityReanchor: NoteID?
-    @QtIgnored private var selectionAtRightPress: [NoteID] = []
+    private let session: DocumentSession
+    private let commands: NoteCommands
+    private(set) var notes: [GridNote] = []
+    private var gesture: GridGesture?
+    private var rightGesture: GridGesture?
+    private var rightBandDemoted = false
+    private var suppressedLeftRelease = false
+    private var pendingDrawInterrupted = false
+    private var bandAuditioned: [NoteID: (track: Int, pitch: Int)] = [:]
+    private var pendingControlToggle: NoteID?
+    private var pendingVelocityReanchor: NoteID?
+    private var selectionAtRightPress: [NoteID] = []
     @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
     /// The Set Velocity row's dispatch: the document-bound page opens its own
     /// prompt transaction. `true` means the request was accepted. Swift-only,
     /// like the shared playhead's policy entries: no QML surface sees it.
     @QtIgnored public var onSetVelocityRequested: (() -> Bool)?
     @QtIgnored public var onPitchBendRequested: (() -> Bool)?
-    @QtIgnored private var lastCommandAvailability: [Bool] = []
-    @QtIgnored private var lastCommandGestureActive = false
-    @QtIgnored private var keyboardAuditionKey: Int?
+    private var lastCommandAvailability: [Bool] = []
+    private var lastCommandGestureActive = false
+    private var keyboardAuditionKey: Int?
     /// Receives roll auditions as (track, pitch, velocity), including band entrants.
     @QtIgnored public var onAudition: ((Int, Int, Int) -> Void)?
-    @QtIgnored private var didApplyInitialHome = false
-    @QtIgnored private var contentEndTick = GridMetrics.songLengthTicks
-    @QtIgnored private var staticSceneDirty = true
-    @QtIgnored private var staticCameraSnapshot: EditorCamera.Snapshot?
-    @QtIgnored private var staticProjection: PitchProjection?
-    @QtIgnored private var staticBaseFontPx = 0.0
-    @QtIgnored private var staticDevicePixelRatio = 0.0
-    @QtIgnored private var staticContentEndTick = GridMetrics.songLengthTicks
+    private var didApplyInitialHome = false
+    private var contentEndTick = GridMetrics.songLengthTicks
+    private var staticSceneDirty = true
+    private var staticCameraSnapshot: EditorCamera.Snapshot?
+    private var staticProjection: PitchProjection?
+    private var staticBaseFontPx = 0.0
+    private var staticDevicePixelRatio = 0.0
+    private var staticContentEndTick = GridMetrics.songLengthTicks
     /// Last note/selection state baked into `noteSummary`. The summary string
     /// is a check-facing probe: rebuilding it per pointer sample serialized
     /// the whole document, so it is only re-encoded when its inputs change.
-    @QtIgnored private var summaryNotes: [GridNote]?
-    @QtIgnored private var summarySelection: [NoteID]?
+    private var summaryNotes: [GridNote]?
+    private var summarySelection: [NoteID]?
 
     @QtTracked public var scene = GridScene()
     /// The palette the roll draws with: assigned once by `init`, either the
@@ -104,7 +104,7 @@ public final class PianoGrid {
     @QtTracked public var ticksPerBeat = GridMetrics.ticksPerBeat
     @QtTracked public var snapTicks = 6
     @QtTracked public var visibleGridTicks = 12
-    @QtIgnored public private(set) var activeNoteId: UInt64 = 0
+    public private(set) var activeNoteId: UInt64 = 0
     @QtTracked public var cursorKind = 0
     @QtTracked public var statusText = ""
     @QtTracked public var noteSummary = "[]"
@@ -124,9 +124,9 @@ public final class PianoGrid {
     /// standalone grids (checks, fixtures) default both off.
     @QtIgnored public var velocityColorMode = false
     @QtIgnored public var noteNameMode = false
-    @QtIgnored private var measurementFonts: [GridFontKind: GridFontSpec] = [:]
-    @QtIgnored private var typography: GridTypography?
-    @QtIgnored private var typographyKey: (fontPx: Double, dpr: Double, rowHeight: Double)?
+    private var measurementFonts: [GridFontKind: GridFontSpec] = [:]
+    private var typography: GridTypography?
+    private var typographyKey: (fontPx: Double, dpr: Double, rowHeight: Double)?
     @QtIgnored var metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 0, height: 0)
 
     var drawPreview: (tick: Int, duration: Int, pitch: Int)? {
@@ -150,7 +150,7 @@ public final class PianoGrid {
     public var interactionActive: Bool { gesture != nil || rightGesture != nil }
 
     @QtIgnored
-    public func previewVelocity(_ id: NoteID) -> Int? {
+    public func previewVelocity(_ id: NoteID) -> Optional<Int> {
         guard case .velocity(let state) = gesture, let preview = state.preview else { return nil }
         if state.noteId == id { return preview }
         guard session.selectedNotes.contains(id), let note = session.document.note(id) else { return nil }

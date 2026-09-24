@@ -269,6 +269,9 @@ public final class GridPalette {
     public var warningText: String = "#644100"
     public var errorText: String = "#8D1B1F"
 
+    public var polyphonyFlashBackground: String = "#D88985"
+    public var polyphonyFlashText: String = "#302C29"
+
     /// Polyphony channel cells: fixed identity fills shared by every theme,
     /// each with the ink that keeps 4.5:1 on it (white on amber is 3.26:1).
     public var polyphonyActiveFill: String = "#228445"

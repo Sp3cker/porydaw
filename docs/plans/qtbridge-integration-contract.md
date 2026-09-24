@@ -2,6 +2,8 @@
 
 Status: integration requirements referenced by the [current charter](swift-backend-charter.md), recorded 2026-09-19. Runtime guarantees below are NOT yet verified by this assessment. This document does not authorize implementation dispatch or close a production cutover. The proposed [ownership design](swift-ownership-cutover/design.md) records unresolved prerequisites and separates bridge capability from production acceptance.
 
+The current declaration convention and enforcement live in `.omp/rules/qtbridge-surface.md` and `docs/plans/qtbridge-surface/spec.md`. The lifetime ownership table and `RewriteWindow`/context-property rows below are historical records of the retired C++ shell; the verified mechanism/evidence rows remain authoritative for bridge capability.
+
 ## Purpose and ownership direction
 
 Target: Swift application/domain logic and QML views, with minimal handwritten C++ Qt application code. Preserve user behavior, not old C++ presenter interfaces. Use direct QtBridge presenters and collections rather than per-surface C++ mirrors. Grid and headers are the first two consumers proving the shared integration.

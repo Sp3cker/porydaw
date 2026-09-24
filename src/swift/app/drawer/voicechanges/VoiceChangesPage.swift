@@ -182,13 +182,13 @@ public final class VoiceChangesPage: EditorDrawerPage {
     /// voice span, and repeated equal publications, rebuild nothing.
     @QtIgnored public internal(set) var contentBuildCount: UInt64 = 0
     /// Shared-playhead presentations the page consumed.
-    @QtIgnored public private(set) var playheadPresentationCount: UInt64 = 0
+    public private(set) var playheadPresentationCount: UInt64 = 0
     /// Presentations that crossed a voice context: the readout/indicator change.
-    @QtIgnored public private(set) var contextChangeCount: UInt64 = 0
-    @QtIgnored public private(set) var presentedContextTick: Tick = 0
-    @QtIgnored public private(set) var presentedContextSlot: Int = -1
-    @QtIgnored public private(set) var presentedPlaying = false
-    @QtIgnored private var lastPresentedPublication: (tick: Tick, playing: Bool)?
+    public private(set) var contextChangeCount: UInt64 = 0
+    public private(set) var presentedContextTick: Tick = 0
+    public private(set) var presentedContextSlot: Int = -1
+    public private(set) var presentedPlaying = false
+    private var lastPresentedPublication: (tick: Tick, playing: Bool)?
 
     // MARK: Check-facing state
 
@@ -224,8 +224,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
     /// The presented context span's end tick: the boundary a later presentation
     /// has to cross to change the readout, or `TimeDefaults.noTick` when the
     /// span runs to the song's end.
-    @QtIgnored public private(set) var presentedContextEndTick: Tick = TimeDefaults.noTick
-    @QtIgnored private var presentedContextStartTick: Tick = 0
+    public private(set) var presentedContextEndTick: Tick = TimeDefaults.noTick
+    private var presentedContextStartTick: Tick = 0
 
     @QtIgnored weak var session: DocumentSession?
     @QtIgnored var palette = GridPalette()
@@ -242,7 +242,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @QtIgnored var dragDistance: Double = 10
     @QtIgnored var contextTick: Tick = 0
     @QtIgnored var playing = false
-    @QtIgnored private var lastContextKey: VoiceContextKey?
+    private var lastContextKey: VoiceContextKey?
     @QtIgnored let pickerCache = VoicePickerProjectionCache()
     @QtIgnored var metricsKey: MetricsKey?
     @QtIgnored var cachedMetrics: GridMetrics?

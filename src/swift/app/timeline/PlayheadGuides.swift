@@ -21,9 +21,9 @@ public enum PlayheadGuideHoverOwner: Int, Sendable {
 @MainActor
 @QtBridgeable
 public final class PlayheadGuideState {
-    @QtTracked public var contentX: Double = 0
+    public var contentX: Double = 0
     @QtTracked public var visible = false
-    @QtTracked public var kind: Int
+    public var kind: Int
 
     public init(kind: Int) {
         self.kind = kind
@@ -42,12 +42,12 @@ public final class PlayheadGuidesPresenter {
     @QtTracked public var timelineAttached = false
 
     /// Distinct guide publications, retained for deterministic presenter checks.
-    @QtIgnored public private(set) var presentationCount: UInt64 = 0
+    public private(set) var presentationCount: UInt64 = 0
 
-    @QtIgnored private weak var session: DocumentSession?
-    @QtIgnored private var hoverOwner: Int?
-    @QtIgnored private var hoverTick: Double?
-    @QtIgnored private var published: Presentation?
+    private weak var session: DocumentSession?
+    private var hoverOwner: Int?
+    private var hoverTick: Double?
+    private var published: Presentation?
 
     private struct Presentation: Equatable {
         var timelineAttached: Bool

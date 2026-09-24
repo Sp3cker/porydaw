@@ -23,7 +23,6 @@ FocusScope {
     readonly property var defaultColumnWidths: [70, 120, 36, 56, 56, 140]
 
     property int currentColumn: 0
-    // Bound by TimelineCanvas to its sibling TimelineInputItem.activeFocus.
     // Window-wide shortcuts must only operate while that input owns navigation.
     property bool navigationInputActive: activeFocus
 

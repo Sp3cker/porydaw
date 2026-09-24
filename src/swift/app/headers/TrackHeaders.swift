@@ -25,37 +25,37 @@ public struct HeaderScrollPosition {
 public final class TrackHeadersPresenter {
     public var rows: QListModel<TrackHeaderRowHandle> = QListModel()
     public var menuItems: QListModel<TrackHeaderMenuItem> = QListModel()
-    @QtTracked public var trackHeaderWidth: Double = 0
-    @QtTracked public var rowHeight: Int = 0
-    @QtTracked public var activityWidth: Int = 0
-    @QtTracked public var separatorWidth: Int = 0
-    @QtTracked public var scrollbarWidth: Int = 0
-    @QtTracked public var scrollbarMinimumThumbHeight: Int = 0
-    @QtTracked public var reorderIndicatorHeight: Int = 0
-    @QtTracked public var contentHeight: Int = 0
-    @QtTracked public var viewportHeight: Double = 0
-    @QtTracked public var maximumScrollY: Double = 0 {
+    public var trackHeaderWidth: Double = 0
+    public var rowHeight: Int = 0
+    public var activityWidth: Int = 0
+    public var separatorWidth: Int = 0
+    public var scrollbarWidth: Int = 0
+    public var scrollbarMinimumThumbHeight: Int = 0
+    public var reorderIndicatorHeight: Int = 0
+    public var contentHeight: Int = 0
+    public var viewportHeight: Double = 0
+    public var maximumScrollY: Double = 0 {
         willSet { _scrollY.maximum = newValue }
     }
-    @QtTracked @HeaderScrollPosition public var scrollY: Double = 0
-    @QtTracked public var muteButtonRect: [String: QVariantSettable] = HeaderRect().map
-    @QtTracked public var soloButtonRect: [String: QVariantSettable] = HeaderRect().map
-    @QtTracked public var voiceLineRect: [String: QVariantSettable] = HeaderRect().map
-    @QtTracked public var renameEditorRect: [String: QVariantSettable] = HeaderRect().map
-    @QtTracked public var renamingTrack: Int = -1
-    @QtTracked public var renameDraft: String = ""
-    @QtTracked public var renamePlaceholder: String = ""
+    @HeaderScrollPosition public var scrollY: Double = 0
+    public var muteButtonRect: [String: QVariantSettable] = HeaderRect().map
+    public var soloButtonRect: [String: QVariantSettable] = HeaderRect().map
+    public var voiceLineRect: [String: QVariantSettable] = HeaderRect().map
+    public var renameEditorRect: [String: QVariantSettable] = HeaderRect().map
+    public var renamingTrack: Int = -1
+    public var renameDraft: String = ""
+    public var renamePlaceholder: String = ""
     @QtTracked public var reorderIndicatorVisible = false
-    @QtTracked public var reorderIndicatorY: Double = 0
+    public var reorderIndicatorY: Double = 0
     @QtTracked public var menuOpen = false
-    @QtTracked public var rowRebuildCount: Int = 0
-    @QtTracked public var lastCancelReason: Int = -1
-    @QtTracked public var cursorKind: Int = 0
-    @QtTracked public var controlFont: [String: QVariantSettable] = [:]
-    @QtTracked public var appearance: [String: QVariantSettable] = [:]
-    @QtTracked public var normalTitleFont: [String: QVariantSettable] = [:]
-    @QtTracked public var boldTitleFont: [String: QVariantSettable] = [:]
-    @QtTracked public var subtitleFont: [String: QVariantSettable] = [:]
+    public var rowRebuildCount: Int = 0
+    public var lastCancelReason: Int = -1
+    public var cursorKind: Int = 0
+    public var controlFont: [String: QVariantSettable] = [:]
+    public var appearance: [String: QVariantSettable] = [:]
+    public var normalTitleFont: [String: QVariantSettable] = [:]
+    public var boldTitleFont: [String: QVariantSettable] = [:]
+    public var subtitleFont: [String: QVariantSettable] = [:]
     /// Supplied by the same Qt host style hints as every other pointer surface.
     public var dragDistance: Double = 0
 
@@ -302,7 +302,7 @@ public final class TrackHeadersPresenter {
             session.document.renameTrack(target.track, to: draft)
             refreshFromDocument()
         }
-        if restoreRollFocus { onRestoreRollFocus?(); rollFocusRequested() }
+        if restoreRollFocus { onRestoreRollFocus?() }
     }
 
     public func beginPointer(x: Double, y: Double, button: Int, modifiers: Int) -> Bool {
@@ -383,7 +383,6 @@ public final class TrackHeadersPresenter {
     }
 
     @QtSignal public func contextMenuRequested(x: Double, y: Double)
-    @QtSignal public func rollFocusRequested()
 
     @QtIgnored
     func validTrack(_ track: Int) -> Bool {

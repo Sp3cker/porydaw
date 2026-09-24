@@ -176,10 +176,10 @@ public final class VelocityPage: EditorDrawerPage {
     public var rampLength: Double = 0
     public var rampSlopeY: Double = 0
     public var rampColor: String = ""
-    @QtTracked public var promptOpen: Bool = false
+    public var promptOpen: Bool = false
     public var promptAppearance: [String: QVariantSettable] = [:]
     public var promptFont: [String: QVariantSettable] = [:]
-    @QtTracked public var promptDraft: String = ""
+    public var promptDraft: String = ""
     public var promptError: String = ""
     public var promptTitle: String = "Note velocity"
     public var promptLabel: String = "Velocity (1-127):"
@@ -204,14 +204,14 @@ public final class VelocityPage: EditorDrawerPage {
     /// context, and repeated equal publications, rebuild nothing.
     @QtIgnored public internal(set) var contentBuildCount: UInt64 = 0
     /// Shared-playhead presentations the page consumed.
-    @QtIgnored public private(set) var playheadPresentationCount: UInt64 = 0
+    public private(set) var playheadPresentationCount: UInt64 = 0
     /// The tick and context slot the page last presented.
-    @QtIgnored public private(set) var presentedContextTick: Tick = 0
-    @QtIgnored public private(set) var presentedContextSlot: Int = -1
-    @QtIgnored public private(set) var presentedPlaying = false
+    public private(set) var presentedContextTick: Tick = 0
+    public private(set) var presentedContextSlot: Int = -1
+    public private(set) var presentedPlaying = false
     /// The last publication the page consumed, so one published change that
     /// reaches the page through both of its signals counts once.
-    @QtIgnored private var lastPresentedPublication: (tick: Tick, playing: Bool)?
+    private var lastPresentedPublication: (tick: Tick, playing: Bool)?
     @QtIgnored public var hasGesture: Bool { gesture != nil }
     /// The primary track's selected notes as the published identity text, for the
     /// lane's real-input cases: the grid's own summary is only as fresh as its

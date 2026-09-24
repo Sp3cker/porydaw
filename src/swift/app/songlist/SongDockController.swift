@@ -15,11 +15,11 @@ public final class SongDockController {
     @QtTracked public var deletableVoicegroup = ""
     @QtTracked public var busy = false
 
-    @QtIgnored private weak var session: ApplicationSession?
-    @QtIgnored private var service: ProjectService?
-    @QtIgnored private var registrationPlan: SongRegistrationPlan?
-    @QtIgnored private var deletionPlan: SongDeletionPlan?
-    @QtIgnored private var operation: Task<Void, Never>?
+    private weak var session: ApplicationSession?
+    private var service: ProjectService?
+    private var registrationPlan: SongRegistrationPlan?
+    private var deletionPlan: SongDeletionPlan?
+    private var operation: Task<Void, Never>?
 
     public init() {
         presenter.onSongActivated = { [weak self] id in self?.open(id, newTab: false) }

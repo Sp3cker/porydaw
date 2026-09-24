@@ -41,7 +41,7 @@ public final class EngineSettingsStore: QmlInstantiableStatus {
     @QtTracked public var songAvailable = false
     @QtTracked public var songLabel = ""
     @QtTracked public var voicegroup = ""
-    @QtTracked public var voicegroups: [String] = []
+    public var voicegroups: [String] = []
     @QtTracked public var masterVolume = 127
     @QtTracked public var reverb = -1
     @QtTracked public var priority = 0
@@ -51,9 +51,9 @@ public final class EngineSettingsStore: QmlInstantiableStatus {
     @QtTracked public var isApplying = false
     @QtTracked public var revision = 0
 
-    @QtIgnored private weak var session: ApplicationSession?
-    @QtIgnored private var committed = EngineSettings()
-    @QtIgnored private var target: DocumentSession?
+    private weak var session: ApplicationSession?
+    private var committed = EngineSettings()
+    private var target: DocumentSession?
 
     public required init() {}
     public func componentComplete() {}
