@@ -99,6 +99,7 @@ deno task verify                             # native check runner harnesses (bu
 deno task verify --filter swiftcore --verbose  # Swift core/presenter suites
 deno task verify:shell [--filter <entry>] --verbose  # production ShellWindow QML lanes
 deno task verify:qml --verbose               # editor drawer QML lane
+deno task verify:qml-roll --verbose          # Swift roll window QML lane
 deno task format [--check] [files...]
 ```
 

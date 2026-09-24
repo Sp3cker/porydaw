@@ -13,6 +13,7 @@ ApplicationWindow {
     readonly property alias shellPresenter: shell
     readonly property alias sceneLoader: editorScene
     readonly property QtObject colors: shell.session.palette
+    property bool establishApplicationIdentity: false
     property int actionRevision: 0
     readonly property int bodyFontPx: Math.max(1, Math.round(baseFontInfo.pixelSize * 1.125))
     width: bodyFontPx * 72
@@ -67,6 +68,11 @@ ApplicationWindow {
         }
     }
     Component.onCompleted: {
+        if (establishApplicationIdentity) {
+            Qt.application.name = "porydaw"
+            Qt.application.organization = "sp3cker"
+            Qt.application.domain = ""
+        }
         appearanceStore.active = true
     }
 

@@ -195,7 +195,7 @@ public final class GridPalette {
 
     public var noteVelocityZero: String = "#8B847E"
     public func noteFill(track: Int, velocity: Int) -> String {
-        PaletteMath.noteFill(track: track, velocity: velocity)
+        PaletteMath.noteFill(track: track, velocity: velocity, zeroColor: noteVelocityZero)
     }
 
     public var noteBorder: String = "#FF000000"

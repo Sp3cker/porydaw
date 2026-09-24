@@ -391,4 +391,58 @@ TestCase {
                    "the second chrome Space stops transport")
     }
 
+    function test_dCopyFromOneSongTabPastesIntoAnother() {
+        var firstId = openTwoSongShell()
+        var tabs = shell.shellPresenter.session.songTabs
+        var secondId = tabs.selectedId
+        var source = selectedSurface()
+        verify(source && source.gridModel, "the source tab has a grid")
+        selectDrawnVelocityNote(source)
+        var sourceSummary = source.gridModel.noteSummary
+        var selected = JSON.parse(sourceSummary).filter(function(note) { return note.selected })
+        compare(selected.length, 1, "one source note is selected")
+        var sourceRoll = findChild(source, "swiftRollInput")
+        sourceRoll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(sourceRoll, "activeFocus", true, 3000)
+        keySequence(StandardKey.Copy)
+        compare(JSON.parse(bootstrap.copiedClipSummary())[2], selected[0].pitch,
+                "Copy places the selected source note on the host clipboard")
+
+        var firstButton = findChild(shell.sceneLoader.item, "songTabSelect_" + firstId)
+        verify(firstButton, "the destination tab control exists")
+        mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
+        tryCompare(tabs, "selectedId", firstId, 3000)
+        var destination = selectedSurface()
+        verify(destination && destination.gridModel, "the destination tab has a grid")
+        var destinationBefore = JSON.parse(destination.gridModel.noteSummary)
+        var destinationIDs = destinationBefore.map(function(note) { return note.id })
+        var destinationTrack = destination.gridModel.trackIndex
+        var destinationRoll = findChild(destination, "swiftRollInput")
+        destinationRoll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(destinationRoll, "activeFocus", true, 3000)
+        keySequence(StandardKey.Paste)
+        verify(waitForNative(function() {
+            var notes = JSON.parse(destination.gridModel.noteSummary)
+            return notes.some(function(note) {
+                return destinationIDs.indexOf(note.id) < 0
+                    && note.pitch === selected[0].pitch && note.track === destinationTrack
+                    && note.selected
+            })
+        }, 5000), "Paste inserts and selects the copied note in the destination track")
+        var destinationAfter = JSON.parse(destination.gridModel.noteSummary)
+        var inserted = destinationAfter.filter(function(note) {
+            return destinationIDs.indexOf(note.id) < 0
+        })
+        compare(inserted.length, 1, "Paste changes only the destination by one note")
+        compare(destination.gridModel.editCursorTick, inserted[0].tick + inserted[0].duration,
+                "Paste advances the destination edit cursor past the inserted note")
+
+        var secondButton = findChild(shell.sceneLoader.item, "songTabSelect_" + secondId)
+        verify(secondButton, "the source tab control still exists")
+        mouseClick(secondButton, secondButton.width / 3, secondButton.height / 2)
+        tryCompare(tabs, "selectedId", secondId, 3000)
+        compare(selectedSurface().gridModel.noteSummary, sourceSummary,
+                "cross-tab Paste leaves the source song unchanged")
+    }
+
 }

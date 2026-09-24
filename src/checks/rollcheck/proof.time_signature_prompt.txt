@@ -54,7 +54,7 @@ Original assertion inventory and source sequence
 
 A001 | PianoRollTest::timeSignaturePromptAcceptUndoGrid | src/checks/rollcheck/time_signature_prompt.cpp:221
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:271 verifies the staged song seeded a 3/4 chip at four beats, so the fixture opened.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:260 verifies the staged song seeded a 3/4 chip at four beats, so the fixture opened.
 Source context since previous assertion:
   // Time-signature editing through the live ruler and its in-canvas Quick
   // prompt. These checks deliberately drive the existing Quick window rather
@@ -281,7 +281,7 @@ Original expression:
 
 A002 | PianoRollTest::timeSignaturePromptAcceptUndoGrid | src/checks/rollcheck/time_signature_prompt.cpp:230
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:255 verifies double-click realized timeSignaturePrompt.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:244 verifies double-click realized timeSignaturePrompt.
 Source context since previous assertion:
   ;
       SongDocument &document = fixture->document();
@@ -297,7 +297,7 @@ Original expression:
 
 A003 | PianoRollTest::timeSignaturePromptAcceptUndoGrid | src/checks/rollcheck/time_signature_prompt.cpp:233
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:257 verifies the numerator text editor exists.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:246 verifies the numerator text editor exists.
 Source context since previous assertion:
   ;
       QQuickItem *const numerator =
@@ -307,7 +307,7 @@ Original expression:
 
 A004 | PianoRollTest::timeSignaturePromptAcceptUndoGrid | src/checks/rollcheck/time_signature_prompt.cpp:237
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:276 compares the numerator text to 7.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:265 compares the numerator text to 7.
 Source context since previous assertion:
   ;
 
@@ -318,7 +318,7 @@ Original expression:
 
 A005 | PianoRollTest::timeSignaturePromptAcceptUndoGrid | src/checks/rollcheck/time_signature_prompt.cpp:238
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:264 verifies the denominator-8 button exists and clicks it.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:253 verifies the denominator-8 button exists and clicks it.
 Source context since previous assertion:
   ;
 Original expression:
@@ -326,7 +326,7 @@ Original expression:
 
 A006 | PianoRollTest::timeSignaturePromptAcceptUndoGrid | src/checks/rollcheck/time_signature_prompt.cpp:245
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:279 verifies Return left timeSigPromptOpen false.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:268 verifies Return left timeSigPromptOpen false.
 Source context since previous assertion:
   ;
       // The denominator now owns focus; Enter must commit the displayed 7/8,
@@ -340,7 +340,7 @@ Original expression:
 
 A007 | PianoRollTest::timeSignaturePromptAcceptUndoGrid | src/checks/rollcheck/time_signature_prompt.cpp:251
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:280-284 compares numerator 7, denominator power 3, revision + 1, undo index + 1, and undo count + 1; src/checks/rollcheck/time_signature_prompt.swift:36 asserts the same document result.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:269-273 compares numerator 7, denominator power 3, revision + 1, undo index + 1, and undo count + 1; src/checks/rollcheck/time_signature_prompt.swift:36 asserts the same document result.
 Source context since previous assertion:
   ;
       const std::vector<DocTimeSig> signatures = document.timeSigs();
@@ -367,7 +367,7 @@ Original expression:
 
 A009 | PianoRollTest::timeSignaturePromptAcceptUndoGrid | src/checks/rollcheck/time_signature_prompt.cpp:262
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:285-288 compares segment start, seven beats per bar, and beat ticks of ticksPerBeat / 2; src/checks/rollcheck/time_signature_prompt.swift:55 asserts the same segment.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:274-277 compares segment start, seven beats per bar, and beat ticks of ticksPerBeat / 2; src/checks/rollcheck/time_signature_prompt.swift:55 asserts the same segment.
 Source context since previous assertion:
   ;
       songview::TimeAxis axis;
@@ -380,7 +380,7 @@ Original expression:
 
 A010 | PianoRollTest::timeSignaturePromptAcceptUndoGrid | src/checks/rollcheck/time_signature_prompt.cpp:266
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:289 verifies Return returned active focus to the ruler input.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:278 verifies Return returned active focus to the ruler input.
 Source context since previous assertion:
   ;
 
@@ -399,7 +399,7 @@ Original expression:
 
 A012 | PianoRollTest::timeSignaturePromptAcceptUndoGrid | src/checks/rollcheck/time_signature_prompt.cpp:273
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:293 reopens the chip and the helper at line 255 verifies the prompt.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:282 reopens the chip and the helper at line 244 verifies the prompt.
 Source context since previous assertion:
   ;
 
@@ -410,7 +410,7 @@ Original expression:
 
 A013 | PianoRollTest::timeSignaturePromptAcceptUndoGrid | src/checks/rollcheck/time_signature_prompt.cpp:278
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:296 verifies the reopened prompt has an Accept button.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:285 verifies the reopened prompt has an Accept button.
 Source context since previous assertion:
   ;
       const QByteArray beforeUnchanged = document.smf().write();
@@ -423,7 +423,7 @@ Original expression:
 
 A014 | PianoRollTest::timeSignaturePromptAcceptUndoGrid | src/checks/rollcheck/time_signature_prompt.cpp:281
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:298-299 verifies the prompt closed and bytes, revision, undo index, and undo count stayed unchanged.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:287-288 verifies the prompt closed and bytes, revision, undo index, and undo count stayed unchanged.
 Source context since previous assertion:
   ;
       QCoreApplication::processEvents();
@@ -436,7 +436,7 @@ Original expression:
 
 A015 | PianoRollTest::timeSignaturePromptCancelStale | src/checks/rollcheck/time_signature_prompt.cpp:293
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:304 verifies the cancel fixture opened.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:293 verifies the cancel fixture opened.
 Source context since previous assertion:
   ;
   }
@@ -451,7 +451,7 @@ Original expression:
 
 A016 | PianoRollTest::timeSignaturePromptCancelStale | src/checks/rollcheck/time_signature_prompt.cpp:302
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:306 opens the chip and the helper at line 255 verifies the prompt.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:295 opens the chip and the helper at line 244 verifies the prompt.
 Source context since previous assertion:
   ;
       SongDocument &document = fixture->document();
@@ -467,7 +467,7 @@ Original expression:
 
 A017 | PianoRollTest::timeSignaturePromptCancelStale | src/checks/rollcheck/time_signature_prompt.cpp:304
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:309 verifies the Cancel button exists.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:298 verifies the Cancel button exists.
 Source context since previous assertion:
   ;
       QTest::keySequence(cancelled.window, QKeySequence(Qt::Key_7));
@@ -477,7 +477,7 @@ Original expression:
 
 A018 | PianoRollTest::timeSignaturePromptCancelStale | src/checks/rollcheck/time_signature_prompt.cpp:308
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:311-312 verifies the prompt closed and bytes, revision, undo index, and undo count stayed unchanged.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:300-301 verifies the prompt closed and bytes, revision, undo index, and undo count stayed unchanged.
 Source context since previous assertion:
   ;
       QCoreApplication::processEvents();
@@ -490,7 +490,7 @@ Original expression:
 
 A019 | PianoRollTest::timeSignaturePromptCancelStale | src/checks/rollcheck/time_signature_prompt.cpp:312
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:313 verifies Cancel returned active focus to the ruler input.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:302 verifies Cancel returned active focus to the ruler input.
 Source context since previous assertion:
   ;
 Original expression:
@@ -499,7 +499,7 @@ Original expression:
 
 A020 | PianoRollTest::timeSignaturePromptCancelStale | src/checks/rollcheck/time_signature_prompt.cpp:317
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:315 opens the invalid prompt and the helper at line 255 verifies it.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:304 opens the invalid prompt and the helper at line 244 verifies it.
 Source context since previous assertion:
   ;
 
@@ -510,7 +510,7 @@ Original expression:
 
 A021 | PianoRollTest::timeSignaturePromptCancelStale | src/checks/rollcheck/time_signature_prompt.cpp:321
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:320-321 verifies invalid 999 left the prompt open and the song snapshot unchanged.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:309-310 verifies invalid 999 left the prompt open and the song snapshot unchanged.
 Source context since previous assertion:
   ;
       QTest::keySequence(invalid.window, QKeySequence(Qt::Key_9, Qt::Key_9, Qt::Key_9));
@@ -524,7 +524,7 @@ Original expression:
 
 A022 | PianoRollTest::timeSignaturePromptCancelStale | src/checks/rollcheck/time_signature_prompt.cpp:327
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:323 verifies Escape left timeSigPromptOpen false.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:312 verifies Escape left timeSigPromptOpen false.
 Source context since previous assertion:
   ;
       QTest::keyClick(invalid.window, Qt::Key_Escape);
@@ -534,7 +534,7 @@ Original expression:
 
 A023 | PianoRollTest::timeSignaturePromptCancelStale | src/checks/rollcheck/time_signature_prompt.cpp:330
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:325 opens the stale prompt and the helper at line 255 verifies it.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:314 opens the stale prompt and the helper at line 244 verifies it.
 Source context since previous assertion:
   ;
 
@@ -544,7 +544,7 @@ Original expression:
 
 A024 | PianoRollTest::timeSignaturePromptCancelStale | src/checks/rollcheck/time_signature_prompt.cpp:339
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:329-330 verifies the revision closed the prompt and added no command beyond the intervening edit.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:318-319 verifies the revision closed the prompt and added no command beyond the intervening edit.
 Source context since previous assertion:
   ;
       // A document revision change owns stale-session retirement; it must not
@@ -564,7 +564,7 @@ Original expression:
 
 A025 | PianoRollTest::timeSignaturePromptMenuEntries | src/checks/rollcheck/time_signature_prompt.cpp:359
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:339-342 verifies the menu fixture and the mounted ruler input.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:328-331 verifies the menu fixture and the mounted ruler input.
 Source context since previous assertion:
   ;
   }
@@ -587,7 +587,7 @@ Original expression:
 
 A026 | PianoRollTest::timeSignaturePromptMenuEntries | src/checks/rollcheck/time_signature_prompt.cpp:362
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:348 verifies the shared ruler menu is open.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:337 verifies the shared ruler menu is open.
 Source context since previous assertion:
   ;
       const quick_popup::PromptGuard guard(fixture->view());
@@ -597,7 +597,7 @@ Original expression:
 
 A027 | PianoRollTest::timeSignaturePromptMenuEntries | src/checks/rollcheck/time_signature_prompt.cpp:364
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:352 verifies the menu closed and line 356 verifies the prompt owns the open session.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:341 verifies the menu closed and line 345 verifies the prompt owns the open session.
 Source context since previous assertion:
   ;
       songview::QuickPopupSession *const popup = quick_popup::popupSession(fixture->view());
@@ -607,7 +607,7 @@ Original expression:
 
 A028 | PianoRollTest::timeSignaturePromptMenuEntries | src/checks/rollcheck/time_signature_prompt.cpp:366
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:356 verifies the menu action realized timeSignaturePrompt.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:345 verifies the menu action realized timeSignaturePrompt.
 Source context since previous assertion:
   ;
 Original expression:
@@ -616,7 +616,7 @@ Original expression:
 
 A029 | PianoRollTest::timeSignaturePromptMenuEntries | src/checks/rollcheck/time_signature_prompt.cpp:371
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:360 verifies Escape left timeSigPromptOpen false.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:349 verifies Escape left timeSigPromptOpen false.
 Source context since previous assertion:
   ;
 
@@ -628,7 +628,7 @@ Original expression:
 
 A030 | PianoRollTest::timeSignaturePromptMenuEntries | src/checks/rollcheck/time_signature_prompt.cpp:373
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:361 verifies closing the menu prompt returned active focus to the ruler input.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:350 verifies closing the menu prompt returned active focus to the ruler input.
 Source context since previous assertion:
   ;
 Original expression:
@@ -637,7 +637,7 @@ Original expression:
 
 A031 | PianoRollTest::timeSignaturePromptCursorEntry | src/checks/rollcheck/time_signature_prompt.cpp:394
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:370 verifies the cursor fixture opened.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:359 verifies the cursor fixture opened.
 Source context since previous assertion:
   ;
   }
@@ -664,7 +664,7 @@ Original expression:
 
 A032 | PianoRollTest::timeSignaturePromptCursorEntry | src/checks/rollcheck/time_signature_prompt.cpp:405
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:373-376 verifies the exact edit cursor and the live ruler input.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:362-365 verifies the exact edit cursor and the live ruler input.
 Source context since previous assertion:
   ;
       SongDocument &document = fixture->document();
@@ -682,7 +682,7 @@ Original expression:
 
 A033 | PianoRollTest::timeSignaturePromptCursorEntry | src/checks/rollcheck/time_signature_prompt.cpp:408
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:381 verifies the cursor action realized timeSignaturePrompt.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:370 verifies the cursor action realized timeSignaturePrompt.
 Source context since previous assertion:
   ;
       ruler->editTimeSignatureAtCursor();
@@ -692,7 +692,7 @@ Original expression:
 
 A034 | PianoRollTest::timeSignaturePromptCursorEntry | src/checks/rollcheck/time_signature_prompt.cpp:414
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:383 verifies the cursor prompt has a numerator input.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:372 verifies the cursor prompt has a numerator input.
 Source context since previous assertion:
   ;
 
@@ -705,7 +705,7 @@ Original expression:
 
 A035 | PianoRollTest::timeSignaturePromptCursorEntry | src/checks/rollcheck/time_signature_prompt.cpp:415
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:385 compares the seeded numerator text to 3.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:374 compares the seeded numerator text to 3.
 Source context since previous assertion:
   ;
 Original expression:
@@ -713,7 +713,7 @@ Original expression:
 
 A036 | PianoRollTest::timeSignaturePromptCursorEntry | src/checks/rollcheck/time_signature_prompt.cpp:419
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:387 compares the typed numerator text to 5.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:376 compares the typed numerator text to 5.
 Source context since previous assertion:
   ;
 
@@ -724,7 +724,7 @@ Original expression:
 
 A037 | PianoRollTest::timeSignaturePromptCursorEntry | src/checks/rollcheck/time_signature_prompt.cpp:420
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:388 chooses denominator 8; line 264 verifies that button and clicks it.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:377 chooses denominator 8; line 253 verifies that button and clicks it.
 Source context since previous assertion:
   ;
 Original expression:
@@ -732,7 +732,7 @@ Original expression:
 
 A038 | PianoRollTest::timeSignaturePromptCursorEntry | src/checks/rollcheck/time_signature_prompt.cpp:425
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:390 verifies Return left timeSigPromptOpen false.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:379 verifies Return left timeSigPromptOpen false.
 Source context since previous assertion:
   ;
       QTest::keyClick(opened.window, Qt::Key_Return);
@@ -744,7 +744,7 @@ Original expression:
 
 A039 | PianoRollTest::timeSignaturePromptCursorEntry | src/checks/rollcheck/time_signature_prompt.cpp:430
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:391-395 compares numerator 5, denominator power 3, revision + 1, undo index + 1, and undo count + 1 at the cursor tick; src/checks/rollcheck/time_signature_prompt.swift:73 asserts the same document result.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:380-384 compares numerator 5, denominator power 3, revision + 1, undo index + 1, and undo count + 1 at the cursor tick; src/checks/rollcheck/time_signature_prompt.swift:73 asserts the same document result.
 Source context since previous assertion:
   ;
       const std::vector<DocTimeSig> signatures = document.timeSigs();
@@ -774,7 +774,7 @@ Original expression:
 
 A041 | PianoRollTest::timeSignaturePromptCursorEntry | src/checks/rollcheck/time_signature_prompt.cpp:443
 Disposition: MATCHED
-Mapping: src/checks/rollqml/tst_SwiftRoll.qml:401 verifies Return returned active focus to the ruler input.
+Mapping: src/checks/rollqml/tst_SwiftRoll.qml:390 verifies Return returned active focus to the ruler input.
 Source context since previous assertion:
   ;
       }

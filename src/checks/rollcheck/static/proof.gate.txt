@@ -34,14 +34,14 @@ Verified Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313
 Verified ready-wheel Swift SHA-256: f848be0e07c37edd0f644d93a836391c1e59f540fa088cd96b3e229cd12718f2
 Converted-window command: deno task verify:qml-roll --verbose
 Converted-window result: PASS (controller); test_readyRollWheelZoom exercises A068.
-Verified QML SHA-256: e0b92076f7f202fd3a2a84bde6e5ff36fb71579a3b496742e3f126bb04e50fb6
+Verified QML SHA-256: e7f78598b6eefcfa4b2e120273fe74c89b3b2a13ad78d286d0dbba11c6478da0
 The legacy header/camera/playhead harnesses are not registered in this checkout.
 Their C++ sources are reference inventories only, never current execution evidence.
 
 Execution and ownership
 runEditorCameraChecks and checkGridCameraWheel execute the 41 camera
 predicates below in suite 10. runGateChecks executes S042 on the same ready
-session, and tst_SwiftRollWindowing.qml:307-323 sends a wheel to the mounted
+session, and tst_SwiftRollWindowing.qml:303-319 sends a wheel to the mounted
 roll input and observes the resulting time zoom. No Swift function executes
 the MIDI-only gate slots. The original slots run under PianoRollStaticTest on
 the GateFixture (static/fixtures.h, fixtures.cpp): a deliberately local
@@ -875,7 +875,7 @@ Original expression:
 
 A068 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:344
 Disposition: MATCHED
-Mapping: S042 in src/checks/rollcheck/static/gate.swift:21 asserts ready time zoom increases after a +120 angle-delta wheel at (80, 100); src/checks/rollqml/tst_SwiftRollWindowing.qml:307-323 sends that wheel to the mounted roll input and verifies the visible time zoom changes. The MIDI-only gated hold A066 remains PARTIAL.
+Mapping: S042 in src/checks/rollcheck/static/gate.swift:21 asserts ready time zoom increases after a +120 angle-delta wheel at (80, 100); src/checks/rollqml/tst_SwiftRollWindowing.qml:303-319 sends that wheel to the mounted roll input and verifies the visible time zoom changes. The MIDI-only gated hold A066 remains PARTIAL.
 Source context since previous assertion:
   ;
       const double ready = fixture.view()->camera().pxPerBeat();

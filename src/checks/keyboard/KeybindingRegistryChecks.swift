@@ -120,4 +120,3 @@ public func runKeybindingRegistryChecks(
         modifierChords,
         "Control plus Shift does not arm velocity drag")
 }
-

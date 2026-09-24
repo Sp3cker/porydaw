@@ -191,11 +191,16 @@ async function stageFixtureFiles(
     );
   }
 
+  const createdDirectories = new Set<string>();
   for (const relativePath of check.fixtureFiles) {
     const source = join(sourceRoot, relativePath);
     const destination = join(scratch, relativePath);
     await requiredFile(source, `${check.name} fixture file`);
-    await Deno.mkdir(dirname(destination), { recursive: true });
+    const directory = dirname(destination);
+    if (!createdDirectories.has(directory)) {
+      await Deno.mkdir(directory, { recursive: true });
+      createdDirectories.add(directory);
+    }
     await Deno.copyFile(source, destination);
   }
 }
