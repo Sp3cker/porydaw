@@ -4,7 +4,7 @@ Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/clipboard/selectioncheck_core.cpp
 Original SHA-256: 6ce29f432dbc1378d18cfbd24b1b4a03699ad616cd0781a4d16da021faa6f6a3
 Swift counterpart: src/checks/editcheck/SelectionChecks.swift
-Swift SHA-256: 7371e9f4f9e9267a778392fe52356c06f6781e769a061c527c6b3c8feb71e25b
+Swift SHA-256: 89df5cc2ea66edee4dbdc58d6c241d0c5dce1583289bfd775c4e3e93775e5842
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -32,6 +32,9 @@ Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS: build ok; "ok: swiftcore (10.20s)"; "verify: 1/6 ok (5 skipped)";
 "run_checks: PASS".
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS: build ok 13.31s; "ok: swiftcore (16.81s)"; "verify: 1/6 ok (5 skipped)";
+"run_checks: PASS". Controller-observed; covers S001-S016.
 Provenance: observed verification reported for this round-2 re-pin; this
 proof-only reconciliation did not rebuild or re-run any suite. LSP diagnostics
 were clean on all touched files. The Swift SHA-256 above is the final

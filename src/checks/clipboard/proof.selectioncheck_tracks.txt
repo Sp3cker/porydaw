@@ -4,7 +4,7 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/clipboard/selectioncheck_tracks.cpp
 Original SHA-256: c0fa3450cb285e33ceb356561d3055af065b6fc341901fea52f96135ae14f7dd
 Swift counterpart: src/checks/editcheck/SelectionChecks.swift
-Swift SHA-256: 7371e9f4f9e9267a778392fe52356c06f6781e769a061c527c6b3c8feb71e25b
+Swift SHA-256: 89df5cc2ea66edee4dbdc58d6c241d0c5dce1583289bfd775c4e3e93775e5842
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -13,9 +13,10 @@ including notification-transition guards. Source context preserves setup and
 guards between assertions verbatim. The current Swift counterpart is
 src/checks/editcheck/SelectionChecks.swift :: clipboardTrackSelectionChecks; its
 executed predicates cover the primary-track transitions, the toggle/plain/range
-scope gestures, the note handoff, the out-of-range guard and the remap
-primary/scope/note/coalesced-publication values, and are indexed as S001-S023
-below. No production change in this reconciliation: src/swift/app/DocumentSession.swift handleDocumentChange keeps the reference-revision fallback (min(priorPrimary, usedTrackCount - 1); scope = remapped scope plus fallback primary), matching EditorSelectionModel::applyRemap at the reference revision. It is verified by the untagged deleted-primary predicates at SelectionChecks.swift:197-203.
+scope gestures, the note handoff, the out-of-range guard, the remap
+primary/scope/note/coalesced-publication values and the deleted-primary
+fallback primary/scope values, and are indexed as S001-S025
+below. No production change in this reconciliation: src/swift/app/DocumentSession.swift handleDocumentChange keeps the reference-revision fallback (min(priorPrimary, usedTrackCount - 1); scope = remapped scope plus fallback primary), matching EditorSelectionModel::applyRemap at the reference revision. It is verified by the untagged deleted-primary predicates at SelectionChecks.swift:197-203 and the A093-A094 fallback predicates S024-S025 at SelectionChecks.swift:209-212.
 The PARTIAL sites map
 to predicates that execute without the native active-time-selection precondition
 (the Swift DocumentSession holds no time-selection state), and that condition is stated per site. The remaining
@@ -33,17 +34,21 @@ A065-A079 record resetForSongSwap, which is not ported (replacing a song in the
 app is a different owner; anchor A065);
 A080-A083 execute the remap primary/scope/note values and the one coalesced
 publication as PARTIAL (structural moveTrack fixture, not an engineTrackMap
-remap; exact PrimaryTrack|TrackScope mask unproved). A084-A105 stay GAP:
-previous/trackTime payloads, lane-list remap with duplicate collapse and
-deleted-primary/deleted-lane drops have no predicate under this cppID; that
-absence is a coverage gap and is not evidence the feature is absent (anchor
-A084).
+remap; exact PrimaryTrack|TrackScope mask unproved). A093-A094 execute the
+deleted-primary fallback primary/scope values as PARTIAL (sequential
+structural deleteTrack fixture driving 5 tracks to 1, not an engineTrackMap
+remap; active 20..30 time selection, exact PrimaryTrack|TrackScope|TimeSelection
+mask and previous/trackTime payloads unproved). The rest of A084-A105 stay GAP:
+previous/trackTime payloads, lane-list remap with duplicate collapse, the
+deleted-track time-selection/mask checks and deleted-lane drops have no predicate
+under this cppID; that absence is a coverage gap and is not evidence the feature
+is absent (anchor A084).
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted check.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 11, PARTIAL 12, GAP 82, NATIVE 0.
+Tally: MATCHED 11, PARTIAL 14, GAP 80, NATIVE 0.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
@@ -56,6 +61,13 @@ checked-in counterpart source; no native run and no differential comparison
 against the C++ original is claimed.
 Command: deno task verify:shell --filter shell-clipboard --verbose
 Result: PASS: "ok: shell-clipboard (1.15s)"; "verify: 1/11 ok"; "run_checks: PASS".
+Command: deno task verify --filter=swiftcore --qt projectSession
+Result: PASS: "Totals 3 passed 0 failed"; "verify: 1/6 ok"; "run_checks: PASS".
+Command: deno task verify --filter swiftcore
+Result: PASS: full-lane corroboration "ok: swiftcore (16.81s)".
+Provenance: observed verification reported for this round (deleted-primary
+fallback predicates S024-S025); this proof-only reconciliation did not rebuild
+or re-run any suite.
 
 Execution ownership
 The executing entry point is clipboardTrackSelectionChecks, called from
@@ -843,7 +855,7 @@ Original expression:
 
 A080 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:234
 Disposition: PARTIAL
-Mapping/reason: Related predicate S020 (SelectionChecks.swift:182-183) executes the primary-follows-remap value: after the structural track moves the primary is 4. The fixture drives document.moveTrack calls rather than an engineTrackMap remap, and no predicate observes the native kPrimaryTrack notification mask; the one coalesced document-plus-selection publication is S023. Family anchor for A084-A105 (previous/trackTime payloads, lane-list remap with duplicate collapse, deleted-primary and deleted-lane drops), which stay GAP. Unproved: exact PrimaryTrack transition mask.
+Mapping/reason: Related predicate S020 (SelectionChecks.swift:182-183) executes the primary-follows-remap value: after the structural track moves the primary is 4. The fixture drives document.moveTrack calls rather than an engineTrackMap remap, and no predicate observes the native kPrimaryTrack notification mask; the one coalesced document-plus-selection publication is S023. Family anchor for A084-A105 except A093-A094 (previous/trackTime payloads, lane-list remap with duplicate collapse and deleted-lane drops), which stay GAP; A093-A094 execute the deleted-primary fallback primary/scope values as PARTIAL (S024-S025). Unproved: exact PrimaryTrack transition mask.
 Source context since previous assertion:
   ;
   }
@@ -978,8 +990,8 @@ Original expression:
   QCOMPARE(laneNotifications.transitions.back().trackTime.trackScope, uint32_t{0});
 
 A093 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:278
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for remap dropping a deleted primary track to track zero; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S024 (SelectionChecks.swift:209-210) executes the deleted-primary fallback value: deleting every track above the fallback clamps the primary to track zero. The fixture drives sequential document.deleteTrack(4, 3, 2) then document.deleteTrack(1) calls driving 5 tracks to 1, reaching the same end values as the native single applyRemap({0, -1, -1}) via the min(priorPrimary, count - 1) fallback, rather than an engineTrackMap remap; the native fixture carried an active 20..30 time selection that DocumentSession cannot model, and no predicate observes the native kPrimaryTrack|kTrackScope|kTimeSelection mask (A096) or the previous/trackTime payloads (A097-A100). Unproved: exact PrimaryTrack|TrackScope|TimeSelection transition mask and the previous/trackTime payloads.
 Source context since previous assertion:
       TrackRemap deletedRemap;
       deletedRemap.engineTrackMap = {0, -1, -1};
@@ -998,8 +1010,8 @@ Original expression:
   QCOMPARE(deletedTrack.primaryTrack(), 0);
 
 A094 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:279
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S025 (SelectionChecks.swift:211-212) executes the deleted-primary scope value: deleting every track above the fallback leaves the scope on track zero. Same fixture and mask conditions as A093: sequential structural deleteTrack calls rather than an engineTrackMap remap, the native active 20..30 time selection has no Swift counterpart, and no predicate observes the native kPrimaryTrack|kTrackScope|kTimeSelection mask (A096) or the previous/trackTime payloads (A097-A100). Unproved: exact TrackScope transition mask and the previous/trackTime payloads.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1280,6 +1292,20 @@ Swift expression:
   report.expect(changes.count == 1 && changes[0].contains(.document)
                 && changes[0].contains(.selection), cppID: remapID,
                 message: "A083 remap and selected scope publish one coalesced change")
+
+S024 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:209-210
+cppID: clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection
+Covers: A093
+Swift expression:
+  report.expectEqual(0, session.selectedTrack, cppID: remapID,
+                     what: "A093 deleting every track above the fallback clamps the primary to track zero")
+
+S025 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:211-212
+cppID: clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection
+Covers: A094
+Swift expression:
+  report.expectEqual(Set([0]), session.selectedTracks, cppID: remapID,
+                     what: "A094 deleting every track above the fallback leaves the scope on track zero")
 
 Shared helpers
 None: the fixture above is local to the counterpart function and carries no

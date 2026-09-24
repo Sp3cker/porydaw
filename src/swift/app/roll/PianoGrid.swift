@@ -236,7 +236,7 @@ public final class PianoGrid {
         let count = session.document.engineTracks.usedTrackCount
         guard index >= 0, index < count, index != trackIndex else { return }
         stopAudition()
-        session.selectedTrack = index
+        session.selectPrimaryTrack(index)
         refreshFromSession()
     }
 

@@ -394,7 +394,7 @@ public final class TrackHeadersPresenter {
     @QtIgnored
     func selectTrack(_ track: Int) {
         guard let session, validTrack(track) else { return }
-        session.selectedTrack = track
+        session.selectPrimaryTrack(track)
         onTrackSelected?(track)
         refreshFromDocument()
     }

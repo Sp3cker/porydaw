@@ -143,7 +143,7 @@ public final class EventListPresenter {
         guard followTrack, target >= 0,
               let track = firstEngineTrack(for: target, in: session.document),
               session.selectedTrack != track else { return }
-        session.selectedTrack = track
+        session.selectPrimaryTrack(track)
     }
 
 
