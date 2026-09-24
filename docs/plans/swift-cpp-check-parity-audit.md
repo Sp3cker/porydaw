@@ -75,6 +75,12 @@ production-app journey proves the same observation.
 
 ## Gap queue
 
+> Superseded work model (2026-09-24): `.omp/rules/proof-ledger-workflow.md`.
+> Work proceeds surface-first. Build one Swift/QML surface at a time and use
+> its ledger as the spec. Change ledger rows only in the commit that proves
+> them. The area counts below are historical context, not a reconciliation
+> queue.
+
 Work in vertical product slices and leave drawer-owned files alone while the
 EditorDrawer proof-hardening pass is active. The structural refactor has not
 started yet.
@@ -82,9 +88,10 @@ started yet.
 1. **Audio and playback.** The click-transport pass reduced audio to one partial
    site: the private-engine hard-cut negative control. Playback now has 3 gaps
    and 59 partial sites; its remaining gaps are raw-pointer lifetime observations.
-   Continue reconciling exact Swift predicates while preserving native callback
-   and reclamation obligations, then re-run `swiftcore`, audio, resonance,
-   transport, click, and export harnesses.
+   Close them with the owning playback surface work; do not run a standalone
+   reconciliation pass. Preserve native callback and reclamation obligations,
+   then re-run `swiftcore`, audio, resonance, transport, click, and export
+   harnesses.
 2. **Core document editing and MIDI.** `editcheck` has 456 gaps and 519 partial
    sites; MIDI has 175 gaps and 138 partial sites. Close data-integrity,
    serialization, undo/redo, tick/range, and export behavior before UI parity.

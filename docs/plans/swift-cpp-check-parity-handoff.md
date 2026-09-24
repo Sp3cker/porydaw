@@ -10,6 +10,11 @@ Updated: 2026-09-21.
 > `docs/plans/editor-drawer-swift-refactor-handoff.md` for the next Editor Drawer
 > refactor. The remaining sections preserve the earlier investigation and must
 > not be treated as current checkout instructions.
+>
+> Steps 5 and 7 under "Immediate next steps" are superseded by
+> `.omp/rules/proof-ledger-workflow.md`: no standalone reconciliation or
+> gap-closing passes; ledger rows change only with the surface work that
+> proves them.
 
 ## Checkout and scope
 
