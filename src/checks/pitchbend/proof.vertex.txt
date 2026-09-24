@@ -172,8 +172,8 @@ Original expression:
       QVERIFY(!interior.empty());
 
 A010 | PitchBendEditingTest::vertexHitTestAndSelection | src/checks/pitchbend/vertex.cpp:58
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: runPitchBendChecks hits the edited curve at the painted middle vertex and asserts it returns a vertex.
 Source context since previous assertion:
       const DocLanePoint target = interior[interior.size() / 2];
       const QPoint position = graph->vertexPosition(target.tick, target.value);
@@ -182,8 +182,8 @@ Original expression:
       QVERIFY(hit.has_value());
 
 A011 | PitchBendEditingTest::vertexHitTestAndSelection | src/checks/pitchbend/vertex.cpp:59
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: runPitchBendChecks asserts the hit vertex returns the tick of the painted middle curve point.
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:

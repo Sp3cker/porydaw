@@ -157,8 +157,8 @@ Original expression:
       QVERIFY(graphResult);
 
 A008 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:53
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls drags the mounted graph with Shift and asserts the document revision changes.
 Source context since previous assertion:
       songview::PitchBendGraph &graph = *graphResult;
       const int index = m_fixture.document().undoStack()->index();
@@ -176,8 +176,8 @@ Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A010 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:60
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls asserts the popup remains open after the completed Shift stroke is rendered.
 Source context since previous assertion:
       // Rendering the Shift line can race a dismissed popup; assert liveness
       // instead of dereferencing a dead editor.
@@ -187,8 +187,8 @@ Original expression:
       QVERIFY2(alive && alive->isOpen(), "popup was dismissed while rendering its Shift line");
 
 A011 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:62
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls asserts rendered curve segments exceed the two endpoints after Shift drag; it does not inspect the serialized interior lane points.
 Source context since previous assertion:
       const std::vector<DocLanePoint> interior = m_fixture.interiorPoints(DOC_CC_BEND);
 Original expression:
@@ -206,8 +206,8 @@ Original expression:
                                  }) == interior.cend());
 
 A013 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:68
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls checks Undo restores the original rendered pitch curve and Redo restores the edit at the history tip, but does not compare encoded MIDI bytes.
 Source context since previous assertion:
       m_fixture.document().undoStack()->undo();
 Original expression:

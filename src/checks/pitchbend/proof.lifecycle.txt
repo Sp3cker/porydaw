@@ -123,8 +123,8 @@ Original expression:
       QVERIFY(QTest::qWaitFor([this] { return m_fixture.popup() != nullptr; }));
 
 A002 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:64
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls invokes the routed note command and asserts the real popup presenter is open.
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -160,24 +160,24 @@ Original expression:
       QVERIFY(hostRect.intersects(popupRect));
 
 A006 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:76
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls checks the popup center stays within its font-relative half-width of the selected note.
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(std::abs(popupRect.center().x() - notePoint.x()) <= popupRect.width() / 2 + 12);
 
 A007 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:77
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls checks the visible popup top is not above the host surface.
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(popupRect.top() >= hostRect.top());
 
 A008 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:78
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls checks the popup bottom remains within its editor host.
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -451,8 +451,8 @@ Original expression:
       QVERIFY(openedEditor);
 
 A037 | PitchBendEditingTest::escapeKeyDismissesPopupRetainingNoteSelection | src/checks/pitchbend/lifecycle.cpp:172
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls sends Escape to the real popup, observes isOpen false and its Quick item removed, and retains selected note.
 Source context since previous assertion:
       QPointer<songview::PitchBendEditor> editor = openedEditor;
       m_fixture.closePopupViaEscape();
@@ -473,8 +473,8 @@ Original expression:
       QVERIFY(openedEditor);
 
 A039 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:183
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: tst_ShellPitchBend.qml test_cancelReopenAndOutsideClickDoNotEdit verifies outside click dismisses and retains selection, but its probe is a blank host location rather than the note itself.
 Source context since previous assertion:
       QPointer<songview::PitchBendEditor> editor = openedEditor;
       QTest::mouseClick(&m_fixture.timelineWindow(), Qt::LeftButton, Qt::NoModifier,
@@ -748,8 +748,8 @@ Original expression:
       QVERIFY(graph);
 
 A067 | PitchBendEditingTest::reopeningPopupRestoresActiveGraphFocus | src/checks/pitchbend/lifecycle.cpp:281
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: tst_ShellPitchBend.qml test_cancelReopenAndOutsideClickDoNotEdit reopens the real popup and asserts the pitch graph has active keyboard focus.
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:

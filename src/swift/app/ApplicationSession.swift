@@ -217,6 +217,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
         return workspace.grid
     }
 
+    public func pitchBendPresenter() -> PitchBendPresenter {
+        guard let workspace else { preconditionFailure("Pitch Bend requested without an open song") }
+        return workspace.pitchBend
+    }
+
     public func trackHeadersPresenter() -> TrackHeadersPresenter {
         guard let workspace else {
             preconditionFailure("Track headers requested without an open song")

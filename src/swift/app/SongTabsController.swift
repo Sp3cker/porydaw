@@ -74,6 +74,8 @@ public final class SongTabSession {
 
     public func gridPresenter() -> PianoGrid { workspace.grid }
 
+    public func pitchBendPresenter() -> PitchBendPresenter { workspace.pitchBend }
+
     public func trackHeadersPresenter() -> TrackHeadersPresenter { workspace.trackHeaders }
 
     public func drawerPresenter() -> EditorDrawerPresenter { workspace.drawer }

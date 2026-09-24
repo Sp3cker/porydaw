@@ -62,6 +62,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runPresentationChecks(report, session: session)
     runTimeSignaturePromptChecks(report, session: session)
     runTimemenuChecks(report, session: session)
+    runPitchBendChecks(report)
     runRulerLoopMenuChecks(report, session: session)
     runSharedPlayheadChecks(report, session: session, service: service)
     runPlayheadFeatureChecks(report, suite: session, service: service)

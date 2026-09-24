@@ -16,6 +16,7 @@ Item {
     readonly property var gridModel: applicationSession.gridPresenter()
     readonly property var headersModel: applicationSession.trackHeadersPresenter()
     readonly property var drawerPresenter: applicationSession.drawerPresenter()
+    readonly property var pitchBendPresenter: applicationSession.pitchBendPresenter()
     readonly property var hintService: applicationSession.mouseHintsPresenter()
     readonly property bool hintWindowActive: visible && Window.window !== null
                                             && Window.window.visible && Window.window.active
@@ -575,6 +576,65 @@ Item {
                     width: implicitWidth
                     height: implicitHeight
                     bridge: root.timeSigHost
+                }
+            }
+        }
+    }
+    Loader {
+        id: pitchBendPopupLoader
+        anchors.fill: parent
+        z: 12
+        active: root.pitchBendPresenter.isOpen
+        visible: active
+        enabled: active
+        sourceComponent: Component {
+            Item {
+                focus: true
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                    onPressed: root.pitchBendPresenter.cancelAndClose()
+                    onWheel: (wheel) => wheel.accepted = true
+                }
+                Original.PitchBendPopup {
+                    id: pitchBendPopup
+                    bridge: root.pitchBendPresenter
+                    fallbackFont: root.applicationFont
+                    width: implicitWidth
+                    height: implicitHeight
+                    x: Math.max(0, Math.min(
+                        root.timelineSplitX + root.pitchBendPresenter.anchorX
+                            + root.pitchBendPresenter.anchorWidth / 2 - width / 2,
+                        parent.width - width))
+                    y: {
+                        const below = root.gridModel.rulerHeight
+                            + root.pitchBendPresenter.anchorY
+                            + root.pitchBendPresenter.anchorHeight
+                            + applicationFontMetrics.height / 3
+                        const above = root.gridModel.rulerHeight
+                            + root.pitchBendPresenter.anchorY - height
+                            - applicationFontMetrics.height / 3
+                        return Math.max(0, Math.min(
+                            below + height <= editorDrawer.y ? below : above,
+                            parent.height - height))
+                    }
+                    Component.onCompleted: {
+                        root.pitchBendPresenter.configure(
+                            Math.max(root.applicationFont.pixelSize,
+                                     root.gridModel.baseFontPx),
+                            applicationFontMetrics.lineSpacing,
+                            root.gridModel.devicePixelRatio)
+                        pitchBendPopup.focusInitialGraph()
+                    }
+                    onFallbackFontChanged: root.pitchBendPresenter.configure(
+                        Math.max(root.applicationFont.pixelSize,
+                                 root.gridModel.baseFontPx),
+                        applicationFontMetrics.lineSpacing,
+                        root.gridModel.devicePixelRatio)
+                }
+                Keys.onEscapePressed: (event) => {
+                    root.pitchBendPresenter.cancelAndClose()
+                    event.accepted = true
                 }
             }
         }
