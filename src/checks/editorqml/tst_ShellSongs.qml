@@ -111,6 +111,7 @@ TestCase {
         const settings = settingsComponent.createObject(testCase)
         verify(settings !== null, "QtCore settings is available")
         settings.setValue("swiftDock/columnWidth", 280)
+        settings.setValue("swiftDock/songsRatio", 0.5)
         settings.sync()
         settings.destroy()
         shell = shellComponent.createObject(null)
@@ -132,8 +133,9 @@ TestCase {
                "empty-song guidance is shown before opening an editor")
         verify(emptyMessage.mapToItem(shell.contentItem, 0, 0).x >= dock.width,
                "empty-song guidance stays over the editor, not the Songs dock")
-        shell.height += 480 - panel().height
-        tryCompare(panel(), "height", 480)
+        shell.height += 2 * (480 - panel().height)
+        tryVerify(function() { return Math.abs(panel().height - 480) <= 1 }, 3000,
+                  "the Songs pane reaches its visual baseline height")
         waitForRendering(panel())
         const actualDpr = Math.round(panel().Screen.devicePixelRatio)
         const actualFontPx = Math.round(panel().baseFontPx)
@@ -309,5 +311,29 @@ TestCase {
                "deletion moves the .mid to .porydaw/trash")
         verify(!bootstrap.dockVoicegroupExists(),
                "deleting with the checked option removes the unused voicegroup source")
+    }
+
+    function test_voicegroupPaneStackedAndRatioRestores() {
+        const settings = settingsComponent.createObject(testCase)
+        verify(settings !== null, "QtCore settings is available")
+        settings.setValue("swiftDock/columnWidth", 280)
+        settings.setValue("swiftDock/songsRatio", 0.3)
+        settings.sync()
+        settings.destroy()
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the production window loads")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        const dock = findChild(shell, "swiftDockColumn")
+        const songs = findChild(shell, "swiftSongsPanel")
+        const voice = findChild(shell, "voicegroupPanel")
+        verify(dock !== null && songs !== null && voice !== null,
+               "Songs and Voicegroup panes mount in the dock column")
+        verify(songs.parent === dock && voice.parent === dock,
+               "both panes are stacked in swiftDockColumn")
+        tryVerify(function() {
+            return voice.mapToItem(dock, 0, 0).y >= songs.mapToItem(dock, 0, 0).y + songs.height
+                && Math.abs(songs.height / dock.height - 0.3) < 0.06
+        }, 3000, "the voicegroup pane sits below Songs with the restored swiftDock/songsRatio")
     }
 }

@@ -74,6 +74,7 @@ ApplicationWindow {
         id: dockSettings
         category: "swiftDock"
         property int columnWidth: 280
+        property real songsRatio: 0.5
     }
     Component.onCompleted: {
         if (establishApplicationIdentity) {
@@ -381,9 +382,15 @@ ApplicationWindow {
             SplitView.maximumWidth: 480
             SplitView.preferredWidth: Math.max(200, Math.min(480, dockSettings.columnWidth))
             controller: shell.session.songDockController()
+            applicationSession: shell.session
+            songsRatio: dockSettings.songsRatio
             colors: shell.session.palette
             applicationFont: Application.font
             baseFontPx: baseFontInfo.pixelSize
+            onSongsRatioChanged: {
+                if (songsRatio !== dockSettings.songsRatio)
+                    dockSettings.songsRatio = songsRatio
+            }
             onWidthChanged: {
                 if (width >= 200 && width <= 480 && width !== dockSettings.columnWidth)
                     dockSettings.columnWidth = Math.round(width)
