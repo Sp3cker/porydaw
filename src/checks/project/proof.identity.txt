@@ -10,42 +10,16 @@ Swift counterpart: src/checks/workspace/SessionChecks.swift
 Swift counterpart: src/checks/workspace/session_io.swift
 Swift counterpart: src/checks/workspace/session_playback.swift
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies an equivalent Swift predicate that would execute;
-PARTIAL identifies a related Swift predicate with an explicit unproved condition;
-GAP identifies an original predicate without an established equivalent;
-NATIVE identifies an observation only a native window/rendering/harness run can establish.
-52 assertion sites across SongName, VoicegroupId, SavedWorkspaceRecipe, and SongHistory (QUndoStack merge) cases. Swift history predicates exercise HistoryGroup merge on SongDocument rather than QUndoStack mergeWith; native identity predicates run through ProjectService open paths. No original site is marked MATCHED: every pairing below differs in harness or in the observed conjunctions.
 
 Portable identity API blocker: the Swift surface exposes SongSource as an unvalidated
 label/path value, LoadedSong's resolved source label, and NativeBankLease's resolved
 bank path/section strings. It exposes no SongName or VoicegroupId creation,
 normalization, equality, or hashing API in that surface (PorydawProject does provide
-SongName/VoicegroupId creation, equality and hashing directly, which
-ProjectIdentityChecks.swift exercises), so the A001-A019 mapping below still cites the
-older app-facing observations. Reimplementing those native identity rules
-inside this check would test a fabricated parallel implementation, not the Swift
-product. Therefore A001–A019 remain PARTIAL; their existing ProjectService
-observations do not establish the direct creation predicates, empty-section value,
-identity equality, or qHash relationships. The native QUndoStack observations
-A037–A052 also remain PARTIAL.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
 
-Execution and ownership
-runDocumentHistorySuite (NoteChecks.swift) owns gestureAndIdentityHistory and historyMergeContracts. runProjectSessionSuite (SessionChecks.swift) owns the native identity checks via ProjectService open paths against the staged swiftcore-session-test project built by stageTestProject.
 Superseded in part: no dedicated project-identity Swift suite existed at the time of this inventory, but src/checks/projectstore/ProjectIdentityChecks.swift (S1 Task 5) now carries executing report.expect/report.expectEqual predicates whose messages name A001-A036, under cppIDs project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash (A001-A008), ::voicegroupId_rejections (A009) and ::voicegroupId_normalizationAndSectionHash (A010-A019), plus the reassigned savedRecipe cppIDs swiftproject/ProjectIdentityChecks::savedRecipe_selectionFallbacks and ::savedRecipe_legacySingleLabelAndEmpty (A020-A036). The per-site PARTIAL dispositions above were not re-audited against that successor in the S6 cutover, so this inventory is conservative for A001-A036; A037-A052 have no successor and stay PARTIAL.
-
-Fixture, sequence and row constraints
-voicegroupId_rejections_data expands one site over 7 rows (empty, absolute, parent, parent-file, nested-parent, project-root, normalizes-to-root). Merge cases hinge on kFirstGesture/kSecondGesture ids and HistoryCountCommand deltas (+1/+2, +4, +1/-1); the saved-boundary and cancelling cases depend on markDocumentSaved sequencing.
-
-Original assertion inventory
 
 A001 | ProjectIdentityTest::songName_acceptRejectRoundtripHash | src/checks/project/identity.cpp:76
 Disposition: PARTIAL
@@ -734,62 +708,27 @@ Swift assertion predicates
 
 S001 | historyMergeContracts | src/checks/editcheck/NoteChecks.swift
 Anchor: message "one merged document gesture undoes to its oldest origin and redoes to its latest result"
-  report.expect(mergedAtLatestResult && restoredOldestOrigin
-          && merged.note(mergedID)?.tick == 3
-          && merged.history.currentIdentity == mergedIdentity,
-          cppID: "project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
-          message: "one merged document gesture undoes to its oldest origin and redoes to its latest result")
 
 S002 | historyMergeContracts | src/checks/editcheck/NoteChecks.swift
 Anchor: message "a saved boundary seals the document gesture so one undo restores the saved result"
-  report.expect(postBoundaryValue
-          && postBoundaryIdentity != saved.identity
-          && boundary.note(boundaryID)?.tick == 3
-          && boundary.history.currentIdentity == saved.identity,
-          cppID: "project-identity/ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge",
-          message: "a saved boundary seals the document gesture so one undo restores the saved result")
 
 S003 | historyMergeContracts | src/checks/editcheck/NoteChecks.swift
 Anchor: message "a self-cancelling document gesture disappears so undo crosses the prior post-save edit"
-  report.expect(redundantGestureRemoved
-          && cancelling.note(cancellingID)?.tick == 3
-          && cancelling.history.currentIdentity == cancellingSaved.identity,
-          cppID: "project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry",
-          message: "a self-cancelling document gesture disappears so undo crosses the prior post-save edit")
 
 S004 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
 Anchor: message "opened session starts clean"
-  report.expectEqual(false, session.document.isDirty,
-                         cppID: "project-identity/ProjectIdentityTest::songHistory_startsClean",
-                         what: "opened session starts clean")
 
 S005 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "undo tempo restores initial 120 BPM timing"
-  report.expectEqual(UInt64(24_000), session.timeline.sample(for: 24),
-                             cppID: "project-identity/ProjectIdentityTest::savedRecipe_selectionFallbacks",
-                             what: "undo tempo restores initial 120 BPM timing")
 
 S006 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "redo tempo restores 150 BPM timing"
-  report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
-                             cppID: "project-identity/ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty",
-                             what: "redo tempo restores 150 BPM timing")
 
 S007 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "playable label reaches native voicegroup resolution and is rejected"
-  report.expect(
-                  operationFailureMessage(error)?.lowercased().contains("voicegroup") == true,
-                  cppID: cppID,
-                  message: "playable label reaches native voicegroup resolution and is rejected")
 
 S008 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "native service publishes a project-relative normalized bank identity"
-  report.expectEqual("sound/voicegroups/test_vg.inc", normalized.bank.sourcePath,
-                             cppID: "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
-                             what: "native service publishes a project-relative normalized bank identity")
 
 S009 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "native service round-trips the accepted playable song label"
-  report.expectEqual("mus_session_test", normalized.source.label,
-                             cppID: "project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
-                             what: "native service round-trips the accepted playable song label")

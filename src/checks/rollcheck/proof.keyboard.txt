@@ -10,19 +10,7 @@ Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843
 Retired in: 4d7fa617 Delete C++ window host, main.cpp and legacy keymap/layout/typography/theme C++; the pinned SHA is the 5f0924e8 blob, resolvable via git show 5f0924e8:src/checks/swiftrollgated/gesturechecks.cpp. S001-S028 index that pinned revision and close no A entry.
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact counterpart predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related counterpart predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift surface.
-GAP identifies an original predicate without a replacement assertion.
-Ten keyboard and timeline slots (transpose, keep-visible, ruler scope, other-events strip, partial repaint, time shortcuts, duplicate-time, two insert-time variants, batch resize). The registered keyboard Swift checks establish seed, transpose and off-grid snap, uniform batch-resize outcomes, and scoped insert-time document effects; exact history-index increments, cursor/selection composites, and host key delivery remain unproved. Time selection, edit cursor, ruler/other-events bands, keep-in-sight scroll, and rendered pixels have no Swift model. Coverage: 18 MATCHED, 5 PARTIAL, 67 GAP, 15 NATIVE.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore projectSession suite executed runKeyboardChecks (S043..S060) and EditorGridCameraChecks commandRouting (S029..S042), not the gated S001..S028.
 Command: deno task verify:qml-roll --verbose
@@ -30,90 +18,17 @@ Result: PASS — 1/1 ok (controller-recorded post-change run); no keyboard site 
 Command: deno task verify:shell --verbose
 Result: PASS — 11/11 ok (controller-recorded post-change run); no keyboard site depends on the shell lane.
 
-Execution and ownership
-runKeyboardChecks executes keyboardTranspose, keyboardResizeNotes, timelineInsertBlankTimeTracks, and timelineInsertBlankTimeLanes in the registered swiftcore projectSession suite. withKeyboardSeed builds a visible unoccupied note with pixel-88 tick, keys 115 down to 24, velocity 100, and grid-drawn duration; each scenario restores its document and camera on exit. EditorGridCamera::commandRouting and the retained native gated checks supply the older related predicates, not host key-delivery proof. Host key delivery (sendKeyStroke/Escape), pointer clicks, framebuffer pixels, and native popup sessions stay NATIVE; time selection, edit cursor, ruler/other-events bands, and keep-in-sight scroll have no Swift model and stay GAP.
-
-Fixture, sequence and row constraints
-Every slot snapshots SMF bytes plus undo index and count, then unwinds to them; timelineInsertBlankTimeTracks additionally probes a rejected insert mid-slot and restores afterwards; keyboardResizeNotes re-executes its shrink sites once per Shift+Left press (up to 256 presses). No _data rows expand sites in this file.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
-
 A001 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:38
 Disposition: MATCHED
-Mapping: S043 keyboard.swift asserts that the matching keyboard seed note exists at the selected track, tick, pitch, and duration.
-Source context since previous assertion:
-  #include "checks/rollcheck/tst_pianoroll.h"
-
-  #include "checks/quickpopupguard.h"
-  #include "checks/rollcheck/headerchecksupport.h"
-  #include "checks/rollcheck/rollcheck.h"
-  #include "checks/trackheaders/trackheaderoracles.h"
-  #include "core/timedefaults.h"
-
-  #include "checks/support/eventsynth.h"
-  #include "checks/support/quickframebuffer.h"
-  #include "core/songdocument.h"
-  #include "ui/songview.h"
-  #include "ui/songview/pianoroll.h"
-  #include "ui/songview/quick/pianorollquick.h"
-  #include "ui/songview/quick/timelineinputitem.h"
-  #include "ui/songview/quick/timelinequickview.h"
-  #include "ui/songview/trackheadermodel.h"
-  #include <QByteArray>
-  #include <QColor>
-  #include <QCoreApplication>
-  #include <QEvent>
-  #include <QImage>
-  #include <QPoint>
-  #include <QPointer>
-  #include <QRectF>
-  #include <QtTest>
-  #include <algorithm>
-  #include <iterator>
-  #include <optional>
-  #include <vector>
-
-  using namespace checks::rollcheck;
-
-  void PianoRollTest::keyboardTranspose()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S043
 
 A002 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:53
 Disposition: MATCHED
-Mapping: S044 keyboard.swift asserts that Up moves the selected seed one semitone without moving its tick.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const SnappedRows rows{view, roll};
-      const Cell &d = seed->cell;
-      const Tick snapCell = seed->snapCell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      const QPoint center(
-          qRound(view.camera().displayX(double(d.tick) + 0.5 * double(snapCell), 0.0, rows.dpr())),
-          rows.centerY(d.key));
-      click(roll, center);
-      sendKeyStroke(roll, Qt::Key_Up, Qt::NoModifier, false);
-      DocNote note;
-Original expression:
-  QVERIFY2(doc.findNote(check.track(), d.tick, uint8_t(d.key + 1), &note),
-               "Up did not transpose up a semitone");
+Mapping: S044
 
 A003 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:56
 Disposition: MATCHED
-Mapping: S045 keyboard.swift asserts that Shift+Down after Up places the note eleven semitones below its seed pitch at the same tick.
-Source context since previous assertion:
-      sendKeyStroke(roll, Qt::Key_Down, Qt::ShiftModifier, false);
-Original expression:
-  QVERIFY2(doc.findNote(check.track(), d.tick, uint8_t(d.key - 11), &note),
-               "Shift+Down did not transpose down an octave");
+Mapping: S045
 
 A004 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:59
 Disposition: PARTIAL
@@ -126,14 +41,7 @@ Original expression:
 
 A005 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:64
 Disposition: MATCHED
-Mapping: S047 keyboard.swift verifies that Left after a half-snap displacement restores the selected note to seed tick plus one snap without changing pitch.
-Source context since previous assertion:
-      doc.moveNotes({note}, int64_t(snapCell / 2), 0);
-      view.selectionModel().setNoteSelection({note.noteId});
-      sendKeyStroke(roll, Qt::Key_Left, Qt::NoModifier, false);
-Original expression:
-  QVERIFY2(doc.findNote(check.track(), d.tick + snapCell, uint8_t(d.key - 11), &note),
-               "Left did not snap the off-grid note back to the grid");
+Mapping: S047
 
 A006 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:68
 Disposition: GAP
@@ -498,12 +406,6 @@ Original expression:
 
 A032 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:270
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/keyboard.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-      const QImage selectedHeaderFrame = headercheck::captureBand(check, view);
-Original expression:
-  QVERIFY2(!plainHeaderFrame.isNull() && !selectedHeaderFrame.isNull(),
-               "could not capture the time-scoped secondary header");
 
 A033 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:275
 Disposition: GAP
@@ -991,41 +893,15 @@ Original expression:
 
 A068 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:549
 Disposition: MATCHED
-Mapping: S043 keyboard.swift checks the track-insertion scenario seed at its selected track, tick, pitch, and duration.
-Source context since previous assertion:
-  }
-
-  void PianoRollTest::timelineInsertBlankTimeTracks()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S043
 
 A069 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:558
 Disposition: MATCHED
-Mapping: S043 keyboard.swift asserts that the track-insertion seed exists on the selected track at the original tick and pitch.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      const int track = check.track();
-      const Cell &d = seed->cell;
-      const Tick snapCell = seed->snapCell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      DocNote transposed;
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed),
-               "track insertion seed note was not found");
+Mapping: S043
 
 A070 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:561
 Disposition: MATCHED
-Mapping: S056 keyboard.swift checks the shifted insert seed at original tick plus two snap cells and pitch minus ten.
-Source context since previous assertion:
-      doc.moveNotes({transposed}, int64_t(2 * snapCell), -10);
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10), &transposed),
-               "track insertion seed did not reach the expected shortcut state");
+Mapping: S056
 
 A071 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:568
 Disposition: GAP
@@ -1197,32 +1073,11 @@ Original expression:
 
 A082 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:673
 Disposition: MATCHED
-Mapping: S043 keyboard.swift checks the lane-insertion scenario seed at its selected track, tick, pitch, and duration.
-Source context since previous assertion:
-  }
-
-  void PianoRollTest::timelineInsertBlankTimeLanes()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S043
 
 A083 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:682
 Disposition: MATCHED
-Mapping: S043 keyboard.swift asserts that the lane-insertion seed exists at the selected track, tick, and pitch.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      const int track = check.track();
-      const Cell &d = seed->cell;
-      const Tick snapCell = seed->snapCell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      DocNote transposed;
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed),
-               "lane insertion seed note was not found");
+Mapping: S043
 
 A084 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:685
 Disposition: GAP
@@ -1303,33 +1158,11 @@ Original expression:
 
 A089 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:737
 Disposition: MATCHED
-Mapping: S043 keyboard.swift checks that the keyboard-resize seed is present with the selected track, tick, pitch, and duration.
-Source context since previous assertion:
-  }
-
-  void PianoRollTest::keyboardResizeNotes()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S043
 
 A090 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:747
 Disposition: MATCHED
-Mapping: S043 keyboard.swift asserts that the resize seed note exists on the selected track with its original tick and pitch.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const int track = check.track();
-      const Cell &d = seed->cell;
-      const Tick snapCell = seed->snapCell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      DocNote noteA;
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA),
-               "keyboard resize seed note was not found");
+Mapping: S043
 
 A091 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:762
 Disposition: GAP
@@ -1362,31 +1195,11 @@ Original expression:
 
 A093 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:767
 Disposition: MATCHED
-Mapping: S049 keyboard.swift checks that both selected resize notes have unequal durations and the second retains its intended duration.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(noteB.duration != noteA.duration, "the resize fixture is not mixed-duration");
+Mapping: S049
 
 A094 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:777
 Disposition: MATCHED
-Mapping: S050 keyboard.swift checks that two Shift+Right commands extend both selected notes by the same two-snap delta despite their different onsets and durations.
-Source context since previous assertion:
-      view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
-
-      const QByteArray resizedBefore = doc.smf().write();
-      const int resizeUndo = doc.undoStack()->index();
-      const int resizeUndoCount = doc.undoStack()->count();
-      // Two compatible presses merge into one undo command that re-lands the
-      // accumulated delta from the gesture's start.
-      sendKeyStroke(roll, Qt::Key_Right, Qt::ShiftModifier, false);
-      sendKeyStroke(roll, Qt::Key_Right, Qt::ShiftModifier, false);
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA) &&
-                   doc.findNote(track, laterTick, uint8_t(laterKey), &noteB) &&
-                   uint64_t(noteA.duration) == uint64_t(d.dur) + 2 * snapCell &&
-                   uint64_t(noteB.duration) == uint64_t(laterDur) + 2 * snapCell,
-               "Shift+Right did not lengthen every selected note by the earliest-onset snap");
+Mapping: S050
 
 A095 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:782
 Disposition: PARTIAL
@@ -1400,22 +1213,11 @@ Original expression:
 
 A096 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:786
 Disposition: MATCHED
-Mapping: S051 keyboard.swift checks that one undo of the merged Shift+Right pair returns the complete document to the post-seed, pre-resize baseline and its history identity.
-Source context since previous assertion:
-      doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), resizedBefore);
+Mapping: S051
 
 A097 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:790
 Disposition: MATCHED
-Mapping: S051 keyboard.swift compares the full post-seed state after the merged-resize undo, including both original notes and their ticks, pitches, and durations.
-Source context since previous assertion:
-      // Shortening applies the same uniform delta until the shortest selected
-      // note reaches one tick; further presses are consumed no-ops.
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA) &&
-                   doc.findNote(track, laterTick, uint8_t(laterKey), &noteB),
-               "the merged resize undo did not restore the seeded notes");
+Mapping: S051
 
 A098 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:800
 Disposition: GAP
@@ -1435,13 +1237,7 @@ Original expression:
 
 A099 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:804
 Disposition: MATCHED
-Mapping: S052 keyboard.swift checks after every Shift+Left press that the shortest duration decreases and both selected notes shorten by exactly the same positive delta.
-Source context since previous assertion:
-          const uint32_t shrink = previousMin - std::min(noteA.duration, noteB.duration);
-Original expression:
-  QVERIFY2(shrink > 0 && noteA.duration == previousA - shrink &&
-                       noteB.duration == previousB - shrink,
-                   "Shift+Left did not shorten every selected note by one uniform delta");
+Mapping: S052
 
 A100 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:808
 Disposition: PARTIAL
@@ -1467,23 +1263,11 @@ Original expression:
 
 A102 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:819
 Disposition: MATCHED
-Mapping: S055 keyboard.swift verifies that one undo of the merged shortening sequence restores the post-seed, pre-resize document baseline.
-Source context since previous assertion:
-      while (doc.undoStack()->index() > floorUndo && doc.undoStack()->canUndo())
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), resizedBefore);
+Mapping: S055
 
 A103 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:823
 Disposition: MATCHED
-Mapping: S055 keyboard.swift compares the restored post-seed state after floor undo, including both notes at their original tracks, ticks, and pitches.
-Source context since previous assertion:
-      // An active time selection owns the timeline: the resize commands refuse
-      // without touching the document or history.
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA) &&
-                   doc.findNote(track, laterTick, uint8_t(laterKey), &noteB),
-               "the floor undo did not restore the seeded notes");
+Mapping: S055
 
 A104 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:835
 Disposition: GAP
@@ -1523,403 +1307,180 @@ S001..S028 index the RETIRED gated Swift-surface suite (C++ QTest checks that dr
 
 S001 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QSKIP("actual resize editing belongs to swiftrollgated");
 
 S002 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY2(fixture.open(&error), qPrintable(error));
 
 S003 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY2(lane.has_value(), qPrintable(error));
 
 S004 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY2(trailing.has_value() && leading.has_value(), qPrintable(error));
 
 S005 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(QTest::qWaitFor(
-          [&] {
-              QString ignored;
-              const auto note = noteWithId(fixture.notes(&ignored), trailing->id);
-              return note && note->tick == trailing->tick && note->duration == snap;
-          },
-          kSettleTimeoutMs));
 
 S006 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(QTest::qWaitFor(
-          [&] {
-              QString ignored;
-              const auto note = noteWithId(fixture.notes(&ignored), leading->id);
-              return note && note->tick == leadingEnd - snap && note->duration == snap;
-          },
-          kSettleTimeoutMs));
 
 S007 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QSKIP("focused-grid command routing belongs to selectionkey");
 
 S008 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY2(fixture.open(&error), qPrintable(error));
 
 S009 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY2(target.has_value(), qPrintable(error));
 
 S010 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(item != nullptr);
 
 S011 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(nudge != nullptr);
 
 S012 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QTRY_VERIFY_WITH_TIMEOUT(nudge->isEnabled(), kSettleTimeoutMs);
 
 S013 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(sendShortcut(fixture.view(), nudge));
 
 S014 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(QTest::qWaitFor(
-          [&] {
-              QString ignored;
-              const auto moved = noteWithId(fixture.notes(&ignored), target->id);
-              return moved && moved->tick == target->tick + fixture.snap() &&
-                     moved->pitch == target->pitch;
-          },
-          kSettleTimeoutMs));
 
 S015 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(pencil != nullptr && sendShortcut(fixture.view(), pencil));
 
 S016 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(fixture.grid()->property("pencilMode").toBool());
 
 S017 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(fixture.grid()->property("pencilMode").toBool());
 
 S018 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(deleteNotes != nullptr && deleteNotes->isEnabled());
 
 S019 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(movedItem != nullptr);
 
 S020 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(sendShortcut(fixture.view(), deleteNotes));
 
 S021 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
 
 S022 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(sendShortcut(fixture.view(), pencil));
 
 S023 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("pencilMode").toBool(), !pencilBefore);
 
 S024 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
 
 S025 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QVERIFY(sendShortcut(fixture.view(), pencil));
 
 S026 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("pencilMode").toBool(), pencilBefore);
 
 S027 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
 
 S028 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
 
 S029 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "nudge right advances the selected note one snap cell"
-Counterpart expression:
-report.expect(
-    session.document.note(a).map { Int($0.tick) == 24 + snap } == true,
-    cppID: id, message: "nudge right advances the selected note one snap cell")
 
 S030 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "nudge left returns the selected note one snap cell"
-Counterpart expression:
-report.expect(
-    session.document.note(a).map { Int($0.tick) == 24 } == true,
-    cppID: id, message: "nudge left returns the selected note one snap cell")
 
 S031 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "nudge right snaps an off-grid note forward to the lattice"
-Counterpart expression:
-report.expect(
-    session.document.note(c).map { Int($0.tick) == 12 } == true,
-    cppID: id, message: "nudge right snaps an off-grid note forward to the lattice")
 
 S032 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "nudge left snaps an off-grid note back to the lattice"
-Counterpart expression:
-report.expect(
-    session.document.note(c).map { Int($0.tick) == 6 } == true,
-    cppID: id, message: "nudge left snaps an off-grid note back to the lattice")
 
 S033 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "octave transpose raises the selected note twelve keys"
-Counterpart expression:
-report.expect(
-    session.document.note(a).map { Int($0.pitch) == pitch + 12 } == true,
-    cppID: id, message: "octave transpose raises the selected note twelve keys")
 
 S034 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "octave transpose down restores the selected note pitch"
-Counterpart expression:
-report.expect(
-    session.document.note(a).map { Int($0.pitch) == pitch } == true,
-    cppID: id, message: "octave transpose down restores the selected note pitch")
 
 S035 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "shorten clamps the shorter note at one tick"
-Counterpart expression:
-report.expect(
-    session.document.note(a).map { Int($0.duration) == 1 } == true
-        && session.document.note(b).map { Int($0.duration) == 7 } == true,
-    cppID: id, message: "shorten clamps the shorter note at one tick")
 
 S036 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "repeated shorten at the floor is a no-op"
-Counterpart expression:
-report.expect(
-    session.document.note(a).map { Int($0.duration) == 1 } == true
-        && session.document.note(b).map { Int($0.duration) == 1 } == true,
-    cppID: id, message: "repeated shorten at the floor is a no-op")
 
 S037 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "merged shorten presses undo in one step"
-Counterpart expression:
-report.expect(
-    session.document.note(a).map { Int($0.duration) == 7 } == true
-        && session.document.note(b).map { Int($0.duration) == 13 } == true,
-    cppID: id, message: "merged shorten presses undo in one step")
 
 S038 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "copy leaves the document and published summary untouched"
-Counterpart expression:
-report.expect(
-    grid.noteSummary == summaryBeforeCopy
-        && session.document.revision == revisionBeforeCopy,
-    cppID: id, message: "copy leaves the document and published summary untouched")
 
 S039 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "delete is refused while a pointer gesture owns the grid"
-Counterpart expression:
-report.expect(
-    grid.noteSummary == midGestureSummary && session.document.note(a) != nil,
-    cppID: id, message: "delete is refused while a pointer gesture owns the grid")
 
 S040 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "pencil mode still toggles mid-gesture without touching notes"
-Counterpart expression:
-report.expect(
-    grid.pencilMode == !pencilBefore && grid.noteSummary == midGestureSummary,
-    cppID: id, message: "pencil mode still toggles mid-gesture without touching notes")
 
 S041 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "pencil mode toggles back mid-gesture without touching notes"
-Counterpart expression:
-report.expect(
-    grid.pencilMode == pencilBefore && grid.noteSummary == midGestureSummary,
-    cppID: id, message: "pencil mode toggles back mid-gesture without touching notes")
 
 S042 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "releasing a zero-delta press commits nothing"
-Counterpart expression:
-report.expect(
-    session.document.revision == revisionBeforePress && session.document.note(a) != nil,
-    cppID: id, message: "releasing a zero-delta press commits nothing")
 
 S043 | swiftcore/PianoRoll::withKeyboardSeed | src/checks/rollcheck/keyboard.swift
 Anchor: message "the seeded keyboard note is present"
-Counterpart expression:
-report.expect(document.note(noteID).map {
-    $0.track == track && $0.tick == tick && Int($0.pitch) == pitch
-        && $0.duration == duration
-} == true, cppID: id, message: "the seeded keyboard note is present")
 
 S044 | checkKeyboardTranspose | src/checks/rollcheck/keyboard.swift
 Anchor: message "Up transposes the selected note one semitone"
-Counterpart expression:
-report.expect(session.document.note(seed.id).map {
-    $0.tick == seed.tick && Int($0.pitch) == seed.pitch + 1
-} == true, cppID: id, message: "Up transposes the selected note one semitone")
 
 S045 | checkKeyboardTranspose | src/checks/rollcheck/keyboard.swift
 Anchor: message "Shift+Down transposes down an octave"
-Counterpart expression:
-report.expect(session.document.note(seed.id).map {
-    $0.tick == seed.tick && Int($0.pitch) == seed.pitch - 11
-} == true, cppID: id, message: "Shift+Down transposes down an octave")
 
 S046 | checkKeyboardTranspose | src/checks/rollcheck/keyboard.swift
 Anchor: message "Right nudges one snap cell without changing pitch"
-Counterpart expression:
-report.expect(session.document.note(seed.id).map {
-    $0.tick == seed.tick + seed.snap && Int($0.pitch) == seed.pitch - 11
-} == true, cppID: id, message: "Right nudges one snap cell without changing pitch")
 
 S047 | checkKeyboardTranspose | src/checks/rollcheck/keyboard.swift
 Anchor: message "Left snaps the off-grid note back to the lattice"
-Counterpart expression:
-report.expect(session.document.note(seed.id).map {
-    $0.tick == seed.tick + seed.snap && Int($0.pitch) == seed.pitch - 11
-} == true, cppID: id, message: "Left snaps the off-grid note back to the lattice")
 
 S048 | swiftcore/PianoRoll::withKeyboardSeed | src/checks/rollcheck/keyboard.swift
 Anchor: message "undo restores the original song, camera, and history position"
-Counterpart expression:
-report.expect(document.state == before && document.history.currentIdentity == identity
-    && session.camera.snapshot == originalCamera,
-    cppID: id, message: "undo restores the original song, camera, and history position")
 
 S049 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
 Anchor: message "the batch fixture has two different durations"
-Counterpart expression:
-report.expect(seed.duration != laterDuration
-    && session.document.note(second)?.duration == laterDuration,
-    cppID: id, message: "the batch fixture has two different durations")
 
 S050 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
 Anchor: message "two Shift+Right presses extend both notes by two snap cells"
-Counterpart expression:
-report.expect(session.document.note(seed.id)?.duration == seed.duration + 2 * seed.snap
-    && session.document.note(second)?.duration == laterDuration + 2 * seed.snap,
-    cppID: id, message: "two Shift+Right presses extend both notes by two snap cells")
 
 S051 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
 Anchor: message "one undo restores both different durations"
-Counterpart expression:
-report.expect(session.document.state == baseline
-    && session.document.history.currentIdentity == resizeIdentity,
-    cppID: id, message: "one undo restores both different durations")
 
 S052 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
 Anchor: message "Shift+Left shortens both notes by the same step"
-Counterpart expression:
-report.expect(shrink > 0 && nextA.duration == a.duration - shrink
-    && nextB.duration == b.duration - shrink,
-    cppID: id, message: "Shift+Left shortens both notes by the same step")
 
 S053 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
 Anchor: message "repeated Shift+Left reaches the one-tick floor"
-Counterpart expression:
-report.expect(min(session.document.note(seed.id)?.duration ?? 0,
-                  session.document.note(second)?.duration ?? 0) == 1,
-              cppID: id, message: "repeated Shift+Left reaches the one-tick floor")
 
 S054 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
 Anchor: message "an extra Shift+Left at the floor is a document and history no-op"
-Counterpart expression:
-report.expect(session.document.state == atFloor
-    && session.document.history.currentIdentity == floorIdentity
-    && session.document.revision == floorRevision,
-    cppID: id, message: "an extra Shift+Left at the floor is a document and history no-op")
 
 S055 | checkKeyboardResizeNotes | src/checks/rollcheck/keyboard.swift
 Anchor: message "the shrink sequence merges and one undo restores the fixture"
-Counterpart expression:
-report.expect(session.document.history.undoDocument()
-    && session.document.state == baseline, cppID: id,
-    message: "the shrink sequence merges and one undo restores the fixture")
 
 S056 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
 Anchor: message "track insertion seed reaches its shortcut position"
-Counterpart expression:
-report.expect(session.document.note(seed.id).map {
-    $0.tick == start && Int($0.pitch) == seed.pitch - 10
-} == true, cppID: id, message: "track insertion seed reaches its shortcut position")
 
 S057 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
 Anchor: message "track-scoped blank insertion shifts only the selected track"
-Counterpart expression:
-report.expect(session.document.insertBlankTime(range, scope: TimeScope(tracks: [seed.track]))
-    && session.document.notes(in: seed.track).contains(where: {
-        $0.tick == end && Int($0.pitch) == seed.pitch - 10
-    })
-    && session.document.note(otherID).map {
-        $0.tick == otherBefore.tick && $0.duration == otherBefore.duration
-            && $0.pitch == otherBefore.pitch && $0.velocity == otherBefore.velocity
-    } == true, cppID: id,
-    message: "track-scoped blank insertion shifts only the selected track")
 
 S058 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
 Anchor: message "undo restores the track-scoped insertion"
-Counterpart expression:
-report.expect(session.document.history.undoDocument()
-    && session.document.state == baseline
-    && session.document.history.currentIdentity == history,
-    cppID: id, message: "undo restores the track-scoped insertion")
 
 S059 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift
 Anchor: message "lane-scoped blank insertion shifts CC7 without moving the note"
-Counterpart expression:
-report.expect(session.document.insertBlankTime(range, scope: scope)
-    && session.document.lanePoints(track: seed.track, lane: lane).contains(where: {
-        $0.tick == pointTick + seed.snap && $0.value == 80
-    })
-    && session.document.note(seed.id).map {
-        $0.tick == noteBefore.tick && $0.duration == noteBefore.duration
-            && $0.pitch == noteBefore.pitch && $0.velocity == noteBefore.velocity
-    } == true, cppID: id,
-    message: "lane-scoped blank insertion shifts CC7 without moving the note")
 
 S060 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift
 Anchor: message "undo restores the lane-scoped insertion"
-Counterpart expression:
-report.expect(session.document.history.undoDocument()
-    && session.document.state == baseline
-    && session.document.history.currentIdentity == history,
-    cppID: id, message: "undo restores the lane-scoped insertion")

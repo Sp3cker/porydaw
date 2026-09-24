@@ -5,120 +5,21 @@ Original: src/checks/voicegroupsave/fixture.cpp
 Original SHA-256: d845e0149ded4783a934830eea99ebba48431d74984e712ce4f268c362c67d66
 Swift counterpart: none identified
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below (4 sites across init and openSong (the remaining helpers and the free function runVoicegroupSaveCheck carry no assertion sites)). Source
-context preserves setup and guards between assertions verbatim.
-MATCHED means a corresponding Swift predicate was identified and executed;
-PARTIAL means a related check exists but differs in a stated way;
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of a converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-No Swift counterpart was identified for this file. All 4 sites below are NATIVE:
-native harness/fixture preconditions (isolated settings, fixture project copy,
-working audio engine, song open) exercised only by the retained native path.
-None of these labels authorizes deletion or claims whole-case equivalence.
 
-Verification
 Command: deno task verify --filter voicegroup-save --verbose
 Result: pending integrated run.
-The "voicegroup-save" filter selects the retained native harness; it provides
-no Swift parity evidence.
-
-Execution ownership
-The retained native harness owns this file. runVoicegroupSaveCheck in
-src/checks/voicegroupsave/fixture.cpp constructs VoicegroupSaveTest and qExecs
-it under the "voicegroup-save" application id; init()/cleanup() bracket every
-test method. init and openSong (the remaining helpers and the free function runVoicegroupSaveCheck carry no assertion sites) execute the checks inventoried below.
-Shared per-test state (m_window, m_document, m_tab, m_browser, m_dsSlot,
-m_originalVoice, m_homeId/m_homeArg, voicegroup/MIDI baselines, save receipts)
-is built by VoicegroupSaveTest::openSong with VoicegroupBrowserDriver and the
-song/project fixtures declared in src/checks/voicegroupsave/tst_voicegroupsave.h.
-No Swift entry point executes these checks; there are no S entries and no
-shared-helper expects for this file.
-
-Fixture, sequence and row constraints
-No data rows, loops, or branch guards expand these sites; each executes once per fixture setup. init() brackets every test method with an isolated QSettings directory, a copied fixture project, a MainWindow with audio engine, and openSong; cleanup() tears all of it down. openSong gates on project Ready, a playable target song, SongTab readiness and voicegroup binding, audio-engine song load, catalog publication, and non-empty voicegroup/MIDI baselines before selecting the first DirectSound-family voice and first note-bearing track.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | VoicegroupSaveTest::init | src/checks/voicegroupsave/fixture.cpp:32
 Disposition: NATIVE
-Mapping/reason: Original native harness/fixture precondition exercised only by the retained native path. A presenter-level Swift check cannot establish this observation; the predicate and setup below remain a native obligation.
-Source context since previous assertion:
-#include "checks/voicegroupsave/tst_voicegroupsave.h"
-
-#include <QDir>
-#include <QFile>
-#include <QSettings>
-#include <QtTest>
-
-#include "checks/support/asyncwait.h"
-#include "checks/support/songfixture.h"
-#include "checks/support/voicegroupbrowserdriver.h"
-#include "mainwindow.h"
-#include "project/projectidentity.h"
-#include "ui/songtab.h"
-#include "ui/songview.h"
-#include "ui/workspaceui.h"
-#include <variant>
-
-namespace checks {
-
-VoicegroupSaveTest::VoicegroupSaveTest(const QString &projectRoot, const QString &songLabel,
-                                       const QString &screenshotPath)
-    : m_sourceRoot(projectRoot)
-    , m_songLabel(songLabel)
-    , m_screenshotPath(screenshotPath)
-{}
-
-VoicegroupSaveTest::~VoicegroupSaveTest() = default;
-
-void VoicegroupSaveTest::init()
-{
-    m_settingsDirectory = std::make_unique<QTemporaryDir>();
-
-Original expression:
-QVERIFY2(m_settingsDirectory && m_settingsDirectory->isValid(),
-             "could not create isolated QSettings directory")
 
 A002 | VoicegroupSaveTest::init | src/checks/voicegroupsave/fixture.cpp:40
 Disposition: NATIVE
-Mapping/reason: Original native harness/fixture precondition exercised only by the retained native path. A presenter-level Swift check cannot establish this observation; the predicate and setup below remain a native obligation.
-Source context since previous assertion:
-;
-    QSettings::setDefaultFormat(QSettings::IniFormat);
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, m_settingsDirectory->path());
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, m_settingsDirectory->path());
-
-    QString error;
-    m_project = ProjectFixture::copyOf(m_sourceRoot, error);
-
-Original expression:
-QVERIFY2(m_project, qPrintable(error))
 
 A003 | VoicegroupSaveTest::init | src/checks/voicegroupsave/fixture.cpp:44
 Disposition: NATIVE
-Mapping/reason: Original native harness/fixture precondition exercised only by the retained native path. A presenter-level Swift check cannot establish this observation; the predicate and setup below remain a native obligation.
-Source context since previous assertion:
-;
-
-    m_window = std::make_unique<MainWindow>();
-    m_window->m_persistSession = false;
-
-Original expression:
-QVERIFY2(m_window->m_audioOk, "VoicegroupSave requires a working application audio engine")
 
 A004 | VoicegroupSaveTest::init | src/checks/voicegroupsave/fixture.cpp:45
 Disposition: NATIVE
-Mapping/reason: Original native harness/fixture precondition exercised only by the retained native path. A presenter-level Swift check cannot establish this observation; the predicate and setup below remain a native obligation.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(openSong(error), qPrintable(error))
 
 Remaining original source (closing sequence and helper bodies):
 ;

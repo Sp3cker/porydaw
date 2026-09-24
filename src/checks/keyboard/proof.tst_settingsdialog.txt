@@ -6,260 +6,63 @@ Original SHA-256: 23c2e40d1157d1005fb2dacffbbb2ba35b4e216b7f68a08aa0a43cee289f6b
 Swift counterpart: src/checks/keyboard/EngineSettingsChecks.swift; src/checks/editorqml/tst_ShellSettings.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below. Source context preserves setup, rows,
-loops, and guards between assertions verbatim; `  ;` marks adjacent sites with
-no intervening source. GAP identifies a value contract without a replacement
-assertion; NATIVE identifies a retained native QWidget-harness obligation a
-presenter-level Swift check cannot establish. None of these labels authorizes
-deletion or claims whole-case equivalence.
 
-Verification
 Commands: deno task verify --filter swiftcore; deno task verify:shell --verbose; deno task verify
 Results: swiftcore 1/31 ok; shell-settings and shellwindow in 17/17 ok; integrated 31/31 ok.
-EngineSettingsChecks exercises the Swift mixer fallback and settings values.
-ShellSettings exercises the production QML dialog, native Settings persistence,
-no-song fallback, song editing, and the ordinary document save.
-
-Execution and ownership
-runSettingsDialogCheck (src/checks/keyboard/tst_settingsdialog.cpp:109) owned
-the deleted SettingsDialogCheckTest. The replacement Swift engine check runs
-in swiftcore; ShellQmlLane runs shell-settings against the shipping shell.
-The historic fixture and source setup below remain preserved for provenance.
-
-Fixture, sequence and row constraints
-initTestCase isolates QSettings into a QTemporaryDir for both IniFormat and
-NativeFormat user scopes. init/cleanup preserve and restore any pre-existing
-engine/pcmMixer value across each slot. configuredEngineSettings fixes
-M4A_PCM_MIXER_SAPPY with 8 max PCM channels; configuredSongTarget fixes master
-volume 110 on song mus_test; voicegroupArguments passes _abandoned_ship and
-_route101. engineMixerPersistsAndRejectsInvalidValue writes through the real
-settings store (valid SAPPY, then the string "invalid") and re-saves the
-persisted fixture at the end. No data rows or loops expand these sites.
-
-Original assertion inventory and source sequence
 
 A001 | SettingsDialogCheckTest::initTestCase | src/checks/keyboard/tst_settingsdialog.cpp:37
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-#include "checks/keyboard/tst_settingsdialog.h"
-
-#include <QComboBox>
-#include <QSettings>
-#include <QTabWidget>
-#include <QtTest>
-#include <optional>
-
-#include "ui/settingsdialog.h"
-
-namespace {
-
-EngineSettings configuredEngineSettings()
-{
-    EngineSettings settings;
-    settings.pcmMixer = M4A_PCM_MIXER_SAPPY;
-    settings.maxPcmChannels = 8;
-    return settings;
-}
-
-SongTarget configuredSongTarget()
-{
-    SongCfg cfg;
-    cfg.masterVolume = 110;
-    return {cfg, QStringLiteral("mus_test")};
-}
-
-QStringList voicegroupArguments()
-{
-    return {QStringLiteral("_abandoned_ship"), QStringLiteral("_route101")};
-}
-
-} // namespace
-
-void SettingsDialogCheckTest::initTestCase()
-{
-Original expression:
-QVERIFY2(m_settingsDirectory.isValid(), "could not create isolated QSettings directory");
 
 A002 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:67
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-    QSettings::setDefaultFormat(QSettings::IniFormat);
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, m_settingsDirectory.path());
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, m_settingsDirectory.path());
-}
-
-void SettingsDialogCheckTest::init()
-{
-    QSettings settings;
-    m_hadPcmMixer = settings.contains(QStringLiteral("engine/pcmMixer"));
-    m_pcmMixer = settings.value(QStringLiteral("engine/pcmMixer"));
-}
-
-void SettingsDialogCheckTest::cleanup()
-{
-    QSettings settings;
-    if (m_hadPcmMixer)
-        settings.setValue(QStringLiteral("engine/pcmMixer"), m_pcmMixer);
-    else
-        settings.remove(QStringLiteral("engine/pcmMixer"));
-    settings.sync();
-}
-
-void SettingsDialogCheckTest::configuredSettingsRoundTrip()
-{
-    const EngineSettings engineSettings = configuredEngineSettings();
-    const SongTarget songTarget = configuredSongTarget();
-    SettingsDialog dialog(engineSettings, songTarget, voicegroupArguments());
-
-    auto *const tabs = dialog.findChild<QTabWidget *>();
-Original expression:
-QVERIFY(tabs);
 
 A003 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:68
 Disposition: MATCHED
-Mapping/reason: shell-settings QML opens the production dialog from the Engine Settings action and compares its initial selected tab with Engine (index 0); focused shell-settings passed.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(tabs->currentIndex(), 0);
 
 A004 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:71
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-    auto *const mixer = dialog.findChild<QComboBox *>(QStringLiteral("pcmMixerCombo"));
-Original expression:
-QVERIFY(mixer);
 
 A005 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:72
 Disposition: MATCHED
-Mapping/reason: shell-settings QML reads production pcmMixerCombo.textAt(0) as Ipatix, then applies and persists the Ipatix engine value; full verify:shell passed.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(mixer->findData(int(M4A_PCM_MIXER_IPATIX)) >= 0);
 
 A006 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:73
 Disposition: MATCHED
-Mapping/reason: shell-settings QML reads production pcmMixerCombo.textAt(1) as Sappy, with Sappy persisted and restored in the same test; full verify:shell passed.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(mixer->findData(int(M4A_PCM_MIXER_SAPPY)) >= 0);
 
 A007 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:74
 Disposition: MATCHED
-Mapping/reason: shell-settings QML seeds Sappy in the native settings store and checks the production mixer ComboBox currentIndex is the Sappy entry (1); full verify:shell passed.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(mixer->currentData().toInt(), int(M4A_PCM_MIXER_SAPPY));
 
 A008 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:75
 Disposition: MATCHED
-Mapping/reason: shell-settings QML checks the production mixer selector has exactly two choices and verifies their Ipatix/Sappy labels; full verify:shell passed.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(mixer->count(), 2);
 
 A009 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:77
 Disposition: MATCHED
-Mapping/reason: shell-settings QML changes the production engine store from Sappy to Ipatix, applies, and checks QtCore.Settings stores Ipatix; full verify:shell passed.
-Source context since previous assertion:
-    mixer->setCurrentIndex(mixer->findData(int(M4A_PCM_MIXER_IPATIX)));
-Original expression:
-QCOMPARE(dialog.engineSettings().pcmMixer, M4A_PCM_MIXER_IPATIX);
 
 A010 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:79
 Disposition: MATCHED
-Mapping/reason: shell-settings QML opens a real fixture song, checks the selected Song tab and songAvailable state, edits flags, and observes its ordinary document save receipt; full verify:shell passed.
-Source context since previous assertion:
-    const std::optional<SongCfg> editedSong = dialog.songCfg();
-Original expression:
-QVERIFY(editedSong.has_value());
 
 A011 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:80
 Disposition: MATCHED
-Mapping/reason: shell-settings QML sets song master volume to 110, applies via SongDocument, saves via the normal receipt, and reads -V110 from midi.cfg; full verify:shell passed.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(editedSong->masterVolume, songTarget.cfg.masterVolume);
 
 A012 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:81
 Disposition: MATCHED
-Mapping/reason: shell-settings QML sets song reverb to 50, applies via SongDocument, saves via the normal receipt, and reads -R50 from midi.cfg; full verify:shell passed.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(editedSong->reverb, songTarget.cfg.reverb);
 
 A013 | SettingsDialogCheckTest::unavailableSongTabFallsBackToEngine | src/checks/keyboard/tst_settingsdialog.cpp:89
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-}
-
-void SettingsDialogCheckTest::unavailableSongTabFallsBackToEngine()
-{
-    SettingsDialog dialog(configuredEngineSettings(), std::nullopt, voicegroupArguments());
-
-    auto *const tabs = dialog.findChild<QTabWidget *>();
-Original expression:
-QVERIFY(tabs);
 
 A014 | SettingsDialogCheckTest::unavailableSongTabFallsBackToEngine | src/checks/keyboard/tst_settingsdialog.cpp:90
 Disposition: MATCHED
-Mapping/reason: shell-settings QML opens the production dialog with no song and asserts the Song tab is disabled; focused shell-settings passed.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!tabs->isTabEnabled(1));
 
 A015 | SettingsDialogCheckTest::unavailableSongTabFallsBackToEngine | src/checks/keyboard/tst_settingsdialog.cpp:91
 Disposition: MATCHED
-Mapping/reason: shell-settings QML opens the production dialog with no song, verifies Song is disabled, and compares selectedTab 0 for Engine fallback; focused shell-settings passed.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(tabs->currentIndex(), 0);
 
 A016 | SettingsDialogCheckTest::unavailableSongTabFallsBackToEngine | src/checks/keyboard/tst_settingsdialog.cpp:92
 Disposition: MATCHED
-Mapping/reason: shell-settings QML opens the production dialog without a song, checks the Song tab disabled and Engine tab selected, then applies engine settings without a SongDocument; full verify:shell passed.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!dialog.songCfg().has_value());
 
 A017 | SettingsDialogCheckTest::engineMixerPersistsAndRejectsInvalidValue | src/checks/keyboard/tst_settingsdialog.cpp:100
 Disposition: MATCHED
-Mapping/reason: shell-settings QML seeds Sappy in QtCore.Settings and restores it into a fresh production ShellWindow; the focused shell-settings and swiftcore runs passed.
-Source context since previous assertion:
-}
-
-void SettingsDialogCheckTest::engineMixerPersistsAndRejectsInvalidValue()
-{
-    EngineSettings persisted = configuredEngineSettings();
-    persisted.pcmMixer = M4A_PCM_MIXER_SAPPY;
-    persisted.save();
-Original expression:
-QCOMPARE(EngineSettings::load().pcmMixer, M4A_PCM_MIXER_SAPPY);
 
 A018 | SettingsDialogCheckTest::engineMixerPersistsAndRejectsInvalidValue | src/checks/keyboard/tst_settingsdialog.cpp:105
 Disposition: MATCHED
-Mapping/reason: shell-settings QML writes an invalid mixer into native QtCore.Settings and a fresh production shell restores Ipatix; EngineSettingsChecks.swift independently checks the same fallback; focused shell-settings and swiftcore runs passed.
-Source context since previous assertion:
-    QSettings settings;
-    settings.setValue(QStringLiteral("engine/pcmMixer"), QStringLiteral("invalid"));
-    settings.sync();
-Original expression:
-QCOMPARE(EngineSettings::load().pcmMixer, M4A_PCM_MIXER_IPATIX);
 
 Swift assertion predicates
 src/checks/keyboard/EngineSettingsChecks.swift reports Sappy restoration and invalid

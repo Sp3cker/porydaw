@@ -6,22 +6,9 @@ Original SHA-256: a495eb31b9a1b64dc3dc31835b626fcba510dc1f0e12ce2de6577966b2c1de
 Swift counterpart: none identified
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
-Status and evidence
-The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. No Swift counterpart was identified for this deleted scrollbar suite: every predicate observes QML scrollbar items, thumbs, travel, and model values inside a native Quick window, so every entry below is NATIVE. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
-The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
-
-Execution ownership
-No Swift entry point executes the deleted scrollbar checks; no Swift fixture is paired.
-
-Fixture, sequence and row constraints
-Standalone-scrollbar rows expand thumb-width, travel, and track-containment sites across initial, resized, and one-pixel width states, with modelValue rows tracking each geometry change. QTRY_VERIFY guards poll Quick-window visibility, root lookup, and thumb metrics before the interaction rows.
-Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:168
 Disposition: GAP
@@ -200,14 +187,6 @@ Original expression:
 
 A002 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:171
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-
-      const std::optional<SongName> name = SongName::create(m_songLabel);
-
-Original expression:
-  QVERIFY(name.has_value())
 
 A003 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:185
 Disposition: GAP
@@ -271,103 +250,30 @@ Original expression:
 
 A007 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:211
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      checks::support::bindEditActionsForTest(m_tab->view());
-
-      SongView &songView = view();
-      songView.setDrawerActivePage(EditorDrawerPage::Automations);
-      songView.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-      songView.setDrawerSectionHeight(EditorDrawerPage::Automations, kDefaultAutomationHeight);
-      songView.setEditorTimeZoom(64.0);
-      songView.setScaleFold(false);
-      songView.setEventListVisible(false);
-
-      songview::TimelineQuickView *const quick = songView.quickView();
-
-Original expression:
-  QVERIFY(quick)
 
 A008 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:213
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      m_window = quick->quickWindow();
-
-Original expression:
-  QVERIFY(m_window)
 
 A009 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:216
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      m_tab->show();
-
-
-Original expression:
-  QTRY_VERIFY(m_window && m_window->isVisible())
 
 A010 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:217
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY((m_root = quick->rootObject()))
 
 A011 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:218
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY((m_horizontalBar = m_root->findChild<QQuickItem *>(
-                       QStringLiteral("timelineHorizontalScrollBar"))))
 
 A012 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:220
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY((m_horizontalThumb = m_root->findChild<QQuickItem *>(
-                       QStringLiteral("timelineHorizontalScrollThumb"))))
 
 A013 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:222
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(
-          (m_verticalBar = m_root->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollBar"))))
 
 A014 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:224
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY((m_verticalThumb =
-                       m_root->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollThumb"))))
 
 A015 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:226
 Disposition: MATCHED
-Mapping/reason: tst_TimelineScrollbar.qml::test_tracksFollowViewportAndCamera asserts both mounted bars and their rendered thumbs are visible; deno task verify:qml-roll --verbose passed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(m_horizontalBar->isVisible() && m_horizontalThumb->isVisible() &&
-                  m_verticalBar->isVisible() && m_verticalThumb->isVisible())
 
 A016 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:228
 Disposition: GAP
@@ -383,36 +289,12 @@ Original expression:
 
 A017 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:232
 Disposition: MATCHED
-Mapping/reason: tst_TimelineScrollbar.qml::test_tracksFollowViewportAndCamera asserts both mounted rendered thumbs fit their tracks; deno task verify:qml-roll --verbose passed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(withinTrack(Qt::Horizontal) && withinTrack(Qt::Vertical))
 
 A018 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:233
 Disposition: MATCHED
-Mapping/reason: tst_TimelineScrollbar.qml::initTestCase asserts both mounted horizontal and roll thumb travels are positive; deno task verify:qml-roll --verbose passed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(m_horizontalBar->property("thumbTravel").toReal() > 0.0 &&
-                  m_verticalBar->property("thumbTravel").toReal() > 0.0)
 
 A019 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:240
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      // Application-focus staging: bare forceActiveFocus only resolves window-local
-      // scope, so the keyboard rows need the Quick window active first. Stage real
-      // Roll-band focus through the normal host path before scrollbar work.
-      songview::TimelineInputItem *const rollInput =
-          m_root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRollInput"));
-
-Original expression:
-  QVERIFY(rollInput)
 
 A020 | ScrollbarTest::init | src/checks/scrollbar/tst_scrollbar.cpp:241
 Disposition: GAP
@@ -437,60 +319,12 @@ Original expression:
 
 A022 | ScrollbarTest::automationLabelActivatesAfterResize | src/checks/scrollbar/tst_scrollbar.cpp:274
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-  }
-
-  void ScrollbarTest::cleanup()
-  {
-      endWheel(Qt::Horizontal);
-      endWheel(Qt::Vertical);
-
-      if (m_window) {
-          QTest::keyClick(m_window, Qt::Key_Escape);
-          release();
-          if (QQuickItem *const grabber = m_window->mouseGrabberItem())
-              grabber->ungrabMouse();
-      }
-      m_heldButton = Qt::NoButton;
-
-      m_horizontalThumb.clear();
-      m_horizontalBar.clear();
-      m_verticalThumb.clear();
-      m_verticalBar.clear();
-      m_root.clear();
-      m_window.clear();
-      m_touchpad.reset();
-      m_tab.reset();
-  }
-
-  void ScrollbarTest::automationLabelActivatesAfterResize()
-  {
-      EditorDrawer *const drawer = view().editorDrawer();
-
-Original expression:
-  QVERIFY(drawer)
 
 A023 | ScrollbarTest::automationLabelActivatesAfterResize | src/checks/scrollbar/tst_scrollbar.cpp:276
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      AutomationPage *const page = drawer->automationPage();
-
-Original expression:
-  QVERIFY(page)
 
 A024 | ScrollbarTest::automationLabelActivatesAfterResize | src/checks/scrollbar/tst_scrollbar.cpp:278
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      AutomationCanvas *const canvas = page->canvas();
-
-Original expression:
-  QVERIFY(canvas)
 
 A025 | ScrollbarTest::automationLabelActivatesAfterResize | src/checks/scrollbar/tst_scrollbar.cpp:283
 Disposition: GAP
@@ -545,40 +379,12 @@ Original expression:
 
 A029 | ScrollbarTest::signedRangeDragRebasesAndTracksModel | src/checks/scrollbar/tst_scrollbar.cpp:304
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-  }
-
-  void ScrollbarTest::signedRangeDragRebasesAndTracksModel()
-  {
-      QString error;
-      QQuickItem *const standaloneRoot = createStandaloneScrollbar(*m_root, &error);
-
-Original expression:
-  QVERIFY2(standaloneRoot, qPrintable(error))
 
 A030 | ScrollbarTest::signedRangeDragRebasesAndTracksModel | src/checks/scrollbar/tst_scrollbar.cpp:309
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      QQuickItem *const scrollbar =
-          standaloneRoot->findChild<QQuickItem *>(QStringLiteral("standaloneTimelineScrollbar"));
-      QQuickItem *const scrollbarThumb =
-          standaloneRoot->findChild<QQuickItem *>(QStringLiteral("standaloneTimelineScrollbarThumb"));
-
-Original expression:
-  QVERIFY(scrollbar)
 
 A031 | ScrollbarTest::signedRangeDragRebasesAndTracksModel | src/checks/scrollbar/tst_scrollbar.cpp:310
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/scrollbar/tst_scrollbar.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(scrollbarThumb)
 
 A032 | ScrollbarTest::signedRangeDragRebasesAndTracksModel | src/checks/scrollbar/tst_scrollbar.cpp:312
 Disposition: GAP

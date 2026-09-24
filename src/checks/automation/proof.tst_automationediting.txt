@@ -9,73 +9,29 @@ Additional Swift counterpart: src/checks/automation/domain/gestures.swift
 Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; the context inventory below records its rows, loops and fixtures.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-Unresolved entries remain work.
 
-Execution and ownership
-The original swiftcore suite entrypoints invoke these paired functions in their original
-order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
-VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
-Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
-Verification evidence
 Command: deno task verify --filter swiftcore --verbose. Result: build: ok (0.13s); ok:
 swiftcore (9.85s) — ********* Finished testing of SwiftCoreTest *********; verify: 1/14 ok
 (9.87s, 13 skipped); run_checks: PASS (all harnesses in 9.87s). The controller ran it in
 this worktree on HEAD 19aca868 plus the uncommitted automationcanvasediting.swift,
-AutomationPageChecks.swift, automationpointmenus.swift and automationtaptempo.swift edits,
-and supplied the banner; the ledger agent did not run it. That snapshot is the one pinned
-above. The legacy automation C++ harness is retired, so this file is an
-assertion-obligation inventory, never current execution evidence for the C++ original.
 Converted-window command: deno task verify:qml --verbose.
 Disposition tally: MATCHED 53, PARTIAL 21, NATIVE 3 (77 sites).
 
-Fixture, sequence, data-row and loop inventory
-Each line below is an exact original source anchor. Multiline declarations, helper
-implementations, native event delivery and the complete order remain in the pinned source.
-src/checks/automation/tst_automationediting.cpp:2 | // The fixture deliberately uses a normal CC lane: 0xC0 is a program change,
-src/checks/automation/tst_automationediting.cpp:68 | // Exactly one release-time document transaction changes the grabbed CC;
-src/checks/automation/tst_automationediting.cpp:121 | QTest::keyClick(m_quickWindow, Qt::Key_Escape, Qt::NoModifier);
-src/checks/automation/tst_automationediting.cpp:130 | // release-commit the cancelled gesture.
-src/checks/automation/tst_automationediting.cpp:131 | mouseMove(arm->dragEndWindow, Qt::NoModifier);
-src/checks/automation/tst_automationediting.cpp:194 | // delta must be target minus press, relative to that activation origin.
-src/checks/automation/tst_automationediting.cpp:205 | mouseMove(activationWindow, Qt::NoModifier);
-src/checks/automation/tst_automationediting.cpp:206 | mouseMove(dragEndWindow, Qt::NoModifier);
-src/checks/automation/tst_automationediting.cpp:230 | for (const TimelineEvent &event : timeline->events) {
-src/checks/automation/tst_automationediting.cpp:269 | for (int index = 0; index < labelCount; ++index) {
-
-Original assertion inventory
-
 A001 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:45
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/tst_automationediting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(quickScene)
 
 A002 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:49
 Disposition: MATCHED
-Mapping/reason: S031 asserts the committed drag advances the document revision by exactly one, the public-API equivalent of the original's documentChanged spy being armed and receiving the commit. [S031]
-Original expression:
-  QVERIFY(documentChanged.isValid())
+Mapping: S031
 
 A003 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:50
 Disposition: MATCHED
-Mapping/reason: S025 asserts a gesture records exactly one history entry (canUndo cleared by one undo), the public-API equivalent of the original's edited spy. [S025]
-Original expression:
-  QVERIFY(edited.isValid())
+Mapping: S025
 
 A004 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:54
 Disposition: MATCHED
-Mapping/reason: S018 asserts the production pointer press on the node is taken, the same arm the original's CC-drag helper performs. [S018]
-Original expression:
-  QVERIFY(arm.has_value())
+Mapping: S018
 
 A005 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:58
 Disposition: PARTIAL
@@ -93,39 +49,27 @@ Original expression:
 
 A007 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:62
 Disposition: MATCHED
-Mapping/reason: S022 asserts a live gesture mutates nothing (document/history snapshot equality), the same frozenDocumentState() observable the original reads mid-drag. [S022]
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen)
+Mapping: S022
 
 A008 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:63
 Disposition: MATCHED
-Mapping/reason: S029 asserts a live sub-threshold move writes nothing, the same lane-value stability the original reads mid-drag. [S029]
-Original expression:
-  QCOMPARE(laneValue(kDraggedTick), kDraggedValue)
+Mapping: S029
 
 A009 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:64
 Disposition: MATCHED
-Mapping/reason: S029 asserts a live sub-threshold move writes nothing, so the independent lane keeps its staged value as the original observes. [S029]
-Original expression:
-  QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
+Mapping: S029
 
 A010 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:71
 Disposition: MATCHED
-Mapping/reason: S031 asserts the drag publishes exactly one document revision (beforeCommit.revision + 1), the same single-commit observable as documentChanged.count() == 1. [S031]
-Original expression:
-  QCOMPARE(documentChanged.count(), 1)
+Mapping: S031
 
 A011 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:72
 Disposition: MATCHED
-Mapping/reason: S025 asserts the gesture recorded exactly one history entry, the same single-edit observable as edited.count() == 1. [S025]
-Original expression:
-  QCOMPARE(edited.count(), 1)
+Mapping: S025
 
 A012 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:73
 Disposition: MATCHED
-Mapping/reason: S031 asserts the committed drag advances the document revision by exactly one. [S031]
-Original expression:
-  QCOMPARE(m_tab->document().revision(), frozen.revision + 1)
+Mapping: S031
 
 A013 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:74
 Disposition: PARTIAL
@@ -141,21 +85,15 @@ Original expression:
 
 A015 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:76
 Disposition: MATCHED
-Mapping/reason: S030 asserts the committed lane holds the drag's new value, the consumer-visible content change the original reads as differing SMF bytes; the byte-level comparison itself is C++ serialization representation. [S030]
-Original expression:
-  QVERIFY(m_tab->document().smf().write() != frozen.smf)
+Mapping: S030
 
 A016 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:77
 Disposition: MATCHED
-Mapping/reason: S030 asserts the dragged tick holds the committed value after the release. [S030]
-Original expression:
-  QCOMPARE(laneValue(kDraggedTick), kCommittedValue)
+Mapping: S030
 
 A017 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:78
 Disposition: MATCHED
-Mapping/reason: S030 asserts the independent tick keeps its staged value after the commit. [S030]
-Original expression:
-  QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
+Mapping: S030
 
 A018 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:79
 Disposition: PARTIAL
@@ -171,27 +109,19 @@ Original expression:
 
 A020 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:82
 Disposition: MATCHED
-Mapping/reason: S032 asserts the committed drag is undoable through the public document history, the same availability the original reads from requestUndo's precondition. [S032]
-Original expression:
-  QVERIFY(m_tab->history().canUndo())
+Mapping: S032
 
 A021 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:83
 Disposition: MATCHED
-Mapping/reason: S032 asserts the drag's undo returns true (the DocumentHistoryApplied outcome the original requires) and S033 asserts the restored lane. [S032][S033]
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestUndo()))
+Mapping: S032, S033
 
 A022 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:84
 Disposition: MATCHED
-Mapping/reason: S033 asserts one undo restores the moved node and the evicted occupant, the same lane restoration the original reads. [S033]
-Original expression:
-  QCOMPARE(laneValue(kDraggedTick), kDraggedValue)
+Mapping: S033
 
 A023 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:85
 Disposition: MATCHED
-Mapping/reason: S033's restored lane keeps the independent tick's staged value (120:40) across the undo. [S033]
-Original expression:
-  QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
+Mapping: S033
 
 A024 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:86
 Disposition: PARTIAL
@@ -207,27 +137,19 @@ Original expression:
 
 A026 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:89
 Disposition: MATCHED
-Mapping/reason: S009 asserts the undone transaction is redoable through the public document history; the converted suite performs no redo of the CC drag itself, so this site rests on the same availability observable. [S009]
-Original expression:
-  QVERIFY(m_tab->history().canRedo())
+Mapping: S009
 
 A027 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:90
 Disposition: MATCHED
-Mapping/reason: S010 exercises the awaited redo with a real failure branch (do/catch -> report.fail) and S011 asserts the restored lane, covering the same DocumentHistoryApplied outcome. [S010][S011]
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestRedo()))
+Mapping: S010, S011
 
 A028 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:91
 Disposition: MATCHED
-Mapping/reason: S011 asserts the redo restores the committed lane, covering the same dragged value. [S011]
-Original expression:
-  QCOMPARE(laneValue(kDraggedTick), kCommittedValue)
+Mapping: S011
 
 A029 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:92
 Disposition: MATCHED
-Mapping/reason: S011's redone lane keeps the independent tick's staged value. [S011]
-Original expression:
-  QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
+Mapping: S011
 
 A030 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:93
 Disposition: PARTIAL
@@ -243,27 +165,18 @@ Original expression:
 
 A032 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:100
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/tst_automationediting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(quickScene)
 
 A033 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:104
 Disposition: MATCHED
-Mapping/reason: The public publication/revision observables for a gesture are asserted by S031 and S022; the original's QSignalSpy object is C++ representation for the same document-change publication.
-Original expression:
-  QVERIFY(documentChanged.isValid())
+Mapping: S031, S022
 
 A034 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:105
 Disposition: MATCHED
-Mapping/reason: S025 asserts a gesture's single history entry through public availability, replacing the original's edited spy.
-Original expression:
-  QVERIFY(edited.isValid())
+Mapping: S025
 
 A035 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:109
 Disposition: MATCHED
-Mapping/reason: S018 asserts the production pointer press on the node is taken, the same arm the original's CC-drag helper performs.
-Original expression:
-  QVERIFY(arm.has_value())
+Mapping: S018
 
 A036 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:113
 Disposition: PARTIAL
@@ -281,21 +194,15 @@ Original expression:
 
 A038 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:117
 Disposition: MATCHED
-Mapping/reason: S022 asserts a live gesture mutates nothing (document/history snapshot equality), the same frozenDocumentState() observable. [S022]
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen)
+Mapping: S022
 
 A039 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:118
 Disposition: MATCHED
-Mapping/reason: S029 asserts a live sub-threshold move writes nothing, the same lane-value stability. [S029]
-Original expression:
-  QCOMPARE(laneValue(kDraggedTick), kDraggedValue)
+Mapping: S029
 
 A040 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:119
 Disposition: MATCHED
-Mapping/reason: S029 asserts a live sub-threshold move writes nothing, so the independent lane keeps its staged value. [S029]
-Original expression:
-  QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
+Mapping: S029
 
 A041 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:122
 Disposition: PARTIAL
@@ -312,21 +219,15 @@ Original expression:
 
 A043 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:125
 Disposition: MATCHED
-Mapping/reason: S022 asserts the cancelled gesture mutates nothing (document/history snapshot equality). [S022]
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen)
+Mapping: S022
 
 A044 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:126
 Disposition: MATCHED
-Mapping/reason: S029 (live) and S022 (cancelled) assert no lane write across the gesture. [S022][S029]
-Original expression:
-  QCOMPARE(laneValue(kDraggedTick), kDraggedValue)
+Mapping: S029, S022
 
 A045 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:127
 Disposition: MATCHED
-Mapping/reason: S029 (live) and S022 (cancelled) assert no lane write, so the independent lane keeps its staged value. [S022][S029]
-Original expression:
-  QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
+Mapping: S029, S022
 
 A046 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:132
 Disposition: PARTIAL
@@ -343,21 +244,15 @@ Original expression:
 
 A048 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:136
 Disposition: MATCHED
-Mapping/reason: S022 asserts the cancelled gesture mutates nothing (document/history snapshot equality). [S022]
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen)
+Mapping: S022
 
 A049 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:137
 Disposition: MATCHED
-Mapping/reason: S029 (live) and S022 (cancelled) assert no lane write. [S022][S029]
-Original expression:
-  QCOMPARE(laneValue(kDraggedTick), kDraggedValue)
+Mapping: S029, S022
 
 A050 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:138
 Disposition: MATCHED
-Mapping/reason: S029 (live) and S022 (cancelled) assert no lane write for the independent lane. [S022][S029]
-Original expression:
-  QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
+Mapping: S029, S022
 
 A051 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:144
 Disposition: GAP
@@ -373,33 +268,23 @@ Original expression:
 
 A053 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:153
 Disposition: MATCHED
-Mapping/reason: S031 and S022 cover the public publication/revision observables for a gesture; the original's QSignalSpy object is C++ representation for the same document-change publication.
-Original expression:
-  QVERIFY(documentChanged.isValid())
+Mapping: S031, S022
 
 A054 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:154
 Disposition: MATCHED
-Mapping/reason: S025 asserts the gesture's single history entry through public availability, replacing the original's edited spy.
-Original expression:
-  QVERIFY(edited.isValid())
+Mapping: S025
 
 A055 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:161
 Disposition: MATCHED
-Mapping/reason: S027 asserts the press parks the edit cursor at the policy's snapped tick, the same cursor position the original reads. [S027]
-Original expression:
-  QTRY_COMPARE(m_tab->view().editCursorTick(), kBlankTick)
+Mapping: S027
 
 A056 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:162
 Disposition: MATCHED
-Mapping/reason: S026 asserts the parked press leaves the document alone (snapshot equality including revision and history identity), the same unchanged SMF bytes. [S026]
-Original expression:
-  QCOMPARE(m_tab->document().smf().write(), smfBefore)
+Mapping: S026
 
 A057 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:163
 Disposition: MATCHED
-Mapping/reason: S026's snapshot equality carries the document revision, the same revision the original reads. [S026]
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revisionBefore)
+Mapping: S026
 
 A058 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:164
 Disposition: PARTIAL
@@ -415,27 +300,19 @@ Original expression:
 
 A060 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:166
 Disposition: MATCHED
-Mapping/reason: S026 asserts the parked press changes nothing and publishes no revision, the same zero document changes. [S026]
-Original expression:
-  QCOMPARE(documentChanged.count(), 0)
+Mapping: S026
 
 A061 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:167
 Disposition: MATCHED
-Mapping/reason: S026's snapshot equality carries history availability, so no history entry was recorded. [S026]
-Original expression:
-  QCOMPARE(edited.count(), 0)
+Mapping: S026
 
 A062 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:168
 Disposition: MATCHED
-Mapping/reason: S026 asserts the document content is unchanged, so the dragged tick keeps its staged value. [S026]
-Original expression:
-  QCOMPARE(laneValue(kDraggedTick), kDraggedValue)
+Mapping: S026
 
 A063 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:169
 Disposition: MATCHED
-Mapping/reason: S026 asserts the document content is unchanged, so the independent tick keeps its staged value. [S026]
-Original expression:
-  QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
+Mapping: S026
 
 A064 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:170
 Disposition: PARTIAL
@@ -445,27 +322,19 @@ Original expression:
 
 A065 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:250
 Disposition: MATCHED
-Mapping/reason: S031 and S022 cover the public publication/revision observables for a gesture; the original's QSignalSpy object is C++ representation for the same document-change publication.
-Original expression:
-  QVERIFY(documentChanged.isValid())
+Mapping: S031, S022
 
 A066 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:251
 Disposition: MATCHED
-Mapping/reason: S025 asserts a gesture's single history entry through public availability, replacing the original's edited spy.
-Original expression:
-  QVERIFY(edited.isValid())
+Mapping: S025
 
 A067 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:263
 Disposition: MATCHED
-Mapping/reason: S037 asserts the page's selection equals the frozen selection across the production parameter switch, the same active selection the original requires. [S037]
-Original expression:
-  QVERIFY(frozenSelection.active())
+Mapping: S037
 
 A068 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:268
 Disposition: MATCHED
-Mapping/reason: S039 asserts the published row stack covers every catalog parameter (AutomationCatalog.count rows, which is more than one), the same labelCount > 1 the original reads from the canvas. [S039]
-Original expression:
-  QVERIFY(labelCount > 1)
+Mapping: S039
 
 A069 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:271
 Disposition: PARTIAL
@@ -475,294 +344,152 @@ Original expression:
 
 A070 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:272
 Disposition: MATCHED
-Mapping/reason: S034 asserts the production activateParameter returns true for the lane, the same activation result the original requires. [S034]
-Original expression:
-  QVERIFY(activateParameter(*row))
+Mapping: S034
 
 A071 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:273
 Disposition: MATCHED
-Mapping/reason: S035 asserts the activated lane's index becomes the page's active parameter index, the same activeParameter() the original reads. [S035]
-Original expression:
-  QCOMPARE(page().canvas()->activeParameter(), index)
+Mapping: S035
 
 A072 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:276
 Disposition: MATCHED
-Mapping/reason: S037 asserts the whole selection is unchanged across the parameter switch, which carries the scope the original compares. [S037]
-Original expression:
-  QCOMPARE(current.scope, frozenSelection.scope)
+Mapping: S037
 
 A073 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:277
 Disposition: MATCHED
-Mapping/reason: S037 asserts the whole selection is unchanged across the parameter switch, which carries the start tick the original compares. [S037]
-Original expression:
-  QCOMPARE(current.startTick, frozenSelection.startTick)
+Mapping: S037
 
 A074 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:278
 Disposition: MATCHED
-Mapping/reason: S037 asserts the whole selection is unchanged across the parameter switch, which carries the end tick the original compares. [S037]
-Original expression:
-  QCOMPARE(current.endTick, frozenSelection.endTick)
+Mapping: S037
 
 A075 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:279
 Disposition: MATCHED
-Mapping/reason: S037 asserts the whole selection is unchanged across the parameter switch, which carries the tempo flag the original compares. [S037]
-Original expression:
-  QCOMPARE(current.tempo, frozenSelection.tempo)
+Mapping: S037
 
 A076 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:280
 Disposition: MATCHED
-Mapping/reason: S037 asserts the whole selection is unchanged across the parameter switch, which carries the selected lanes the original compares. [S037]
-Original expression:
-  QVERIFY(current.lanes == frozenSelection.lanes)
+Mapping: S037
 
 A077 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:281
 Disposition: MATCHED
-Mapping/reason: S036 asserts the parameter switch writes nothing (document/history snapshot equality). [S036]
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen)
-
-Swift executable assertion index
-The S entries are exact predicates already called by the suite. Their presence alone
-does not close any A entry. Preserve their surrounding setup and order in the paired source.
+Mapping: S036
 
 S001 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "the prompt opens"
-Swift expression:
-  report.expect(fixture.page.openPrompt(tick: 24, value: 64), cppID: drawerAutomationHistoryID,
-                    message: "the prompt opens")
 
 S002 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "the prompt commits"
-Swift expression:
-  report.expect(fixture.page.acceptPrompt(displayedValue: 20), cppID: drawerAutomationHistoryID,
-                    message: "the prompt commits")
 
 S003 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "the committed lane holds the new value"
-Swift expression:
-  report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                         what: "the committed lane holds the new value")
 
 S004 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "the transaction is on the undo stack"
-Swift expression:
-  report.expect(fixture.document.history.canUndo, cppID: drawerAutomationHistoryID,
-                    message: "the transaction is on the undo stack")
 
 S005 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "the transaction undoes"
-Swift expression:
-  report.expect(fixture.undo(), cppID: drawerAutomationHistoryID, message: "the transaction undoes")
 
 S006 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "undo restores the curve from the document"
-Swift expression:
-  report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                         what: "undo restores the curve from the document")
 
 S007 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "the transaction recorded exactly one history entry"
-Swift expression:
-  report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationHistoryID,
-                    message: "the transaction recorded exactly one history entry")
 
 S008 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "the page rebuilds the restored curve"
-Swift expression:
-  report.expectEqual(["0:64", "24:64", "120:40"],
-                         fixture.page.projection?.points.map { "\($0.tick):\($0.value)" } ?? [],
-                         cppID: drawerAutomationHistoryID, what: "the page rebuilds the restored curve")
 
 S009 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "the undone transaction is redoable"
-Swift expression:
-  report.expect(fixture.document.history.canRedo, cppID: drawerAutomationHistoryID,
-                    message: "the undone transaction is redoable")
 
 S010 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: function
-Swift expression:
-  report.fail(drawerAutomationHistoryID, "redo failed: \(error)")
 
 S011 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "redo restores the committed lane"
-Swift expression:
-  report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                         what: "redo restores the committed lane")
 
 S012 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "one undo and one redo stand on the same single entry"
-Swift expression:
-  report.expect(fixture.document.history.canUndo && !fixture.document.history.canRedo,
-                    cppID: drawerAutomationHistoryID,
-                    message: "one undo and one redo stand on the same single entry")
 
 S013 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "a commit, an undo and a redo each publish one revision"
-Swift expression:
-  report.expectEqual(before.revision + 3, fixture.document.revision, cppID: drawerAutomationHistoryID,
-                         what: "a commit, an undo and a redo each publish one revision")
 
 S014 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "two transactions leave both writes"
-Swift expression:
-  report.expectEqual(["24:74", "48:54"], two.values(two.panLane), cppID: drawerAutomationHistoryID,
-                         what: "two transactions leave both writes")
 
 S015 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "the first undo removes only the second transaction"
-Swift expression:
-  report.expect(two.undo() && two.values(two.panLane) == ["24:74"], cppID: drawerAutomationHistoryID,
-                    message: "the first undo removes only the second transaction")
 
 S016 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "the second undo removes the first transaction"
-Swift expression:
-  report.expect(two.undo() && two.values(two.panLane) == ["24:64"], cppID: drawerAutomationHistoryID,
-                    message: "the second undo removes the first transaction")
 
 S017 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "a third undo finds nothing and reports nothing"
-Swift expression:
-  report.expect(!two.undo(), cppID: drawerAutomationHistoryID,
-                    message: "a third undo finds nothing and reports nothing")
 
 S018 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a press on a node grabs it"
-Swift expression:
-  report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1, button: 1),
-                  cppID: drawerAutomationCancelID, message: "a press on a node grabs it")
 
 S019 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the page publishes the live gesture"
-Swift expression:
-  report.expect(fixture.page.hasGesture && fixture.page.interactionActive, cppID: drawerAutomationCancelID,
-                  message: "the page publishes the live gesture")
 
 S020 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape claims the live gesture"
-Swift expression:
-  report.expect(fixture.page.handleEscape(), cppID: drawerAutomationCancelID,
-                  message: "Escape claims the live gesture")
 
 S021 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "cancelling ends the gesture synchronously"
-Swift expression:
-  report.expect(!fixture.page.hasGesture && !fixture.page.interactionActive, cppID: drawerAutomationCancelID,
-                  message: "cancelling ends the gesture synchronously")
 
 S022 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cancelled gesture mutates nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
-                       what: "a cancelled gesture mutates nothing")
 
 S023 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "an armed stroke that moved no node writes nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
-                       what: "an armed stroke that moved no node writes nothing")
 
 S024 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a plain stationary release deletes the grabbed node"
-Swift expression:
-  report.expectEqual(["24:64"], fixture.values(fixture.panLane), cppID: drawerAutomationCancelID,
-                       what: "a plain stationary release deletes the grabbed node")
 
 S025 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the stationary delete recorded exactly one history entry"
-Swift expression:
-  report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationCancelID,
-                  message: "the stationary delete recorded exactly one history entry")
 
 S026 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the parked press leaves the document alone"
-Swift expression:
-  report.expectEqual(emptyBefore, empty.snapshot, cppID: drawerAutomationCancelID,
-                       what: "the parked press leaves the document alone")
 
 S027 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the press parks the edit cursor at the snapped tick"
-Swift expression:
-  report.expectEqual(snapped, empty.session.editCursor, cppID: drawerAutomationCancelID,
-                       what: "the press parks the edit cursor at the snapped tick")
 
 S028 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a sub-threshold move previews the untouched target"
-Swift expression:
-  report.expectEqual([Tick(24): 64], [jitter.page.previewPoints.first?.tick ?? 0:
-                                          jitter.page.previewPoints.first?.value ?? 0],
-                       cppID: drawerAutomationCancelID,
-                       what: "a sub-threshold move previews the untouched target")
 
 S029 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a sub-threshold move writes nothing"
-Swift expression:
-  report.expectEqual(jitter.snapshot, drawerAutomationAutomationDocumentSnapshot(jitter.document), cppID: drawerAutomationCancelID,
-                       what: "a sub-threshold move writes nothing")
 
 S030 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the node lands on its destination and evicts the occupant there"
-Swift expression:
-  report.expectEqual(["48:90", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationNodeDragID,
-                       what: "the node lands on its destination and evicts the occupant there")
 
 S031 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "one drag is one revision"
-Swift expression:
-  report.expectEqual(beforeCommit.revision + 1, fixture.document.revision, cppID: drawerAutomationNodeDragID,
-                       what: "one drag is one revision")
 
 S032 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the drag is undoable"
-Swift expression:
-  report.expect(fixture.undo(), cppID: drawerAutomationNodeDragID, message: "the drag is undoable")
 
 S033 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "one undo restores the moved node and the evicted occupant"
-Swift expression:
-  report.expectEqual(["24:60", "48:80", "120:40"], fixture.values(fixture.panLane),
-                       cppID: drawerAutomationNodeDragID,
-                       what: "one undo restores the moved node and the evicted occupant")
 
 S034 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "a parameter switch is accepted"
-Swift expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
 
 S035 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the catalog index follows the switch"
-Swift expression:
-  report.expectEqual(panIndex, fixture.page.activeParameterIndex, cppID: drawerAutomationSwitchID,
-                       what: "the catalog index follows the switch")
 
 S036 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "switching a parameter mutates nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationSwitchID,
-                       what: "switching a parameter mutates nothing")
 
 S037 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "switching a parameter keeps the explicit selection"
-Swift expression:
-  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
-                       what: "switching a parameter keeps the explicit selection")
 
 S038 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the inactive parameter's selection indicator survives the switch"
-Swift expression:
-  report.expectEqual([fixture.panLane], fixture.page.selectedParameters, cppID: drawerAutomationSwitchID,
-                       what: "the inactive parameter's selection indicator survives the switch")
 
 S039 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the row stack carries one row per catalog parameter"
-Swift expression:
-  report.expectEqual(AutomationCatalog.count, stack.rows.count, cppID: drawerAutomationLabelsID,
-                       what: "the row stack carries one row per catalog parameter")
 
 S040 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cancelled stale gesture never writes on release"
-Swift expression:
-  report.expectEqual(afterStale, fixture.snapshot, cppID: drawerAutomationCancelID,
-                     what: "a cancelled stale gesture never writes on release")

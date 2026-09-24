@@ -8,69 +8,14 @@ Additional Swift counterpart: src/checks/keyboard/tst_velocitygesture.swift
 Additional Swift counterpart: src/checks/keyboard/tst_velocityaxis.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-VelocityGestureModel is DELETED by the B1 re-review; the gesture owner is now
-VelocityGestureState + VelocityGesturePolicy with SongDocument.setVelocities
-commits in src/swift/app/drawer/velocity/VelocityTransactions.swift. This is an
-assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below. Source context preserves setup, rows,
-loops, and guards between assertions verbatim; `  ;` marks adjacent sites with
-no intervening source. S identifiers identify exact Swift predicates, listed
-after the inventory. MATCHED identifies oracle-differential VelocityMap
-predicates (S001-S009) plus VelocityGestureState/Policy parity predicates
-(S010-S065, 34 sites) and VelocityAxisModel parity predicates (S066-S121) that
-execute in the paired Swift suite; GAP identifies the five nested-resolution
-sites A067-A071 plus 22 unrepresentable gesture begin/session/completion
-contracts (A001-A006, A008-A012, A015-A018, A023-A025, A030, A043, A055-A056),
-each naming the exact absent production API below. The Swift files have landed,
-so the SHA-256 lines above pin the tree inspected here. None of these
-labels authorizes deletion or claims whole-case equivalence. Native passes do
-not prove the Swift replacement. Expected tally: MATCHED 138 (48 oracle + 56
-axis + 34 gesture), GAP 27 (5 nested + 22 unrepresentable gesture), PARTIAL 0.
 Focused thermo re-review verdict: PASS, zero blocking findings.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS (1/6 ok, 10.32s), zero failures on the frozen post-fix tree.
 Command: deno task verify:qml --verbose
 Result: PASS (1/1 ok, 33.87s, velocity-lane profiles verified).
 Command: deno task proof check
 Result: PASS (224 files).
-The native velocity-model check row covers the C++ side; the Swift oracles
-below execute through the swiftcore lane.
-Execution and ownership
-runVelocityModelCheck (src/checks/keyboard/tst_velocitymodel.cpp:339) owns the
-VelocityModelTest slots gestureLifecycle, gestureAtomicity,
-gestureCompletionAndDeltaFromOriginals, gestureClampedDeltaAndCancellation,
-resolvesVoiceKinds, levelsCanonicalizeAndMove,
-continuousAxisGeometryAndDensity, intrinsicAxisRowsAndRoundTrip, and
-markerCapAndAccessibility. Swift execution runs through runVelocityMapOracleChecks
-(src/checks/keyboard/tst_velocitymodel.swift, SHA-256 48558722dc925dcc1d0073c39e91b383efc6da0d4903a6ee4bbf056fe7025ab7, @MainActor entry, suite 2 musicalSemantics), called by
-runMusicalSemanticsSuite (src/checks/midi/MidiChecks.swift). runVelocityMapOracleChecks
-fans out to runVelocityGestureParityChecks (src/checks/keyboard/tst_velocitygesture.swift,
-SHA-256 d7da2f1be2d2a1156ee4ba98a1c61934a20256fd994bd60d8c3836e6b7ea4f03, @MainActor entry runVelocityGestureParityChecks, 166 lines) for the four
-gesture slots against VelocityGestureState + VelocityGesturePolicy with
-SongDocument.setVelocities commits in src/swift/app/drawer/velocity/VelocityTransactions.swift
-(production SHA-256 89f4571cc77220196cc400f1d9b4c4e7a057bcb4c1cdac573016e4629c83b9f1; model deleted, updates() note-sort fix),
-and to runVelocityAxisParityChecks (src/checks/keyboard/tst_velocityaxis.swift,
-SHA-256 459ddc92727454e5309b1f4201b57b4cbdb9ac627d922d6cb1c1790575a5a301) for the three
-axis slots against VelocityAxisModel in src/swift/app/drawer/velocity/VelocityAxis.swift. No shared
-fixture file carries expects for this suite.
-
-Fixture, sequence and row constraints
-axisGeometry fixes the C++ VelocityAxisGeometry (6.0 top margin, 200.0 default
-label width, density thresholds 84.0/112.0/156.0/300.0); hasLevel, tone, and
-mapForTone build single-tone VelocityMaps. Loop-expanded sites: A-representative
-sites expand over 16 square/noise levels and 5 wave levels; label sites expand
-over 3/5/17 expected-label arrays; intrinsic sites expand over three maps
-(square, noise, wave) times each map's graduation levels. Swift S001-S009 each
-expand over oracle loops: kinds 0..<8, kind pairs, levels -2...18, velocities
--2...130, and the moveLevels origin/delta grid. C++ nested-resolution fixtures
-(KEYSPLIT_ALL subgroup arrays, keySplitTable splits) have no Swift loop
-counterpart. Swift S066-S121 parity rows expand over the same label arrays (below-D2 3, at-D2 5, dense 17) and over intrinsic maps (square, noise, wave) times each map's graduation levels; each executed row embeds its index, map, or level in the row text. Original setup, guards, and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | VelocityModelTest::gestureLifecycle | src/checks/keyboard/tst_velocitymodel.cpp:46
 Disposition: GAP
@@ -165,11 +110,7 @@ QVERIFY(!gesture.begin(42, {}));
 
 A007 | VelocityModelTest::gestureLifecycle | src/checks/keyboard/tst_velocitymodel.cpp:53
 Disposition: MATCHED
-Mapping/reason: S016 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): unassigned commit rejects nil; agrees with the C++ gestureLifecycle site (same consumer-visible rejection of the unassigned note) against SongDocument.setVelocities.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!gesture.begin(42, {{NoteId(), 40}}));
+Mapping: S016
 
 A008 | VelocityModelTest::gestureLifecycle | src/checks/keyboard/tst_velocitymodel.cpp:54
 Disposition: GAP
@@ -213,19 +154,11 @@ QVERIFY(!gesture.active());
 
 A013 | VelocityModelTest::gestureLifecycle | src/checks/keyboard/tst_velocitymodel.cpp:60
 Disposition: MATCHED
-Mapping/reason: S022 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): freeze accepts an unsorted target pair; agrees with the C++ gestureLifecycle site against VelocityGestureState capture.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(gesture.begin(42, {second, first}));
+Mapping: S022
 
 A014 | VelocityModelTest::gestureLifecycle | src/checks/keyboard/tst_velocitymodel.cpp:61
 Disposition: MATCHED
-Mapping/reason: S023 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): captured freeze is non-nil; agrees with the C++ active-after-begin site (non-nil stands in for active) against VelocityGestureState capture.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(gesture.active());
+Mapping: S023
 
 A015 | VelocityModelTest::gestureLifecycle | src/checks/keyboard/tst_velocitymodel.cpp:62
 Disposition: GAP
@@ -261,41 +194,19 @@ QCOMPARE(gesture.previewVelocity(first.noteId), std::optional<uint8_t>(40));
 
 A019 | VelocityModelTest::gestureAtomicity | src/checks/keyboard/tst_velocitymodel.cpp:73
 Disposition: MATCHED
-Mapping/reason: S028 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): freeze captures the atomicity pair; agrees with the C++ gestureAtomicity site against VelocityGestureState capture.
-Source context since previous assertion:
-}
-
-void VelocityModelTest::gestureAtomicity()
-{
-    const NoteVelocity first{NoteId(1), 40};
-    const NoteVelocity second{NoteId(2), 120};
-    VelocityGestureModel gesture;
-Original expression:
-QVERIFY(gesture.begin(42, {first, second}));
+Mapping: S028
 
 A020 | VelocityModelTest::gestureAtomicity | src/checks/keyboard/tst_velocitymodel.cpp:75
 Disposition: MATCHED
-Mapping/reason: S029 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): commit with an unknown target rejects nil; agrees with the C++ gestureAtomicity site (same consumer-visible atomic rejection) against SongDocument.setVelocities.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!gesture.update({{first.noteId, 100}, {NoteId(3), 64}}));
+Mapping: S029
 
 A021 | VelocityModelTest::gestureAtomicity | src/checks/keyboard/tst_velocitymodel.cpp:76
 Disposition: MATCHED
-Mapping/reason: S030 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): rejected commit keeps the first document value at 40 with an empty preview; agrees with the C++ gestureAtomicity site against SongDocument.setVelocities.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(gesture.previewVelocity(first.noteId), std::optional<uint8_t>(40));
+Mapping: S030
 
 A022 | VelocityModelTest::gestureAtomicity | src/checks/keyboard/tst_velocitymodel.cpp:77
 Disposition: MATCHED
-Mapping/reason: S031 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): rejected commit keeps the second document value at 120; agrees with the C++ gestureAtomicity site against SongDocument.setVelocities.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(gesture.previewVelocity(second.noteId), std::optional<uint8_t>(120));
+Mapping: S031
 
 A023 | VelocityModelTest::gestureAtomicity | src/checks/keyboard/tst_velocitymodel.cpp:79
 Disposition: GAP
@@ -323,41 +234,19 @@ QCOMPARE(gesture.previewVelocity(first.noteId), std::optional<uint8_t>(40));
 
 A026 | VelocityModelTest::gestureAtomicity | src/checks/keyboard/tst_velocitymodel.cpp:82
 Disposition: MATCHED
-Mapping/reason: S035 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): duplicated commit keeps the second value at 120; agrees with the C++ gestureAtomicity site against SongDocument.setVelocities.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(gesture.previewVelocity(second.noteId), std::optional<uint8_t>(120));
+Mapping: S035
 
 A027 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:90
 Disposition: MATCHED
-Mapping/reason: S036 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): freeze captures the completion pair; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGestureState capture.
-Source context since previous assertion:
-}
-
-void VelocityModelTest::gestureCompletionAndDeltaFromOriginals()
-{
-    const NoteVelocity first{NoteId(1), 40};
-    const NoteVelocity second{NoteId(2), 120};
-    VelocityGestureModel gesture;
-Original expression:
-QVERIFY(gesture.begin(42, {second, first}));
+Mapping: S036
 
 A028 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:91
 Disposition: MATCHED
-Mapping/reason: S037 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): absolute preview reaches the commit payload; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGesturePolicy.updates.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(gesture.update({{first.noteId, 100}}));
+Mapping: S037
 
 A029 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:92
 Disposition: MATCHED
-Mapping/reason: S038 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): first preview takes the absolute value 100; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGestureState.preview.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(gesture.previewVelocity(first.noteId), std::optional<uint8_t>(100));
+Mapping: S038
 
 A030 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:93
 Disposition: GAP
@@ -369,99 +258,51 @@ QCOMPARE(gesture.previewVelocity(second.noteId), std::optional<uint8_t>(120));
 
 A031 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:95
 Disposition: MATCHED
-Mapping/reason: S040 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): relative motion past activation arms the gesture; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGesturePolicy.applyRelative.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(gesture.updateByDelta(-10));
+Mapping: S040
 
 A032 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:96
 Disposition: MATCHED
-Mapping/reason: S041 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): first preview measures 30 from origin 40; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGesturePolicy.applyRelative.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(gesture.previewVelocity(first.noteId), std::optional<uint8_t>(30));
+Mapping: S041
 
 A033 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:97
 Disposition: MATCHED
-Mapping/reason: S042 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): second preview measures 110 from origin 120; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGesturePolicy.applyRelative.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(gesture.previewVelocity(second.noteId), std::optional<uint8_t>(110));
+Mapping: S042
 
 A034 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:100
 Disposition: MATCHED
-Mapping/reason: S043 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): commit payload is non-empty after edits; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGesturePolicy.updates.
-Source context since previous assertion:
-    const std::optional<VelocityGestureModel::Completion> completion = gesture.takeCompletion();
-Original expression:
-QVERIFY(completion.has_value());
+Mapping: S043
 
 A035 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:101
 Disposition: MATCHED
-Mapping/reason: S044 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): payload revision equals the freeze revision; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGestureState.revision.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(completion->expectedRevision, uint64_t(42));
+Mapping: S044
 
 A036 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:102
 Disposition: MATCHED
-Mapping/reason: S045 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): payload carries both targets; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGesturePolicy.updates.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(completion->targets.size(), std::size_t(2));
+Mapping: S045
 
 A037 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:103
 Disposition: MATCHED
-Mapping/reason: S046 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): payload first target is ordered by note; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGesturePolicy.updates (production updates() note-sort fix).
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(completion->targets[0].noteId, first.noteId);
+Mapping: S046
 
 A038 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:104
 Disposition: MATCHED
-Mapping/reason: S047 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): payload carries the first delta value 30; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGesturePolicy.updates.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(completion->targets[0].velocity, uint8_t(30));
+Mapping: S047
 
 A039 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:105
 Disposition: MATCHED
-Mapping/reason: S048 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): payload second target is ordered by note; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGesturePolicy.updates (production updates() note-sort fix).
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(completion->targets[1].noteId, second.noteId);
+Mapping: S048
 
 A040 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:106
 Disposition: MATCHED
-Mapping/reason: S049 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): payload carries the second delta value 110; agrees with the C++ gestureCompletionAndDeltaFromOriginals site against VelocityGesturePolicy.updates.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(completion->targets[1].velocity, uint8_t(110));
+Mapping: S049
 
 A041 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:107
 Disposition: MATCHED
-Mapping/reason: S050 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): nil reset plus applied commit (30/110 in the document); agrees with the C++ taken-completion-resets site against SongDocument.setVelocities.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!gesture.active());
+Mapping: S050
 
 A042 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:108
 Disposition: MATCHED
-Mapping/reason: S051 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): preview is nil after reset; agrees with the C++ preview-empties-after-completion site (nil stands in for empty) against the call-site reset.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!gesture.previewVelocity(first.noteId).has_value());
+Mapping: S051
 
 A043 | VelocityModelTest::gestureCompletionAndDeltaFromOriginals | src/checks/keyboard/tst_velocitymodel.cpp:109
 Disposition: GAP
@@ -473,97 +314,47 @@ QVERIFY(!gesture.takeCompletion().has_value());
 
 A044 | VelocityModelTest::gestureClampedDeltaAndCancellation | src/checks/keyboard/tst_velocitymodel.cpp:117
 Disposition: MATCHED
-Mapping/reason: S053 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): freeze captures the clamped pair; agrees with the C++ gestureClampedDeltaAndCancellation site against VelocityGestureState capture.
-Source context since previous assertion:
-}
-
-void VelocityModelTest::gestureClampedDeltaAndCancellation()
-{
-    const NoteVelocity first{NoteId(1), 40};
-    const NoteVelocity second{NoteId(2), 120};
-    VelocityGestureModel gesture;
-Original expression:
-QVERIFY(gesture.begin(42, {first, second}));
+Mapping: S053
 
 A045 | VelocityModelTest::gestureClampedDeltaAndCancellation | src/checks/keyboard/tst_velocitymodel.cpp:118
 Disposition: MATCHED
-Mapping/reason: S054 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): below-floor commit 0 clamps to 1 and applies; agrees with the C++ gestureClampedDeltaAndCancellation site (same consumer-visible clamped value) against SongDocument.setVelocities.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(gesture.update({{first.noteId, 0}}));
+Mapping: S054
 
 A046 | VelocityModelTest::gestureClampedDeltaAndCancellation | src/checks/keyboard/tst_velocitymodel.cpp:119
 Disposition: MATCHED
-Mapping/reason: S055 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): committed floor value reads 1; agrees with the C++ gestureClampedDeltaAndCancellation site against SongDocument.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(gesture.previewVelocity(first.noteId), std::optional<uint8_t>(1));
+Mapping: S055
 
 A047 | VelocityModelTest::gestureClampedDeltaAndCancellation | src/checks/keyboard/tst_velocitymodel.cpp:120
 Disposition: MATCHED
-Mapping/reason: S056 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): above-ceiling commit 128 clamps to 127 and applies; agrees with the C++ gestureClampedDeltaAndCancellation site (same consumer-visible clamped value) against SongDocument.setVelocities.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(gesture.update({{first.noteId, 128}}));
+Mapping: S056
 
 A048 | VelocityModelTest::gestureClampedDeltaAndCancellation | src/checks/keyboard/tst_velocitymodel.cpp:121
 Disposition: MATCHED
-Mapping/reason: S057 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): committed ceiling value reads 127; agrees with the C++ gestureClampedDeltaAndCancellation site against SongDocument.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(gesture.previewVelocity(first.noteId), std::optional<uint8_t>(127));
+Mapping: S057
 
 A049 | VelocityModelTest::gestureClampedDeltaAndCancellation | src/checks/keyboard/tst_velocitymodel.cpp:122
 Disposition: MATCHED
-Mapping/reason: S058 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): clamped delta motion arms the gesture; agrees with the C++ gestureClampedDeltaAndCancellation site against VelocityGesturePolicy.applyRelative.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(gesture.updateByDelta(-50));
+Mapping: S058
 
 A050 | VelocityModelTest::gestureClampedDeltaAndCancellation | src/checks/keyboard/tst_velocitymodel.cpp:123
 Disposition: MATCHED
-Mapping/reason: S059 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): clamped delta floors the first preview at 1 from its origin; agrees with the C++ gestureClampedDeltaAndCancellation site against VelocityGesturePolicy.applyRelative.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(gesture.previewVelocity(first.noteId), std::optional<uint8_t>(1));
+Mapping: S059
 
 A051 | VelocityModelTest::gestureClampedDeltaAndCancellation | src/checks/keyboard/tst_velocitymodel.cpp:124
 Disposition: MATCHED
-Mapping/reason: S060 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): clamped delta moves the second preview to 70 from its origin; agrees with the C++ gestureClampedDeltaAndCancellation site against VelocityGesturePolicy.applyRelative.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(gesture.previewVelocity(second.noteId), std::optional<uint8_t>(70));
+Mapping: S060
 
 A052 | VelocityModelTest::gestureClampedDeltaAndCancellation | src/checks/keyboard/tst_velocitymodel.cpp:125
 Disposition: MATCHED
-Mapping/reason: S061 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): nil reset while active leaves the document revision untouched; agrees with the C++ cancel-while-active site (same consumer-visible no-mutation) against the call-site reset.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(gesture.cancel());
+Mapping: S061
 
 A053 | VelocityModelTest::gestureClampedDeltaAndCancellation | src/checks/keyboard/tst_velocitymodel.cpp:126
 Disposition: MATCHED
-Mapping/reason: S062 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): cancelled gesture holds no targets; agrees with the C++ cancelled-reports-inactive site (empty targets stand in for inactive) against the call-site reset.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!gesture.active());
+Mapping: S062
 
 A054 | VelocityModelTest::gestureClampedDeltaAndCancellation | src/checks/keyboard/tst_velocitymodel.cpp:127
 Disposition: MATCHED
-Mapping/reason: S063 runVelocityGestureParityChecks execution (src/checks/keyboard/tst_velocitygesture.swift): preview is empty after cancel; agrees with the C++ gestureClampedDeltaAndCancellation site against the call-site reset.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!gesture.previewVelocity(first.noteId).has_value());
+Mapping: S063
 
 A055 | VelocityModelTest::gestureClampedDeltaAndCancellation | src/checks/keyboard/tst_velocitymodel.cpp:128
 Disposition: GAP
@@ -583,92 +374,43 @@ QVERIFY(!gesture.cancel());
 
 A057 | VelocityModelTest::resolvesVoiceKinds | src/checks/keyboard/tst_velocitymodel.cpp:141
 Disposition: MATCHED
-Mapping/reason: S001 runVelocityMapOracleChecks oracle-differential execution: velocityIsPSG per kind agrees with the C++ isPsg() for the PSG tone kinds.
-Source context since previous assertion:
-}
-
-void VelocityModelTest::resolvesVoiceKinds()
-{
-    const VelocityMap square = mapForTone(VOICE_SQUARE_1);
-    const VelocityMap squareTwo = mapForTone(VOICE_SQUARE_2);
-    const VelocityMap noise = mapForTone(VOICE_NOISE);
-    const VelocityMap wave = mapForTone(VOICE_PROGRAMMABLE_WAVE);
-    const VelocityMap directSound = mapForTone(VOICE_DIRECTSOUND);
-    const VelocityMap unresolved = VelocityMap::resolve(nullptr, std::nullopt);
-Original expression:
-QVERIFY(square.isPsg());
+Mapping: S001
 
 A058 | VelocityModelTest::resolvesVoiceKinds | src/checks/keyboard/tst_velocitymodel.cpp:142
 Disposition: MATCHED
-Mapping/reason: S003 runVelocityMapOracleChecks oracle-differential execution: velocityName per kind agrees with the C++ voiceName() string.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(QString::fromLatin1(square.voiceName()), QStringLiteral("Square 1"));
+Mapping: S003
 
 A059 | VelocityModelTest::resolvesVoiceKinds | src/checks/keyboard/tst_velocitymodel.cpp:143
 Disposition: MATCHED
-Mapping/reason: S001 runVelocityMapOracleChecks oracle-differential execution: velocityIsPSG per kind agrees with the C++ isPsg() for the PSG tone kinds.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(squareTwo.isPsg());
+Mapping: S001
 
 A060 | VelocityModelTest::resolvesVoiceKinds | src/checks/keyboard/tst_velocitymodel.cpp:144
 Disposition: MATCHED
-Mapping/reason: S003 runVelocityMapOracleChecks oracle-differential execution: velocityName per kind agrees with the C++ voiceName() string.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(QString::fromLatin1(squareTwo.voiceName()), QStringLiteral("Square 2"));
+Mapping: S003
 
 A061 | VelocityModelTest::resolvesVoiceKinds | src/checks/keyboard/tst_velocitymodel.cpp:145
 Disposition: MATCHED
-Mapping/reason: S001 runVelocityMapOracleChecks oracle-differential execution: velocityIsPSG per kind agrees with the C++ isPsg() for the PSG tone kinds.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(noise.isPsg());
+Mapping: S001
 
 A062 | VelocityModelTest::resolvesVoiceKinds | src/checks/keyboard/tst_velocitymodel.cpp:146
 Disposition: MATCHED
-Mapping/reason: S003 runVelocityMapOracleChecks oracle-differential execution: velocityName per kind agrees with the C++ voiceName() string.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(QString::fromLatin1(noise.voiceName()), QStringLiteral("Noise"));
+Mapping: S003
 
 A063 | VelocityModelTest::resolvesVoiceKinds | src/checks/keyboard/tst_velocitymodel.cpp:147
 Disposition: MATCHED
-Mapping/reason: S001 runVelocityMapOracleChecks oracle-differential execution: velocityIsPSG per kind agrees with the C++ isPsg() for the PSG tone kinds.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(wave.isPsg());
+Mapping: S001
 
 A064 | VelocityModelTest::resolvesVoiceKinds | src/checks/keyboard/tst_velocitymodel.cpp:148
 Disposition: MATCHED
-Mapping/reason: S003 runVelocityMapOracleChecks oracle-differential execution: velocityName per kind agrees with the C++ voiceName() string.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(QString::fromLatin1(wave.voiceName()), QStringLiteral("Programmable Wave"));
+Mapping: S003
 
 A065 | VelocityModelTest::resolvesVoiceKinds | src/checks/keyboard/tst_velocitymodel.cpp:149
 Disposition: MATCHED
-Mapping/reason: S001 runVelocityMapOracleChecks oracle-differential execution: velocityIsPSG per kind agrees with the C++ non-PSG verdict for direct-sound and unresolved maps.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!directSound.isPsg());
+Mapping: S001
 
 A066 | VelocityModelTest::resolvesVoiceKinds | src/checks/keyboard/tst_velocitymodel.cpp:150
 Disposition: MATCHED
-Mapping/reason: S001 runVelocityMapOracleChecks oracle-differential execution: velocityIsPSG per kind agrees with the C++ non-PSG verdict for direct-sound and unresolved maps.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!unresolved.isPsg());
+Mapping: S001
 
 A067 | VelocityModelTest::resolvesVoiceKinds | src/checks/keyboard/tst_velocitymodel.cpp:153
 Disposition: GAP
@@ -724,1370 +466,744 @@ QCOMPARE(QString::fromLatin1(resolvedSplit.voiceName()), QStringLiteral("Program
 
 A072 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:188
 Disposition: MATCHED
-Mapping/reason: S002 runVelocityMapOracleChecks oracle-differential execution: velocityLevelCount per kind agrees with the C++ levelCount().
-Source context since previous assertion:
-}
-
-void VelocityModelTest::levelsCanonicalizeAndMove()
-{
-    const VelocityMap square = mapForTone(VOICE_SQUARE_1);
-    const VelocityMap squareTwo = mapForTone(VOICE_SQUARE_2);
-    const VelocityMap noise = mapForTone(VOICE_NOISE);
-    const VelocityMap wave = mapForTone(VOICE_PROGRAMMABLE_WAVE);
-    const VelocityMap directSound = mapForTone(VOICE_DIRECTSOUND);
-    const VelocityMap invalid = mapForTone(VOICE_CRY);
-    const std::array<uint8_t, 16> squareNoise = {
-        1, 12, 20, 28, 36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 127,
-    };
-    const std::array<uint8_t, 5> waveLevels = {1, 32, 64, 96, 127};
-Original expression:
-QCOMPARE(square.levelCount(), squareNoise.size());
+Mapping: S002
 
 A073 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:189
 Disposition: MATCHED
-Mapping/reason: S002 runVelocityMapOracleChecks oracle-differential execution: velocityLevelCount per kind agrees with the C++ levelCount().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(noise.levelCount(), squareNoise.size());
+Mapping: S002
 
 A074 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:190
 Disposition: MATCHED
-Mapping/reason: S002 runVelocityMapOracleChecks oracle-differential execution: velocityLevelCount per kind agrees with the C++ levelCount().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(wave.levelCount(), waveLevels.size());
+Mapping: S002
 
 A075 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:192
 Disposition: MATCHED
-Mapping/reason: S006 runVelocityMapOracleChecks oracle-differential execution: velocityRepresentative per kind/level agrees with the C++ representative(). Each site expands over its loop indices.
-Source context since previous assertion:
-    for (std::size_t index = 0; index < squareNoise.size(); ++index) {
-Original expression:
-QCOMPARE(square.representative(int(index)), squareNoise[index]);
+Mapping: S006
 
 A076 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:193
 Disposition: MATCHED
-Mapping/reason: S006 runVelocityMapOracleChecks oracle-differential execution: velocityRepresentative per kind/level agrees with the C++ representative(). Each site expands over its loop indices.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(noise.representative(int(index)), squareNoise[index]);
+Mapping: S006
 
 A077 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:196
 Disposition: MATCHED
-Mapping/reason: S006 runVelocityMapOracleChecks oracle-differential execution: velocityRepresentative per kind/level agrees with the C++ representative(). Each site expands over its loop indices.
-Source context since previous assertion:
-    }
-    for (std::size_t index = 0; index < waveLevels.size(); ++index)
-Original expression:
-QCOMPARE(wave.representative(int(index)), waveLevels[index]);
+Mapping: S006
 
 A078 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:197
 Disposition: MATCHED
-Mapping/reason: S007 runVelocityMapOracleChecks oracle-differential execution: velocityLevel per kind/velocity agrees with the C++ levelOf().
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(hasLevel(square.levelOf(1), 0));
+Mapping: S007
 
 A079 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:198
 Disposition: MATCHED
-Mapping/reason: S007 runVelocityMapOracleChecks oracle-differential execution: velocityLevel per kind/velocity agrees with the C++ levelOf().
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(hasLevel(square.levelOf(127), 15));
+Mapping: S007
 
 A080 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:199
 Disposition: MATCHED
-Mapping/reason: S007 runVelocityMapOracleChecks oracle-differential execution: velocityLevel per kind/velocity agrees with the C++ levelOf().
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(hasLevel(wave.levelOf(1), 0));
+Mapping: S007
 
 A081 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:200
 Disposition: MATCHED
-Mapping/reason: S007 runVelocityMapOracleChecks oracle-differential execution: velocityLevel per kind/velocity agrees with the C++ levelOf().
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(hasLevel(wave.levelOf(127), 4));
+Mapping: S007
 
 A082 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:201
 Disposition: MATCHED
-Mapping/reason: S007 runVelocityMapOracleChecks oracle-differential execution: the oracle records -1 for absent levels, agreeing with the C++ empty levelOf() for direct sound.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!directSound.levelOf(1).has_value());
+Mapping: S007
 
 A083 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:202
 Disposition: MATCHED
-Mapping/reason: S004 runVelocityMapOracleChecks oracle-differential execution: velocityCompatible per kind pair agrees with the C++ compatibleWith().
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(square.compatibleWith(square));
+Mapping: S004
 
 A084 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:203
 Disposition: MATCHED
-Mapping/reason: S004 runVelocityMapOracleChecks oracle-differential execution: velocityCompatible per kind pair agrees with the C++ compatibleWith().
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!square.compatibleWith(squareTwo));
+Mapping: S004
 
 A085 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:204
 Disposition: MATCHED
-Mapping/reason: S004 runVelocityMapOracleChecks oracle-differential execution: velocityCompatible per kind pair agrees with the C++ compatibleWith().
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!square.compatibleWith(noise));
+Mapping: S004
 
 A086 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:206
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(square.canonicalize(1), uint8_t(1));
+Mapping: S008
 
 A087 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:207
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(square.canonicalize(127), uint8_t(127));
+Mapping: S008
 
 A088 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:208
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(square.canonicalize(64), uint8_t(60));
+Mapping: S008
 
 A089 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:209
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(wave.canonicalize(80), uint8_t(64));
+Mapping: S008
 
 A090 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:210
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(square.canonicalize(8), uint8_t(1));
+Mapping: S008
 
 A091 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:211
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(noise.canonicalize(8), uint8_t(1));
+Mapping: S008
 
 A092 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:212
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(noise.canonicalize(9), uint8_t(12));
+Mapping: S008
 
 A093 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:213
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(square.canonicalize(9), uint8_t(12));
+Mapping: S008
 
 A094 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:214
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(wave.canonicalize(112), uint8_t(96));
+Mapping: S008
 
 A095 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:215
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(wave.canonicalize(65), uint8_t(64));
+Mapping: S008
 
 A096 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:216
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(square.canonicalize(65), uint8_t(68));
+Mapping: S008
 
 A097 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:217
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(noise.canonicalize(65), uint8_t(68));
+Mapping: S008
 
 A098 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:218
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(directSound.canonicalize(65), uint8_t(65));
+Mapping: S008
 
 A099 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:219
 Disposition: MATCHED
-Mapping/reason: S008 runVelocityMapOracleChecks oracle-differential execution: velocityCanonicalize per kind/velocity agrees with the C++ canonicalize().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(invalid.canonicalize(65), uint8_t(65));
+Mapping: S008
 
 A100 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:221
 Disposition: MATCHED
-Mapping/reason: S007 runVelocityMapOracleChecks oracle-differential execution: velocityLevel per kind/velocity agrees with the C++ levelOf().
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(hasLevel(wave.levelOf(95), 3));
+Mapping: S007
 
 A101 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:222
 Disposition: MATCHED
-Mapping/reason: S009 runVelocityMapOracleChecks oracle-differential execution: velocityMoveLevels per kind/origin/delta agrees with the C++ moveLevels().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(wave.moveLevels(95, 0), uint8_t(95));
+Mapping: S009
 
 A102 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:223
 Disposition: MATCHED
-Mapping/reason: S009 runVelocityMapOracleChecks oracle-differential execution: velocityMoveLevels per kind/origin/delta agrees with the C++ moveLevels().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(wave.moveLevels(95, -1), uint8_t(64));
+Mapping: S009
 
 A103 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:224
 Disposition: MATCHED
-Mapping/reason: S009 runVelocityMapOracleChecks oracle-differential execution: velocityMoveLevels per kind/origin/delta agrees with the C++ moveLevels().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(wave.moveLevels(95, 1), uint8_t(127));
+Mapping: S009
 
 A104 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:225
 Disposition: MATCHED
-Mapping/reason: S009 runVelocityMapOracleChecks oracle-differential execution: velocityMoveLevels per kind/origin/delta agrees with the C++ moveLevels().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(square.moveLevels(60, 1), uint8_t(68));
+Mapping: S009
 
 A105 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:226
 Disposition: MATCHED
-Mapping/reason: S009 runVelocityMapOracleChecks oracle-differential execution: velocityMoveLevels per kind/origin/delta agrees with the C++ moveLevels().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(directSound.moveLevels(65, 1), uint8_t(66));
+Mapping: S009
 
 A106 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:227
 Disposition: MATCHED
-Mapping/reason: S009 runVelocityMapOracleChecks oracle-differential execution: velocityMoveLevels per kind/origin/delta agrees with the C++ moveLevels().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(wave.moveLevels(1, -1), uint8_t(1));
+Mapping: S009
 
 A107 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:228
 Disposition: MATCHED
-Mapping/reason: S009 runVelocityMapOracleChecks oracle-differential execution: velocityMoveLevels per kind/origin/delta agrees with the C++ moveLevels().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(square.moveLevels(127, 1), uint8_t(127));
+Mapping: S009
 
 A108 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:229
 Disposition: MATCHED
-Mapping/reason: S009 runVelocityMapOracleChecks oracle-differential execution: velocityMoveLevels per kind/origin/delta agrees with the C++ moveLevels().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(directSound.moveLevels(1, -1), uint8_t(1));
+Mapping: S009
 
 A109 | VelocityModelTest::levelsCanonicalizeAndMove | src/checks/keyboard/tst_velocitymodel.cpp:230
 Disposition: MATCHED
-Mapping/reason: S009 runVelocityMapOracleChecks oracle-differential execution: velocityMoveLevels per kind/origin/delta agrees with the C++ moveLevels().
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(directSound.moveLevels(127, 1), uint8_t(127));
+Mapping: S009
 
 A110 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:240
 Disposition: MATCHED
-Mapping/reason: S066 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): unresolved map uses the continuous ruler; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-}
-
-void VelocityModelTest::continuousAxisGeometryAndDensity()
-{
-    const VelocityMap unresolved = VelocityMap::resolve(nullptr, std::nullopt);
-    const VelocityMap directSound = mapForTone(VOICE_DIRECTSOUND);
-    const VelocityMap invalid = mapForTone(VOICE_CRY);
-    const VelocityAxis axis(unresolved, axisGeometry(200.0), std::array<uint8_t, 3>{12, 64, 100});
-Original expression:
-QCOMPARE(axis.mode(), VelocityAxis::Mode::Continuous);
+Mapping: S066
 
 A111 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:241
 Disposition: MATCHED
-Mapping/reason: S067 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): ruler top is the inset; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.top(), 6.0);
+Mapping: S067
 
 A112 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:242
 Disposition: MATCHED
-Mapping/reason: S068 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): ruler bottom is height minus inset; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.bottom(), 194.0);
+Mapping: S068
 
 A113 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:243
 Disposition: MATCHED
-Mapping/reason: S069 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): maximum velocity draws at the top; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.velocityToY(127), 6.0);
+Mapping: S069
 
 A114 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:244
 Disposition: MATCHED
-Mapping/reason: S070 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): minimum velocity draws at the bottom; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.velocityToY(1), 194.0);
+Mapping: S070
 
 A115 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:245
 Disposition: MATCHED
-Mapping/reason: S071 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): velocity 64 draws midway; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.velocityToY(64), 100.0);
+Mapping: S071
 
 A116 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:246
 Disposition: MATCHED
-Mapping/reason: S072 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): ruler top reads back maximum velocity; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.yToVelocity(6.0), 127);
+Mapping: S072
 
 A117 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:247
 Disposition: MATCHED
-Mapping/reason: S073 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): ruler bottom reads back minimum velocity; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.yToVelocity(194.0), 1);
+Mapping: S073
 
 A118 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:248
 Disposition: MATCHED
-Mapping/reason: S074 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): interior active value folds into min/max markers; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.markerCount(), std::size_t(2));
+Mapping: S074
 
 A119 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:249
 Disposition: MATCHED
-Mapping/reason: S075 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): first marker is the minimum active value; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.markers()[0].velocity, uint8_t(12));
+Mapping: S075
 
 A120 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:250
 Disposition: MATCHED
-Mapping/reason: S076 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): second marker is the maximum active value; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.markers()[1].velocity, uint8_t(100));
+Mapping: S076
 
 A121 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:251
 Disposition: MATCHED
-Mapping/reason: S077 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): height 200 uses the 17-tick density band; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.tickCount(), std::size_t(17));
+Mapping: S077
 
 A122 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:252
 Disposition: MATCHED
-Mapping/reason: S078 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): band labels the maximum; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(axis.hasLabel(127));
+Mapping: S078
 
 A123 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:253
 Disposition: MATCHED
-Mapping/reason: S079 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): band labels 112; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(axis.hasLabel(112));
+Mapping: S079
 
 A124 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:254
 Disposition: MATCHED
-Mapping/reason: S080 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): band labels the minimum; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(axis.hasLabel(1));
+Mapping: S080
 
 A125 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:255
 Disposition: MATCHED
-Mapping/reason: S081 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): ruler owns its left edge; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(axis.inRuler(QPointF(0.0, 0.0), 200.0));
+Mapping: S081
 
 A126 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:256
 Disposition: MATCHED
-Mapping/reason: S082 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): ruler excludes its trailing edge; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!axis.inRuler(QPointF(200.0, 0.0), 200.0));
+Mapping: S082
 
 A127 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:257
 Disposition: MATCHED
-Mapping/reason: S083 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): press on a label row takes that label value; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.rulerVelocityAt(QPointF(0.0, axis.labels()[0].y), 12.0),
-             int(axis.labels()[0].velocity));
+Mapping: S083
 
 A128 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:259
 Disposition: MATCHED
-Mapping/reason: S084 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): press past the text radius reports no value; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.rulerVelocityAt(QPointF(0.0, axis.labels()[0].y + 6.01), 12.0), -1);
+Mapping: S084
 
 A129 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:260
 Disposition: MATCHED
-Mapping/reason: S085 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): first tick is the maximum velocity; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.ticks()[0].velocity, uint8_t(127));
+Mapping: S085
 
 A130 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:261
 Disposition: MATCHED
-Mapping/reason: S086 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): first tick draws at the ruler top; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.ticks()[0].y, axis.top());
+Mapping: S086
 
 A131 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:262
 Disposition: MATCHED
-Mapping/reason: S087 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): direct sound uses the continuous ruler; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(VelocityAxis(directSound, axisGeometry(200.0)).mode(), VelocityAxis::Mode::Continuous);
+Mapping: S087
 
 A132 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:263
 Disposition: MATCHED
-Mapping/reason: S088 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): invalid voice uses the continuous ruler; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(VelocityAxis(invalid, axisGeometry(200.0)).mode(), VelocityAxis::Mode::Continuous);
+Mapping: S088
 
 A133 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:265
 Disposition: MATCHED
-Mapping/reason: S089 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): below D1 thins to 5 ticks; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(VelocityAxis(unresolved, axisGeometry(83.0)).tickCount(), std::size_t(5));
+Mapping: S089
 
 A134 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:266
 Disposition: MATCHED
-Mapping/reason: S090 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): at D1 steps to 9 ticks; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(VelocityAxis(unresolved, axisGeometry(84.0)).tickCount(), std::size_t(9));
+Mapping: S090
 
 A135 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:267
 Disposition: MATCHED
-Mapping/reason: S091 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): at D2 holds 9 ticks; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(VelocityAxis(unresolved, axisGeometry(112.0)).tickCount(), std::size_t(9));
+Mapping: S091
 
 A136 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:268
 Disposition: MATCHED
-Mapping/reason: S092 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): at D3 steps to 17 ticks; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(VelocityAxis(unresolved, axisGeometry(156.0)).tickCount(), std::size_t(17));
+Mapping: S092
 
 A137 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:270
 Disposition: MATCHED
-Mapping/reason: S093 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): at D4 reaches the 32-tick cap; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-    const VelocityAxis dense(unresolved, axisGeometry(300.0));
-Original expression:
-QCOMPARE(dense.tickCount(), std::size_t(32));
+Mapping: S093
 
 A138 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:271
 Disposition: MATCHED
-Mapping/reason: S094 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): finest band steps ticks by four from 127; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(dense.ticks()[1].velocity, uint8_t(123));
+Mapping: S094
 
 A139 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:272
 Disposition: MATCHED
-Mapping/reason: S095 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): finest band ends its stride at 7; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(dense.ticks()[30].velocity, uint8_t(7));
+Mapping: S095
 
 A140 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:280
 Disposition: MATCHED
-Mapping/reason: S096 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): below D2 labels three values; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-    const VelocityAxis belowD2(unresolved, axisGeometry(111.999));
-    const VelocityAxis atD2(unresolved, axisGeometry(112.0));
-    const std::array<uint8_t, 3> belowD2Labels = {127, 64, 1};
-    const std::array<uint8_t, 5> atD2Labels = {127, 96, 64, 32, 1};
-    const std::array<uint8_t, 17> denseLabels = {
-        127, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 1,
-    };
-Original expression:
-QCOMPARE(belowD2.labelCount(), belowD2Labels.size());
+Mapping: S096
 
 A141 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:282
 Disposition: MATCHED
-Mapping/reason: S097 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): below-D2 label rows match the expected array; All 3 executed rows embed their label index in the row text. agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-    for (std::size_t index = 0; index < belowD2Labels.size(); ++index)
-Original expression:
-QCOMPARE(belowD2.labels()[index].velocity, belowD2Labels[index]);
+Mapping: S097
 
 A142 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:283
 Disposition: MATCHED
-Mapping/reason: S098 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): at D2 labels five values; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(atD2.labelCount(), atD2Labels.size());
+Mapping: S098
 
 A143 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:285
 Disposition: MATCHED
-Mapping/reason: S099 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): at-D2 label rows match the expected array; All 5 executed rows embed their label index in the row text. agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-    for (std::size_t index = 0; index < atD2Labels.size(); ++index)
-Original expression:
-QCOMPARE(atD2.labels()[index].velocity, atD2Labels[index]);
+Mapping: S099
 
 A144 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:286
 Disposition: MATCHED
-Mapping/reason: S100 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): dense band labels seventeen values; agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(dense.labelCount(), denseLabels.size());
+Mapping: S100
 
 A145 | VelocityModelTest::continuousAxisGeometryAndDensity | src/checks/keyboard/tst_velocitymodel.cpp:288
 Disposition: MATCHED
-Mapping/reason: S101 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): dense label rows match the expected array; All 17 executed rows embed their label index in the row text. agrees with the C++ continuousAxisGeometryAndDensity site against VelocityAxisModel.
-Source context since previous assertion:
-    for (std::size_t index = 0; index < denseLabels.size(); ++index)
-Original expression:
-QCOMPARE(dense.labels()[index].velocity, denseLabels[index]);
+Mapping: S101
 
 A146 | VelocityModelTest::intrinsicAxisRowsAndRoundTrip | src/checks/keyboard/tst_velocitymodel.cpp:298
 Disposition: MATCHED
-Mapping/reason: S102 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): each map uses the intrinsic ruler; Executed once per map (square, noise, wave); each row embeds its map. agrees with the C++ intrinsicAxisRowsAndRoundTrip site against VelocityAxisModel.
-Source context since previous assertion:
-}
-
-void VelocityModelTest::intrinsicAxisRowsAndRoundTrip()
-{
-    const VelocityMap square = mapForTone(VOICE_SQUARE_1);
-    const VelocityMap noise = mapForTone(VOICE_NOISE);
-    const VelocityMap wave = mapForTone(VOICE_PROGRAMMABLE_WAVE);
-    for (const VelocityMap *const map : {&square, &noise, &wave}) {
-        const VelocityAxis axis(*map, axisGeometry(200.0));
-Original expression:
-QCOMPARE(axis.mode(), VelocityAxis::Mode::Intrinsic);
+Mapping: S102
 
 A147 | VelocityModelTest::intrinsicAxisRowsAndRoundTrip | src/checks/keyboard/tst_velocitymodel.cpp:299
 Disposition: MATCHED
-Mapping/reason: S103 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): each map publishes one row per level; Executed once per map (square, noise, wave); each row embeds its map. agrees with the C++ intrinsicAxisRowsAndRoundTrip site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.graduationCount(), map->levelCount());
+Mapping: S103
 
 A148 | VelocityModelTest::intrinsicAxisRowsAndRoundTrip | src/checks/keyboard/tst_velocitymodel.cpp:301
 Disposition: MATCHED
-Mapping/reason: S104 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): each level row carries its representative; Executed per map per level (16 square, 16 noise, 5 wave rows); each row embeds its map and level. agrees with the C++ intrinsicAxisRowsAndRoundTrip site against VelocityAxisModel.
-Source context since previous assertion:
-        for (std::size_t level = 0; level < axis.graduationCount(); ++level) {
-Original expression:
-QCOMPARE(axis.graduations()[level].velocity, map->representative(int(level)));
+Mapping: S104
 
 A149 | VelocityModelTest::intrinsicAxisRowsAndRoundTrip | src/checks/keyboard/tst_velocitymodel.cpp:302
 Disposition: MATCHED
-Mapping/reason: S105 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): each level row stays below the top; Executed per map per level; each row embeds its map and level. agrees with the C++ intrinsicAxisRowsAndRoundTrip site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(axis.graduations()[level].y >= axis.top());
+Mapping: S105
 
 A150 | VelocityModelTest::intrinsicAxisRowsAndRoundTrip | src/checks/keyboard/tst_velocitymodel.cpp:303
 Disposition: MATCHED
-Mapping/reason: S106 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): each level row stays above the bottom; Executed per map per level; each row embeds its map and level. agrees with the C++ intrinsicAxisRowsAndRoundTrip site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(axis.graduations()[level].y <= axis.bottom());
+Mapping: S106
 
 A151 | VelocityModelTest::intrinsicAxisRowsAndRoundTrip | src/checks/keyboard/tst_velocitymodel.cpp:304
 Disposition: MATCHED
-Mapping/reason: S107 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): each level round-trips through its center; Executed per map per level; each row embeds its map and level. agrees with the C++ intrinsicAxisRowsAndRoundTrip site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(axis.yToLevel(axis.levelToY(int(level))), int(level));
+Mapping: S107
 
 A152 | VelocityModelTest::intrinsicAxisRowsAndRoundTrip | src/checks/keyboard/tst_velocitymodel.cpp:309
 Disposition: MATCHED
-Mapping/reason: S108 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): narrow label width collapses the intrinsic column; agrees with the C++ intrinsicAxisRowsAndRoundTrip site against VelocityAxisModel.
-Source context since previous assertion:
-        }
-    }
-
-    const VelocityAxis narrow(square, axisGeometry(200.0, 2.0));
-Original expression:
-QCOMPARE(narrow.intrinsicColumnWidth(), 0.0);
+Mapping: S108
 
 A153 | VelocityModelTest::intrinsicAxisRowsAndRoundTrip | src/checks/keyboard/tst_velocitymodel.cpp:310
 Disposition: MATCHED
-Mapping/reason: S109 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): narrow first graduation has no width; agrees with the C++ intrinsicAxisRowsAndRoundTrip site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(narrow.graduations()[0].width, 0.0);
+Mapping: S109
 
 A154 | VelocityModelTest::intrinsicAxisRowsAndRoundTrip | src/checks/keyboard/tst_velocitymodel.cpp:311
 Disposition: MATCHED
-Mapping/reason: S110 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): narrow first graduation stays in bounds; agrees with the C++ intrinsicAxisRowsAndRoundTrip site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(narrow.graduations()[0].x >= 0.0);
+Mapping: S110
 
 A155 | VelocityModelTest::intrinsicAxisRowsAndRoundTrip | src/checks/keyboard/tst_velocitymodel.cpp:312
 Disposition: MATCHED
-Mapping/reason: S111 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): narrow second graduation stays in bounds; agrees with the C++ intrinsicAxisRowsAndRoundTrip site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(narrow.graduations()[1].x >= 0.0);
+Mapping: S111
 
 A156 | VelocityModelTest::markerCapAndAccessibility | src/checks/keyboard/tst_velocitymodel.cpp:319
 Disposition: MATCHED
-Mapping/reason: S112 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): selected dense ruler labels seventeen values; agrees with the C++ markerCapAndAccessibility site against VelocityAxisModel.
-Source context since previous assertion:
-}
-
-void VelocityModelTest::markerCapAndAccessibility()
-{
-    const VelocityMap unresolved = VelocityMap::resolve(nullptr, std::nullopt);
-    const VelocityAxis selected(unresolved, axisGeometry(300.0), std::array<uint8_t, 1>{73});
-Original expression:
-QCOMPARE(selected.labelCount(), std::size_t(17));
+Mapping: S112
 
 A157 | VelocityModelTest::markerCapAndAccessibility | src/checks/keyboard/tst_velocitymodel.cpp:324
 Disposition: MATCHED
-Mapping/reason: S113 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): selected dense label rows match the expected array; All 17 executed rows embed their label index in the row text. agrees with the C++ markerCapAndAccessibility site against VelocityAxisModel.
-Source context since previous assertion:
-    const std::array<uint8_t, 17> denseLabels = {
-        127, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 1,
-    };
-    for (std::size_t index = 0; index < denseLabels.size(); ++index)
-Original expression:
-QCOMPARE(selected.labels()[index].velocity, denseLabels[index]);
+Mapping: S113
 
 A158 | VelocityModelTest::markerCapAndAccessibility | src/checks/keyboard/tst_velocitymodel.cpp:325
 Disposition: MATCHED
-Mapping/reason: S114 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): one active value draws one marker; agrees with the C++ markerCapAndAccessibility site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(selected.markerCount(), std::size_t(1));
+Mapping: S114
 
 A159 | VelocityModelTest::markerCapAndAccessibility | src/checks/keyboard/tst_velocitymodel.cpp:326
 Disposition: MATCHED
-Mapping/reason: S115 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): marker carries the active value; agrees with the C++ markerCapAndAccessibility site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(selected.markers()[0].velocity, uint8_t(73));
+Mapping: S115
 
 A160 | VelocityModelTest::markerCapAndAccessibility | src/checks/keyboard/tst_velocitymodel.cpp:329
 Disposition: MATCHED
-Mapping/reason: S116 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): active set caps at the marker maximum; agrees with the C++ markerCapAndAccessibility site against VelocityAxisModel.
-Source context since previous assertion:
-    const VelocityAxis capped(unresolved, axisGeometry(200.0), std::array<uint8_t, 3>{12, 64, 100});
-Original expression:
-QCOMPARE(capped.markerCount(), VelocityAxis::MAXIMUM_MARKERS);
+Mapping: S116
 
 A161 | VelocityModelTest::markerCapAndAccessibility | src/checks/keyboard/tst_velocitymodel.cpp:330
 Disposition: MATCHED
-Mapping/reason: S117 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): capped first marker is the minimum; agrees with the C++ markerCapAndAccessibility site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(capped.markers()[0].velocity, uint8_t(12));
+Mapping: S117
 
 A162 | VelocityModelTest::markerCapAndAccessibility | src/checks/keyboard/tst_velocitymodel.cpp:331
 Disposition: MATCHED
-Mapping/reason: S118 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): capped second marker is the maximum; agrees with the C++ markerCapAndAccessibility site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(capped.markers()[1].velocity, uint8_t(100));
+Mapping: S118
 
 A163 | VelocityModelTest::markerCapAndAccessibility | src/checks/keyboard/tst_velocitymodel.cpp:332
 Disposition: MATCHED
-Mapping/reason: S119 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): continuous ruler description is the plain domain; agrees with the C++ markerCapAndAccessibility site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QCOMPARE(QString::fromUtf8(capped.accessibleDescription().data(),
-                               int(capped.accessibleDescription().size())),
-             QStringLiteral("Velocity"));
+Mapping: S119
 
 A164 | VelocityModelTest::markerCapAndAccessibility | src/checks/keyboard/tst_velocitymodel.cpp:335
 Disposition: MATCHED
-Mapping/reason: S120 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): ruler nodes stay unfocusable; agrees with the C++ markerCapAndAccessibility site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!VelocityAxis::nodesFocusable());
+Mapping: S120
 
 A165 | VelocityModelTest::markerCapAndAccessibility | src/checks/keyboard/tst_velocitymodel.cpp:336
 Disposition: MATCHED
-Mapping/reason: S121 runVelocityAxisParityChecks execution (src/checks/keyboard/tst_velocityaxis.swift): graduation labels stay unfocusable; agrees with the C++ markerCapAndAccessibility site against VelocityAxisModel.
-Source context since previous assertion:
-  ;
-Original expression:
-QVERIFY(!VelocityAxis::graduationLabelsFocusable());
+Mapping: S121
 
 Swift assertion predicates
 
 S001 | runVelocityMapOracleChecks | src/checks/keyboard/tst_velocitymodel.swift
 Anchor: function
-        coreMidiExpectOracleValue(map.isPSG ? 1 : 0, .velocityIsPSG, Int64(kind),
-                          row: "velocity-kind-\(kind)-is-psg", cppID: velocityResolutionID,
-                          report: report)
 
 S002 | runVelocityMapOracleChecks | src/checks/keyboard/tst_velocitymodel.swift
 Anchor: function
-        coreMidiExpectOracleValue(Int64(map.levelCount), .velocityLevelCount, Int64(kind),
-                          row: "velocity-kind-\(kind)-count", cppID: velocityLevelsID,
-                          report: report)
 
 S003 | runVelocityMapOracleChecks | src/checks/keyboard/tst_velocitymodel.swift
 Anchor: function
-        coreMidiExpectOracleText(map.voiceName, .velocityName, Int64(kind),
-                         row: "velocity-kind-\(kind)-name", cppID: velocityResolutionID,
-                         report: report)
 
 S004 | runVelocityMapOracleChecks | src/checks/keyboard/tst_velocitymodel.swift
 Anchor: function
-            coreMidiExpectOracleValue(map.compatible(with: otherMap) ? 1 : 0, .velocityCompatible,
-                              Int64(kind), Int64(other),
-                              row: "velocity-kind-\(kind)-compatible-\(other)",
-                              cppID: velocityResolutionID, report: report)
 
 S005 | runVelocityMapOracleChecks | src/checks/keyboard/tst_velocitymodel.swift
 Anchor: function
-            coreMidiExpectOracleValue(packed, .velocityLevelRange, Int64(kind), Int64(level),
-                              row: "velocity-kind-\(kind)-range-\(level)",
-                              cppID: velocityLevelsID, report: report)
 
 S006 | runVelocityMapOracleChecks | src/checks/keyboard/tst_velocitymodel.swift
 Anchor: function
-            coreMidiExpectOracleValue(Int64(map.representative(level)), .velocityRepresentative,
-                              Int64(kind), Int64(level),
-                              row: "velocity-kind-\(kind)-representative-\(level)",
-                              cppID: velocityLevelsID, report: report)
 
 S007 | runVelocityMapOracleChecks | src/checks/keyboard/tst_velocitymodel.swift
 Anchor: function
-            coreMidiExpectOracleValue(Int64(map.level(of: velocity) ?? -1), .velocityLevel,
-                              Int64(kind), Int64(velocity),
-                              row: "velocity-kind-\(kind)-level-of-\(velocity)",
-                              cppID: velocityLevelsID, report: report)
 
 S008 | runVelocityMapOracleChecks | src/checks/keyboard/tst_velocitymodel.swift
 Anchor: function
-            coreMidiExpectOracleValue(Int64(map.canonicalize(velocity)), .velocityCanonicalize,
-                              Int64(kind), Int64(velocity),
-                              row: "velocity-kind-\(kind)-canonical-\(velocity)",
-                              cppID: velocityLevelsID, report: report)
 
 S009 | runVelocityMapOracleChecks | src/checks/keyboard/tst_velocitymodel.swift
 Anchor: function
-                coreMidiExpectOracleValue(actual, .velocityMoveLevels, Int64(kind), Int64(origin),
-                                  Int64(delta), 0,
-                                  row: "velocity-kind-\(kind)-move-\(origin)-\(delta)",
-                                  cppID: velocityLevelsID, report: report)
 
 S010 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A001 fresh gesture captures nothing"
-    report.expect(lifecycle == nil, cppID: lifecycleID, message: "A001 fresh gesture captures nothing")
 
 S011 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A002 relative motion with no targets previews nothing"
-    report.expect(empty.preview.isEmpty && !empty.relativeActivated, cppID: lifecycleID, message: "A002 relative motion with no targets previews nothing")
 
 S012 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A003 preview with no gesture is empty"
-    report.expect(lifecycle?.preview == nil, cppID: lifecycleID, message: "A003 preview with no gesture is empty")
 
 S013 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A004 completion with no targets carries nothing"
-    report.expect(VelocityGesturePolicy.updates(empty).isEmpty, cppID: lifecycleID, message: "A004 completion with no targets carries nothing")
 
 S014 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A005 cancelling with no gesture stays empty"
-    report.expect(lifecycle == nil, cppID: lifecycleID, message: "A005 cancelling with no gesture stays empty")
 
 S015 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A006 empty commit is a no-op success"
-    report.expect(probeEmpty == probeDocument.revision, cppID: lifecycleID, message: "A006 empty commit is a no-op success")
 
 S016 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A007 unassigned commit rejects"
-    report.expect(probeUnassigned == nil, cppID: lifecycleID, message: "A007 unassigned commit rejects")
 
 S017 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A008 below-floor commit clamps to the floor"
-    report.expect(probeFloor == probeDocument.revision && probeDocument.note(probeFirst)?.velocity == 1, cppID: lifecycleID, message: "A008 below-floor commit clamps to the floor")
 
 S018 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A009 above-ceiling commit clamps to the ceiling"
-    report.expect(probeCeiling == probeDocument.revision && probeDocument.note(probeFirst)?.velocity == 127, cppID: lifecycleID, message: "A009 above-ceiling commit clamps to the ceiling")
 
 S019 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A010 duplicated commit keeps the last write"
-    report.expect(probeDuplicate == probeRevision && probeDocument.revision == probeRevision, cppID: lifecycleID, message: "A010 duplicated commit keeps the last write")
 
 S020 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A011 duplicated longer commit changes nothing"
-    report.expect(probeLonger == probeRevision && probeDocument.note(probeSecond)?.velocity == 120, cppID: lifecycleID, message: "A011 duplicated longer commit changes nothing")
 
 S021 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A012 rejected commits leave the gesture and revision untouched"
-    report.expect(probeRejected == nil && probeDocument.revision == probeRevision && frozenProbe.preview.isEmpty, cppID: lifecycleID, message: "A012 rejected commits leave the gesture and revision untouched")
 
 S022 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A013 freeze accepts an unsorted target pair"
-    report.expect(lifecycle?.notes.count == 2, cppID: lifecycleID, message: "A013 freeze accepts an unsorted target pair")
 
 S023 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A014 captured freeze reports active"
-    report.expect(lifecycle != nil, cppID: lifecycleID, message: "A014 captured freeze reports active")
 
 S024 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A015 first frozen target holds its begin value"
-    report.expectEqual(Optional(UInt8(40)), lifecycle?.frozenNote(liveFirst)?.velocity, cppID: lifecycleID, what: "A015 first frozen target holds its begin value")
 
 S025 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A016 second frozen target holds its begin value"
-    report.expectEqual(Optional(UInt8(120)), lifecycle?.frozenNote(liveSecond)?.velocity, cppID: lifecycleID, what: "A016 second frozen target holds its begin value")
 
 S026 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A017 re-freeze replaces the live gesture"
-    report.expect(lifecycle?.notes.count == 1, cppID: lifecycleID, message: "A017 re-freeze replaces the live gesture")
 
 S027 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A018 re-freeze starts with an empty preview"
-    report.expect(lifecycle?.preview.isEmpty ?? false, cppID: lifecycleID, message: "A018 re-freeze starts with an empty preview")
 
 S028 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A019 freeze captures the atomicity pair"
-    report.expect(atomicity.notes.count == 2, cppID: atomicityID, message: "A019 freeze captures the atomicity pair")
 
 S029 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A020 commit with an unknown target rejects"
-    report.expect(atomicRejected == nil, cppID: atomicityID, message: "A020 commit with an unknown target rejects")
 
 S030 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A021 rejected commit keeps the first value"
-    report.expect(atomicDocument.note(atomicFirst)?.velocity == 40 && atomicity.preview.isEmpty, cppID: atomicityID, message: "A021 rejected commit keeps the first value")
 
 S031 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A022 rejected commit keeps the second value"
-    report.expectEqual(UInt8(120), atomicDocument.note(atomicSecond)?.velocity, cppID: atomicityID, what: "A022 rejected commit keeps the second value")
 
 S032 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A023 empty commit is a no-op success"
-    report.expect(atomicEmpty == atomicRevision && atomicDocument.revision == atomicRevision, cppID: atomicityID, message: "A023 empty commit is a no-op success")
 
 S033 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A024 duplicated commit keeps the last write"
-    report.expect(atomicDuplicate == atomicDocument.revision && atomicDocument.note(atomicFirst)?.velocity == 110, cppID: atomicityID, message: "A024 duplicated commit keeps the last write")
 
 S034 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A025 duplicated commit moves the first value to the last write"
-    report.expect(atomicDocument.note(atomicFirst)?.velocity == 110, cppID: atomicityID, message: "A025 duplicated commit moves the first value to the last write")
 
 S035 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A026 duplicated commit keeps the second value"
-    report.expectEqual(UInt8(120), atomicDocument.note(atomicSecond)?.velocity, cppID: atomicityID, what: "A026 duplicated commit keeps the second value")
 
 S036 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A027 freeze captures the completion pair"
-    report.expect(completion?.notes.count == 2, cppID: completionID, message: "A027 freeze captures the completion pair")
 
 S037 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A028 absolute preview applies to the commit payload"
-    report.expect(absolute.contains(where: { $0.noteID == finishingFirst && $0.velocity == 100 }), cppID: completionID, message: "A028 absolute preview applies to the commit payload")
 
 S038 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A029 first preview takes the absolute value"
-    report.expectEqual(Optional(UInt8(100)), completion!.preview[finishingFirst], cppID: completionID, what: "A029 first preview takes the absolute value")
 
 S039 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A030 untouched target keeps its frozen begin value"
-    report.expect(completion!.preview[finishingSecond] == nil && completion!.frozenNote(finishingSecond)?.velocity == 120, cppID: completionID, what: "A030 untouched target keeps its frozen begin value")
 
 S040 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A031 relative motion past activation arms the gesture"
-    report.expect(completion!.relativeActivated, cppID: completionID, message: "A031 relative motion past activation arms the gesture")
 
 S041 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A032 first preview measures the delta from its origin"
-    report.expectEqual(Optional(UInt8(30)), completion!.preview[finishingFirst], cppID: completionID, what: "A032 first preview measures the delta from its origin")
 
 S042 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A033 second preview measures the delta from its origin"
-    report.expectEqual(Optional(UInt8(110)), completion!.preview[finishingSecond], cppID: completionID, what: "A033 second preview measures the delta from its origin")
 
 S043 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A034 completion exists after edits"
-    report.expect(!payload.isEmpty, cppID: completionID, message: "A034 completion exists after edits")
 
 S044 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A035 completion carries the begin revision"
-    report.expectEqual(finishingRevision, completion!.revision, cppID: completionID, what: "A035 completion carries the begin revision")
 
 S045 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A036 completion carries both targets"
-    report.expectEqual(2, payload.count, cppID: completionID, what: "A036 completion carries both targets")
 
 S046 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A037 completion orders the first target by note"
-    report.expectEqual(finishingFirst, payload.first?.noteID ?? NoteID(), cppID: completionID, what: "A037 completion orders the first target by note")
 
 S047 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A038 completion carries the first delta value"
-    report.expectEqual(30, payload.first?.velocity ?? -1, cppID: completionID, what: "A038 completion carries the first delta value")
 
 S048 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A039 completion orders the second target by note"
-    report.expectEqual(finishingSecond, payload.last?.noteID ?? NoteID(), cppID: completionID, what: "A039 completion orders the second target by note")
 
 S049 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A040 completion carries the second delta value"
-    report.expectEqual(110, payload.last?.velocity ?? -1, cppID: completionID, what: "A040 completion carries the second delta value")
 
 S050 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A041 taken completion resets to inactive after one commit"
-    report.expect(completion == nil && committed == finishingDocument.revision && finishingDocument.note(finishingFirst)?.velocity == 30 && finishingDocument.note(finishingSecond)?.velocity == 110, cppID: completionID, message: "A041 taken completion resets to inactive after one commit")
 
 S051 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A042 preview empties after completion"
-    report.expect(completion?.preview == nil, cppID: completionID, message: "A042 preview empties after completion")
 
 S052 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A043 recommitting the consumed payload changes nothing"
-    report.expect(repeated == finishingDocument.revision, cppID: completionID, message: "A043 recommitting the consumed payload changes nothing")
 
 S053 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A044 freeze captures the clamped pair"
-    report.expect(cancellation?.notes.count == 2, cppID: clampedID, message: "A044 freeze captures the clamped pair")
 
 S054 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A045 below-floor commit clamps and applies"
-    report.expect(clampedFloor == clampedDocument.revision && clampedDocument.note(clampedFirst)?.velocity == 1, cppID: clampedID, message: "A045 below-floor commit clamps and applies")
 
 S055 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A046 committed floor value reads one"
-    report.expectEqual(UInt8(1), clampedDocument.note(clampedFirst)?.velocity, cppID: clampedID, what: "A046 committed floor value reads one")
 
 S056 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A047 above-ceiling commit clamps and applies"
-    report.expect(clampedCeiling == clampedDocument.revision && clampedDocument.note(clampedFirst)?.velocity == 127, cppID: clampedID, message: "A047 above-ceiling commit clamps and applies")
 
 S057 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A048 committed ceiling value reads 127"
-    report.expectEqual(UInt8(127), clampedDocument.note(clampedFirst)?.velocity, cppID: clampedID, what: "A048 committed ceiling value reads 127")
 
 S058 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A049 clamped delta motion arms the gesture"
-    report.expect(cancellation!.relativeActivated, cppID: clampedID, message: "A049 clamped delta motion arms the gesture")
 
 S059 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A050 clamped delta floors the first preview"
-    report.expectEqual(Optional(UInt8(1)), cancellation!.preview[clampedFirst], cppID: clampedID, what: "A050 clamped delta floors the first preview")
 
 S060 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A051 clamped delta moves the second preview from its origin"
-    report.expectEqual(Optional(UInt8(70)), cancellation!.preview[clampedSecond], cppID: clampedID, what: "A051 clamped delta moves the second preview from its origin")
 
 S061 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A052 cancel while active clears the gesture and commits nothing"
-    report.expect(cancellation == nil && clampedDocument.revision == revisionBeforeCancel, cppID: clampedID, message: "A052 cancel while active clears the gesture and commits nothing")
 
 S062 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A053 cancelled gesture holds no targets"
-    report.expect(cancellation?.notes.isEmpty ?? true, cppID: clampedID, message: "A053 cancelled gesture holds no targets")
 
 S063 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A054 preview empties after cancel"
-    report.expect(cancellation?.preview.isEmpty ?? true, cppID: clampedID, message: "A054 preview empties after cancel")
 
 S064 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A055 completion with no targets carries nothing"
-    report.expect(VelocityGesturePolicy.updates(frozenGesture(notes: [], revision: revisionBeforeCancel)).isEmpty, cppID: clampedID, message: "A055 completion with no targets carries nothing")
 
 S065 | runVelocityGestureParityChecks | src/checks/keyboard/tst_velocitygesture.swift
 Anchor: message "A056 second cancel changes nothing"
-    report.expect(cancellation == nil && clampedDocument.revision == revisionBeforeCancel, cppID: clampedID, message: "A056 second cancel changes nothing")
 
 S066 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A110 unresolved map uses the continuous ruler"
-    report.expectEqual(VelocityAxisModel.Mode.continuous, axis.mode, cppID: velocityContinuousAxisID,
-                       what: "A110 unresolved map uses the continuous ruler")
 
 S067 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A111 ruler top is the inset"
-    report.expectEqual(6.0, axis.top, cppID: velocityContinuousAxisID, what: "A111 ruler top is the inset")
 
 S068 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A112 ruler bottom is height minus inset"
-    report.expectEqual(194.0, axis.bottom, cppID: velocityContinuousAxisID, what: "A112 ruler bottom is height minus inset")
 
 S069 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A113 maximum velocity draws at the top"
-    report.expectEqual(6.0, axis.velocityToY(127), cppID: velocityContinuousAxisID,
-                       what: "A113 maximum velocity draws at the top")
 
 S070 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A114 minimum velocity draws at the bottom"
-    report.expectEqual(194.0, axis.velocityToY(1), cppID: velocityContinuousAxisID,
-                       what: "A114 minimum velocity draws at the bottom")
 
 S071 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A115 velocity 64 draws midway"
-    report.expectEqual(100.0, axis.velocityToY(64), cppID: velocityContinuousAxisID,
-                       what: "A115 velocity 64 draws midway")
 
 S072 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A116 ruler top reads back maximum velocity"
-    report.expectEqual(127, axis.yToVelocity(6.0), cppID: velocityContinuousAxisID,
-                       what: "A116 ruler top reads back maximum velocity")
 
 S073 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A117 ruler bottom reads back minimum velocity"
-    report.expectEqual(1, axis.yToVelocity(194.0), cppID: velocityContinuousAxisID,
-                       what: "A117 ruler bottom reads back minimum velocity")
 
 S074 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A118 interior active value folds into min/max markers"
-    report.expectEqual(2, axis.markers.count, cppID: velocityContinuousAxisID,
-                       what: "A118 interior active value folds into min/max markers")
 
 S075 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A119 first marker is the minimum active value"
-    report.expectEqual(12, axis.markers[0].velocity, cppID: velocityContinuousAxisID,
-                       what: "A119 first marker is the minimum active value")
 
 S076 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A120 second marker is the maximum active value"
-    report.expectEqual(100, axis.markers[1].velocity, cppID: velocityContinuousAxisID,
-                       what: "A120 second marker is the maximum active value")
 
 S077 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A121 height 200 uses the 17-tick density band"
-    report.expectEqual(17, axis.ticks.count, cppID: velocityContinuousAxisID,
-                       what: "A121 height 200 uses the 17-tick density band")
 
 S078 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A122 band labels the maximum"
-    report.expect(axis.hasLabel(127), cppID: velocityContinuousAxisID, message: "A122 band labels the maximum")
 
 S079 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A123 band labels 112"
-    report.expect(axis.hasLabel(112), cppID: velocityContinuousAxisID, message: "A123 band labels 112")
 
 S080 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A124 band labels the minimum"
-    report.expect(axis.hasLabel(1), cppID: velocityContinuousAxisID, message: "A124 band labels the minimum")
 
 S081 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A125 ruler owns its left edge"
-    report.expect(axis.inRuler(x: 0.0, rulerWidth: 200.0), cppID: velocityContinuousAxisID,
-                  message: "A125 ruler owns its left edge")
 
 S082 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A126 ruler excludes its trailing edge"
-    report.expect(!axis.inRuler(x: 200.0, rulerWidth: 200.0), cppID: velocityContinuousAxisID,
-                  message: "A126 ruler excludes its trailing edge")
 
 S083 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A127 press on a label row takes that label value"
-    report.expectEqual(axis.labels[0].velocity,
-                       axis.rulerVelocityAt(y: axis.labels[0].y, labelHeight: 12.0),
-                       cppID: velocityContinuousAxisID,
-                       what: "A127 press on a label row takes that label value")
 
 S084 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A128 press past the text radius reports no value"
-    report.expectEqual(-1,
-                       axis.rulerVelocityAt(y: axis.labels[0].y + 6.01, labelHeight: 12.0),
-                       cppID: velocityContinuousAxisID,
-                       what: "A128 press past the text radius reports no value")
 
 S085 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A129 first tick is the maximum velocity"
-    report.expectEqual(127, axis.ticks[0].velocity, cppID: velocityContinuousAxisID,
-                       what: "A129 first tick is the maximum velocity")
 
 S086 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A130 first tick draws at the ruler top"
-    report.expectEqual(axis.top, axis.ticks[0].y, cppID: velocityContinuousAxisID,
-                       what: "A130 first tick draws at the ruler top")
 
 S087 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A131 direct sound uses the continuous ruler"
-    report.expectEqual(VelocityAxisModel.Mode.continuous, directAxis.mode, cppID: velocityContinuousAxisID,
-                       what: "A131 direct sound uses the continuous ruler")
 
 S088 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A132 invalid voice uses the continuous ruler"
-    report.expectEqual(VelocityAxisModel.Mode.continuous, invalidAxis.mode, cppID: velocityContinuousAxisID,
-                       what: "A132 invalid voice uses the continuous ruler")
 
 S089 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A133 below D1 thins to 5 ticks"
-    report.expectEqual(5, VelocityAxisModel(map: unresolved, geometry: velocityParityGeometry(height: 83.0)).ticks.count,
-                       cppID: velocityContinuousAxisID, what: "A133 below D1 thins to 5 ticks")
 
 S090 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A134 at D1 steps to 9 ticks"
-    report.expectEqual(9, VelocityAxisModel(map: unresolved, geometry: velocityParityGeometry(height: 84.0)).ticks.count,
-                       cppID: velocityContinuousAxisID, what: "A134 at D1 steps to 9 ticks")
 
 S091 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A135 at D2 holds 9 ticks"
-    report.expectEqual(9, VelocityAxisModel(map: unresolved, geometry: velocityParityGeometry(height: 112.0)).ticks.count,
-                       cppID: velocityContinuousAxisID, what: "A135 at D2 holds 9 ticks")
 
 S092 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A136 at D3 steps to 17 ticks"
-    report.expectEqual(17, VelocityAxisModel(map: unresolved, geometry: velocityParityGeometry(height: 156.0)).ticks.count,
-                       cppID: velocityContinuousAxisID, what: "A136 at D3 steps to 17 ticks")
 
 S093 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A137 at D4 reaches the 32-tick cap"
-    report.expectEqual(32, dense.ticks.count, cppID: velocityContinuousAxisID,
-                       what: "A137 at D4 reaches the 32-tick cap")
 
 S094 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A138 finest band steps ticks by four from 127"
-    report.expectEqual(123, dense.ticks[1].velocity, cppID: velocityContinuousAxisID,
-                       what: "A138 finest band steps ticks by four from 127")
 
 S095 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A139 finest band ends its stride at 7"
-    report.expectEqual(7, dense.ticks[30].velocity, cppID: velocityContinuousAxisID,
-                       what: "A139 finest band ends its stride at 7")
 
 S096 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A140 below D2 labels three values"
-    report.expectEqual(belowD2Labels.count, belowD2.labels.count, cppID: velocityContinuousAxisID,
-                       what: "A140 below D2 labels three values")
 
 S097 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A141 below-D2 label \(index)"
-        report.expectEqual(belowD2Labels[index], belowD2.labels[index].velocity,
-                           cppID: velocityContinuousAxisID, what: "A141 below-D2 label \(index)")
 
 S098 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A142 at D2 labels five values"
-    report.expectEqual(atD2Labels.count, atD2.labels.count, cppID: velocityContinuousAxisID,
-                       what: "A142 at D2 labels five values")
 
 S099 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A143 at-D2 label \(index)"
-        report.expectEqual(atD2Labels[index], atD2.labels[index].velocity,
-                           cppID: velocityContinuousAxisID, what: "A143 at-D2 label \(index)")
 
 S100 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A144 dense band labels seventeen values"
-    report.expectEqual(denseLabels.count, dense.labels.count, cppID: velocityContinuousAxisID,
-                       what: "A144 dense band labels seventeen values")
 
 S101 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A145 dense label \(index)"
-        report.expectEqual(denseLabels[index], dense.labels[index].velocity,
-                           cppID: velocityContinuousAxisID, what: "A145 dense label \(index)")
 
 S102 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A146 \(name) uses the intrinsic ruler"
-        report.expectEqual(VelocityAxisModel.Mode.intrinsic, intrinsic.mode, cppID: velocityIntrinsicAxisID,
-                           what: "A146 \(name) uses the intrinsic ruler")
 
 S103 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A147 \(name) publishes one row per level"
-        report.expectEqual(map.levelCount, intrinsic.graduations.count, cppID: velocityIntrinsicAxisID,
-                           what: "A147 \(name) publishes one row per level")
 
 S104 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A148 \(name) level \(level) carries its representative"
-            report.expectEqual(Int(map.representative(level)), intrinsic.graduations[level].velocity,
-                               cppID: velocityIntrinsicAxisID,
-                               what: "A148 \(name) level \(level) carries its representative")
 
 S105 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A149 \(name) level \(level) stays below the top"
-            report.expect(intrinsic.graduations[level].y >= intrinsic.top, cppID: velocityIntrinsicAxisID,
-                          message: "A149 \(name) level \(level) stays below the top")
 
 S106 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A150 \(name) level \(level) stays above the bottom"
-            report.expect(intrinsic.graduations[level].y <= intrinsic.bottom, cppID: velocityIntrinsicAxisID,
-                          message: "A150 \(name) level \(level) stays above the bottom")
 
 S107 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A151 \(name) level \(level) round-trips through its center"
-            report.expectEqual(level, intrinsic.yToLevel(intrinsic.levelToY(level)),
-                               cppID: velocityIntrinsicAxisID,
-                               what: "A151 \(name) level \(level) round-trips through its center")
 
 S108 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A152 narrow label width collapses the intrinsic column"
-    report.expectEqual(0.0, narrow.intrinsicColumnWidth, cppID: velocityIntrinsicAxisID,
-                       what: "A152 narrow label width collapses the intrinsic column")
 
 S109 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A153 narrow first graduation has no width"
-    report.expectEqual(0.0, narrow.graduations[0].width, cppID: velocityIntrinsicAxisID,
-                       what: "A153 narrow first graduation has no width")
 
 S110 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A154 narrow first graduation stays in bounds"
-    report.expect(narrow.graduations[0].x >= 0.0, cppID: velocityIntrinsicAxisID,
-                  message: "A154 narrow first graduation stays in bounds")
 
 S111 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A155 narrow second graduation stays in bounds"
-    report.expect(narrow.graduations[1].x >= 0.0, cppID: velocityIntrinsicAxisID,
-                  message: "A155 narrow second graduation stays in bounds")
 
 S112 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A156 selected dense ruler labels seventeen values"
-    report.expectEqual(denseLabels.count, selected.labels.count, cppID: velocityMarkerAxisID,
-                       what: "A156 selected dense ruler labels seventeen values")
 
 S113 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A157 selected dense label \(index)"
-        report.expectEqual(denseLabels[index], selected.labels[index].velocity,
-                           cppID: velocityMarkerAxisID, what: "A157 selected dense label \(index)")
 
 S114 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A158 one active value draws one marker"
-    report.expectEqual(1, selected.markers.count, cppID: velocityMarkerAxisID,
-                       what: "A158 one active value draws one marker")
 
 S115 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A159 marker carries the active value"
-    report.expectEqual(73, selected.markers[0].velocity, cppID: velocityMarkerAxisID,
-                       what: "A159 marker carries the active value")
 
 S116 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A160 active set caps at the marker maximum"
-    report.expectEqual(VelocityAxisModel.maximumMarkers, capped.markers.count, cppID: velocityMarkerAxisID,
-                       what: "A160 active set caps at the marker maximum")
 
 S117 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A161 capped first marker is the minimum"
-    report.expectEqual(12, capped.markers[0].velocity, cppID: velocityMarkerAxisID,
-                       what: "A161 capped first marker is the minimum")
 
 S118 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A162 capped second marker is the maximum"
-    report.expectEqual(100, capped.markers[1].velocity, cppID: velocityMarkerAxisID,
-                       what: "A162 capped second marker is the maximum")
 
 S119 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A163 continuous ruler description is the plain domain"
-    report.expectEqual("Velocity", capped.accessibleDescription, cppID: velocityMarkerAxisID,
-                       what: "A163 continuous ruler description is the plain domain")
 
 S120 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A164 ruler nodes stay unfocusable"
-    report.expect(!VelocityAxisModel.nodesFocusable, cppID: velocityMarkerAxisID,
-                  message: "A164 ruler nodes stay unfocusable")
 
 S121 | runVelocityAxisParityChecks | src/checks/keyboard/tst_velocityaxis.swift
 Anchor: message "A165 graduation labels stay unfocusable"
-    report.expect(!VelocityAxisModel.graduationLabelsFocusable, cppID: velocityMarkerAxisID,
-                  message: "A165 graduation labels stay unfocusable")
 
 Remaining original source (closing sequence and helper bodies):
 }

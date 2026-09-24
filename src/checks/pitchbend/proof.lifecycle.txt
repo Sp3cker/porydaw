@@ -6,52 +6,14 @@ Original SHA-256: 9ec0f5738f80a3e80f130292de8056e326500263b37b5321182207d661cbc5
 Swift counterpart: none identified
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-Every site below is GAP under one canonical reason, "feature not yet ported:
-pitch-bend editor": the Swift app has no pitch-bend editor surface (the
-roll.pitch_bend/G keybinding and the EditCommand row are inert registrations)
-and the original native pitch-bend harness is neither built nor registered, so
-no site executes.
-No Swift counterpart covers this suite: src/checks/pitchbend/ holds no .swift
-file; src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not
-Swift; swiftcore/*.swift and automation Swift touch only unrelated parameter
-metadata (e.g. AutomationParameter.pitchBend titles), never the pitch-bend
-editor popup, its graphs, or its controllers. Unsure between PARTIAL and GAP
-resolves to GAP: bookkeeping must not overclaim.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
 
-Execution ownership
-No Swift entry point executes these checks, and no native one either: the T7A
-runtime cutover removed every pitchbend source from src/checks/CMakeLists.txt
-and src/checks/checkcatalog.cpp registers no pitch-bend entry, so no site below
-executes. The original C++ suite entry point
-runPitchBendEditingCheck (PitchBendEditingTest::init/cleanup drive the fixture)
-belongs to that unbuilt harness; the
 PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve
 and PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with
 declarations in src/checks/pitchbend/tst_pitchbendediting.h
 (SHA-256 7580a8bae6dab536e3f3a4ceeb170a23d047ee5cf3459bb5e1584e4b2e64b895).
-
-Fixture, sequence and row constraints
-No QTest data rows in this file; each site executes once per test run.
-Loops over lane points, SMF events, surface pixels, and probe fractions expand
-one site into many runtime checks; undo-index and SMF comparisons pin the
-document state around each gesture. init/setup guards gate every test method.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:63
 Disposition: GAP
@@ -124,11 +86,6 @@ Original expression:
 
 A002 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:64
 Disposition: MATCHED
-Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls invokes the routed note command and asserts the real popup presenter is open.
-Source context since previous assertion:
-  (none: assertion opens the file segment)
-Original expression:
-      QVERIFY(m_fixture.popup()->isOpen());
 
 A003 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:66
 Disposition: GAP
@@ -161,27 +118,12 @@ Original expression:
 
 A006 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:76
 Disposition: MATCHED
-Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls checks the popup center stays within its font-relative half-width of the selected note.
-Source context since previous assertion:
-  (none: assertion opens the file segment)
-Original expression:
-      QVERIFY(std::abs(popupRect.center().x() - notePoint.x()) <= popupRect.width() / 2 + 12);
 
 A007 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:77
 Disposition: MATCHED
-Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls checks the visible popup top is not above the host surface.
-Source context since previous assertion:
-  (none: assertion opens the file segment)
-Original expression:
-      QVERIFY(popupRect.top() >= hostRect.top());
 
 A008 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:78
 Disposition: MATCHED
-Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls checks the popup bottom remains within its editor host.
-Source context since previous assertion:
-  (none: assertion opens the file segment)
-Original expression:
-      QVERIFY(popupRect.bottom() <= hostRect.bottom());
 
 A009 | PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds | src/checks/pitchbend/lifecycle.cpp:82
 Disposition: GAP
@@ -452,12 +394,6 @@ Original expression:
 
 A037 | PitchBendEditingTest::escapeKeyDismissesPopupRetainingNoteSelection | src/checks/pitchbend/lifecycle.cpp:172
 Disposition: MATCHED
-Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls sends Escape to the real popup, observes isOpen false and its Quick item removed, and retains selected note.
-Source context since previous assertion:
-      QPointer<songview::PitchBendEditor> editor = openedEditor;
-      m_fixture.closePopupViaEscape();
-Original expression:
-      QVERIFY(editor.isNull());
 
 A038 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:179
 Disposition: GAP
@@ -749,11 +685,6 @@ Original expression:
 
 A067 | PitchBendEditingTest::reopeningPopupRestoresActiveGraphFocus | src/checks/pitchbend/lifecycle.cpp:281
 Disposition: MATCHED
-Mapping/reason: tst_ShellPitchBend.qml test_cancelReopenAndOutsideClickDoNotEdit reopens the real popup and asserts the pitch graph has active keyboard focus.
-Source context since previous assertion:
-  (none: assertion opens the file segment)
-Original expression:
-      QTRY_VERIFY(graph->hasActiveFocus());
 
 A068 | PitchBendEditingTest::dismissalRestoresRollEdgeCursor | src/checks/pitchbend/lifecycle.cpp:286
 Disposition: GAP
@@ -1062,4 +993,3 @@ Remaining original source (closing sequence and helper bodies):
 Swift assertion predicates
 None: no Swift counterpart file carries report.expect*/expectEqual predicates
 for this suite.
-

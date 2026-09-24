@@ -7,28 +7,9 @@ Original: src/checks/project/mk.cpp
 Original SHA-256: cfaa01e3ee61067c10123ce401420d666b86cf0f85dd8aae265a9b90ea35478d
 Swift counterpart: none identified
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies an equivalent Swift predicate that would execute;
-PARTIAL identifies a related Swift predicate with an explicit unproved condition;
-GAP identifies an original predicate without an established equivalent;
-NATIVE identifies an observation only a native window/rendering/harness run can establish.
-36 assertion sites across songs.mk recipe parsing, volume-write minimality, STD_REVERB spelling preservation, and append/remove byte-exact round-trips. No Swift counterpart exists; every site below is GAP.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
-
-Execution and ownership
-C++ runner runMkCheck (SongsMkTest) against a ProjectFixture copy of the staged root; no Swift entry point executes these checks.
-
-Fixture, sequence and row constraints
-The mkOnly fixture guard (no midi.cfg, songs.mk present) gates every case; volume writes use 111/99; append/remove round-trips demand byte-exact songs.mk restoration including double-remove.
-
-Original assertion inventory
 
 A001 | SongsMkTest::init | src/checks/project/mk.cpp:101
 Disposition: GAP

@@ -5,89 +5,24 @@ Original: src/checks/automation/automationpointmenus.cpp
 Original SHA-256: b15a2e6646fb4e2878367a6ef67473926f9ac2522c626266ce2c090755355325
 Swift counterpart: src/checks/automation/automationpointmenus.swift
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; the context inventory below records its rows, loops and fixtures.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-Unresolved entries remain work.
 
-Execution and ownership
-The original swiftcore suite entrypoints invoke these paired functions in their original
-order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
-VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
-Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
-Verification evidence
 Verification: deno task verify --filter swiftcore --verbose — ok: swiftcore on this worktree (1/14 harnesses selected, ~10s) on the tree at 19aca868 plus the lane uncommitted check edits; drawerAutomationOutsidePressRetarget executes green in runAutomationPageChecks with no FAIL lines for its cppID, alongside drawerAutomationPointMenuDeleteAndStale, drawerAutomationDuplicatePromptAndParameterSwitch and drawerAutomationLaneDeleteConfirmation. Recorded by the lane controller from that run; this proof-only reconciliation did not re-run the build or the suite.
 Reference revision pin: the recovered original at the recorded revision hashes to the recorded Original SHA-256; the counterpart hash above is the final checked-in source.
 Registered run path: src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks -> src/checks/workspace/SessionChecks.swift :: runProjectSessionSuite -> projectSession (swiftcore suite 10); the counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
 Execution boundary: MATCHED identifies equivalent executing predicates at the cited S entries. Native popup rendering and pointer delivery, native focus and key delivery with no Swift ingress (each recorded as GAP with its observed outcome), retired representation and the residual unproved conditions stay recorded per site; parser success is not semantic parity.
 
-Fixture, sequence, data-row and loop inventory
-Each line below is an exact original source anchor. Multiline declarations, helper
-implementations, native event delivery and the complete order remain in the pinned source.
-src/checks/automation/automationpointmenus.cpp:4 | // surface — the node right-press, the typed SetValue/DeleteNode rows, and
-src/checks/automation/automationpointmenus.cpp:47 | // The fixture's pilot CC lane: two written points the point menu targets.
-src/checks/automation/automationpointmenus.cpp:69 | // Opens the node point menu through the real node right-press, then waits
-src/checks/automation/automationpointmenus.cpp:116 | QStringLiteral("the node right-press did not open the point menu"));
-src/checks/automation/automationpointmenus.cpp:156 | QStringLiteral("the duplicate node right-press did not open the point menu"));
-src/checks/automation/automationpointmenus.cpp:172 | QTest::keyClick(&quickWindow(), Qt::Key_0);
-src/checks/automation/automationpointmenus.cpp:173 | QTest::keyClick(&quickWindow(), Qt::Key_Return);
-src/checks/automation/automationpointmenus.cpp:201 | QStringLiteral("the duplicate node right-press did not open the point menu"));
-src/checks/automation/automationpointmenus.cpp:208 | QTest::keyClick(&quickWindow(), Qt::Key_Escape);
-src/checks/automation/automationpointmenus.cpp:249 | QTest::keyClick(&quickWindow(), Qt::Key_0);
-src/checks/automation/automationpointmenus.cpp:250 | QTest::keyClick(&quickWindow(), Qt::Key_Return);
-src/checks/automation/automationpointmenus.cpp:269 | // An outside right press on another node retargets the open menu: the
-src/checks/automation/automationpointmenus.cpp:273 | QStringLiteral("the node right-press did not open the point menu"));
-src/checks/automation/automationpointmenus.cpp:282 | songTab.view(), QStringLiteral("the outside node press closed the point menu"));
-src/checks/automation/automationpointmenus.cpp:298 | // A miss right press dismisses through the session and swallows the
-src/checks/automation/automationpointmenus.cpp:299 | // paired release: the witness sits inside the time selection, so a leaked
-src/checks/automation/automationpointmenus.cpp:300 | // release would open the time-selection menu right there.
-src/checks/automation/automationpointmenus.cpp:311 | QStringLiteral("the witness right-press did not reopen the point menu"));
-src/checks/automation/automationpointmenus.cpp:318 | QVERIFY2(!reopened.session->isOpen(), "a miss right press did not dismiss the point menu");
-src/checks/automation/automationpointmenus.cpp:320 | "the dismissed point menu leaked its paired release into a new menu");
-src/checks/automation/automationpointmenus.cpp:334 | QTest::keyClick(fallback.session->window(), Qt::Key_Escape);
-src/checks/automation/automationpointmenus.cpp:374 | QTest::keyClick(&quickWindow(), Qt::Key_Escape);
-src/checks/automation/automationpointmenus.cpp:442 | QStringLiteral("the synthetic node right-press did not open the point menu"));
-src/checks/automation/automationpointmenus.cpp:491 | QTest::keyClick(&quickWindow(), Qt::Key_3);
-src/checks/automation/automationpointmenus.cpp:492 | QTest::keyClick(&quickWindow(), Qt::Key_Return);
-src/checks/automation/automationpointmenus.cpp:511 | // A document rewrite landing between a row's press and its release makes the
-src/checks/automation/automationpointmenus.cpp:523 | QStringLiteral("the node right-press did not open the point menu"));
-src/checks/automation/automationpointmenus.cpp:547 | // Whether the rewrite cancelled the pending menu or the release ran a
-src/checks/automation/automationpointmenus.cpp:579 | QStringLiteral("the node right-press did not open the point menu"));
-src/checks/automation/automationpointmenus.cpp:643 | // menu so the release-path setItems below is the next reset observed.
-src/checks/automation/automationpointmenus.cpp:646 | QStringLiteral("the node right-press did not open the point menu"));
-src/checks/automation/automationpointmenus.cpp:651 | QTest::keyClick(menu.session->window(), Qt::Key_Escape);
-src/checks/automation/automationpointmenus.cpp:678 | // A real node right-release runs setItems on that boundary.
-src/checks/automation/automationpointmenus.cpp:731 | QStringLiteral("the node right-press did not open the point menu"));
-src/checks/automation/automationpointmenus.cpp:807 | QTest::keyClick(&quickWindow(), Qt::Key_1);
-src/checks/automation/automationpointmenus.cpp:808 | QTest::keyClick(&quickWindow(), Qt::Key_3);
-src/checks/automation/automationpointmenus.cpp:809 | QTest::keyClick(&quickWindow(), Qt::Key_2);
-src/checks/automation/automationpointmenus.cpp:810 | QTest::keyClick(&quickWindow(), Qt::Key_Return);
-
-Original assertion inventory
-
 A001 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:109
 Disposition: MATCHED
-Mapping/reason: The Swift scenario stages the same written CC lane and asserts its points through the values predicates ([S031], [S034]); the C++ label-row lookup has no separate Swift assertion.
-Original expression:
-  QVERIFY(cc.valid())
+Mapping: S031, S034
 
 A002 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:117
 Disposition: MATCHED
-Mapping/reason: The Swift pointer route reaches the point-menu target predicate and the published Delete row for the staged lane ([S028], [S029]).
-Original expression:
-  QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
+Mapping: S028, S029
 
 A003 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:119
 Disposition: MATCHED
-Mapping/reason: The published point menu enables Delete on a written node ([S029]).
-Original expression:
-  QVERIFY2(deleteRow && deleteRow->enabled, "the Delete row never rendered enabled")
+Mapping: S029
 
 A004 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:123
 Disposition: PARTIAL
@@ -104,69 +39,47 @@ Original expression:
 
 A006 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:128
 Disposition: MATCHED
-Mapping/reason: Swift requires Delete to remove the targeted node and keep the sibling ([S031]).
-Original expression:
-  QVERIFY(!songTab.document().findLanePoint(0, kController, kPointTick, &point))
+Mapping: S031
 
 A007 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:129
 Disposition: MATCHED
-Mapping/reason: Swift requires the sibling node to survive the Delete ([S031]).
-Original expression:
-  QVERIFY(songTab.document().findLanePoint(0, kController, kOtherPointTick, &point))
+Mapping: S031
 
 A008 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:130
 Disposition: MATCHED
-Mapping/reason: Swift requires the surviving sibling to keep its value ([S031]).
-Original expression:
-  QCOMPARE(point.value, kOtherPointValue)
+Mapping: S031
 
 A009 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:131
 Disposition: MATCHED
-Mapping/reason: One Delete publishes one revision ([S032]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), revision + 1)
+Mapping: S032
 
 A010 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:132
 Disposition: MATCHED
-Mapping/reason: One Delete is one revision and one history entry ([S032], [S035]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndex + 1)
+Mapping: S032, S035
 
 A011 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:135
 Disposition: MATCHED
-Mapping/reason: Swift requires the Delete to be undoable ([S033]).
-Original expression:
-  QVERIFY(songTab.history().canUndo())
+Mapping: S033
 
 A012 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:136
 Disposition: MATCHED
-Mapping/reason: Swift requires one undo to consume the Delete ([S033]).
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(songTab.history().requestUndo()))
+Mapping: S033
 
 A013 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:137
 Disposition: MATCHED
-Mapping/reason: Swift requires undo to restore the deleted node ([S034]).
-Original expression:
-  QVERIFY(songTab.document().findLanePoint(0, kController, kPointTick, &point))
+Mapping: S034
 
 A014 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:138
 Disposition: MATCHED
-Mapping/reason: Swift requires the restored node to keep its value ([S034]).
-Original expression:
-  QCOMPARE(point.value, kPointValue)
+Mapping: S034
 
 A015 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:139
 Disposition: MATCHED
-Mapping/reason: The restored lane values plus the consumed single history entry ([S034], [S035]) are the public-API representation of the restored serialization.
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), before)
+Mapping: S034, S035
 
 A016 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:150
 Disposition: MATCHED
-Mapping/reason: Swift asserts the staged duplicate lane through its exact values ([S039]).
-Original expression:
-  QVERIFY(cc.valid())
+Mapping: S039
 
 A017 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:157
 Disposition: PARTIAL
@@ -189,9 +102,7 @@ Original expression:
 
 A020 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:168
 Disposition: MATCHED
-Mapping/reason: Swift requires the prompt to open on the written node ([S040]).
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+Mapping: S040
 
 A021 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:170
 Disposition: GAP
@@ -201,9 +112,7 @@ Original expression:
 
 A022 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:171
 Disposition: MATCHED
-Mapping/reason: Swift supplies the displayed value and asserts the mapped stored value lands ([S041], [S042]), exercising the same stored-to-displayed mapping; the rendered field text itself is not read.
-Original expression:
-  QCOMPARE(prompt->property("selectedText").toString(), QStringLiteral("32"))
+Mapping: S041, S042
 
 A023 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:174
 Disposition: PARTIAL
@@ -213,45 +122,31 @@ Original expression:
 
 A024 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:177
 Disposition: MATCHED
-Mapping/reason: Swift requires both duplicate occurrences to stand after the acceptance ([S042]).
-Original expression:
-  QCOMPARE(points.size(), std::size_t{2})
+Mapping: S042
 
 A025 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:178
 Disposition: MATCHED
-Mapping/reason: Swift requires the first duplicate occurrence to keep its tick ([S042]).
-Original expression:
-  QCOMPARE(points[0].tick, kPointTick)
+Mapping: S042
 
 A026 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:179
 Disposition: MATCHED
-Mapping/reason: Swift requires the untargeted duplicate occurrence to keep its value ([S042]).
-Original expression:
-  QCOMPARE(points[0].value, 32)
+Mapping: S042
 
 A027 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:180
 Disposition: MATCHED
-Mapping/reason: Swift requires the targeted duplicate occurrence to keep its tick ([S042]).
-Original expression:
-  QCOMPARE(points[1].tick, kPointTick)
+Mapping: S042
 
 A028 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:181
 Disposition: MATCHED
-Mapping/reason: Swift requires only the targeted duplicate occurrence to move ([S042]).
-Original expression:
-  QCOMPARE(points[1].value, 64)
+Mapping: S042
 
 A029 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:182
 Disposition: MATCHED
-Mapping/reason: One duplicate acceptance publishes one revision ([S043]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), revision + 1)
+Mapping: S043
 
 A030 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:183
 Disposition: MATCHED
-Mapping/reason: One duplicate acceptance is one history entry ([S043]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndex + 1)
+Mapping: S043
 
 A031 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:184
 Disposition: GAP
@@ -261,9 +156,7 @@ Original expression:
 
 A032 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:195
 Disposition: MATCHED
-Mapping/reason: Swift requires a prompt to open on a written node, which requires the staged lane ([S004]).
-Original expression:
-  QVERIFY(cc.valid())
+Mapping: S004
 
 A033 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:202
 Disposition: PARTIAL
@@ -280,33 +173,23 @@ Original expression:
 
 A035 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:207
 Disposition: MATCHED
-Mapping/reason: Swift requires the prompt to open on the written node ([S001]).
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+Mapping: S001
 
 A036 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:209
 Disposition: MATCHED
-Mapping/reason: The page claims an open prompt with Escape through the cancel route the predicate exercises: cancelling an open prompt drops the prompt and the live interaction ([S022]) and commits nothing ([S021]).
-Original expression:
-  QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+Mapping: S022, S021
 
 A037 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:211
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route commits nothing ([S021]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), revision)
+Mapping: S021
 
 A038 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:212
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route publishes no document change ([S021]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndex)
+Mapping: S021
 
 A039 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:213
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route leaves the staged lane alone ([S021]).
-Original expression:
-  QCOMPARE(songTab.document().lanePoints(0, kController).size(), std::size_t{1})
+Mapping: S021
 
 A040 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:214
 Disposition: GAP
@@ -340,9 +223,7 @@ Original expression:
 
 A045 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:232
 Disposition: MATCHED
-Mapping/reason: Swift requires the prompt to open on the CC lane before the switch ([S046]).
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+Mapping: S046
 
 A046 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:233
 Disposition: GAP
@@ -370,27 +251,19 @@ Original expression:
 
 A050 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:255
 Disposition: MATCHED
-Mapping/reason: Swift requires the parameter switch to close the CC prompt ([S047]).
-Original expression:
-  QVERIFY(!canvas->valuePromptVisible())
+Mapping: S047
 
 A051 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:256
 Disposition: MATCHED
-Mapping/reason: Swift requires the switched parameter to leave the CC lane untouched ([S051]).
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), before)
+Mapping: S051
 
 A052 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:257
 Disposition: MATCHED
-Mapping/reason: The switch itself publishes no revision: Swift requires the prompt dropped ([S047]) and the CC lane untouched ([S051]) with only the later tempo acceptance advancing the revision ([S052]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), revision)
+Mapping: S047, S051, S052
 
 A053 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:258
 Disposition: MATCHED
-Mapping/reason: With the switch writing nothing the history state is unchanged ([S047], [S051]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndex)
+Mapping: S047, S051
 
 A054 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:264
 Disposition: GAP
@@ -400,27 +273,19 @@ Original expression:
 
 A055 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:266
 Disposition: MATCHED
-Mapping/reason: The Swift scenario stages the same two-point CC lane and asserts it through the values predicates ([S031], [S034]).
-Original expression:
-  QVERIFY(cc.valid())
+Mapping: S031, S034
 
 A056 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:274
 Disposition: MATCHED
-Mapping/reason: The Swift retarget scenario opens the first point menu through the same node right-press and asserts its captured point target ([S082]); the sibling delete scenario asserts the same route ([S028]).
-Original expression:
-  QVERIFY2(first.session, qUtf8Printable(first.diagnostic))
+Mapping: S082, S028
 
 A057 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:283
 Disposition: MATCHED
-Mapping/reason: The Swift retarget scenario delivers the outside right press on the second written node through the page outside-press route and asserts the captured point target ([S083]); the consumed Delete then removes the second node only ([S085]), so the retargeted menu names the newly hit node.
-Original expression:
-  QVERIFY2(retargeted.session, qUtf8Printable(retargeted.diagnostic))
+Mapping: S083, S085
 
 A058 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:287
 Disposition: MATCHED
-Mapping/reason: The published point menu enables Delete on the written node ([S029]); in the retarget scenario the consumed Delete row proves the retargeted menu published it enabled ([S084]).
-Original expression:
-  QVERIFY2(deleteItem && deleteItem->enabled, "the retargeted menu lost its Delete row")
+Mapping: S029, S084
 
 A059 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:288
 Disposition: PARTIAL
@@ -437,15 +302,11 @@ Original expression:
 
 A061 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:293
 Disposition: MATCHED
-Mapping/reason: Swift requires the retargeted Delete to spare the first written node ([S085]) and its undo to restore both written nodes ([S086], [S034]).
-Original expression:
-  QVERIFY(songTab.document().findLanePoint(0, kController, kPointTick, &point))
+Mapping: S085, S086, S034
 
 A062 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:294
 Disposition: MATCHED
-Mapping/reason: Swift requires the retargeted Delete to remove exactly the second written node ([S085]), the node the outside press hit ([S083]).
-Original expression:
-  QVERIFY(!songTab.document().findLanePoint(0, kController, kOtherPointTick, &point))
+Mapping: S085, S083
 
 A063 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:295
 Disposition: GAP
@@ -456,15 +317,11 @@ Original expression:
 
 A064 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:312
 Disposition: MATCHED
-Mapping/reason: The Swift retarget scenario reopens the point menu through the same node right-press at the witness node and asserts its captured point target ([S087]).
-Original expression:
-  QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic))
+Mapping: S087
 
 A065 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:318
 Disposition: MATCHED
-Mapping/reason: The Swift retarget scenario reopens the point menu and delivers the outside press on empty plot space through the page outside-press route, then requires the shared menu to be closed ([S088]).
-Original expression:
-  QVERIFY2(!reopened.session->isOpen(), "a miss right press did not dismiss the point menu")
+Mapping: S088
 
 A066 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:319
 Disposition: PARTIAL
@@ -475,9 +332,7 @@ Original expression:
 
 A067 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:321
 Disposition: MATCHED
-Mapping/reason: The Swift retarget scenario captures the document state with the menu dismissed, before the empty-space press, and requires it unchanged across the miss press and its paired release ([S090]).
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), before)
+Mapping: S090
 
 A068 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:322
 Disposition: GAP
@@ -488,9 +343,6 @@ Original expression:
 
 A069 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:331
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY2(fallback.session, qUtf8Printable(fallback.diagnostic))
 
 A070 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:332
 Disposition: GAP
@@ -507,9 +359,7 @@ Original expression:
 
 A072 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:347
 Disposition: MATCHED
-Mapping/reason: The Swift pointer route opens the point menu and asserts its captured target ([S028]).
-Original expression:
-  QVERIFY2(selectionInvalidated.session, qUtf8Printable(selectionInvalidated.diagnostic))
+Mapping: S028
 
 A073 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:351
 Disposition: PARTIAL
@@ -527,27 +377,19 @@ Original expression:
 
 A075 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:355
 Disposition: MATCHED
-Mapping/reason: The stale scenario snapshot equality includes the revision ([S038]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), revisionBeforeInvalidation)
+Mapping: S038
 
 A076 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:356
 Disposition: MATCHED
-Mapping/reason: The snapshot equality plus the one-entry undo traversal ([S035]) prove the history state is unchanged ([S038]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndexBeforeInvalidation)
+Mapping: S035, S038
 
 A077 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:357
 Disposition: MATCHED
-Mapping/reason: The snapshot equality is the public-API representation of the unchanged serialization ([S038]).
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), beforeInvalidation)
+Mapping: S038
 
 A078 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:364
 Disposition: MATCHED
-Mapping/reason: The Swift pointer route opens the point menu and asserts its captured target ([S028]).
-Original expression:
-  QVERIFY2(valueMenu.session, qUtf8Printable(valueMenu.diagnostic))
+Mapping: S028
 
 A079 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:365
 Disposition: PARTIAL
@@ -558,9 +400,7 @@ Original expression:
 
 A080 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:368
 Disposition: MATCHED
-Mapping/reason: Swift requires the prompt to open on the written node ([S001]).
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+Mapping: S001
 
 A081 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:372
 Disposition: PARTIAL
@@ -571,34 +411,23 @@ Original expression:
 
 A082 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:375
 Disposition: MATCHED
-Mapping/reason: The page claims an open prompt with Escape through the cancel route the predicate exercises: cancelling the prompt on the written node drops the prompt and the interaction ([S022]) and commits nothing ([S021]).
-Original expression:
-  QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+Mapping: S022, S021
 
 A083 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:376
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route commits nothing ([S021]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), revisionBeforeInvalidation)
+Mapping: S021
 
 A084 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:377
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route publishes no document change ([S021]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndexBeforeInvalidation)
+Mapping: S021
 
 A085 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:378
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route leaves the document unchanged ([S021]).
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), beforeInvalidation)
+Mapping: S021
 
 A086 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:386
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation owns the shared session with its confirm-lane-delete prompt kind ([S053], [S055]).
-Original expression:
-  QVERIFY2(laneDelete.session && laneDelete.root && laneDelete.cancelButton,
-               qUtf8Printable(laneDelete.diagnostic))
+Mapping: S053, S055
 
 A087 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:391
 Disposition: PARTIAL
@@ -624,33 +453,23 @@ Original expression:
 
 A090 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:398
 Disposition: MATCHED
-Mapping/reason: Swift requires cancelling the confirmation to drop the prompt ([S065]).
-Original expression:
-  QTRY_VERIFY(!laneDelete.session->isOpen())
+Mapping: S065
 
 A091 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:399
 Disposition: MATCHED
-Mapping/reason: The confirmation cancel route leaves document and history untouched ([S066]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), revisionBeforeInvalidation)
+Mapping: S066
 
 A092 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:400
 Disposition: MATCHED
-Mapping/reason: The confirmation cancel route leaves the history state untouched ([S066]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndexBeforeInvalidation)
+Mapping: S066
 
 A093 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:401
 Disposition: MATCHED
-Mapping/reason: The cancel snapshot equality is the public-API representation of the unchanged serialization ([S066]).
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), beforeInvalidation)
+Mapping: S066
 
 A094 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:420
 Disposition: MATCHED
-Mapping/reason: The Swift synthetic and written-count scenarios stage the volume lane and assert its written events ([S075]).
-Original expression:
-  QVERIFY(volume.valid())
+Mapping: S075
 
 A095 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:424
 Disposition: PARTIAL
@@ -667,28 +486,19 @@ Original expression:
 
 A097 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:427
 Disposition: MATCHED
-Mapping/reason: The Swift eventless lane disables Delete events ([S069]), the public statement that the lane carries no written events.
-Original expression:
-  QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty())
+Mapping: S069
 
 A098 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:430
 Disposition: MATCHED
-Mapping/reason: The Swift predicate requires the volume parameter to remain in the catalogue ([S076]).
-Original expression:
-  QVERIFY(volumeIndex >= 0)
+Mapping: S076
 
 A099 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:431
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: The parallel canvas event-count and label arrays are retired C++ data plumbing with no consumer-visible effect; the Swift page publishes lane snapshots and the written count through the confirmation message ([S073]).
-Original expression:
-  QCOMPARE(page().canvas()->parameterEventCounts().size(),
-               page().canvas()->parameterLabels().size())
+Mapping/reason: S073
 
 A100 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:433
 Disposition: MATCHED
-Mapping/reason: The disabled Delete row states that the lane carries no written events ([S069]); when the lane is written the same row is enabled and consumed ([S072]).
-Original expression:
-  QVERIFY(!page().canvas()->parameterEventCounts().at(volumeIndex).toBool())
+Mapping: S069, S072
 
 A101 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:443
 Disposition: PARTIAL
@@ -698,10 +508,7 @@ Original expression:
 
 A102 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:445
 Disposition: MATCHED
-Mapping/reason: Swift requires the eventless lane to render Delete disabled ([S069]).
-Original expression:
-  QVERIFY2(deleteRow && !deleteRow->enabled,
-               "the synthetic default's Delete row rendered enabled")
+Mapping: S069
 
 A103 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:448
 Disposition: PARTIAL
@@ -745,27 +552,19 @@ Original expression:
 
 A108 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:474
 Disposition: MATCHED
-Mapping/reason: The synthetic scenario now asserts the refused dispatch leaves the document snapshot unchanged, the revision included ([S081], [S070]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), revision)
+Mapping: S081, S070
 
 A109 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:475
 Disposition: MATCHED
-Mapping/reason: The refused dispatch leaves the document snapshot unchanged, which includes undo availability ([S081], [S070]), and the confirmation traversal proves its history depth ([S064]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndex)
+Mapping: S081, S070, S064
 
 A110 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:476
 Disposition: MATCHED
-Mapping/reason: The refused dispatch leaves the document snapshot unchanged ([S081], [S070]); the confirmation own traversal proves that no second history entry ever landed ([S064]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->count(), undoCount)
+Mapping: S081, S070, S064
 
 A111 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:477
 Disposition: MATCHED
-Mapping/reason: The refused dispatch leaves the document snapshot unchanged and the eventless lane keeps no written events ([S081], [S070], [S071]).
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), before)
+Mapping: S081, S070, S071
 
 A112 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:482
 Disposition: PARTIAL
@@ -782,9 +581,7 @@ Original expression:
 
 A114 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:486
 Disposition: MATCHED
-Mapping/reason: Swift requires the empty-tick prompt to open ([S015]).
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+Mapping: S015
 
 A115 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:488
 Disposition: GAP
@@ -794,10 +591,7 @@ Original expression:
 
 A116 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:489
 Disposition: MATCHED
-Mapping/reason: The Swift acceptance supplies a displayed value that lands the mapped stored value ([S016], [S017]); the rendered field text itself is not read.
-Original expression:
-  QCOMPARE(prompt->property("selectedText").toString(),
-               QString::number(CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume)))
+Mapping: S016, S017
 
 A117 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:493
 Disposition: PARTIAL
@@ -807,51 +601,35 @@ Original expression:
 
 A118 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:496
 Disposition: MATCHED
-Mapping/reason: Swift requires the insertion to land exactly one point ([S017]).
-Original expression:
-  QCOMPARE(points.size(), std::size_t{1})
+Mapping: S017
 
 A119 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:497
 Disposition: MATCHED
-Mapping/reason: Swift requires the inserted point at the captured tick ([S017]).
-Original expression:
-  QCOMPARE(points[0].tick, uint64_t{0})
+Mapping: S017
 
 A120 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:498
 Disposition: MATCHED
-Mapping/reason: Swift requires the inserted point to store the accepted displayed value ([S016], [S017]).
-Original expression:
-  QCOMPARE(points[0].value, 3)
+Mapping: S016, S017
 
 A121 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:499
 Disposition: MATCHED
-Mapping/reason: A prompt acceptance is one revision ([S010], [S020]) and the insertion predicate asserts the inserted stream itself ([S017]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), revision + 1)
+Mapping: S010, S020, S017
 
 A122 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:500
 Disposition: MATCHED
-Mapping/reason: One acceptance is one history entry, consumed by one undo ([S010], [S014]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->count(), undoCount + 1)
+Mapping: S010, S014
 
 A123 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:501
 Disposition: MATCHED
-Mapping/reason: One acceptance advances the stack by one ([S010], [S014]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndex + 1)
+Mapping: S010, S014
 
 A124 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:504
 Disposition: MATCHED
-Mapping/reason: Swift requires the acceptance to be undoable ([S012]).
-Original expression:
-  QVERIFY(songTab.history().canUndo())
+Mapping: S012
 
 A125 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:505
 Disposition: MATCHED
-Mapping/reason: Swift requires one undo to consume the acceptance ([S012]).
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(songTab.history().requestUndo()))
+Mapping: S012
 
 A126 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:506
 Disposition: PARTIAL
@@ -873,15 +651,11 @@ Original expression:
 
 A129 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:519
 Disposition: MATCHED
-Mapping/reason: The Swift stale scenario opens its point menu on the staged lane and asserts the captured target ([S036]).
-Original expression:
-  QVERIFY(cc.valid())
+Mapping: S036
 
 A130 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:524
 Disposition: MATCHED
-Mapping/reason: The Swift stale scenario opens its point menu on the staged lane and asserts the captured target ([S036]).
-Original expression:
-  QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
+Mapping: S036
 
 A131 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:530
 Disposition: GAP
@@ -904,51 +678,35 @@ Original expression:
 
 A134 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:552
 Disposition: MATCHED
-Mapping/reason: The stale scenario snapshot equality includes the revision ([S038]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), revisionAfterWrite)
+Mapping: S038
 
 A135 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:553
 Disposition: MATCHED
-Mapping/reason: The stale scenario snapshot equality is the public-API representation of the unchanged history state ([S038]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->count(), undoCountAfterWrite)
+Mapping: S038
 
 A136 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:554
 Disposition: MATCHED
-Mapping/reason: The stale scenario snapshot equality is the public-API representation of the unchanged history state ([S038]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndexAfterWrite)
+Mapping: S038
 
 A137 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:555
 Disposition: MATCHED
-Mapping/reason: The stale scenario snapshot equality is the public-API representation of the unchanged serialization ([S038]).
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), smfAfterWrite)
+Mapping: S038
 
 A138 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:557
 Disposition: MATCHED
-Mapping/reason: The stale scenario now asserts the full post-write lane after the refused dispatch ([S079]) together with the unchanged snapshot ([S038]). The intervening write is a span write in Swift rather than the original lane replacement, so the literal point set differs while the no-op observation is asserted over the whole list.
-Original expression:
-  QVERIFY(songTab.document().findLanePoint(0, kController, kRewrittenTick, &point))
+Mapping: S079, S038
 
 A139 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:558
 Disposition: MATCHED
-Mapping/reason: The post-write lane predicate names the intervening write value ([S079]) with the unchanged snapshot ([S038]), the same observation this site makes of the rewritten point.
-Original expression:
-  QCOMPARE(point.value, kRewrittenValue)
+Mapping: S079, S038
 
 A140 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:559
 Disposition: MATCHED
-Mapping/reason: The post-write lane predicate asserts the complete list after the refused dispatch ([S079]): the original target tick is absent because the interrupting write replaced the lane, while the Swift interrupt keeps it and appends at 168, so the same no-op property is asserted over the whole list.
-Original expression:
-  QVERIFY(!songTab.document().findLanePoint(0, kController, kPointTick, &point))
+Mapping: S079
 
 A141 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:560
 Disposition: MATCHED
-Mapping/reason: The post-write lane predicate asserts the complete list after the refused dispatch ([S079]): the original second target tick is absent by that lane replacement, while the Swift interrupt keeps it and appends at 168, so the same no-op property is asserted over the whole list.
-Original expression:
-  QVERIFY(!songTab.document().findLanePoint(0, kController, kOtherPointTick, &point))
+Mapping: S079
 
 A142 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:561
 Disposition: PARTIAL
@@ -958,33 +716,20 @@ Original expression:
 
 A143 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:572
 Disposition: MATCHED
-Mapping/reason: The Swift stale scenario opens its point menu on the staged lane and asserts the captured target ([S036]).
-Original expression:
-  QVERIFY(cc.valid())
+Mapping: S036
 
 A144 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:580
 Disposition: MATCHED
-Mapping/reason: The Swift stale scenario opens its point menu on the staged lane and asserts the captured target ([S036]).
-Original expression:
-  QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
+Mapping: S036
 
 A145 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:583
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(root)
 
 A146 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:586
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(rulerInput)
 
 A147 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:588
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(ruler)
 
 A148 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:591
 Disposition: GAP
@@ -1043,33 +788,23 @@ Original expression:
 
 A156 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:619
 Disposition: MATCHED
-Mapping/reason: The displaced node target writes nothing: the Swift stale scenario asserts the refusal and the unchanged snapshot ([S037], [S038]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), revision)
+Mapping: S037, S038
 
 A157 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:620
 Disposition: MATCHED
-Mapping/reason: The displaced target leaves the history state unchanged ([S038]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndex)
+Mapping: S038
 
 A158 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:621
 Disposition: MATCHED
-Mapping/reason: The displaced target leaves the serialization unchanged ([S038]).
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), before)
+Mapping: S038
 
 A159 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:623
 Disposition: MATCHED
-Mapping/reason: The stale scenario now asserts the full post-write lane ([S079]) with the unchanged snapshot ([S038]): the displaced node target wrote nothing and left the lane intact, the same observation this site makes.
-Original expression:
-  QVERIFY(songTab.document().findLanePoint(0, kController, kPointTick, &point))
+Mapping: S079, S038
 
 A160 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:624
 Disposition: MATCHED
-Mapping/reason: The post-write lane predicate covers both written points and the intervening write ([S079]) with the unchanged snapshot ([S038]).
-Original expression:
-  QVERIFY(songTab.document().findLanePoint(0, kController, kOtherPointTick, &point))
+Mapping: S079, S038
 
 A161 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:625
 Disposition: PARTIAL
@@ -1085,45 +820,27 @@ Original expression:
 
 A163 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:640
 Disposition: MATCHED
-Mapping/reason: The Swift stale scenario opens its point menu on the staged lane and asserts the captured target ([S036]).
-Original expression:
-  QVERIFY(cc.valid())
+Mapping: S036
 
 A164 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:647
 Disposition: MATCHED
-Mapping/reason: The Swift stale scenario opens its point menu on the staged lane and asserts the captured target ([S036]).
-Original expression:
-  QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
+Mapping: S036
 
 A165 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:650
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(nodeModel)
 
 A166 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:653
 Disposition: MATCHED
-Mapping/reason: The Swift scenario reopens the point menu through the production pointer route ([S110], [S111]) and dismisses it through the production Escape route: handleEscape claims the open menu ([S112]) and closes it ([S113]) with nothing written ([S114]), the same dispatchEscape the QML Escape handling calls (src/ui/songview/quick/drawer/AutomationMenu.qml Keys.onPressed; src/ui/songview/quick/drawer/AutomationPage.qml Keys.onEscapePressed->handleEscape).
-Original expression:
-  QVERIFY2(!menu.session->isOpen(), "Escape did not dismiss the point menu")
+Mapping: S110, S111, S112, S113, S114
 
 A167 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:656
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(root)
 
 A168 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:659
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(rulerInput)
 
 A169 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:661
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(ruler)
 
 A170 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:664
 Disposition: GAP
@@ -1178,21 +895,15 @@ Original expression:
 
 A178 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:709
 Disposition: MATCHED
-Mapping/reason: The consumed node hit stayed consumed: the Swift stale scenario asserts the refusal and the unchanged revision ([S037], [S038]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), revision)
+Mapping: S037, S038
 
 A179 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:710
 Disposition: MATCHED
-Mapping/reason: The consumed node hit leaves the history state unchanged ([S038]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndex)
+Mapping: S038
 
 A180 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:711
 Disposition: MATCHED
-Mapping/reason: The consumed node hit leaves the serialization unchanged ([S038]).
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), before)
+Mapping: S038
 
 A181 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:712
 Disposition: PARTIAL
@@ -1208,9 +919,7 @@ Original expression:
 
 A183 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:725
 Disposition: MATCHED
-Mapping/reason: The Swift switch scenario opens a CC prompt on the staged lane ([S046]).
-Original expression:
-  QVERIFY(cc.valid())
+Mapping: S046
 
 A184 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:732
 Disposition: PARTIAL
@@ -1233,9 +942,7 @@ Original expression:
 
 A187 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:737
 Disposition: MATCHED
-Mapping/reason: Swift requires the prompt to open on the written node ([S046]).
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+Mapping: S046
 
 A188 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:739
 Disposition: GAP
@@ -1245,21 +952,12 @@ Original expression:
 
 A189 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:744
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(root)
 
 A190 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:747
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(rulerInput)
 
 A191 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:749
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(ruler)
 
 A192 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:752
 Disposition: GAP
@@ -1285,27 +983,19 @@ Original expression:
 
 A195 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:769
 Disposition: MATCHED
-Mapping/reason: The Swift predicate requires the Tempo parameter index to resolve in the catalogue ([S076]), the same index lookup the original performs.
-Original expression:
-  QVERIFY(tempoIndex >= 0)
+Mapping: S076
 
 A196 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:771
 Disposition: MATCHED
-Mapping/reason: The switch closes the CC prompt and the Tempo row then opens its own prompt ([S047], [S048]).
-Original expression:
-  QCOMPARE(page().canvas()->activeParameter(), tempoIndex)
+Mapping: S047, S048
 
 A197 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:772
 Disposition: MATCHED
-Mapping/reason: Swift requires the switch to drop the owned prompt ([S047]).
-Original expression:
-  QVERIFY(!page().canvas()->valuePromptVisible())
+Mapping: S047
 
 A198 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:773
 Disposition: MATCHED
-Mapping/reason: Swift requires the switch to drop the owned prompt ([S047]).
-Original expression:
-  QVERIFY(!automation_valueprompt::promptVisible(chrome))
+Mapping: S047
 
 A199 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:774
 Disposition: GAP
@@ -1315,9 +1005,7 @@ Original expression:
 
 A200 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:776
 Disposition: MATCHED
-Mapping/reason: The switch writes nothing and the CC lane keeps its written point ([S047], [S051]).
-Original expression:
-  QVERIFY(frozenDocumentState() == before)
+Mapping: S047, S051
 
 A201 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:784
 Disposition: GAP
@@ -1353,22 +1041,15 @@ Original expression:
 
 A206 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:797
 Disposition: MATCHED
-Mapping/reason: Swift requires the Tempo prompt to open on its written point ([S048]).
-Original expression:
-  QVERIFY(tempo.valid())
+Mapping: S048
 
 A207 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:800
 Disposition: MATCHED
-Mapping/reason: Swift requires Tempo to open its own prompt and to store the prompted BPM ([S048], [S050]).
-Original expression:
-  QVERIFY(page().canvas()->openValuePromptForInsertion(tempo, kFreshTick,
-                                                           CoreTimeDefaults::kTempoBpm))
+Mapping: S048, S050
 
 A208 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:802
 Disposition: MATCHED
-Mapping/reason: Swift requires the Tempo prompt to open ([S048]).
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+Mapping: S048
 
 A209 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:804
 Disposition: GAP
@@ -1378,10 +1059,7 @@ Original expression:
 
 A210 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:805
 Disposition: MATCHED
-Mapping/reason: The Swift tempo acceptance supplies a displayed value that lands the stored tempo ([S049], [S050]); the rendered field text itself is not read.
-Original expression:
-  QCOMPARE(freshPrompt->property("selectedText").toString(),
-               QString::number(CoreTimeDefaults::kTempoBpm))
+Mapping: S049, S050
 
 A211 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:811
 Disposition: PARTIAL
@@ -1391,29 +1069,19 @@ Original expression:
 
 A212 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:813
 Disposition: MATCHED
-Mapping/reason: The Tempo acceptance publishes one revision ([S052]).
-Original expression:
-  QCOMPARE(songTab.document().revision(), before.revision + 1)
+Mapping: S052
 
 A213 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:814
 Disposition: MATCHED
-Mapping/reason: One acceptance advances the stack by one and its undo restores the stored microseconds ([S027], [S052]).
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), before.undoIndex + 1)
+Mapping: S027, S052
 
 A214 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:816
 Disposition: MATCHED
-Mapping/reason: Swift requires the tempo stream to hold the single inserted point ([S050]).
-Original expression:
-  QCOMPARE(tempoPoints.size(), std::size_t{1})
+Mapping: S050
 
 A215 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:817
 Disposition: MATCHED
-Mapping/reason: Swift requires the inserted tempo point to name the prompted BPM ([S049], [S050]).
-Original expression:
-  QCOMPARE(int(std::lround(
-                   CoreTimeDefaults::tempoBpm(tempoPoints.front().microsecondsPerQuarterNote))),
-               kFreshBpm)
+Mapping: S049, S050
 
 A216 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:821
 Disposition: PARTIAL
@@ -1423,15 +1091,11 @@ Original expression:
 
 A217 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:822
 Disposition: MATCHED
-Mapping/reason: Swift requires the CC lane written point to keep its tick across the switch ([S051]).
-Original expression:
-  QCOMPARE(points[0].tick, kPointTick)
+Mapping: S051
 
 A218 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:823
 Disposition: MATCHED
-Mapping/reason: Swift requires the CC lane written point to keep its value across the switch ([S051]).
-Original expression:
-  QCOMPARE(points[0].value, kPointValue)
+Mapping: S051
 
 A219 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:824
 Disposition: PARTIAL
@@ -1447,27 +1111,19 @@ Original expression:
 
 A221 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:828
 Disposition: MATCHED
-Mapping/reason: Swift requires the Tempo acceptance to be undoable ([S027]).
-Original expression:
-  QVERIFY(songTab.history().canUndo())
+Mapping: S027
 
 A222 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:829
 Disposition: MATCHED
-Mapping/reason: Swift requires one undo to consume the Tempo acceptance ([S027]).
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(songTab.history().requestUndo()))
+Mapping: S027
 
 A223 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:830
 Disposition: MATCHED
-Mapping/reason: The undo restores the pre-accept tempo stream ([S027]); the Swift fixture names a tick-zero tempo rather than the original empty stream.
-Original expression:
-  QVERIFY(songTab.document().tempoPoints().empty())
+Mapping: S027
 
 A224 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:831
 Disposition: MATCHED
-Mapping/reason: The restored stream is the public-API representation of the restored serialization ([S027]).
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), before.smf)
+Mapping: S027
 
 A225 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:832
 Disposition: GAP
@@ -1487,658 +1143,342 @@ src/checks/automation/automationpointmenus.swift.
 
 S001 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "a prompt opens on a written node"
-Swift expression:
-    report.expect(fixture.page.openPrompt(tick: 24, value: 64), cppID: drawerAutomationPromptID,
-                  message: "a prompt opens on a written node")
 
 S002 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "an open prompt marks the page interacting"
-Swift expression:
-    report.expect(fixture.page.hasPrompt && fixture.page.interactionActive, cppID: drawerAutomationPromptID,
-                  message: "an open prompt marks the page interacting")
 
 S003 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "opening a prompt writes nothing"
-Swift expression:
-    report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationPromptID,
-                       what: "opening a prompt writes nothing")
 
 S004 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "opening a prompt leaves the lane alone"
-Swift expression:
-    report.expectEqual(1, fixture.lanePoints(fixture.panLane).count(where: { $0.tick == 24 }),
-                       cppID: drawerAutomationPromptID, what: "opening a prompt leaves the lane alone")
 
 S005 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "accepting the unchanged value commits nothing"
-Swift expression:
-    report.expect(!fixture.page.acceptPrompt(displayedValue: 0), cppID: drawerAutomationPromptID,
-                  message: "accepting the unchanged value commits nothing")
 
 S006 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "a no-op acceptance writes nothing"
-Swift expression:
-    report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationPromptID,
-                       what: "a no-op acceptance writes nothing")
 
 S007 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "the prompt reopens"
-Swift expression:
-    report.expect(fixture.page.openPrompt(tick: 24, value: 64), cppID: drawerAutomationPromptID,
-                  message: "the prompt reopens")
 
 S008 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "accepting a changed value commits once"
-Swift expression:
-    report.expect(fixture.page.acceptPrompt(displayedValue: 10), cppID: drawerAutomationPromptID,
-                  message: "accepting a changed value commits once")
 
 S009 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "the displayed value maps back through the prompt's offset"
-Swift expression:
-    report.expectEqual(["24:74", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationPromptID,
-                       what: "the displayed value maps back through the prompt's offset")
 
 S010 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "one acceptance is one document revision"
-Swift expression:
-    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: drawerAutomationPromptID,
-                       what: "one acceptance is one document revision")
 
 S011 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "a value replacement keeps one occurrence at the tick"
-Swift expression:
-    report.expectEqual(1, fixture.lanePoints(fixture.panLane).count(where: { $0.tick == 24 }),
-                       cppID: drawerAutomationPromptID, what: "a value replacement keeps one occurrence at the tick")
 
 S012 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "the acceptance is undoable"
-Swift expression:
-    report.expect(fixture.undo(), cppID: drawerAutomationPromptID, message: "the acceptance is undoable")
 
 S013 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "one undo restores the lane's values"
-Swift expression:
-    report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationPromptID,
-                       what: "one undo restores the lane's values")
 
 S014 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "one undo consumes the acceptance's single history entry"
-Swift expression:
-    report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationPromptID,
-                  message: "one undo consumes the acceptance's single history entry")
 
 S015 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "a prompt opens on an empty tick"
-Swift expression:
-    report.expect(fixture.page.openPrompt(tick: 48, value: 40), cppID: drawerAutomationPromptID,
-                  message: "a prompt opens on an empty tick")
 
 S016 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "the empty-tick prompt commits its insertion"
-Swift expression:
-    report.expect(fixture.page.acceptPrompt(displayedValue: -24), cppID: drawerAutomationPromptID,
-                  message: "the empty-tick prompt commits its insertion")
 
 S017 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "the insertion lands at the captured tick"
-Swift expression:
-    report.expectEqual(["24:64", "48:40", "120:40"], fixture.values(fixture.panLane),
-                       cppID: drawerAutomationPromptID, what: "the insertion lands at the captured tick")
 
 S018 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "a prompt reopens on the inserted tick"
-Swift expression:
-    report.expect(fixture.page.openPrompt(tick: 48, value: 40), cppID: drawerAutomationPromptID,
-                  message: "a prompt reopens on the inserted tick")
 
 S019 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "re-inserting an existing point changes nothing"
-Swift expression:
-    report.expect(!fixture.page.acceptPrompt(displayedValue: -24), cppID: drawerAutomationPromptID,
-                  message: "re-inserting an existing point changes nothing")
 
 S020 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "a duplicate insertion writes no revision"
-Swift expression:
-    report.expectEqual(revisionAfterInsert, fixture.document.revision, cppID: drawerAutomationPromptID,
-                       what: "a duplicate insertion writes no revision")
 
 S021 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "cancelling a prompt commits nothing"
-Swift expression:
-    report.expectEqual(beforeCancel, fixture.snapshot, cppID: drawerAutomationPromptID,
-                       what: "cancelling a prompt commits nothing")
 
 S022 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "cancelling drops the prompt and the interaction"
-Swift expression:
-    report.expect(!fixture.page.hasPrompt && !fixture.page.interactionActive, cppID: drawerAutomationPromptID,
-                  message: "cancelling drops the prompt and the interaction")
 
 S023 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "Tempo opens the same prompt on its written point"
-Swift expression:
-    report.expect(tempoFixture.page.openPrompt(tick: 0, value: 120), cppID: drawerAutomationPromptID,
-                  message: "Tempo opens the same prompt on its written point")
 
 S024 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "Tempo commits its prompt"
-Swift expression:
-    report.expect(tempoFixture.page.acceptPrompt(displayedValue: 150), cppID: drawerAutomationPromptID,
-                  message: "Tempo commits its prompt")
 
 S025 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "the tempo point stores the prompted BPM"
-Swift expression:
-    report.expectEqual(["0:150"], tempoFixture.tempoValues, cppID: drawerAutomationPromptID,
-                       what: "the tempo point stores the prompted BPM")
 
 S026 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "Tempo's acceptance is one revision"
-Swift expression:
-    report.expectEqual(tempoBefore.revision + 1, tempoFixture.document.revision, cppID: drawerAutomationPromptID,
-                       what: "Tempo's acceptance is one revision")
 
 S027 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "one undo restores Tempo's stored microseconds"
-Swift expression:
-    report.expect(tempoFixture.undo() && tempoFixture.tempoValues == ["0:120"], cppID: drawerAutomationPromptID,
-                  message: "one undo restores Tempo's stored microseconds")
 
 S028 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
 Anchor: message "the written point owns its captured menu target"
-Swift expression:
-    report.expect(page.menuTargetIsPoint, cppID: id,
-                  message: "the written point owns its captured menu target")
 
 S029 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
 Anchor: message "the point menu enables Delete on a written node"
-Swift expression:
-    report.expect(page.publishedMenuRows.first {
-        $0.actionId == AutomationMenuAction.deleteNode.rawValue
-    }?.enabled == true, cppID: id, message: "the point menu enables Delete on a written node")
 
 S030 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
 Anchor: message "the Delete row is consumed"
-Swift expression:
-    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
-                  cppID: id, message: "the Delete row is consumed")
 
 S031 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
 Anchor: message "Delete removes the targeted node and keeps the other"
-Swift expression:
-    report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id,
-                       what: "Delete removes the targeted node and keeps the other")
 
 S032 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
 Anchor: message "one Delete is one revision"
-Swift expression:
-    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                       what: "one Delete is one revision")
 
 S033 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
 Anchor: message "the Delete undoes"
-Swift expression:
-    report.expect(fixture.undo(), cppID: id, message: "the Delete undoes")
 
 S034 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
 Anchor: message "undo restores the deleted node"
-Swift expression:
-    report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: id,
-                       what: "undo restores the deleted node")
 
 S035 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
 Anchor: message "the Delete recorded exactly one history entry"
-Swift expression:
-    report.expect(!fixture.document.history.canUndo, cppID: id,
-                  message: "the Delete recorded exactly one history entry")
 
 S036 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
 Anchor: message "the stale target opens its point menu"
-Swift expression:
-    report.expect(stale.page.menuTargetIsPoint, cppID: staleID,
-                  message: "the stale target opens its point menu")
 
 S037 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
 Anchor: message "a stale point menu cannot delete its target"
-Swift expression:
-    report.expect(!stale.page.consumeMenuAction(
-        actionId: AutomationMenuAction.deleteNode.rawValue), cppID: staleID,
-                  message: "a stale point menu cannot delete its target")
 
 S038 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
 Anchor: message "the rejected Delete leaves the rewritten lane intact"
-Swift expression:
-    report.expectEqual(rewritten, stale.snapshot, cppID: staleID,
-                       what: "the rejected Delete leaves the rewritten lane intact")
 
 S039 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "both duplicate occurrences stage"
-Swift expression:
-    report.expectEqual(["24:30", "24:90"], fixture.values(fixture.panLane), cppID: id,
-                       what: "both duplicate occurrences stage")
 
 S040 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "a prompt opens on the duplicate tick"
-Swift expression:
-    report.expect(fixture.page.openPrompt(tick: 24, value: 30), cppID: id,
-                  message: "a prompt opens on the duplicate tick")
 
 S041 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "the duplicate value commits"
-Swift expression:
-    report.expect(fixture.page.acceptPrompt(displayedValue: -14), cppID: id,
-                  message: "the duplicate value commits")
 
 S042 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "only the targeted duplicate occurrence moves"
-Swift expression:
-    report.expectEqual(["24:30", "24:50"], fixture.values(fixture.panLane), cppID: id,
-                       what: "only the targeted duplicate occurrence moves")
 
 S043 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "one duplicate acceptance is one revision"
-Swift expression:
-    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                       what: "one duplicate acceptance is one revision")
 
 S044 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "the duplicate acceptance undoes"
-Swift expression:
-    report.expect(fixture.undo(), cppID: id, message: "the duplicate acceptance undoes")
 
 S045 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "undo restores both duplicate occurrences"
-Swift expression:
-    report.expectEqual(["24:30", "24:90"], fixture.values(fixture.panLane), cppID: id,
-                       what: "undo restores both duplicate occurrences")
 
 S046 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "a prompt opens on the CC lane"
-Swift expression:
-    report.expect(switched.page.openPrompt(tick: 24, value: 64), cppID: switchID,
-                  message: "a prompt opens on the CC lane")
 
 S047 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "switching parameters closes the CC prompt"
-Swift expression:
-    report.expect(!switched.page.hasPrompt, cppID: switchID,
-                  message: "switching parameters closes the CC prompt")
 
 S048 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "Tempo opens its own prompt"
-Swift expression:
-    report.expect(switched.page.openPrompt(tick: 0, value: 120), cppID: switchID,
-                  message: "Tempo opens its own prompt")
 
 S049 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "Tempo commits its prompt"
-Swift expression:
-    report.expect(switched.page.acceptPrompt(displayedValue: 150), cppID: switchID,
-                  message: "Tempo commits its prompt")
 
 S050 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "the tempo point stores the prompted BPM"
-Swift expression:
-    report.expectEqual(["0:150"], switched.tempoValues, cppID: switchID,
-                       what: "the tempo point stores the prompted BPM")
 
 S051 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "the CC lane stays untouched"
-Swift expression:
-    report.expectEqual(["24:64"], switched.values(switched.panLane), cppID: switchID,
-                       what: "the CC lane stays untouched")
 
 S052 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "Tempo's acceptance is one revision"
-Swift expression:
-    report.expectEqual(tempoBefore.revision + 1, switched.document.revision, cppID: switchID,
-                       what: "Tempo's acceptance is one revision")
 
 S053 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the lane menu opens"
-Swift expression:
-    report.expect(page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0),
-                  cppID: id, message: "the lane menu opens")
 
 S054 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the Delete events row is consumed" #1
-Swift expression:
-    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue),
-                  cppID: id, message: "the Delete events row is consumed")
 
 S055 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the row opens the delete confirmation"
-Swift expression:
-    report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id,
-                       what: "the row opens the delete confirmation")
 
 S056 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the confirmation names the written count"
-Swift expression:
-    report.expect(page.promptMessage.contains("2 written events"), cppID: id,
-                  message: "the confirmation names the written count")
 
 S057 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "opening the confirmation writes nothing"
-Swift expression:
-    report.expectEqual(before, fixture.snapshot, cppID: id,
-                       what: "opening the confirmation writes nothing")
 
 S058 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the confirmation accepts" #1
-Swift expression:
-    report.expect(page.acceptPromptDraft(), cppID: id, message: "the confirmation accepts")
 
 S059 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "accept removes only the target lane"
-Swift expression:
-    report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
-                       what: "accept removes only the target lane")
 
 S060 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the volume lane is preserved"
-Swift expression:
-    report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                       what: "the volume lane is preserved")
 
 S061 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "one acceptance is one revision"
-Swift expression:
-    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                       what: "one acceptance is one revision")
 
 S062 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the acceptance undoes" #1
-Swift expression:
-    report.expect(fixture.undo(), cppID: id, message: "the acceptance undoes")
 
 S063 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "undo restores the target lane"
-Swift expression:
-    report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
-                       what: "undo restores the target lane")
 
 S064 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the acceptance recorded exactly one history entry"
-Swift expression:
-    report.expect(!fixture.document.history.canUndo, cppID: id,
-                  message: "the acceptance recorded exactly one history entry")
 
 S065 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "cancelling drops the confirmation"
-Swift expression:
-    report.expect(!page.hasPrompt, cppID: cancelID, message: "cancelling drops the confirmation")
 
 S066 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "cancelling leaves document and history untouched"
-Swift expression:
-    report.expectEqual(cancelBefore, fixture.snapshot, cppID: cancelID,
-                       what: "cancelling leaves document and history untouched")
 
 S067 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "a stale confirmation cannot delete its target"
-Swift expression:
-    report.expect(!page.acceptPromptDraft(), cppID: staleID,
-                  message: "a stale confirmation cannot delete its target")
 
 S068 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the rejected confirmation leaves the rewritten lane intact"
-Swift expression:
-    report.expectEqual(rewritten, fixture.snapshot, cppID: staleID,
-                       what: "the rejected confirmation leaves the rewritten lane intact")
 
 S069 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the eventless lane disables Delete events"
-Swift expression:
-    report.expect(synthetic.page.publishedMenuRows.first {
-        $0.actionId == AutomationMenuAction.deleteLaneEvents.rawValue
-    }?.enabled == false, cppID: syntheticID,
-                  message: "the eventless lane disables Delete events")
 
 S070 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the disabled row is refused"
-Swift expression:
-    report.expect(!synthetic.page.consumeMenuAction(
-        actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: syntheticID,
-                  message: "the disabled row is refused")
 
 S071 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "no confirmation opens for the eventless lane"
-Swift expression:
-    report.expect(!synthetic.page.hasPrompt, cppID: syntheticID,
-                  message: "no confirmation opens for the eventless lane")
 
 S072 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the Delete events row is consumed" #2
-Swift expression:
-    report.expect(single.page.consumeMenuAction(
-        actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: countID,
-                  message: "the Delete events row is consumed")
 
 S073 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the confirmation counts written events only"
-Swift expression:
-    report.expect(single.page.promptMessage.contains("1 written events"), cppID: countID,
-                  message: "the confirmation counts written events only")
 
 S074 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the confirmation accepts" #2
-Swift expression:
-    report.expect(single.page.acceptPromptDraft(), cppID: countID,
-                  message: "the confirmation accepts")
 
 S075 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "accept removes the written event"
-Swift expression:
-    report.expectEqual([String](), single.values(single.volumeLane), cppID: countID,
-                       what: "accept removes the written event")
 
 S076 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the volume parameter remains in the catalog"
-Swift expression:
-    report.expect(single.page.catalogIndex(of: single.volumeLane) >= 0, cppID: countID,
-                  message: "the volume parameter remains in the catalog")
 
 S077 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the acceptance undoes" #2
-Swift expression:
-    report.expect(single.undo(), cppID: countID, message: "the acceptance undoes")
 
 S078 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "undo restores the written event"
-Swift expression:
-    report.expectEqual(["48:70"], single.values(single.volumeLane), cppID: countID,
-                       what: "undo restores the written event")
 
 S079 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift
 Anchor: message "the rejected Delete preserves the rewritten points"
-Swift expression:
-    report.expectEqual(["24:64", "120:40", "168:5"], stale.values(stale.panLane), cppID: staleID,
-                       what: "the rejected Delete preserves the rewritten points")
 
 S080 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the rejected confirmation preserves the rewritten points"
-Swift expression:
-    report.expectEqual(["24:60", "120:40", "168:5"], fixture.values(fixture.panLane),
-                       cppID: staleID,
-                       what: "the rejected confirmation preserves the rewritten points")
 
 S081 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the refused row writes nothing"
-Swift expression:
-    report.expectEqual(syntheticBefore, synthetic.snapshot, cppID: syntheticID,
-                       what: "the refused row writes nothing")
 
 S082 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "the first point owns its captured menu target"
-Swift expression:
-    report.expect(page.menuTargetIsPoint, cppID: id,
-                  message: "the first point owns its captured menu target")
 
 S083 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "an outside right press on another node retargets the menu"
-Swift expression:
-    report.expect(page.menuTargetIsPoint, cppID: id,
-                  message: "an outside right press on another node retargets the menu")
 
 S084 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "the retargeted Delete row is consumed"
-Swift expression:
-    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
-                  cppID: id, message: "the retargeted Delete row is consumed")
 
 S085 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "the retargeted Delete removes the second node only"
-Swift expression:
-    report.expectEqual(["24:64"], fixture.values(fixture.panLane), cppID: id,
-                       what: "the retargeted Delete removes the second node only")
 
 S086 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "the retargeted Delete undoes"
-Swift expression:
-    report.expect(fixture.undo(), cppID: id, message: "the retargeted Delete undoes")
 
 S087 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "the point menu reopens"
-Swift expression:
-    report.expect(page.menuTargetIsPoint, cppID: id,
-                  message: "the point menu reopens")
 
 S088 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "the miss closes the shared menu"
-Swift expression:
-    report.expect(!page.menuOpen, cppID: id, message: "the miss closes the shared menu")
 
 S089 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "the paired release claims no band"
-Swift expression:
-    report.expect(!page.pointerRelease(x: fixture.x(168), y: 60, button: AutomationQtButton.right),
-                  cppID: id, message: "the paired release claims no band")
 
 S090 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "the dismissed menu writes nothing"
-Swift expression:
-    report.expectEqual(missBefore, fixture.snapshot, cppID: id,
-                       what: "the dismissed menu writes nothing")
 
 S091 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "the prompt reopens for the Escape route"
-Swift expression:
-    report.expect(fixture.page.hasPrompt && fixture.page.interactionActive, cppID: drawerAutomationPromptID, message: "the prompt reopens for the Escape route")
 
 S092 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "Escape claims the open prompt"
-Swift expression:
-    report.expect(fixture.page.handleEscape(), cppID: drawerAutomationPromptID, message: "Escape claims the open prompt")
 
 S093 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "Escape drops the prompt and the interaction"
-Swift expression:
-    report.expect(!fixture.page.hasPrompt && !fixture.page.interactionActive, cppID: drawerAutomationPromptID, message: "Escape drops the prompt and the interaction")
 
 S094 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "Escape cancellation writes nothing"
-Swift expression:
-    report.expectEqual(escapeBefore, fixture.snapshot, cppID: drawerAutomationPromptID, what: "Escape cancellation writes nothing")
 
 S095 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "the written point owns its Set Value menu target"
-Swift expression:
-    report.expect(routed.page.menuTargetIsPoint, cppID: id, message: "the written point owns its Set Value menu target")
 
 S096 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "the point menu opens for the Set Value route"
-Swift expression:
-    report.expect(routed.page.menuOpen, cppID: id, message: "the point menu opens for the Set Value route")
 
 S097 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "the point menu enables Set Value on a written node"
-Swift expression:
-    report.expect(routed.page.publishedMenuRows.first { $0.actionId == AutomationMenuAction.setValue.rawValue }?.enabled == true, cppID: id, message: "the point menu enables Set Value on a written node")
 
 S098 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "the Set Value row is consumed"
-Swift expression:
-    report.expect(routed.page.consumeMenuAction(actionId: AutomationMenuAction.setValue.rawValue), cppID: id, message: "the Set Value row is consumed")
 
 S099 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "the Set Value pick opens the value prompt"
-Swift expression:
-    report.expect(routed.page.promptOpen, cppID: id, message: "the Set Value pick opens the value prompt")
 
 S100 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "the Set Value pick opens the value form"
-Swift expression:
-    report.expectEqual(AutomationPromptKind.value.rawValue, routed.page.promptKind, cppID: id, what: "the Set Value pick opens the value form")
 
 S101 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "the open value prompt marks the page interacting"
-Swift expression:
-    report.expect(routed.page.interactionActive, cppID: id, message: "the open value prompt marks the page interacting")
 
 S102 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "the value prompt carries its initial draft"
-Swift expression:
-    report.expect(!routed.page.promptDraft.isEmpty, cppID: id, message: "the value prompt carries its initial draft")
 
 S103 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
 Anchor: message "cancelling the routed prompt drops the prompt and the interaction"
-Swift expression:
-    report.expect(!routed.page.hasPrompt && !routed.page.interactionActive, cppID: id, message: "cancelling the routed prompt drops the prompt and the interaction")
 
 S104 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the reopened row owns the delete confirmation"
-Swift expression:
-    report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id, what: "the reopened row owns the delete confirmation")
 
 S105 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the delete confirmation is open"
-Swift expression:
-    report.expect(page.promptOpen, cppID: id, message: "the delete confirmation is open")
 
 S106 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the open confirmation marks the page interacting"
-Swift expression:
-    report.expect(page.interactionActive, cppID: id, message: "the open confirmation marks the page interacting")
 
 S107 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "Escape claims the open confirmation"
-Swift expression:
-    report.expect(page.handleEscape(), cppID: escapeID, message: "Escape claims the open confirmation")
 
 S108 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "Escape drops the confirmation and the interaction"
-Swift expression:
-    report.expect(!page.promptOpen && !page.interactionActive, cppID: escapeID, message: "Escape drops the confirmation and the interaction")
 
 S109 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "Escape cancellation writes nothing"
-Swift expression:
-    report.expectEqual(confirmationEscapeBefore, fixture.snapshot, cppID: escapeID, what: "Escape cancellation writes nothing")
 
 S110 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "the point menu reopens for the Escape route"
-Swift expression:
-    report.expect(page.menuTargetIsPoint, cppID: foreignID, message: "the point menu reopens for the Escape route")
 
 S111 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "the reopened point menu is open"
-Swift expression:
-    report.expect(page.menuOpen, cppID: foreignID, message: "the reopened point menu is open")
 
 S112 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "Escape claims the open point menu"
-Swift expression:
-    report.expect(page.handleEscape(), cppID: foreignID, message: "Escape claims the open point menu")
 
 S113 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "Escape closes the open point menu"
-Swift expression:
-    report.expect(!page.menuOpen, cppID: foreignID, message: "Escape closes the open point menu")
 
 S114 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift
 Anchor: message "Escape dismissal writes nothing"
-Swift expression:
-    report.expectEqual(menuEscapeBefore, fixture.snapshot, cppID: foreignID, what: "Escape dismissal writes nothing")

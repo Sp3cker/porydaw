@@ -7,66 +7,13 @@ Swift counterpart: src/checks/trackheaders/headerfixture.swift
 Additional Swift counterpart: src/checks/trackheaders/headerinputfixture.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
 Converted-window command: deno task verify:qml --verbose
-The legacy header/camera/playhead harnesses are not registered in this checkout.
-Their C++ sources are reference inventories only, never current execution evidence.
-
-Execution ownership
-TrackHeadersChecks and TrackHeadersInputChecks call the paired functions in the
-original Swift suite order. headerfixture.swift constructs a real two-track
-DocumentSession (Lead C0/key60/v100/24 ticks and Bass C1/key48/v80/48 ticks);
-headerinputfixture.swift owns pointer probes and document/history baselines.
-This file contributes only the native fixture init guards inventoried below; no
-same-name Swift case exists, so the S index lists the suite fixture predicates
-that execute on every paired call.
-
-Fixture, sequence and row constraints
-No data rows, loops, or paint sequences: init() constructs a TrackHeadersFixture
-and focuses its input, and cleanup() tears it down. Both guards must pass before
-any case body runs; a QTest failure aborts the case. The Swift suite opens its
-ProjectService bank once per run and builds a typed TrackHeadersFixture per check
-instead of a native window with focused input.
-
-Original assertion inventory and source sequence
 
 A001 | TrackHeadersTest::init | src/checks/trackheaders/tst_trackheaders.cpp:18
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackheaders.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-#include "checks/trackheaders/tst_trackheaders.h"
-
-#include <QtTest>
-
-#include <utility>
-
-TrackHeadersTest::TrackHeadersTest(QString projectRoot, QString songLabel)
-    : m_projectRoot(std::move(projectRoot))
-    , m_songLabel(std::move(songLabel))
-{}
-
-TrackHeadersTest::~TrackHeadersTest() = default;
-
-void TrackHeadersTest::init()
-{
-    m_fixture = std::make_unique<TrackHeadersFixture>(m_projectRoot, m_songLabel);
-    QString error;
-
-Original expression:
-  QVERIFY2(m_fixture->create(error), qPrintable(error))
 
 A002 | TrackHeadersTest::init | src/checks/trackheaders/tst_trackheaders.cpp:19
 Disposition: GAP
@@ -104,114 +51,42 @@ Swift assertion predicates
 
 S001 | drag | src/checks/trackheaders/headerfixture.swift
 Anchor: message "\(label): header accepts press"
-  report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
-                    cppID: trackHeadersReorderID, message: "\(label): header accepts press")
 
 S002 | drag | src/checks/trackheaders/headerfixture.swift
 Anchor: message "\(label): header accepts drag"
-  report.expect(headers.updatePointer(x: x, y: dropY, modifiers: 0),
-                    cppID: trackHeadersReorderID, message: "\(label): header accepts drag")
 
 S003 | drag | src/checks/trackheaders/headerfixture.swift
 Anchor: message "\(label): header accepts release"
-  report.expect(headers.endPointer(x: x, y: dropY, button: 1, modifiers: 0),
-                    cppID: trackHeadersReorderID, message: "\(label): header accepts release")
 
 S004 | expectRows | src/checks/trackheaders/headerfixture.swift
 Anchor: message "\(phase): rows follow engine track order"
-  report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
-                         what: "\(phase): rows follow engine track order")
 
 S005 | expectRows | src/checks/trackheaders/headerfixture.swift
 Anchor: message "\(phase): rows display ordered numbered track names"
-  report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
-                         what: "\(phase): rows display ordered numbered track names")
 
 S006 | expectRows | src/checks/trackheaders/headerfixture.swift
 Anchor: message "\(phase): one row per track plus add-track row"
-  report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
-                         what: "\(phase): one row per track plus add-track row")
 
 S007 | expectRows | src/checks/trackheaders/headerfixture.swift
 Anchor: message "\(phase): add-track row remains last"
-  report.expectEqual([names.count], addRows, cppID: cppID,
-                         what: "\(phase): add-track row remains last")
 
 S008 | click | src/checks/trackheaders/headerinputfixture.swift
 Anchor: message "\(probe) row \(row) accepts press"
-  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
-                    cppID: cppID, message: "\(probe) row \(row) accepts press")
 
 S009 | click | src/checks/trackheaders/headerinputfixture.swift
 Anchor: message "\(probe) row \(row) accepts release"
-  report.expect(headers.endPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
-                    cppID: cppID, message: "\(probe) row \(row) accepts release")
 
 S010 | openMenu | src/checks/trackheaders/headerinputfixture.swift
 Anchor: message "right press is handled"
-  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 2, modifiers: 0),
-                    cppID: cppID, message: "right press is handled")
 
 S011 | openMenu | src/checks/trackheaders/headerinputfixture.swift
 Anchor: message "right press opens header menu"
-  report.expect(headers.menuOpen, cppID: cppID, message: "right press opens header menu")
 
 S012 | expectUnchanged | src/checks/trackheaders/headerinputfixture.swift
 Anchor: message "\(phase): song unchanged"
-  report.expectEqual(state, document.state, cppID: cppID, what: "\(phase): song unchanged")
 
 S013 | expectUnchanged | src/checks/trackheaders/headerinputfixture.swift
 Anchor: message "\(phase): no document write"
-  report.expectEqual(revision, document.revision, cppID: cppID,
-                         what: "\(phase): no document write")
 
 S014 | expectUnchanged | src/checks/trackheaders/headerinputfixture.swift
 Anchor: message "\(phase): history unchanged"
-  report.expectEqual(history, document.history.currentIdentity, cppID: cppID,
-                         what: "\(phase): history unchanged")
-
-Shared helper: src/checks/trackheaders/headerfixture.swift
-SHA-256: 97168dc6c4c652f8497a6b3f1cf1750fa010c067def9b5f39955c3dab56d48aa
-src/checks/trackheaders/headerfixture.swift:64
-  report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
-                    cppID: trackHeadersReorderID, message: "\(label): header accepts press")
-src/checks/trackheaders/headerfixture.swift:66
-  report.expect(headers.updatePointer(x: x, y: dropY, modifiers: 0),
-                    cppID: trackHeadersReorderID, message: "\(label): header accepts drag")
-src/checks/trackheaders/headerfixture.swift:68
-  report.expect(headers.endPointer(x: x, y: dropY, button: 1, modifiers: 0),
-                    cppID: trackHeadersReorderID, message: "\(label): header accepts release")
-src/checks/trackheaders/headerfixture.swift:73
-  report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
-                         what: "\(phase): rows follow engine track order")
-src/checks/trackheaders/headerfixture.swift:76
-  report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
-                         what: "\(phase): rows display ordered numbered track names")
-src/checks/trackheaders/headerfixture.swift:78
-  report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
-                         what: "\(phase): one row per track plus add-track row")
-src/checks/trackheaders/headerfixture.swift:81
-  report.expectEqual([names.count], addRows, cppID: cppID,
-                         what: "\(phase): add-track row remains last")
-
-Shared helper: src/checks/trackheaders/headerinputfixture.swift
-SHA-256: 3c5d2bdfd003b1564928b17990288debd27810525485463027fd19d950d7ec40
-src/checks/trackheaders/headerinputfixture.swift:28
-  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
-                    cppID: cppID, message: "\(probe) row \(row) accepts press")
-src/checks/trackheaders/headerinputfixture.swift:30
-  report.expect(headers.endPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
-                    cppID: cppID, message: "\(probe) row \(row) accepts release")
-src/checks/trackheaders/headerinputfixture.swift:36
-  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 2, modifiers: 0),
-                    cppID: cppID, message: "right press is handled")
-src/checks/trackheaders/headerinputfixture.swift:38
-  report.expect(headers.menuOpen, cppID: cppID, message: "right press opens header menu")
-src/checks/trackheaders/headerinputfixture.swift:64
-  report.expectEqual(state, document.state, cppID: cppID, what: "\(phase): song unchanged")
-src/checks/trackheaders/headerinputfixture.swift:65
-  report.expectEqual(revision, document.revision, cppID: cppID,
-                         what: "\(phase): no document write")
-src/checks/trackheaders/headerinputfixture.swift:67
-  report.expectEqual(history, document.history.currentIdentity, cppID: cppID,
-                         what: "\(phase): history unchanged")

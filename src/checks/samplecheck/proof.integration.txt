@@ -5,36 +5,10 @@ Original: src/checks/samplecheck/integration.cpp
 Original SHA-256: 6c9de17973a3ede8a7dd643d494f606a9c1fb0b0fab1742a2b6f7d84abc2bf49
 Swift counterpart: none identified
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards, refusal oracles,
-and loop bodies. Source context preserves setup, rows, loops, and guards between
-assertions verbatim. No Swift counterpart file was identified for this suite, so no
-S predicates exist and no Swift execution is claimed.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted window.
-GAP identifies an original predicate without a replacement assertion.
-Methods cover the engine loop-wrap render against the production voicegroup loader, sidecar write/read/round-trip/rerender/touch/fallback/remove, sample update and its refusals, and the sidecar edit dialog.
 Inventory: 71 sites across 9 test methods (engineLoop, sampleUpdate, sampleUpdateRefusals, sidecarEditDialog, sidecarFallback, sidecarRemove, sidecarRerender, sidecarRoundtrip, sidecarTouchedSource). Tally: 68 GAP, 3 NATIVE, 0 MATCHED, 0 PARTIAL.
 
-Verification
 Command: deno task verify --filter samplecheck --verbose
 Result: pending integrated run.
-
-Execution and ownership
-No Swift entry points execute these checks. Retained native execution owns this suite:
-the samplecheck harness via the Verification command above. Shared fixture construction
-lives in src/checks/samplecheck/fixtures.h and src/checks/samplecheck/fixtures.cpp; those
-files carry no assertion sites (see Shared helpers).
-
-Fixture, sequence and row constraints
-sampleUpdateRefusals_data expands 2 rows (unregistered, bin-only). Sidecar tests share one params shape (cropStart 150, 13379 Hz, key 59, +25 cents) across round-trip, rerender, touch, and fallback. engineLoop renders at most 400000 frames and measures only the final loop wrap after four warm-up wraps.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:46
 Disposition: GAP
@@ -871,45 +845,9 @@ Original expression:
 
 A061 | SampleProcessingTest::sidecarEditDialog | src/checks/samplecheck/integration.cpp:377
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      SampleEditParams params = SampleDocument::defaultParams(hiRes);
-      params.cropStart = 150;
-      params.targetRate = 13379.0;
-      params.baseKey = 59;
-      params.fineTuneCents = 25.0;
-
-      const auto acceptsRegisteredName = [](const QString &candidate, QString *err) {
-          if (candidate == QStringLiteral("provenance_tone"))
-              return true;
-          if (err)
-              *err = QStringLiteral("the sample keeps its registered name.");
-          return false;
-      };
-      SampleEditorDialog dialog(hiRes, acceptsRegisteredName);
-      dialog.setEditTarget(QStringLiteral("provenance_tone"));
-      dialog.applyParamsExternal(params);
-      dialog.show();
-      QApplication::processEvents();
-      auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
-      auto *addButton = dialog.findChild<QPushButton *>(QStringLiteral("sampleAddButton"));
-      const auto *document = dialog.document();
-      const auto *undoStack = dialog.undoStack();
-
-Original expression:
-  QVERIFY2(nameEdit && nameEdit->isReadOnly() &&
-                   nameEdit->text() == QStringLiteral("provenance_tone"),
-               "edit mode locks the name")
 
 A062 | SampleProcessingTest::sidecarEditDialog | src/checks/samplecheck/integration.cpp:380
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(addButton && addButton->isEnabled(), "edit mode exposes an enabled commit action")
 
 A063 | SampleProcessingTest::sidecarEditDialog | src/checks/samplecheck/integration.cpp:381
 Disposition: GAP
@@ -922,13 +860,6 @@ Original expression:
 
 A064 | SampleProcessingTest::sidecarEditDialog | src/checks/samplecheck/integration.cpp:382
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(document->params() == params && undoStack->count() == 0,
-               "sidecar params are the baseline, not an undo entry")
 
 A065 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:389
 Disposition: GAP

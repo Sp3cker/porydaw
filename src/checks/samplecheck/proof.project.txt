@@ -5,36 +5,10 @@ Original: src/checks/samplecheck/project.cpp
 Original SHA-256: a30e72511768146ff4e27a3c2fbb4c9feb7bb1266b71d0caadff1d267e093146
 Swift counterpart: none identified
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards, refusal oracles,
-and loop bodies. Source context preserves setup, rows, loops, and guards between
-assertions verbatim. No Swift counterpart file was identified for this suite, so no
-S predicates exist and no Swift execution is claimed.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted window.
-GAP identifies an original predicate without a replacement assertion.
-Methods cover wav2agb project probing (wav2agb vs legacy AIFF vs unsupported layouts), sample-name sanitize/validate, committed-wav inspection with refusal cases, registration with inc/symbol/voicegroup-tone proof, duplicate refusal, and CRLF line-ending preservation.
 Inventory: 63 sites across 6 test methods (projectCrlf, projectDuplicate, projectInspect, projectProbe, projectRegister, projectSanitizeValidate). Tally: 63 GAP, 0 NATIVE, 0 MATCHED, 0 PARTIAL.
 
-Verification
 Command: deno task verify --filter samplecheck --verbose
 Result: pending integrated run.
-
-Execution and ownership
-No Swift entry points execute these checks. Retained native execution owns this suite:
-the samplecheck harness via the Verification command above. Shared fixture construction
-lives in src/checks/samplecheck/fixtures.h and src/checks/samplecheck/fixtures.cpp; those
-files carry no assertion sites (see Shared helpers).
-
-Fixture, sequence and row constraints
-No data rows. Registration tests share kRegisteredSampleName (samplecheck_tone) and the kIncSeed/kWav2AgbRules project skeleton. projectInspect exercises one accepted shape plus five refusal shapes (garbage, stereo, two loops, backward loop, bare loop without agbp). Byte loops expand single sites over 64 voice bytes and the CRLF output.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | SampleProcessingTest::projectProbe | src/checks/samplecheck/project.cpp:72
 Disposition: GAP

@@ -6,186 +6,17 @@ Original SHA-256: 4083b59bbb5e88019ed164c1296e3f8ea36e3a6fe6673d8b0ef74316dbdbae
 Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift (drawerVelocityPrimaryTrackSwitchCancels :267-312; drawerVelocityLifecycleCancellation :315-383 plus bank route :384-461); src/checks/velocity/VelocityPageChecks.swift call-list entry; src/checks/editorqml/tst_ShellWindow.qml test_kVelocityGestureTermination plus data (:976-1083)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
-Status and evidence
-The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. Velocity-gesture termination counterparts were identified for this deleted host suite (see Swift counterpart): A114 through A120 carry partial presenter plus production-shell correspondence with explicit unproved song and voice route conditions, and A105, A108, A111, A113, A121 retire QQuick delivery and SongView focus-band mechanics. Production owners: DocumentWorkspace bank-domain and hidden cancel, VelocityInteraction cancelGesture selection rule, VelocityPage.qml focus-loss and Escape routing, TrackHeaders menu guard. All other families retain their prior dispositions. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Nothing here is marked MATCHED or PARTIAL; unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove any Swift replacement.
 
-Dispositions and no-ingress evidence
 NATIVE is no longer used: every site that observed a native-window, embedding, delivery, framebuffer, settings, popup, or harness obligation is RETIRED-REPRESENTATION, because the mechanism that carried it is gone (this C++ file was deleted at 31ea635f, appears in no CMake target, and checkcatalog.cpp registers no host entry; re-verified 2026-09-24). GAP sites are behavior assertions whose Swift owners exist but whose original predicates have no executed Swift equivalent; each mapping names the owner verified under src/swift/app. The Reference revision and Original SHA-256 below were re-verified against each other (git show <revision>:<path> | shasum -a 256) before any retirement claim.
 
-Verification
 Command: deno task proof check
 Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity. Quoted post-merge verification (not re-executed here): deno task verify --filter swiftcore PASS 1/6; deno task verify:shell --filter shellwindow PASS 1/12; deno task verify:qml PASS editorqml-drawer 1/1. No lane executes the deleted harness itself.
 
-Execution ownership
-Velocity-termination predicates execute under swiftcore/VelocityPage::cancellationPaths through the runVelocityPageChecks call list plus the shellwindow editorqml lane (test_kVelocityGestureTermination); no Swift entry point executes the deleted host harness itself.
-
-Fixture, sequence and row constraints
-A two-note track fixture anchors the velocity-gesture cases: begin, update, preview, commit, and undo stages expand one site per gesture phase, with framebuffer captures (baseline, committed, undone, deselected, zoomed) guarding each rendering stage. Focus-band and pan-delivery cases iterate timeline bands, expanding mouse-grabber and isPanning sites per band.
-Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
-
-
-Original assertion inventory and source sequence
-
 A001 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:145
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
-Source context since previous assertion:
-  #include "checks/fwd.hpp"
-
-  #include <memory>
-  #include <optional>
-  #include <utility>
-  #include <vector>
-
-  #include <QCloseEvent>
-  #include <QCryptographicHash>
-  #include <QCursor>
-  #include <QDirIterator>
-  #include <QFile>
-  #include <QQuickItem>
-  #include <QQuickWindow>
-  #include <QScopeGuard>
-  #include <QSettings>
-  #include <QStringList>
-  #include <QVariant>
-  #include <QtTest>
-  #include <algorithm>
-
-  #include "checks/host/hosttestsupport.h"
-  #include "checks/support/asyncwait.h"
-  #include "checks/support/eventsynth.h"
-  #include "checks/support/quickframebuffer.h"
-  #include "checks/support/songfixture.h"
-  #include "core/miditimeline.h"
-  #include "mainwindow.h"
-  #include "ui/editordrawer/automationcanvas.h"
-  #include "ui/editordrawer/automationpage.h"
-  #include "ui/editordrawer/editordrawer.h"
-  #include "ui/editordrawer/velocityarea/velocityarea.h"
-  #include "ui/editorviewstate.h"
-  #include "ui/layout.h"
-  #include "ui/songtab.h"
-  #include "ui/songview.h"
-  #include "ui/songview/quick/timelineinputitem.h"
-  #include "ui/songview/quick/timelinequickview.h"
-  #include "ui/workspaceui.h"
-  namespace checks::host {
-
-  namespace {
-
-  bool waitForProjectReady(const WorkspaceUi &workspace)
-  {
-      return checks::async_wait::waitUntil(
-                 [] { return true; },
-                 [&workspace] { return workspace.projectState().state == ProjectOpenState::Ready; },
-                 30000, 1) == checks::async_wait::Result::Ready;
-  }
-
-  bool waitForTabReady(const WorkspaceUi &workspace, SongTab *tab)
-  {
-      return tab &&
-             checks::async_wait::waitUntil(
-                 [&workspace, tab] { return workspace.songTabFor(tab->name()) == tab; },
-                 [tab] { return tab->isReady(); }, 30000, 1) == checks::async_wait::Result::Ready;
-  }
-
-  QByteArray fileBytes(const QString &path)
-  {
-      QFile file(path);
-      return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray{};
-  }
-
-  QByteArray directoryFingerprint(const QString &root)
-  {
-      QCryptographicHash hash(QCryptographicHash::Sha256);
-      QDirIterator entries(root, QDir::Files, QDirIterator::Subdirectories);
-      QStringList paths;
-      while (entries.hasNext())
-          paths.append(entries.next());
-      std::sort(paths.begin(), paths.end());
-      for (const QString &path : paths) {
-          QFile file(path);
-          if (!file.open(QIODevice::ReadOnly))
-              return {};
-          hash.addData(path.mid(root.size()).toUtf8());
-          hash.addData(file.readAll());
-      }
-      return hash.result();
-  }
-
-  QPointF velocityNodePosition(const SongView &view, const VelocityArea &area,
-                               const MidiTimeline &timeline, const DocNote &note)
-  {
-      const qreal x = qreal(note.tick) * view.camera().pxPerBeat() / timeline.ticksPerBeat -
-                      view.camera().scrollX();
-      return {x, area.axis().velocityToY(note.velocity)};
-  }
-
-  class SettingsGuard final
-  {
-    public:
-      SettingsGuard()
-      {
-          for (const QString &key : m_settings.allKeys())
-              m_values.emplace_back(key, m_settings.value(key));
-          m_settings.clear();
-      }
-
-      ~SettingsGuard()
-      {
-          m_settings.clear();
-          for (const auto &[key, value] : m_values)
-              m_settings.setValue(key, value);
-          m_settings.sync();
-      }
-
-      SettingsGuard(const SettingsGuard &) = delete;
-      SettingsGuard &operator=(const SettingsGuard &) = delete;
-
-    private:
-      QSettings m_settings;
-      std::vector<std::pair<QString, QVariant>> m_values;
-  };
-
-  struct Session final {
-      std::unique_ptr<SettingsGuard> settings;
-      std::unique_ptr<checks::ProjectFixture> fixture;
-      std::unique_ptr<MainWindow> window;
-      SongTab *first = nullptr;
-      SongTab *active = nullptr;
-  };
-
-  } // namespace
-
-  class HostIntegrationTest final : public QObject
-  {
-      Q_OBJECT
-      Q_DISABLE_COPY_MOVE(HostIntegrationTest)
-
-    public:
-      HostIntegrationTest(QString projectRoot, QString songA, QString songB, QString screenshotPath)
-          : m_projectRoot(std::move(projectRoot))
-          , m_songA(std::move(songA))
-          , m_songB(std::move(songB))
-          , m_screenshotPath(std::move(screenshotPath))
-      {}
-
-    private slots:
-      void twoTabReadySessionWithTwoNoteSeed()
-      {
-          const std::optional<Session> session = openSession();
-
-Original expression:
-  QVERIFY(session.has_value())
 
 A002 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:146
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old session tab pointer identity (first != active); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(session->first != session->active)
 
 A003 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:147
 Disposition: GAP
@@ -207,28 +38,9 @@ Original expression:
 
 A005 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:154
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
-Source context since previous assertion:
-  ;
-      }
-
-      void steadyPlaybackIsPresentationOnly()
-      {
-          const std::optional<Session> session = openSession();
-
-Original expression:
-  QVERIFY(session.has_value())
 
 A006 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:157
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old editorDrawer()->velocityArea() QWidget handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-          SongView &view = session->active->view();
-          auto *velocity = view.editorDrawer()->velocityArea();
-
-Original expression:
-  QVERIFY(velocity)
 
 A007 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:178
 Disposition: GAP
@@ -300,56 +112,18 @@ Original expression:
 
 A011 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:194
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old velocity-area diagnostics playhead-presentation counter; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage/SharedPlayheadPresenter owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(velocity->diagnostics().playheadPresentationCount,
-                   before.playheadPresentationCount + 120)
 
 A012 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:196
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old velocity-area diagnostics content-build counter; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage presentation counters owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(velocity->diagnostics().contentBuildCount, before.contentBuildCount)
 
 A013 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:199
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation post-playback raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          const QImage automationAfter =
-              checks::support::captureQuickBand(view, automationGeometry->rect, &captureError);
-
-Original expression:
-  QVERIFY2(!automationAfter.isNull(), qPrintable(captureError))
 
 A014 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:200
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation raster equality across the playback run; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(automationAfter, automationBefore)
 
 A015 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:206
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
-Source context since previous assertion:
-  ;
-      }
-
-      void velocityEditCommitsOnceInvalidatesAndUndoes()
-      {
-          const std::optional<Session> session = openSession();
-
-Original expression:
-  QVERIFY(session.has_value())
 
 A016 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:210
 Disposition: GAP
@@ -365,55 +139,15 @@ Original expression:
 
 A017 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:215
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old editorDrawer()->velocityArea() QWidget handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-          const std::vector<DocNote> notes = document.notesForTrack(track);
-          view.selectTrack(track);
-          view.selectionModel().setNoteSelection({notes[0].noteId, notes[1].noteId});
-          auto *velocity = view.editorDrawer()->velocityArea();
-
-Original expression:
-  QVERIFY(velocity)
 
 A018 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:224
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old baseline band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          QString captureError;
-          const auto renderVelocity = [&]() {
-              const auto geometry =
-                  view.timelineBandLayout().geometry(songview::TimelineBand::Velocity);
-              return checks::support::captureQuickBand(view, geometry ? geometry->rect : QRect{},
-                                                       &captureError);
-          };
-          const QImage baselineFrame = renderVelocity();
-
-Original expression:
-  QVERIFY2(!baselineFrame.isNull(), qPrintable(captureError))
 
 A019 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:229
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old beginVelocityGesture acceptance on the host view; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-          const auto before = velocity->diagnostics();
-          const uint64_t revision = document.revision();
-          const int undo = document.undoStack()->index();
-          const uint8_t changed = notes[0].velocity == 127 ? 1 : uint8_t(notes[0].velocity + 1);
-
-Original expression:
-  QVERIFY(view.beginVelocityGesture(notes))
 
 A020 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:230
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old updateVelocityGesture acceptance on the host view; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(view.updateVelocityGesture({{notes[0].noteId, changed}}))
 
 A021 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:231
 Disposition: GAP
@@ -444,12 +178,6 @@ Original expression:
 
 A024 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:234
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old commitVelocityGesture result on the host view; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(view.commitVelocityGesture(), SongView::VelocityCommitResult::Committed)
 
 A025 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:235
 Disposition: GAP
@@ -499,98 +227,30 @@ Original expression:
 
 A030 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:242
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old committed band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          const QImage committedFrame = renderVelocity();
-
-Original expression:
-  QVERIFY2(!committedFrame.isNull(), qPrintable(captureError))
 
 A031 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:243
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old content-build counter increased after the commit; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage presentation counters owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(velocity->diagnostics().contentBuildCount > before.contentBuildCount)
 
 A032 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:246
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old undone band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          document.undoStack()->undo();
-          const QImage undoneFrame = renderVelocity();
-
-Original expression:
-  QVERIFY2(!undoneFrame.isNull(), qPrintable(captureError))
 
 A033 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:250
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old deselected band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          const auto selectionBefore = velocity->diagnostics();
-          view.selectionModel().clearNoteSelection();
-          const QImage deselectedFrame = renderVelocity();
-
-Original expression:
-  QVERIFY2(!deselectedFrame.isNull(), qPrintable(captureError))
 
 A034 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:251
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old content-build counter increased after deselection; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage presentation counters owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(velocity->diagnostics().contentBuildCount > selectionBefore.contentBuildCount)
 
 A035 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:254
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old quick view and window handles for the zoom capture; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          const auto zoomBefore = velocity->diagnostics();
-          auto *quick = view.quickView();
-
-Original expression:
-  QVERIFY(quick && quick->quickWindow())
 
 A036 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:257
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old zoomed band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          view.zoomAroundContentX(1.1, qreal(quick->quickWindow()->width()) / 2.0);
-          const QImage zoomedFrame = renderVelocity();
-
-Original expression:
-  QVERIFY2(!zoomedFrame.isNull(), qPrintable(captureError))
 
 A037 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:258
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old content-build counter increased after the zoom; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage presentation counters owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(velocity->diagnostics().contentBuildCount > zoomBefore.contentBuildCount)
 
 A038 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:263
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
-Source context since previous assertion:
-  ;
-      }
-      void readySongTabVelocityTransactionRetainsHeldAndCommittedContracts()
-      {
-          const std::optional<Session> session = openSession();
-
-Original expression:
-  QVERIFY(session.has_value())
 
 A039 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:267
 Disposition: GAP
@@ -616,36 +276,12 @@ Original expression:
 
 A041 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:275
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old beginVelocityGesture acceptance; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-          view.selectTrack(track);
-          const std::vector<NoteId> selected{notes[0].noteId, notes[1].noteId};
-          view.selectionModel().setNoteSelection(selected);
-          const uint64_t revision = document.revision();
-          const int undo = document.undoStack()->index();
-
-Original expression:
-  QVERIFY(view.beginVelocityGesture(notes))
 
 A042 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:276
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old updateVelocityGesture reporting no change for same-value targets; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!view.updateVelocityGesture(
-              {{notes[0].noteId, notes[0].velocity}, {notes[1].noteId, notes[1].velocity}}))
 
 A043 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:278
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old commitVelocityGesture returning Unchanged; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(view.commitVelocityGesture(), SongView::VelocityCommitResult::Unchanged)
 
 A044 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:279
 Disposition: GAP
@@ -667,21 +303,6 @@ Original expression:
 
 A046 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:290
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old velocity input, velocity area and timeline host handles; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage/ApplicationSession shell owns the behavior).
-Source context since previous assertion:
-  ;
-          const uint8_t first =
-              notes[0].velocity == 127 ? uint8_t{1} : uint8_t(notes[0].velocity + 1);
-          auto *quick =
-              view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-          auto *velocityInput = quick ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
-                                            QStringLiteral("timelineVelocityInput"))
-                                      : nullptr;
-          auto *velocity = view.editorDrawer()->velocityArea();
-          const std::shared_ptr<const MidiTimeline> timeline = session->active->timeline();
-
-Original expression:
-  QVERIFY(velocityInput && velocity && timeline)
 
 A047 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:296
 Disposition: GAP
@@ -727,24 +348,9 @@ Original expression:
 
 A051 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:304
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old beginVelocityGesture acceptance on the drag path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-          view.selectionModel().setNoteSelection(selected);
-          const uint8_t second =
-              notes[1].velocity == 127 ? uint8_t{1} : uint8_t(notes[1].velocity + 1);
-
-Original expression:
-  QVERIFY(view.beginVelocityGesture(notes))
 
 A052 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:305
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old updateVelocityGesture acceptance on the drag path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(view.updateVelocityGesture({{notes[0].noteId, first}, {notes[1].noteId, second}}))
 
 A053 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:306
 Disposition: GAP
@@ -803,12 +409,6 @@ Original expression:
 
 A059 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:313
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old commitVelocityGesture returning Committed; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(view.commitVelocityGesture(), SongView::VelocityCommitResult::Committed)
 
 A060 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:314
 Disposition: GAP
@@ -876,41 +476,12 @@ Original expression:
 
 A067 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:328
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old beginVelocityGesture acceptance on the stale-target path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-          document.undoStack()->redo();
-          notes = document.notesForTrack(track);
-          const uint8_t staleTarget =
-              notes[0].velocity == 127 ? uint8_t{1} : uint8_t(notes[0].velocity + 1);
-          const uint8_t externalTarget =
-              notes[1].velocity == 127 ? uint8_t{1} : uint8_t(notes[1].velocity + 1);
-
-Original expression:
-  QVERIFY(view.beginVelocityGesture(notes))
 
 A068 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:330
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old updateVelocityGesture acceptance of the stale target; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-
-Original expression:
-  QVERIFY(view.updateVelocityGesture({{notes[0].noteId, staleTarget}}))
 
 A069 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:335
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old commitVelocityGesture returning Rejected; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-          const uint64_t staleRevision = document.revision();
-          document.blockSignals(true);
-          document.setNotesVelocity({notes[1]}, externalTarget);
-          document.blockSignals(false);
-
-Original expression:
-  QCOMPARE(view.commitVelocityGesture(), SongView::VelocityCommitResult::Rejected)
 
 A070 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:336
 Disposition: GAP
@@ -997,65 +568,15 @@ Original expression:
 
 A079 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:361
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
-Source context since previous assertion:
-  ;
-      }
-      void automationPanLifecycle_data()
-      {
-          QTest::addColumn<QString>("route");
-          QTest::newRow("page-switch") << QStringLiteral("page-switch");
-          QTest::newRow("quick-ungrab") << QStringLiteral("quick-ungrab");
-          QTest::newRow("quick-focus-loss") << QStringLiteral("quick-focus-loss");
-          QTest::newRow("quick-deactivate") << QStringLiteral("quick-deactivate");
-      }
-
-      void automationPanLifecycle()
-      {
-          QFETCH(QString, route);
-          const std::optional<Session> session = openSession();
-
-Original expression:
-  QVERIFY(session.has_value())
 
 A080 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:373
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old quick view, canvas and input host handles; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell/AutomationPage owns the behavior).
-Source context since previous assertion:
-  ;
-          SongView &view = session->active->view();
-          SongDocument &document = session->active->document();
-          view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-          view.setDrawerActivePage(EditorDrawerPage::Automations);
-          QCoreApplication::processEvents();
-          auto *quick =
-              view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-          auto *canvas = view.editorDrawer()->automationPage()->canvas();
-          auto *input = quick ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
-                                    QStringLiteral("timelineAutomationInput"))
-                              : nullptr;
-
-Original expression:
-  QVERIFY(quick && canvas && input)
 
 A081 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:375
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old quick window handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          QQuickWindow *const quickWindow = quick->quickWindow();
-
-Original expression:
-  QVERIFY(quickWindow)
 
 A082 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:376
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old focusTimelineBand acceptance for the automation band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(view.focusTimelineBand(songview::TimelineBand::Automation, Qt::OtherFocusReason))
 
 A083 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:377
 Disposition: GAP
@@ -1068,12 +589,6 @@ Original expression:
 
 A084 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:378
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation input item active focus; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(input->hasActiveFocus())
 
 A085 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:391
 Disposition: GAP
@@ -1098,12 +613,6 @@ Original expression:
 
 A086 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:392
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation canvas isPanning while the pointer is held; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(canvas->isPanning())
 
 A087 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:397
 Disposition: GAP
@@ -1120,13 +629,6 @@ Original expression:
 
 A088 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:399
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old focusTimelineBand acceptance for the velocity band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-          } else if (route == QStringLiteral("quick-focus-loss")) {
-
-Original expression:
-  QVERIFY(view.focusTimelineBand(songview::TimelineBand::Velocity, Qt::OtherFocusReason))
 
 A089 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:400
 Disposition: GAP
@@ -1139,12 +641,6 @@ Original expression:
 
 A090 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:401
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation input item losing active focus; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(!input->hasActiveFocus())
 
 A091 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:407
 Disposition: GAP
@@ -1162,34 +658,12 @@ Original expression:
 
 A092 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:408
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation canvas isPanning on the second focus path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(canvas->isPanning())
 
 A093 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:410
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation canvas isPanning cleared after the second pan; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
-Source context since previous assertion:
-  ;
-          } else {
-
-Original expression:
-  QTRY_VERIFY(!canvas->isPanning())
 
 A094 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:414
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation canvas isPanning cleared at the end of the slot; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
-Source context since previous assertion:
-  ;
-          }
-          QTest::mouseRelease(quickWindow, Qt::MiddleButton, Qt::NoModifier, windowPoint);
-          buttonHeld = false;
-
-Original expression:
-  QTRY_VERIFY(!canvas->isPanning())
 
 A095 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:415
 Disposition: GAP
@@ -1229,34 +703,6 @@ Original expression:
 
 A099 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:441
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
-Source context since previous assertion:
-  ;
-      }
-
-      void lifecycleTermination_data()
-      {
-          QTest::addColumn<QString>("route");
-          QTest::newRow("page-switch") << QStringLiteral("page-switch");
-          QTest::newRow("drawer-hide") << QStringLiteral("drawer-hide");
-          QTest::newRow("track-replace") << QStringLiteral("track-replace");
-          QTest::newRow("song-null") << QStringLiteral("song-null");
-          QTest::newRow("song-replacement") << QStringLiteral("song-replacement");
-          QTest::newRow("voice-replace") << QStringLiteral("voice-replace");
-          QTest::newRow("voice-null") << QStringLiteral("voice-null");
-          QTest::newRow("quick-ungrab") << QStringLiteral("quick-ungrab");
-          QTest::newRow("quick-focus-loss") << QStringLiteral("quick-focus-loss");
-          QTest::newRow("quick-deactivate") << QStringLiteral("quick-deactivate");
-          QTest::newRow("escape") << QStringLiteral("escape");
-      }
-
-      void lifecycleTermination()
-      {
-          QFETCH(QString, route);
-          const std::optional<Session> session = openSession();
-
-Original expression:
-  QVERIFY(session.has_value())
 
 A100 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:445
 Disposition: GAP
@@ -1282,92 +728,24 @@ Original expression:
 
 A102 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:457
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old quick, velocity area, input and timeline host handles; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage/ApplicationSession shell owns the behavior).
-Source context since previous assertion:
-  ;
-          view.selectTrack(track);
-          view.selectionModel().setNoteSelection({notes[0].noteId});
-          auto *quick =
-              view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-          auto *velocity = view.editorDrawer()->velocityArea();
-          auto *velocityInput = quick ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
-                                            QStringLiteral("timelineVelocityInput"))
-                                      : nullptr;
-          const std::shared_ptr<const MidiTimeline> timeline = session->active->timeline();
-
-Original expression:
-  QVERIFY(quick && velocity && velocityInput && timeline)
 
 A103 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:459
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old quick window handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          QQuickWindow *const quickWindow = quick->quickWindow();
-
-Original expression:
-  QVERIFY(quickWindow)
 
 A104 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:460
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old focusTimelineBand acceptance for the velocity drag; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(view.focusTimelineBand(songview::TimelineBand::Velocity, Qt::OtherFocusReason))
 
 A105 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:461
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old SongView timeline-band focus identity (focusedTimelineBand() == Velocity); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift focus-loss cancellation travels through EditorDrawerPresenter.inputCancelled with GridCancelReason plus QML activeFocus; no focusTimelineBand or focusedTimelineBand symbol under src/swift, src/ui or src/checks).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Velocity)
 
 A106 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:465
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old input item bounds containing the press point; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-          const QPointF press = velocityNodePosition(view, *velocity, *timeline, notes[0]);
-          const uint8_t targetVelocity = notes[0].velocity <= 64 ? uint8_t{127} : uint8_t{1};
-          const QPointF drag(press.x(), velocity->axis().velocityToY(targetVelocity));
-
-Original expression:
-  QVERIFY(velocityInput->bounds().contains(press))
 
 A107 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:466
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old input item bounds containing the drag point; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(velocityInput->bounds().contains(drag))
 
 A108 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:480
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old QQuickWindow mouse-grabber delivery identity during the velocity drag (quickWindow->mouseGrabberItem()); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts press delivery through page interactionActive and plot pressed predicates; no mouseGrabberItem symbol under src/swift, src/ui or src/checks).
-Source context since previous assertion:
-  ;
-          const QPoint pressWindow = velocityInput->mapToScene(press).toPoint();
-          const QPoint dragWindow = velocityInput->mapToScene(drag).toPoint();
-          const QByteArray midi = document.smf().write();
-          const uint64_t revision = document.revision();
-          const int undo = document.undoStack()->count();
-          QTest::mouseEvent(QTest::MouseMove, quickWindow, Qt::NoButton, Qt::NoModifier, pressWindow);
-          QTest::mousePress(quickWindow, Qt::LeftButton, Qt::NoModifier, pressWindow);
-          bool buttonHeld = true;
-          QPoint lastWindowPoint = pressWindow;
-          const auto releaseButton = qScopeGuard([quickWindow, &lastWindowPoint, &buttonHeld] {
-              if (buttonHeld)
-                  QTest::mouseRelease(quickWindow, Qt::LeftButton, Qt::NoModifier, lastWindowPoint);
-          });
-
-Original expression:
-  QTRY_COMPARE(quickWindow->mouseGrabberItem(), static_cast<QQuickItem *>(velocityInput))
 
 A109 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:483
 Disposition: GAP
@@ -1382,60 +760,15 @@ Original expression:
 
 A110 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:484
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old userGestureActive while the drag is in progress; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(view.userGestureActive())
 
 A111 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:505
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old QQuickWindow mouse-grabber delivery cleared by ungrabMouse(); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress at QQuick delivery level (the presenter level pointer-ungrabbed cancel is asserted separately at A114 through A118 via VelocityClickSelectionChecks.swift,368-382; no mouseGrabberItem symbol under src/swift, src/ui or src/checks; never claims QML event-delivery coverage).
-Source context since previous assertion:
-  ;
-          const bool clearsSelection = route == QStringLiteral("track-replace") ||
-                                       route == QStringLiteral("song-null") ||
-                                       route == QStringLiteral("song-replacement");
-          LoadedVoiceGroup replacement = {};
-          if (route == QStringLiteral("page-switch")) {
-              view.setDrawerActivePage(EditorDrawerPage::Automations);
-          } else if (route == QStringLiteral("drawer-hide")) {
-              view.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
-          } else if (route == QStringLiteral("track-replace")) {
-              view.selectTrack(track == 0 ? 1 : 0);
-          } else if (route == QStringLiteral("song-null")) {
-              view.setSong(nullptr, nullptr);
-          } else if (route == QStringLiteral("song-replacement")) {
-              view.prepareForSongReplacement();
-          } else if (route == QStringLiteral("voice-replace")) {
-              view.setVoicegroup(&replacement);
-          } else if (route == QStringLiteral("voice-null")) {
-              view.setVoicegroup(nullptr);
-          } else if (route == QStringLiteral("quick-ungrab")) {
-              velocityInput->ungrabMouse();
-
-Original expression:
-  QTRY_VERIFY(!quickWindow->mouseGrabberItem())
 
 A112 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:507
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old focusTimelineBand acceptance for the roll band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift PianoGrid owns the behavior).
-Source context since previous assertion:
-  ;
-          } else if (route == QStringLiteral("quick-focus-loss")) {
-
-Original expression:
-  QVERIFY(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason))
 
 A113 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:508
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old SongView timeline-band focus identity on the focus-loss path (focusedTimelineBand() == Roll); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift focus-loss cancellation travels through EditorDrawerPresenter.inputCancelled with GridCancelReason.focusLost; no focusTimelineBand or focusedTimelineBand symbol under src/swift, src/ui or src/checks).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Roll)
 
 A114 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:515
 Disposition: PARTIAL
@@ -1512,12 +845,6 @@ Original expression:
 
 A121 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:526
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old QQuickWindow mouse-grabber delivery cleared at the end of the slot (quickWindow->mouseGrabberItem()); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift asserts gesture teardown through page interactionActive and plot pressed predicates; no mouseGrabberItem symbol under src/swift, src/ui or src/checks).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!quickWindow->mouseGrabberItem())
 
 A122 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:528
 Disposition: GAP
@@ -1531,31 +858,6 @@ Original expression:
 
 A123 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:548
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
-Source context since previous assertion:
-  ;
-          if (route == QStringLiteral("song-replacement"))
-              view.setSong(timeline.get(), view.voicegroup());
-          if (route == QStringLiteral("voice-replace"))
-              view.setVoicegroup(nullptr);
-      }
-
-      void documentMutationUndoRedoAndReloadPreemptPreview_data()
-      {
-          QTest::addColumn<QString>("event");
-          QTest::newRow("mutation") << QStringLiteral("mutation");
-          QTest::newRow("undo") << QStringLiteral("undo");
-          QTest::newRow("redo") << QStringLiteral("redo");
-          QTest::newRow("reload") << QStringLiteral("reload");
-      }
-
-      void documentMutationUndoRedoAndReloadPreemptPreview()
-      {
-          QFETCH(QString, event);
-          const std::optional<Session> session = openSession();
-
-Original expression:
-  QVERIFY(session.has_value())
 
 A124 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:552
 Disposition: GAP
@@ -1571,24 +873,9 @@ Original expression:
 
 A125 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:556
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old beginVelocityGesture acceptance on the reload path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-          const std::vector<DocNote> notes = document.notesForTrack(track);
-          view.selectTrack(track);
-          view.selectionModel().setNoteSelection({notes[0].noteId});
-
-Original expression:
-  QVERIFY(view.beginVelocityGesture(notes))
 
 A126 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:557
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old updateVelocityGesture acceptance on the reload path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(view.updateVelocityGesture({{notes[0].noteId, 96}}))
 
 A127 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:564
 Disposition: GAP
@@ -1672,14 +959,6 @@ Original expression:
 
 A134 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:584
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old waitForTabReady workspace readiness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/DocumentWorkspace owns the behavior).
-Source context since previous assertion:
-  ;
-          } else {
-              session->window->m_workspace->requestSongOpen(session->active->name());
-
-Original expression:
-  QVERIFY(waitForTabReady(*session->window->m_workspace, session->active))
 
 A135 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:585
 Disposition: GAP
@@ -1711,50 +990,15 @@ Original expression:
 
 A138 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:594
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
-Source context since previous assertion:
-  ;
-      }
-
-      void appearanceNotificationPreservesAutomationRaster()
-      {
-          const std::optional<Session> session = openSession();
-
-Original expression:
-  QVERIFY(session.has_value())
 
 A139 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:598
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old quick view handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
-Source context since previous assertion:
-  ;
-          SongView &view = session->active->view();
-          auto *quick =
-              view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-
-Original expression:
-  QVERIFY(quick)
 
 A140 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:600
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old quick root object handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
-Source context since previous assertion:
-  ;
-          QQuickItem *root = quick->rootObject();
-
-Original expression:
-  QVERIFY(root)
 
 A141 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:603
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation band input item handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
-Source context since previous assertion:
-  ;
-          auto *automation = root->findChild<songview::TimelineInputItem *>(
-              QStringLiteral("timelineAutomationInput"));
-
-Original expression:
-  QVERIFY(automation)
 
 A142 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:606
 Disposition: GAP
@@ -1769,46 +1013,15 @@ Original expression:
 
 A143 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:608
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation page widget handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage owns the behavior).
-Source context since previous assertion:
-  ;
-          auto *page = view.editorDrawer()->automationPage();
-
-Original expression:
-  QVERIFY(page)
 
 A144 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:612
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation baseline raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          const auto before = page->canvas()->rows();
-          QString error;
-          const QImage baseline = checks::support::captureQuickBand(view, geometry->rect, &error);
-
-Original expression:
-  QVERIFY2(!baseline.isNull(), qPrintable(error))
 
 A145 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:616
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation post-change raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          automation->notifyHostAppearanceChanged();
-          checks::support::pumpQuick();
-          const QImage after = checks::support::captureQuickBand(view, geometry->rect, &error);
-
-Original expression:
-  QVERIFY2(!after.isNull(), qPrintable(error))
 
 A146 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:617
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation rows equality through the host canvas widget; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationProjection owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(automationRowsEqual(page->canvas()->rows(), before))
 
 A147 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:621
 Disposition: GAP
@@ -1824,27 +1037,9 @@ Original expression:
 
 A148 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:623
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old screenshot artifact write to disk; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          if (!m_screenshotPath.isEmpty())
-
-Original expression:
-  QVERIFY2(after.save(m_screenshotPath), qPrintable(m_screenshotPath))
 
 A149 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:629
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
-Source context since previous assertion:
-  ;
-      }
-
-      void nonSelectedEditorStateFansOutWithoutTouchingSongBytes()
-      {
-          const std::optional<Session> session = openSession();
-
-Original expression:
-  QVERIFY(session.has_value())
 
 A150 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:651
 Disposition: GAP
@@ -1905,13 +1100,6 @@ Original expression:
 
 A154 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:656
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the QSettings-backed editor view-state load (SettingsGuard host state); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController preference persistence owns the behavior).
-Source context since previous assertion:
-  ;
-          QSettings settings;
-
-Original expression:
-  QCOMPARE(loadEditorViewState(settings), state)
 
 A155 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:657
 Disposition: GAP
@@ -1969,17 +1157,6 @@ Original expression:
 
 A161 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:668
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
-Source context since previous assertion:
-  ;
-      }
-
-      void projectSwitchAndClosePreserveProjectBoundaries()
-      {
-          const std::optional<Session> session = openSession();
-
-Original expression:
-  QVERIFY(session.has_value())
 
 A162 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:670
 Disposition: GAP
@@ -1993,96 +1170,30 @@ Original expression:
 
 A163 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:678
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old waitForProjectReady workspace readiness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject owns the behavior).
-Source context since previous assertion:
-  ;
-          const QByteArray beforeA = fileBytes(session->first->document().midPath());
-          const QByteArray beforeB = fileBytes(session->active->document().midPath());
-          const QString firstPath = session->first->document().midPath();
-          const int undoA = session->first->document().undoStack()->count();
-          const int undoB = session->active->document().undoStack()->count();
-          const EditorViewState state = session->active->view().editorViewState();
-          session->window->m_workspace->requestProjectOpenAt(session->fixture->root());
-
-Original expression:
-  QVERIFY(waitForProjectReady(*session->window->m_workspace))
 
 A164 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:679
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old open tab count after the project switch; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(session->window->m_workspace->openTabCount(), qsizetype{0})
 
 A165 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:680
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old project directory fingerprint unchanged across the switch; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(directoryFingerprint(session->fixture->root()), projectBefore)
 
 A166 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:682
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old QSettings editor view state after the switch; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController preference persistence owns the behavior).
-Source context since previous assertion:
-  ;
-          QSettings settings;
-
-Original expression:
-  QCOMPARE(loadEditorViewState(settings), state)
 
 A167 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:685
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old waitForTabReady workspace readiness after the reopen; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/DocumentWorkspace owns the behavior).
-Source context since previous assertion:
-  ;
-          session->window->m_workspace->requestSongOpen(*SongName::create(m_songA));
-          SongTab *reopened = session->window->m_workspace->selectedSongTab();
-
-Original expression:
-  QVERIFY(waitForTabReady(*session->window->m_workspace, reopened))
 
 A168 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:686
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old reopened tab editor view state; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(reopened->view().editorViewState(), state)
 
 A169 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:687
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old reopened song bytes on disk; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongDocument/ApplicationSession.openProject owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(fileBytes(reopened->document().midPath()), beforeA)
 
 A170 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:688
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old reopened tab history depth; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift DocumentSession history owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(reopened->document().undoStack()->count(), undoA)
 
 A171 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:691
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old waitForTabReady for the second tab; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/DocumentWorkspace owns the behavior).
-Source context since previous assertion:
-  ;
-          session->window->m_workspace->requestSongOpen(*SongName::create(m_songB), true);
-          SongTab *second = session->window->m_workspace->selectedSongTab();
-
-Original expression:
-  QVERIFY(waitForTabReady(*session->window->m_workspace, second))
 
 A172 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:693
 Disposition: GAP
@@ -2096,12 +1207,6 @@ Original expression:
 
 A173 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:694
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old open tab count after reopening two tabs; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(session->window->m_workspace->openTabCount(), qsizetype{2})
 
 A174 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:697
 Disposition: GAP
@@ -2116,12 +1221,6 @@ Original expression:
 
 A175 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:698
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the host close-accepted flag (MainWindow); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/SongTabsController close path owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(session->window->m_closeAccepted)
 
 A176 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:699
 Disposition: GAP
@@ -2143,59 +1242,18 @@ Original expression:
 
 A178 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:701
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old project directory fingerprint unchanged after the close; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(directoryFingerprint(session->fixture->root()), projectBefore)
 
 A179 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:702
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old QSettings editor view state after the close; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController preference persistence owns the behavior).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(loadEditorViewState(settings), state)
 
 A180 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:711
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
-Source context since previous assertion:
-  ;
-      }
-
-      // SongTab must tear the quick host (and thus the embedded window) down
-      // explicitly in its destructor body, before the SongView coordinator and
-      // the SongDocument members die.
-      void songTabTeardownDestroysQuickWindowBeforeDocument()
-      {
-          std::optional<Session> session = openSession();
-
-Original expression:
-  QVERIFY(session.has_value())
 
 A181 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:714
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old quick view handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
-Source context since previous assertion:
-  ;
-          SongView &view = session->active->view();
-          auto *quick = view.quickView();
-
-Original expression:
-  QVERIFY(quick)
 
 A182 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:716
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old embedded window handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
-Source context since previous assertion:
-  ;
-          QQuickWindow *const window = quick->quickWindow();
-
-Original expression:
-  QVERIFY(window)
 
 A183 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:730
 Disposition: GAP

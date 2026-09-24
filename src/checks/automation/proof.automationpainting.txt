@@ -8,151 +8,15 @@ Swift counterpart: src/checks/automation/presentation/painting.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-Of the 62 sites in this file, 23 are MATCHED, 1 PARTIAL, 31 NATIVE, and 7 NATIVE-SETUP. The domain half of every method (lane activation on the production page and the document staying uncommitted while the presentation composes its preview) is executed by drawerAutomationScaleLabelsAndLaneCounts and drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift plus the page-level no-write predicates in src/checks/automation/automationselection.swift and src/checks/automation/automationcanvasediting.swift; the Quick scene-graph curve/node/selection layer revisions and their colour/ring probes stay NATIVE because no Swift presenter predicate observes the rendered mesh. NATIVE-SETUP sites are the retired AutomationCanvas lane row/body geometry. The one PARTIAL site (empty tempo storage) names its unproved condition.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including the predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
 Delta snapshot: the automationcanvasediting.swift and automationselection.swift hashes above were re-pinned for the delta (double-click-once deletion moved the selection file; keyboard-ingress/band-escape predicates extended the canvasediting file), and every indexed S anchor was re-audited against the pinned sources with no drift. This ledger's dispositions are unchanged.
 Converted-window command: deno task verify:qml --verbose
-The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
-Their sources are reference inventories only, never current execution evidence.
-
-Execution ownership
-The legacy AutomationEditingTest painting suite verified curve, node, and selection reticle geometry composition. In the converted Swift suite, drawerAutomationScaleLabelsAndLaneCounts and drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift verify projection scale labels, row stacks, event counts and the selection indicators the reticles consumed; the page-level no-write predicates in src/checks/automation/automationselection.swift and src/checks/automation/automationcanvasediting.swift carry the domain half. Registered run path: src/checks/automation/AutomationPageChecks.swift,351 :: runAutomationPageChecks → projectSession (swiftcore suite 10).
-
-Fixture, sequence and row constraints
-Data rows expand stepCurvesAndNodesComposed (tempo-steps, cc-steps) and selectionRingsAndReticlesComposed (single-selected, range-selected). Loops verify step segments and node reticles across ticks.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:109
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators activates a lane on the production page and asserts the page's published active parameter, the observable of the original activateParameter(row) result. [S030]
-Source context since previous assertion:
-  #include "checks/automation/tst_automationediting.h"
-
-  #include <algorithm>
-  #include <cstdint>
-  #include <limits>
-  #include <vector>
-
-  #include <QColor>
-  #include <QSignalSpy>
-  #include <QtTest>
-
-  #include "checks/support/timelinequickcheck.h"
-  #include "core/timedefaults.h"
-  #include "ui/editordrawer/automationcanvas.h"
-  #include "ui/editordrawer/automationpage.h"
-  #include "ui/editordrawer/automationprojection.h"
-  #include "ui/editordrawer/cclanes.h"
-  #include "ui/editordrawer/nodelane/hover.h"
-  #include "ui/editordrawer/tempolane.h"
-  #include "ui/layout.h"
-  #include "ui/songview/quick/timelinequickscene.h"
-  #include "ui/songview/quick/timelinequickview.h"
-  #include "ui/theme/themeruntime.h"
-  #include "ui/theme/trackidentitycolors.h"
-
-  namespace {
-
-  constexpr uint8_t kController = 10;
-  constexpr Tick kFirstNodeTick = 96;
-  constexpr Tick kSecondNodeTick = 144;
-  constexpr int kTempoHeld = 80;
-  constexpr int kTempoNode = 200;
-  constexpr int kTempoSecond = 160;
-  constexpr int kCcHeld = 24;
-  constexpr int kCcNode = 96;
-  constexpr int kCcSecond = 72;
-
-  enum class LaneKind { Tempo, Cc };
-
-  EditorAutomationRowId rowId(LaneKind kind)
-  {
-      return kind == LaneKind::Tempo
-                 ? EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}
-                 : EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kController};
-  }
-
-  struct LanePaint final {
-      LaneHandle handle;
-      QRect body;
-      QColor color;
-      int minimum = 0;
-      int maximum = 0;
-  };
-
-  QRectF nodeProbe(const QPointF &center, qreal radius)
-  {
-      return {center.x() - radius, center.y() - radius, 2.0 * radius, 2.0 * radius};
-  }
-
-  QRectF lineProbe(const QPointF &center, qreal halfWidth, qreal halfHeight)
-  {
-      return {center.x() - halfWidth, center.y() - halfHeight, 2.0 * halfWidth, 2.0 * halfHeight};
-  }
-
-  void setTempo(SongDocument &document, const std::vector<TempoPoint> &points)
-  {
-      TempoEdit edit;
-      edit.remove = document.tempoPoints();
-      edit.add = points;
-      document.applyTempoEdit(edit);
-  }
-
-  void setCc(SongDocument &document, const std::vector<SongDocument::LanePointValue> &points)
-  {
-      document.writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick, points);
-  }
-
-  LanePaint lanePaint(AutomationPage &page, LaneKind kind)
-  {
-      const QColor ink = themes::color(themes::Role::song_view_automation_node_ink);
-      if (kind == LaneKind::Tempo) {
-          const LaneHandle handle{0};
-          return {handle, page.canvas()->laneBody(handle), ink, CoreTimeDefaults::kMinTempoBpm,
-                  CoreTimeDefaults::kMaxTempoBpm};
-      }
-
-      const auto &rows = page.canvas()->rows();
-      for (int row = 0; row < int(rows.size()); ++row) {
-          if (rows[std::size_t(row)].id.controller == kController) {
-              const LaneHandle handle{row};
-              return {handle, page.canvas()->laneBody(handle), ink, 0, 127};
-          }
-      }
-      return {};
-  }
-
-  QPointF nodePoint(const SongView &view, const songview::TimelineInputItem &input,
-                    const LanePaint &lane, Tick tick, int value)
-  {
-      return {view.camera().displayX(double(tick), 0.0, input.devicePixelRatio()),
-              AutomationProjection::valueY(lane.body, AutomationGeometry::resolve(), lane.minimum,
-                                           lane.maximum, value)};
-  }
-
-  } // namespace
-
-  void AutomationEditingTest::emptyTempoStorageComposesNoLeadIn()
-  {
-
-Original expression:
-  QVERIFY(activateParameter(rowId(LaneKind::Tempo)));
+Mapping: S030
 
 A002 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:113
 Disposition: GAP
@@ -168,14 +32,6 @@ Original expression:
 
 A003 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:116
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpainting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-
-      const auto *scene = view.findChild<songview::TimelineQuickScene *>();
-
-Original expression:
-  QVERIFY(scene);
 
 A004 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:117
 Disposition: PARTIAL
@@ -188,24 +44,11 @@ Original expression:
 
 A005 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:121
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
-      QSignalSpy edited(&tab(), &SongTab::edited);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
+Mapping: S035
 
 A006 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:122
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(edited.isValid());
+Mapping: S035
 
 A007 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:135
 Disposition: GAP
@@ -241,25 +84,11 @@ Original expression:
 
 A009 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:139
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+Mapping: S035
 
 A010 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:144
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators activates a lane on the production page and asserts the page's published active parameter, the observable of the original activateParameter(row) result. [S030]
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve()
-  {
-
-Original expression:
-  QVERIFY(activateParameter(rowId(LaneKind::Tempo)));
+Mapping: S030
 
 A011 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:148
 Disposition: GAP
@@ -275,13 +104,6 @@ Original expression:
 
 A012 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:150
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpainting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      auto *scene = view.findChild<songview::TimelineQuickScene *>();
-
-Original expression:
-  QVERIFY(scene);
 
 A013 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:156
 Disposition: GAP
@@ -300,23 +122,11 @@ Original expression:
 
 A014 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:160
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
-      QSignalSpy edited(&tab(), &SongTab::edited);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
+Mapping: S035
 
 A015 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:161
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(edited.isValid());
+Mapping: S035
 
 A016 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:171
 Disposition: GAP
@@ -362,25 +172,11 @@ Original expression:
 
 A019 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:180
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+Mapping: S035
 
 A020 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:185
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators activates a lane on the production page and asserts the page's published active parameter, the observable of the original activateParameter(row) result. [S030]
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve()
-  {
-
-Original expression:
-  QVERIFY(activateParameter(rowId(LaneKind::Tempo)));
+Mapping: S030
 
 A021 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:189
 Disposition: GAP
@@ -396,13 +192,6 @@ Original expression:
 
 A022 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:191
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpainting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      auto *scene = view.findChild<songview::TimelineQuickScene *>();
-
-Original expression:
-  QVERIFY(scene);
 
 A023 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:196
 Disposition: GAP
@@ -419,23 +208,11 @@ Original expression:
 
 A024 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:199
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
-      QSignalSpy edited(&tab(), &SongTab::edited);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
+Mapping: S035
 
 A025 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:200
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(edited.isValid());
+Mapping: S035
 
 A026 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:208
 Disposition: GAP
@@ -468,46 +245,14 @@ Original expression:
 
 A028 | AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve | src/checks/automation/automationpainting.cpp:214
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+Mapping: S035
 
 A029 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:228
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators activates a lane on the production page and asserts the page's published active parameter, the observable of the original activateParameter(row) result. [S030]
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::stepCurvesAndNodesComposed_data()
-  {
-      QTest::addColumn<int>("laneKind");
-      QTest::newRow("tempo") << int(LaneKind::Tempo);
-      QTest::newRow("cc") << int(LaneKind::Cc);
-  }
-
-  void AutomationEditingTest::stepCurvesAndNodesComposed()
-  {
-      QFETCH(int, laneKind);
-      const LaneKind kind = LaneKind(laneKind);
-
-Original expression:
-  QVERIFY(activateParameter(rowId(kind)));
+Mapping: S030
 
 A030 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:232
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpainting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      SongDocument &document = m_tab->document();
-      SongView &view = m_tab->view();
-      auto *scene = view.findChild<songview::TimelineQuickScene *>();
-
-Original expression:
-  QVERIFY(scene);
 
 A031 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:246
 Disposition: GAP
@@ -543,23 +288,11 @@ Original expression:
 
 A033 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:251
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
-      QSignalSpy edited(&tab(), &SongTab::edited);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
+Mapping: S035
 
 A034 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:252
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(edited.isValid());
+Mapping: S035
 
 A035 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:256
 Disposition: GAP
@@ -613,74 +346,22 @@ Original expression:
 
 A039 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:272
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+Mapping: S035
 
 A040 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:286
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators activates a lane on the production page and asserts the page's published active parameter, the observable of the original activateParameter(row) result. [S030]
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::selectionRingsAndReticlesComposed_data()
-  {
-      QTest::addColumn<int>("laneKind");
-      QTest::newRow("tempo") << int(LaneKind::Tempo);
-      QTest::newRow("cc") << int(LaneKind::Cc);
-  }
-
-  void AutomationEditingTest::selectionRingsAndReticlesComposed()
-  {
-      QFETCH(int, laneKind);
-      const LaneKind kind = LaneKind(laneKind);
-
-Original expression:
-  QVERIFY(activateParameter(rowId(kind)));
+Mapping: S030
 
 A041 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:290
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpainting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      SongDocument &document = m_tab->document();
-      SongView &view = m_tab->view();
-      auto *scene = view.findChild<songview::TimelineQuickScene *>();
-
-Original expression:
-  QVERIFY(scene);
 
 A042 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:300
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-      if (kind == LaneKind::Tempo) {
-          setTempo(document, {{0, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoHeld)},
-                              {kFirstNodeTick,
-                               CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoNode)}});
-      } else {
-          setCc(document, {{0, kCcHeld}, {kFirstNodeTick, kCcNode}});
-      }
-      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
-      QSignalSpy edited(&tab(), &SongTab::edited);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
+Mapping: S035
 
 A043 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:301
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(edited.isValid());
+Mapping: S035
 
 A044 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:304
 Disposition: GAP
@@ -762,50 +443,18 @@ Original expression:
 
 A049 | AutomationEditingTest::selectionRingsAndReticlesComposed | src/checks/automation/automationpainting.cpp:341
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+Mapping: S035
 
 A050 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:349
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpainting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings()
-  {
-      SongDocument &document = m_tab->document();
-      SongView &view = m_tab->view();
-      auto *scene = view.findChild<songview::TimelineQuickScene *>();
-
-Original expression:
-  QVERIFY(scene);
 
 A051 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:353
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-      setCc(document, {{48, 40}, {72, 80}, {120, 55}});
-      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
-      QSignalSpy edited(&tab(), &SongTab::edited);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
+Mapping: S035
 
 A052 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:354
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(edited.isValid());
+Mapping: S035
 
 A053 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:357
 Disposition: GAP
@@ -920,13 +569,7 @@ Original expression:
 
 A062 | AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings | src/checks/automation/automationpainting.cpp:395
 Disposition: MATCHED
-Mapping/reason: The page-level no-write predicates assert the composition leaves the document uncommitted (document snapshot equality, e.g. banding writes nothing, the parked press leaves the document alone), the observable of the original publication spies and frozen-state equality. [S035]
-Source context since previous assertion:
-
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+Mapping: S035
 
 Remaining original source (closing sequence and helper bodies):
 
@@ -939,204 +582,111 @@ does not close any A entry. Preserve their surrounding setup and order in the pa
 
 S001 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "a centered parameter emits maximum, minimum and neutral labels"
-  report.expectEqual([AutomationScaleLabel.Role.maximum, .minimum, .neutral],
-                         pan.scaleLabels.map(\.role), cppID: drawerAutomationLabelsID,
-                         what: "a centered parameter emits maximum, minimum and neutral labels")
 
 S002 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the scale labels use the parameter's own formatting"
-  report.expectEqual(["c_v+63", "c_v-64", "c_v+0"], pan.scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
-                         what: "the scale labels use the parameter's own formatting")
 
 S003 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the neutral label names the neutral value"
-  report.expectEqual(64, pan.scaleLabels[2].value, cppID: drawerAutomationLabelsID,
-                         what: "the neutral label names the neutral value")
 
 S004 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "maximum, neutral and minimum sit at their curve-true heights"
-  report.expect(pan.scaleLabels[0].y < pan.scaleLabels[2].y
-                        && pan.scaleLabels[2].y < pan.scaleLabels[1].y,
-                    cppID: drawerAutomationLabelsID,
-                    message: "maximum, neutral and minimum sit at their curve-true heights")
 
 S005 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "a parameter without a neutral emits only its extremes"
-  report.expectEqual([AutomationScaleLabel.Role.maximum, .minimum],
-                         volume.scaleLabels.map(\.role), cppID: drawerAutomationLabelsID,
-                         what: "a parameter without a neutral emits only its extremes")
 
 S006 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "Volume's scale labels are its raw values"
-  report.expectEqual(["127", "0"], volume.scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
-                         what: "Volume's scale labels are its raw values")
 
 S007 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "Tempo's scale labels are its BPM bounds with no neutral"
-  report.expectEqual(["255", "20"], fixture.projection(.tempo).scaleLabels.map(\.text),
-                         cppID: drawerAutomationLabelsID,
-                         what: "Tempo's scale labels are its BPM bounds with no neutral")
 
 S008 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "Bend's scale labels take the bend format path"
-  report.expectEqual(["+8191", "-8192", "0"], fixture.projection(fixture.bendLane)
-          .scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
-                         what: "Bend's scale labels take the bend format path")
 
 S009 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the row stack carries one row per catalog parameter"
-  report.expectEqual(AutomationCatalog.count, stack.rows.count, cppID: drawerAutomationLabelsID,
-                         what: "the row stack carries one row per catalog parameter")
 
 S010 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the Tempo row leads the stack"
-  report.expectEqual(AutomationParameter.tempo, stack.rows[0].parameter, cppID: drawerAutomationLabelsID,
-                         what: "the Tempo row leads the stack")
 
 S011 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "a row counts the lane's written events"
-  report.expectEqual(2, stack.row(for: fixture.volumeLane)?.eventCount ?? 0, cppID: drawerAutomationLabelsID,
-                         what: "a row counts the lane's written events")
 
 S012 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "a lane the document never wrote counts no event"
-  report.expectEqual(0, stack.row(for: fixture.modulationLane)?.eventCount ?? 0, cppID: drawerAutomationLabelsID,
-                         what: "a lane the document never wrote counts no event")
 
 S013 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "a ready stack shows every row"
-  report.expectEqual(AutomationCatalog.count, stack.visibleRowCount, cppID: drawerAutomationLabelsID,
-                         what: "a ready stack shows every row")
 
 S014 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the lane count sums the written events, Tempo included"
-  report.expectEqual(4, stack.laneCount, cppID: drawerAutomationLabelsID,
-                         what: "the lane count sums the written events, Tempo included")
 
 S015 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the selector's counts follow the catalog order, Tempo first"
-  report.expectEqual([1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], stack.eventCounts(track: 0),
-                         cppID: drawerAutomationLabelsID,
-                         what: "the selector's counts follow the catalog order, Tempo first")
 
 S016 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "without a track only the Tempo row is visible"
-  report.expectEqual(1, hidden.visibleRowCount, cppID: drawerAutomationLabelsID,
-                         what: "without a track only the Tempo row is visible")
 
 S017 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "without a track the selector counts only Tempo"
-  report.expectEqual([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hidden.eventCounts(track: 0),
-                         cppID: drawerAutomationLabelsID,
-                         what: "without a track the selector counts only Tempo")
 
 S018 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "an active selection publishes its tick range"
-  report.expectEqual(range, stack.activeTickRange, cppID: drawerAutomationRowsID,
-                         what: "an active selection publishes its tick range")
 
 S019 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a covered lane with events inside the range carries both indicators"
-  report.expect(panRow?.coversNodes == true && panRow?.coversLane == true
-                        && panRow?.selectionHasEvents == true,
-                    cppID: drawerAutomationRowsID,
-                    message: "a covered lane with events inside the range carries both indicators")
 
 S020 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "an uncovered lane carries no scope indicator"
-  report.expect(volumeRow?.coversNodes == false && volumeRow?.selectionHasEvents == false,
-                    cppID: drawerAutomationRowsID, message: "an uncovered lane carries no scope indicator")
 
 S021 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the selected parameters are the covered lanes with events"
-  report.expectEqual([fixture.panLane, .tempo], stack.selectedParameters(track: 0), cppID: drawerAutomationRowsID,
-                         what: "the selected parameters are the covered lanes with events")
 
 S022 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "scope coverage alone never marks a row selected"
-  report.expect(empty.row(for: fixture.panLane)?.coversNodes == true
-                        && empty.row(for: fixture.panLane)?.selectionHasEvents == false,
-                    cppID: drawerAutomationRowsID, message: "scope coverage alone never marks a row selected")
 
 S023 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a covered but empty range selects no parameter"
-  report.expectEqual([AutomationParameter](), empty.selectedParameters(track: 0), cppID: drawerAutomationRowsID,
-                         what: "a covered but empty range selects no parameter")
 
 S024 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a track-scoped selection covers the selected track's lanes"
-  report.expect(trackScoped.covers(fixture.panLane, usedTracks: [0]), cppID: drawerAutomationRowsID,
-                    message: "a track-scoped selection covers the selected track's lanes")
 
 S025 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a track-scoped selection leaves another track's lanes alone"
-  report.expect(!trackScoped.covers(.controlChange(track: 1, controller: TimeDefaults.ccPan),
-                                        usedTracks: [0, 1]),
-                    cppID: drawerAutomationRowsID,
-                    message: "a track-scoped selection leaves another track's lanes alone")
 
 S026 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "Tempo is covered when the whole used set is selected"
-  report.expect(trackScoped.coversTempo(usedTracks: [0]), cppID: drawerAutomationRowsID,
-                    message: "Tempo is covered when the whole used set is selected")
 
 S027 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "Tempo is uncovered when part of the used set is selected"
-  report.expect(!trackScoped.coversTempo(usedTracks: [0, 1]), cppID: drawerAutomationRowsID,
-                    message: "Tempo is uncovered when part of the used set is selected")
 
 S028 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a zero-width range is no selection"
-  report.expect(!AutomationTimeSelection(range: TimeRange(startTick: 20, endTick: 20),
-                                             scope: .lanes).isActive,
-                    cppID: drawerAutomationRowsID, message: "a zero-width range is no selection")
 
 S029 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the page publishes the selected inactive parameters"
-  report.expectEqual([fixture.panLane, .tempo], fixture.page.selectedParameters, cppID: drawerAutomationRowsID,
-                         what: "the page publishes the selected inactive parameters")
 
 S030 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the active parameter is not the selected one"
-  report.expectEqual(fixture.volumeLane, fixture.page.activeParameter, cppID: drawerAutomationRowsID,
-                         what: "the active parameter is not the selected one")
 
 S031 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a covered lane with events pins as a ghost"
-  report.expect(fixture.page.toggleGhostParameter(index: panIndex), cppID: drawerAutomationRowsID,
-                    message: "a covered lane with events pins as a ghost")
 
 S032 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the ghost label names the curve and its event count"
-  report.expectEqual(["Pan (PAN) · 2 Events"], fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
-                         what: "the ghost label names the curve and its event count")
 
 S033 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the pin toggles off again"
-  report.expect(fixture.page.toggleGhostParameter(index: panIndex), cppID: drawerAutomationRowsID,
-                    message: "the pin toggles off again")
 
 S034 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "unpinning drops the ghost label"
-  report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
-                         what: "unpinning drops the ghost label")
 
 S035 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the parked press leaves the document alone"
-Swift expression:
-  report.expectEqual(emptyBefore, empty.snapshot, cppID: drawerAutomationCancelID, what: "the parked press leaves the document alone")
 
 S036 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "banding writes nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id, what: "banding writes nothing")
 
 S037 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "blank hover deletion changes nothing"
-Swift expression:
-  report.expectEqual(hoverBefore, hover.snapshot, cppID: id, what: "blank hover deletion changes nothing")
-
-Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
-src/checks/automation/AutomationPageChecks.swift:402
-  report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

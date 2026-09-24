@@ -6,131 +6,6 @@ Original SHA-256: d9d25f1358b21abdc07c7f03023240d202b38f23bea8fe2b49006f668e2286
 Swift counterpart: src/checks/drawerpresentation/voicemenus.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; the context inventory below records its rows, loops and fixtures.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE identifies a retained native window, rendering, focus or
-input-delivery obligation; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-Unresolved entries remain work.
-
-Execution and ownership
-The original swiftcore suite entrypoints invoke these paired functions in their original
-order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
-VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
-Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
-
-Verification evidence
-deno task verify --filter swiftcore --verbose: PASS on the current worktree —
-1/14 harnesses ok, 13 skipped, swiftcore 16.06s. The QML case
-test_productionVoiceChangesPointerAndMenuTransactions PASSES: it drives real
-menu-row input through the production composition. Both are the lane owner
-observations reported as given; this ledger re-ran neither.
-
-Fixture, sequence, data-row and loop inventory
-Each line below is an exact original source anchor. Multiline declarations, helper
-implementations, native event delivery and the complete order remain in the pinned source.
-src/checks/drawerpresentation/fixtures.cpp:131 | void createVoiceFixture(VoiceTransactionFixture &fixture)
-src/checks/drawerpresentation/fixtures.cpp:134 | if (!fixture.create(error))
-src/checks/drawerpresentation/voicemenus.cpp:3 | // Every scenario drives the real right-press, the typed rows, and the shared
-src/checks/drawerpresentation/voicemenus.cpp:6 | // drift or kill it, rewrites between a row's press and release reject the
-src/checks/drawerpresentation/voicemenus.cpp:56 | // Opens the voice menu through the real band right-press: live on the press
-src/checks/drawerpresentation/voicemenus.cpp:57 | // itself, the paired release picking nothing.
-src/checks/drawerpresentation/voicemenus.cpp:58 | VoiceMenu openVoiceMenu(VoiceTransactionFixture &fixture, Tick tick, QString diagnostic)
-src/checks/drawerpresentation/voicemenus.cpp:62 | const QPointF point(fixture.xForTick(double(tick)), fixture.bandRect().height() / 2.0);
-src/checks/drawerpresentation/voicemenus.cpp:63 | sendMouse(fixture.input(), QEvent::MouseButtonPress, point, Qt::RightButton, Qt::RightButton);
-src/checks/drawerpresentation/voicemenus.cpp:64 | const QPointer<songview::QuickPopupSession> live{quick_popup::popupSession(fixture.view())};
-src/checks/drawerpresentation/voicemenus.cpp:75 | sendMouse(fixture.input(), QEvent::MouseButtonRelease, point, Qt::RightButton);
-src/checks/drawerpresentation/voicemenus.cpp:81 | // press before any band does.
-src/checks/drawerpresentation/voicemenus.cpp:82 | void windowPress(VoiceTransactionFixture &fixture, QQuickWindow &window, const QPointF &itemPoint)
-src/checks/drawerpresentation/voicemenus.cpp:84 | const QPoint point = fixture.input().mapToScene(itemPoint).toPoint();
-src/checks/drawerpresentation/voicemenus.cpp:91 | void windowRelease(VoiceTransactionFixture &fixture, QQuickWindow &window, const QPointF &itemPoint)
-src/checks/drawerpresentation/voicemenus.cpp:93 | const QPoint point = fixture.input().mapToScene(itemPoint).toPoint();
-src/checks/drawerpresentation/voicemenus.cpp:101 | VoiceTransactionFixture fixture;
-src/checks/drawerpresentation/voicemenus.cpp:102 | createVoiceFixture(fixture);
-src/checks/drawerpresentation/voicemenus.cpp:103 | quick_popup::PromptGuard guard(fixture.view());
-src/checks/drawerpresentation/voicemenus.cpp:104 | SongView &view = fixture.view();
-src/checks/drawerpresentation/voicemenus.cpp:105 | const Snapshot before = fixture.snapshot();
-src/checks/drawerpresentation/voicemenus.cpp:109 | openVoiceMenu(fixture, kEmptyTick,
-src/checks/drawerpresentation/voicemenus.cpp:110 | QStringLiteral("the empty-lane right-press did not open the voice menu"));
-src/checks/drawerpresentation/voicemenus.cpp:124 | QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point));
-src/checks/drawerpresentation/voicemenus.cpp:126 | QCOMPARE(fixture.document().revision(), before.revision + 1);
-src/checks/drawerpresentation/voicemenus.cpp:127 | QCOMPARE(fixture.document().undoStack()->index(), before.undoIndex + 1);
-src/checks/drawerpresentation/voicemenus.cpp:131 | const Snapshot changed = fixture.snapshot();
-src/checks/drawerpresentation/voicemenus.cpp:133 | fixture, kEmptyTick, QStringLiteral("the marker right-press did not open the voice menu"));
-src/checks/drawerpresentation/voicemenus.cpp:143 | QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point));
-src/checks/drawerpresentation/voicemenus.cpp:145 | QCOMPARE(fixture.document().revision(), changed.revision + 1);
-src/checks/drawerpresentation/voicemenus.cpp:146 | QCOMPARE(fixture.document().undoStack()->index(), changed.undoIndex + 1);
-src/checks/drawerpresentation/voicemenus.cpp:149 | const Snapshot changedAgain = fixture.snapshot();
-src/checks/drawerpresentation/voicemenus.cpp:151 | openVoiceMenu(fixture, kEmptyTick,
-src/checks/drawerpresentation/voicemenus.cpp:152 | QStringLiteral("the marker right-press did not reopen the voice menu"));
-src/checks/drawerpresentation/voicemenus.cpp:157 | QVERIFY(!fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point));
-src/checks/drawerpresentation/voicemenus.cpp:158 | QCOMPARE(fixture.document().revision(), changedAgain.revision + 1);
-src/checks/drawerpresentation/voicemenus.cpp:159 | QCOMPARE(fixture.document().undoStack()->index(), changedAgain.undoIndex + 1);
-src/checks/drawerpresentation/voicemenus.cpp:162 | fixture.document().undoStack()->undo();
-src/checks/drawerpresentation/voicemenus.cpp:163 | QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point));
-src/checks/drawerpresentation/voicemenus.cpp:165 | fixture.document().undoStack()->undo();
-src/checks/drawerpresentation/voicemenus.cpp:166 | QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point));
-src/checks/drawerpresentation/voicemenus.cpp:168 | fixture.document().undoStack()->undo();
-src/checks/drawerpresentation/voicemenus.cpp:169 | QVERIFY(!fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point));
-src/checks/drawerpresentation/voicemenus.cpp:170 | QVERIFY(fixture.document().smf().write() == before.smf);
-src/checks/drawerpresentation/voicemenus.cpp:177 | VoiceTransactionFixture fixture;
-src/checks/drawerpresentation/voicemenus.cpp:178 | createVoiceFixture(fixture);
-src/checks/drawerpresentation/voicemenus.cpp:179 | quick_popup::PromptGuard guard(fixture.view());
-src/checks/drawerpresentation/voicemenus.cpp:180 | SongView &view = fixture.view();
-src/checks/drawerpresentation/voicemenus.cpp:181 | const Snapshot before = fixture.snapshot();
-src/checks/drawerpresentation/voicemenus.cpp:183 | const auto beforePoints = fixture.document().lanePoints(0, DOC_CC_VOICE);
-src/checks/drawerpresentation/voicemenus.cpp:186 | fixture, kMarkerTick, QStringLiteral("the marker right-press did not open the voice menu"));
-src/checks/drawerpresentation/voicemenus.cpp:206 | const auto afterPoints = fixture.document().lanePoints(0, DOC_CC_VOICE);
-src/checks/drawerpresentation/voicemenus.cpp:208 | for (const DocLanePoint &beforePoint : beforePoints) {
-src/checks/drawerpresentation/voicemenus.cpp:210 | QVERIFY2(fixture.document().findLanePoint(0, DOC_CC_VOICE, beforePoint.tick, &afterPoint),
-src/checks/drawerpresentation/voicemenus.cpp:217 | QCOMPARE(fixture.document().revision(), before.revision + 1);
-src/checks/drawerpresentation/voicemenus.cpp:218 | QCOMPARE(fixture.document().undoStack()->index(), before.undoIndex + 1);
-src/checks/drawerpresentation/voicemenus.cpp:221 | // A rewrite between a row's press and its release makes the activation
-src/checks/drawerpresentation/voicemenus.cpp:225 | VoiceTransactionFixture fixture;
-src/checks/drawerpresentation/voicemenus.cpp:226 | createVoiceFixture(fixture);
-src/checks/drawerpresentation/voicemenus.cpp:227 | quick_popup::PromptGuard guard(fixture.view());
-src/checks/drawerpresentation/voicemenus.cpp:228 | SongView &view = fixture.view();
-src/checks/drawerpresentation/voicemenus.cpp:231 | fixture, kMarkerTick, QStringLiteral("the marker right-press did not open the voice menu"));
-src/checks/drawerpresentation/voicemenus.cpp:234 | // The rewrite must land between the row press and its release.
-src/checks/drawerpresentation/voicemenus.cpp:242 | // hover the Delete row first (the same enter/move/press order the
-src/checks/drawerpresentation/voicemenus.cpp:243 | // windowPress helper and repo input fixtures use), so the held press
-src/checks/drawerpresentation/voicemenus.cpp:244 | // starts on the rendered row and the post-rewrite release completes on it.
-src/checks/drawerpresentation/voicemenus.cpp:248 | QTest::mouseMove(menuWindow, deletePoint);
-src/checks/drawerpresentation/voicemenus.cpp:251 | fixture.document().addLanePoint(0, DOC_CC_VOICE, kEmptyTick, 5);
-src/checks/drawerpresentation/voicemenus.cpp:253 | const Snapshot rewritten = fixture.snapshot();
-src/checks/drawerpresentation/voicemenus.cpp:258 | // Whether the rewrite cancelled the menu or the release ran stale, the
-src/checks/drawerpresentation/voicemenus.cpp:262 | QVERIFY(fixture.snapshot() == rewritten);
-src/checks/drawerpresentation/voicemenus.cpp:264 | QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kMarkerTick, &point));
-src/checks/drawerpresentation/voicemenus.cpp:266 | QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point));
-src/checks/drawerpresentation/voicemenus.cpp:271 | // the swallowed paired release is preserved.
-src/checks/drawerpresentation/voicemenus.cpp:274 | VoiceTransactionFixture fixture;
-src/checks/drawerpresentation/voicemenus.cpp:275 | createVoiceFixture(fixture);
-src/checks/drawerpresentation/voicemenus.cpp:276 | quick_popup::PromptGuard guard(fixture.view());
-src/checks/drawerpresentation/voicemenus.cpp:277 | SongView &view = fixture.view();
-src/checks/drawerpresentation/voicemenus.cpp:278 | const Snapshot before = fixture.snapshot();
-src/checks/drawerpresentation/voicemenus.cpp:281 | // voice-band focus first. The fixture only stages page visibility, and
-src/checks/drawerpresentation/voicemenus.cpp:287 | fixture, kMarkerTick, QStringLiteral("the marker right-press did not open the voice menu"));
-src/checks/drawerpresentation/voicemenus.cpp:290 | const QPointF miss(fixture.xForTick(double(kEmptyTick)), fixture.bandRect().height() / 2.0);
-src/checks/drawerpresentation/voicemenus.cpp:293 | windowPress(fixture, *menuWindow, miss);
-src/checks/drawerpresentation/voicemenus.cpp:295 | QVERIFY2(!menu.session->isOpen(), "an outside right press did not dismiss the voice menu");
-src/checks/drawerpresentation/voicemenus.cpp:296 | windowRelease(fixture, *menuWindow, miss);
-src/checks/drawerpresentation/voicemenus.cpp:299 | "the dismissed voice menu leaked its paired release into a new popup");
-src/checks/drawerpresentation/voicemenus.cpp:301 | QVERIFY(fixture.snapshot() == before);
-src/checks/drawerpresentation/voicemenus.cpp:310 | VoiceTransactionFixture fixture;
-src/checks/drawerpresentation/voicemenus.cpp:311 | createVoiceFixture(fixture);
-src/checks/drawerpresentation/voicemenus.cpp:312 | quick_popup::PromptGuard guard(fixture.view());
-src/checks/drawerpresentation/voicemenus.cpp:313 | SongView &view = fixture.view();
-src/checks/drawerpresentation/voicemenus.cpp:314 | const Snapshot before = fixture.snapshot();
-src/checks/drawerpresentation/voicemenus.cpp:317 | fixture, kMarkerTick, QStringLiteral("the marker right-press did not open the voice menu"));
-src/checks/drawerpresentation/voicemenus.cpp:359 | QVERIFY(fixture.snapshot() == before);
-src/checks/drawerpresentation/voicemenus.cpp:361 | QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kMarkerTick, &point));
-
-Original assertion inventory
-
 A001 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:111
 Disposition: PARTIAL
 Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. Swift presenter state only: original native popup existence, drawn rows or ListView state remains an open UI assertion. No keyboard/focus/window equivalence is claimed.
@@ -181,35 +56,15 @@ Original expression:
 
 A007 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:124
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S033):
-  expect(value() != nil, 124)
-Original expression:
-  QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A008 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:125
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S034):
-  expect(value() == 7, 125)
-Original expression:
-  QCOMPARE(point.value, 7)
 
 A009 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:126
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S035):
-  expect(document.revision == before.revision + 1, 126)
-Original expression:
-  QCOMPARE(fixture.document().revision(), before.revision + 1)
 
 A010 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:127
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. The original three-undo sequence verifies one-step restoration of full serialized bytes and checkpoint history identity for this specific transaction; this replaces private Qt stack-index inspection. The assertion is evaluated at its corresponding undo step, not before undo.
-Swift counterpart expression (S054):
-  expect(bytes() == beforeBytes && document.history.currentIdentity == before.identity
-  && document.history.canUndo == before.canUndo, 127)
-Original expression:
 
 A011 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:134
 Disposition: PARTIAL
@@ -260,34 +115,15 @@ Original expression:
 
 A017 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:143
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S041):
-  expect(value() != nil, 143)
-Original expression:
-  QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A018 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:144
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S042):
-  expect(value() == 3, 144)
-Original expression:
-  QCOMPARE(point.value, 3)
 
 A019 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:145
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S043):
-  expect(document.revision == inserted.revision + 1, 145)
-Original expression:
-  QCOMPARE(fixture.document().revision(), changed.revision + 1)
 
 A020 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:146
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. The original three-undo sequence verifies one-step restoration of full serialized bytes and checkpoint history identity for this specific transaction; this replaces private Qt stack-index inspection. The assertion is evaluated at its corresponding undo step, not before undo.
-Swift counterpart expression (S051):
-  expect(bytes() == insertedBytes && document.history.currentIdentity == inserted.identity, 146)
-Original expression:
 
 A021 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:153
 Disposition: PARTIAL
@@ -306,83 +142,33 @@ Original expression:
 
 A023 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:156
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. The Delete pick requires page.menuOpen false, the same session-closure observable matched for the automation lane menus.
-Swift counterpart expression (S045):
-  expect(!page.menuOpen, 156)
-Original expression:
-  QVERIFY2(!deleteMenu.session->isOpen(), "the Delete pick left the voice menu open");
 
 A024 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:157
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S046):
-  expect(value() == nil, 157)
-Original expression:
-  QVERIFY(!fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A025 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:158
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S047):
-  expect(document.revision == changed.revision + 1, 158)
-Original expression:
-  QCOMPARE(fixture.document().revision(), changedAgain.revision + 1)
 
 A026 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:159
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. The original three-undo sequence verifies one-step restoration of full serialized bytes and checkpoint history identity for this specific transaction; this replaces private Qt stack-index inspection. The assertion is evaluated at its corresponding undo step, not before undo.
-Swift counterpart expression (S048):
-  expect(bytes() == changedBytes && document.history.currentIdentity == changed.identity, 159)
-Original expression:
-  QCOMPARE(fixture.document().undoStack()->index(), changedAgain.undoIndex + 1);
 
 A027 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:163
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S049):
-  expect(value() != nil, 163)
-Original expression:
-  QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A028 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:164
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S050):
-  expect(value() == 3, 164)
-Original expression:
-  QCOMPARE(point.value, 3)
 
 A029 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:166
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S052):
-  expect(value() != nil, 166)
-Original expression:
-  QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A030 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:167
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S053):
-  expect(value() == 7, 167)
-Original expression:
-  QCOMPARE(point.value, 7)
 
 A031 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:169
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S055):
-  expect(value() == nil, 169)
-Original expression:
-  QVERIFY(!fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A032 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:170
 Disposition: MATCHED
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression (S056):
-  expect(bytes() == beforeBytes, 170)
-Original expression:
-  QVERIFY(fixture.document().smf().write() == before.smf)
 
 A033 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:187
 Disposition: PARTIAL
@@ -392,9 +178,7 @@ Original expression:
 
 A034 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:191
 Disposition: MATCHED
-Mapping/reason: S006 asserts the identical observable on the same fixture and sequence: the menu stays open across a camera-only scroll, with S007/S008 pinning the captured identity and tick. Central execution passed in the recorded swiftcore run.
-Original expression:
-  QVERIFY2(menu.session->isOpen(), "a camera-only scroll closed the useful voice menu")
+Mapping: S006, S007, S008
 
 A035 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:192
 Disposition: PARTIAL
@@ -479,9 +263,6 @@ Original expression:
 
 A048 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:236
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY2(panel, "the voice menu lost its rendered panel before the stale probe")
 
 A049 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:238
 Disposition: GAP
@@ -491,39 +272,26 @@ Original expression:
 
 A050 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:240
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(menuWindow)
 
 A051 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:260
 Disposition: MATCHED
-Mapping/reason: S025 asserts the same observable under the same fixture and sequence: a document change cancels the open menu, so the stale release leaves no popup open (hasMenu mirrors menu != nil). Central execution passed in the recorded swiftcore run.
-Original expression:
-  QVERIFY2(!menu.session->isOpen(), "the stale request left a popup open")
+Mapping: S025
 
 A052 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:261
 Disposition: MATCHED
-Mapping/reason: S025 asserts the page menu surface is closed after the rewrite and S026 asserts the post-cancellation activation writes nothing, so no popup can be reopened; the page owns one menu surface, the observable the original reads through the shared popup session accessor.
-Original expression:
-  QVERIFY2(!quick_popup::popupSession(view)->isOpen(), "the stale request reopened a popup")
+Mapping: S025, S026
 
 A053 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:262
 Disposition: MATCHED
-Mapping/reason: S027 asserts the identical observable: the stale activation leaves the post-rewrite snapshot (revision, history identity, canUndo/canRedo) as the only change.
-Original expression:
-  QVERIFY(fixture.snapshot() == rewritten)
+Mapping: S027
 
 A054 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:264
 Disposition: MATCHED
-Mapping/reason: S027 asserts the post-rewrite snapshot is unchanged by the stale activation, so nothing was committed and the captured marker at 48 is untouched; the Swift sequence reads the snapshot rather than re-finding the single point.
-Original expression:
-  QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kMarkerTick, &point))
+Mapping: S027
 
 A055 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:265
 Disposition: MATCHED
-Mapping/reason: S027 asserts the post-rewrite snapshot is unchanged by the stale activation, so the captured voice at 48 stands; the Swift sequence never re-reads the single point.
-Original expression:
-  QCOMPARE(point.value, kMarkerVoice)
+Mapping: S027
 
 A056 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:266
 Disposition: PARTIAL
@@ -557,15 +325,10 @@ Original expression:
 
 A061 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:292
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(menuWindow)
 
 A062 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:295
 Disposition: MATCHED
-Mapping/reason: S009 asserts the dismissal closes the page menu on the same fixture (hasMenu and menuOpen mirror menu != nil) and S010 that it releases the interaction gate; the passing QML case dismisses through a real outside press on voiceMenuUnderlay (tst_EditorDrawer.qml, S059). The Swift scenario dismisses by explicit call rather than a pointer press.
-Original expression:
-  QVERIFY2(!menu.session->isOpen(), "an outside right press did not dismiss the voice menu")
+Mapping: S009, S010, S059
 
 A063 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:298
 Disposition: PARTIAL
@@ -576,15 +339,11 @@ Original expression:
 
 A064 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:300
 Disposition: MATCHED
-Mapping/reason: S010 asserts no active interaction after the dismissal; interactionActive is computed from picker != nil, menu != nil, drag != nil and panRevision != nil (src/swift/app/drawer/voicechanges/VoiceChangesInteraction.swift), so an active picker would fail it.
-Original expression:
-  QVERIFY(!checks::voicepicker::active(view))
+Mapping: S010
 
 A065 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:301
 Disposition: MATCHED
-Mapping/reason: S011 asserts the identical observable: the dismissal writes nothing, snapshot equality on the same fixture.
-Original expression:
-  QVERIFY(fixture.snapshot() == before)
+Mapping: S011
 
 A066 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:302
 Disposition: GAP
@@ -601,21 +360,12 @@ Original expression:
 
 A068 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:321
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(root)
 
 A069 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:324
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(rulerInput)
 
 A070 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:326
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(ruler)
 
 A071 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:329
 Disposition: GAP
@@ -625,20 +375,9 @@ Original expression:
 
 A072 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:334
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: The site reads the shared canvas popup session accessor, a mechanism whose production ingress is gone. No-ingress proof: scoped grep of QuickPopupSession, QuickMenuModel, quick_popup, popupSession, rowForId, clickMenuRow, menuRowSceneCenter and menuPanel( over src/swift and the page QML (src/ui/songview/quick/drawer, src/ui/songview/quick/swiftroll) returns zero hits; each page hosts its own QML modal (drawer/VoiceChangeMenu.qml,34,58 rows via model.activateMenuRow, covered by the QML case test_automationModalsRetireWithPage) and the C++ owners (src/ui/songview.cpp, src/ui/editordrawer/voicechangearea/voicechangemenu.cpp) appear in no CMake target.
-Original expression:
-  QVERIFY(live)
 
 A073 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:335
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: A foreign session takeover cannot occur in the page-owned modal composition, so the foreign-panel publication site has no equivalent observation. No-ingress as A072: QuickPopupSession, QuickMenuModel, quick_popup, popupSession, rowForId, clickMenuRow, menuRowSceneCenter and menuPanel( have zero hits across src/swift and the page QML (src/ui/songview/quick/drawer, src/ui/songview/quick/swiftroll); each page hosts its own modal (QML case test_automationModalsRetireWithPage).
-Original expression:
-  QVERIFY2(QTest::qWaitFor([&live] {
-                   QQuickItem *const foreignPanel = quick_popup::menuPanel(*live);
-                   return live->isOpen() && foreignPanel &&
-                          quick_popup::menuModel(*foreignPanel) != nullptr;
-               }),
-               "the foreign ruler menu did not publish over the pending voice menu")
 
 A074 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:347
 Disposition: GAP
@@ -675,400 +414,200 @@ Original expression:
 
 A079 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:359
 Disposition: MATCHED
-Mapping/reason: S027 asserts the stale activation leaves the post-rewrite snapshot as the only change and S025 cancels the displaced menu, so the displaced voice target writes nothing. The Swift proves the never-fires outcome through the document-change cancellation path; a foreign session takeover is unrepresentable with page-owned modals.
-Original expression:
-  QVERIFY(fixture.snapshot() == before)
+Mapping: S027, S025
 
 A080 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:361
 Disposition: MATCHED
-Mapping/reason: S026 asserts the activation after the cancellation writes nothing and S027 the unchanged snapshot, so the marker at 48 is untouched. The Swift proves it through the cancellation path, since a foreign takeover is unrepresentable with page-owned modals.
-Original expression:
-  QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kMarkerTick, &point))
+Mapping: S026, S027
 
 A081 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:362
 Disposition: MATCHED
-Mapping/reason: S026/S027 prove the cancelled target committed nothing, so the captured voice at the marker stands; the Swift path is the document-change cancellation, not a foreign takeover.
-Original expression:
-  QCOMPARE(point.value, kMarkerVoice)
+Mapping: S026, S027
 
 A082 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:363
 Disposition: MATCHED
-Mapping/reason: S026 asserts the activation after the cancellation writes nothing and S010 asserts no active interaction; interactionActive is computed from picker != nil (src/swift/app/drawer/voicechanges/VoiceChangesInteraction.swift), so no late picker can surface.
-Original expression:
-  QVERIFY(!checks::voicepicker::active(view))
+Mapping: S026, S010
 
 A083 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:364
 Disposition: MATCHED
-Mapping/reason: S025 asserts the page menu surface is cancelled and not open (hasMenu mirrors menu != nil); the page owns the single menu surface, so no popup stands after the cancellation.
-Original expression:
-  QVERIFY(!quick_popup::popupSession(view)->isOpen())
+Mapping: S025
 
 A084 | createVoiceFixture | src/checks/drawerpresentation/fixtures.cpp:135
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  qFatal("%s", qPrintable(error))
-
-Swift executable assertion index
-The S entries are exact predicates already called by the suite. Their presence alone
-does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
 S001 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "a right press on a marker opens the context menu"
-Swift expression:
-  report.expect(page.hasMenu && page.menuOpen, cppID: drawerVoiceMenuID,
-                    message: "a right press on a marker opens the context menu")
 
 S002 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "a marker target publishes the change and delete rows"
-Swift expression:
-  report.expectEqual([VoiceChangesPagePolicy.changeVoiceAction,
-                          VoiceChangesPagePolicy.deleteMarkerAction],
-                         page.menuRowActions, cppID: drawerVoiceMenuID,
-                         what: "a marker target publishes the change and delete rows")
 
 S003 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the menu captured the pressed occurrence"
-Swift expression:
-  report.expectEqual(target.text, page.menuTargetIdentity, cppID: drawerVoiceMenuID,
-                         what: "the menu captured the pressed occurrence")
 
 S004 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the menu captured the marker's own tick"
-Swift expression:
-  report.expectEqual(48, page.menuTargetTick, cppID: drawerVoiceMenuID,
-                         what: "the menu captured the marker's own tick")
 
 S005 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "an open menu reports an active interaction"
-Swift expression:
-  report.expect(page.interactionActive, cppID: drawerVoiceMenuID,
-                    message: "an open menu reports an active interaction")
 
 S006 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "a camera scroll keeps the menu open"
-Swift expression:
-  report.expect(page.hasMenu, cppID: drawerVoiceMenuID, message: "a camera scroll keeps the menu open")
 
 S007 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "a camera scroll does not drift the captured identity"
-Swift expression:
-  report.expectEqual(target.text, page.menuTargetIdentity, cppID: drawerVoiceMenuID,
-                         what: "a camera scroll does not drift the captured identity")
 
 S008 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "a camera scroll does not drift the captured tick"
-Swift expression:
-  report.expectEqual(48, page.menuTargetTick, cppID: drawerVoiceMenuID,
-                         what: "a camera scroll does not drift the captured tick")
 
 S009 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the outside dismissal closes the menu"
-Swift expression:
-  report.expect(!page.hasMenu && !page.menuOpen, cppID: drawerVoiceMenuID,
-                    message: "the outside dismissal closes the menu")
 
 S010 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the dismissal releases the follow-scroll gate"
-Swift expression:
-  report.expect(!page.interactionActive, cppID: drawerVoiceMenuID,
-                    message: "the dismissal releases the follow-scroll gate")
 
 S011 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the dismissal writes nothing"
-Swift expression:
-  report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceMenuID,
-                         what: "the dismissal writes nothing")
 
 S012 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the delete row deletes the captured marker"
-Swift expression:
-  report.expect(page.activateMenuAction(actionId: VoiceChangesPagePolicy.deleteMarkerAction),
-                    cppID: drawerVoiceMenuID, message: "the delete row deletes the captured marker")
 
 S013 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the deleted tick no longer holds a change"
-Swift expression:
-  report.expect(VoiceLanePolicy.occurrence(at: 48, in: fixture.lanePoints()) == nil,
-                    cppID: drawerVoiceMenuID, message: "the deleted tick no longer holds a change")
 
 S014 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the deletion is one revision"
-Swift expression:
-  report.expectEqual(baseline.revision + 1, fixture.snapshot.revision, cppID: drawerVoiceMenuID,
-                         what: "the deletion is one revision")
 
 S015 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the deletion records one history entry"
-Swift expression:
-  report.expect(fixture.snapshot.canUndo && !baseline.canUndo, cppID: drawerVoiceMenuID,
-                    message: "the deletion records one history entry")
 
 S016 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the projection drops exactly the deleted marker"
-Swift expression:
-  report.expectEqual([0, 120], page.markerTicks, cppID: drawerVoiceMenuID,
-                         what: "the projection drops exactly the deleted marker")
 
 S017 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "an empty-lane target publishes the insert row"
-Swift expression:
-  report.expectEqual([VoiceChangesPagePolicy.insertVoiceChangeAction], page.menuRowActions,
-                         cppID: drawerVoiceMenuID, what: "an empty-lane target publishes the insert row")
 
 S018 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the empty-lane target carries no occurrence"
-Swift expression:
-  report.expect(page.menuTargetIdentity == nil, cppID: drawerVoiceMenuID,
-                    message: "the empty-lane target carries no occurrence")
 
 S019 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the insert row opens the picker"
-Swift expression:
-  report.expect(page.activateMenuAction(actionId: VoiceChangesPagePolicy.insertVoiceChangeAction),
-                    cppID: drawerVoiceMenuID, message: "the insert row opens the picker")
 
 S020 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the picker opens on the capture"
-Swift expression:
-  report.expect(page.hasPicker, cppID: drawerVoiceMenuID, message: "the picker opens on the capture")
 
 S021 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the picker inherits the menu's captured tick"
-Swift expression:
-  report.expectEqual(96, page.pickerTargetTick, cppID: drawerVoiceMenuID,
-                         what: "the picker inherits the menu's captured tick")
 
 S022 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the inherited empty-lane capture keeps the insertion title"
-Swift expression:
-  report.expectEqual("Insert voice change", page.pickerTitle, cppID: drawerVoiceMenuID,
-                         what: "the inherited empty-lane capture keeps the insertion title")
 
 S023 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the activation consumed the menu"
-Swift expression:
-  report.expect(!page.hasMenu, cppID: drawerVoiceMenuID, message: "the activation consumed the menu")
 
 S024 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the menu reopened on the third marker"
-Swift expression:
-  report.expect(page.hasMenu, cppID: drawerVoiceMenuID, message: "the menu reopened on the third marker")
 
 S025 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "a document change cancels the open menu"
-Swift expression:
-  report.expect(!page.hasMenu, cppID: drawerVoiceMenuID,
-                    message: "a document change cancels the open menu")
 
 S026 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "an activation after the cancellation writes nothing"
-Swift expression:
-  report.expect(!page.activateMenuAction(actionId: VoiceChangesPagePolicy.deleteMarkerAction),
-                    cppID: drawerVoiceMenuID, message: "an activation after the cancellation writes nothing")
 
 S027 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: message "the stale activation leaves the rewrite as the only change"
-Swift expression:
-  report.expectEqual(rewritten, fixture.snapshot, cppID: drawerVoiceMenuID,
-                         what: "the stale activation leaves the rewrite as the only change")
 
 S028 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(page.menuOpen && page.menuTargetTick == 144, 111)
 
 S029 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(page.pickerOpen && page.pickerTargetTick == 144, 115)
 
 S030 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(!page.menuOpen, 116)
 
 S031 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(page.pickerRowPrograms == [7] && page.pickerIndex == 0, 119)
 
 S032 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(!page.pickerOpen, 121)
 
 S033 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(value() != nil, 124)
 
 S034 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(value() == 7, 125)
 
 S035 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(document.revision == before.revision + 1, 126)
 
 S036 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(page.menuOpen && page.menuTargetTick == 144, 134)
 
 S037 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(page.pickerOpen, 137)
 
 S038 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(page.pickerIndex == 7, 138)
 
 S039 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(page.pickerRowPrograms == [3] && page.pickerIndex == 0, 140)
 
 S040 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(!page.pickerOpen, 142)
 
 S041 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(value() != nil, 143)
 
 S042 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(value() == 3, 144)
 
 S043 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(document.revision == inserted.revision + 1, 145)
 
 S044 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(page.menuOpen && page.menuTargetTick == 144, 153)
 
 S045 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(!page.menuOpen, 156)
 
 S046 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(value() == nil, 157)
 
 S047 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(document.revision == changed.revision + 1, 158)
 
 S048 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(bytes() == changedBytes && document.history.currentIdentity == changed.identity, 159)
 
 S049 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(value() != nil, 163)
 
 S050 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(value() == 3, 164)
 
 S051 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(bytes() == insertedBytes && document.history.currentIdentity == inserted.identity, 146)
 
 S052 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(value() != nil, 166)
 
 S053 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(value() == 7, 167)
 
 S054 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(bytes() == beforeBytes && document.history.currentIdentity == before.identity
-      && document.history.canUndo == before.canUndo, 127)
 
 S055 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(value() == nil, 169)
 
 S056 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift
 Anchor: function
-Swift expression:
-  expect(bytes() == beforeBytes, 170)
-
-
-Pinned menu transaction addition
-Reference f3069ef693542bdb63564b80a29773e2f5b2a360, fixtures.cpp44-62 and374-406.
-Division24, conductor500000us, channel0 program0/note60 velocity100 ending48,
-channel1 program5/note48 velocity100 ending48, all endTick384. Setup inserts
-program3 at48 as its own undoable edit before the baseline snapshot.
-The called companion reproduces empty tick144 insert7, marker144 change3,
-marker144 delete, and the original three-undo walk. Expected values are pinned
-from the C++ behavioral oracle, not a second migration implementation.
-Swift uses the live project bank rather than the native fixture voice names;
-these transaction assertions depend on128 legal program slots, not label/audio
-identity. Native row-click assertions112/135/154 are PARTIAL against the passing
-QML production-input case plus the Swift activation predicates; the native window,
-focus-poll and rendered-popup sites stay NATIVE. No synthetic keyboard, focus,
-native-window or rendered-menu parity is claimed.
-Existing scenarios remain called in their original order; the execution evidence
-is recorded in the Verification evidence section.
-
-OMP structural correction checkpoint
-drawerVoiceOriginalMenuTransactions is now a direct runVoiceChangesPageChecks call immediately after drawerVoiceContextMenuTransactions. The distinct undoable program3-at48 setup remains unchanged.
-Suite order is explicit; no generic fixture abstraction was introduced.
-Static diff check passed; Debug execution of this refactor is pending root.
-This reconciliation supersedes the checkpoint: every site is reconciled against the
-final Swift predicates and the recorded lane evidence.
-
-Production QML composition predicates
-These entries record the passing production-composition case that drives real Qt input
-through the drawer pages; they are the QML half of the row-click, dismissal and
-modal-ownership mappings above.
 
 S057 | test_productionVoiceChangesPointerAndMenuTransactions | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: function
-QML expression:
-  mouseClick(input, markerPoint.x, markerPoint.y, Qt.RightButton) at :3504 opens the
-  context menu (tryVerify(model.menuOpen, 1000) at :3505) on the production page, whose
-  rendered delegate rows resolve by typed action id (menuRowByAction at :3513 and :3514
-  through panel.rowItem(i).model.actionId at :2652) and publish the popup-menu role at
-  :3511 and menu-item roles at :3516.
 
 S058 | test_productionVoiceChangesPointerAndMenuTransactions | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "voiceChangeMenu" #1
-QML expression:
-  mouseClick(deleteRow, deleteRow.width / 2, deleteRow.height / 2, Qt.LeftButton) at :3520
-  with tryVerify(voiceMarkerLines().length === drawnBefore, 1000) at :3521 and
-  awaitVoiceModal("voiceChangeMenu", false) at :3523: the rendered Delete row removes
-  exactly the captured occurrence and the page-owned modal retires.
 
 S059 | test_productionVoiceChangesPointerAndMenuTransactions | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: function
-QML expression:
-  mouseClick(underlay, 4, 4, Qt.LeftButton) at :3536 on voiceMenuUnderlay with
-  tryVerify(!model.menuOpen, 1000) at :3537 and voiceMarkerLines().length === settled at
-  :3539: the outside press dismisses the menu without a write.

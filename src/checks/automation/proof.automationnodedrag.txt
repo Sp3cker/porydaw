@@ -8,35 +8,11 @@ Swift counterpart: src/checks/automation/domain/gestures.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-Of the 71 sites in this file, 36 are MATCHED, 6 PARTIAL, 14 NATIVE, and 15 NATIVE-SETUP. Node drag commits, group drags, phantom outcomes and the Shift axis lock are executed under the original cppIDs by drawerAutomationNodeDragAndPhantomOutcomes (src/checks/automation/domain/gestures.swift) and drawerAutomationPencilOwnershipAndShift (src/checks/automation/automationselection.swift); the rebuild and parameter-switch cancellations with recovery are executed by drawerAutomationInflightDragInvalidation, the Escape cancellations by drawerAutomationCancellationAndNoOps and drawerAutomationKeyboardIngress, and the Delete-key range delete by drawerAutomationSelectionDeleteCommand (src/checks/automation/automationcanvasediting.swift and src/checks/automation/automationselection.swift). NATIVE sites are the Quick scene-graph transient layers, curve probes and native cursor/pointer feedback; NATIVE-SETUP sites are the retired AutomationCanvas lane-row geometry. The native focus chain that delivers the physical Delete key to the band has no Swift predicate; it is recorded as the unproved delivery obligation on A047-A049 and is not claimed by any MATCHED row. Each PARTIAL line names the exact unproved condition.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including drawerAutomationInflightDragInvalidation, drawerAutomationPencilOwnershipAndShift and the gesture predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
 Delta snapshot: the counterpart hashes above were re-pinned for the delta that added the Escape-cancel, Delete-key arbiter and idle-quiescence predicates (drawerAutomationKeyboardIngress, drawerAutomationBandEscape) and restored the double-click-once deletion. The implementing lane reported deno task verify --filter swiftcore --verbose PASS (10.08 s) for its own snapshot; the keyboard-ingress, band-escape, arbiter and quiescence predicates were not covered by a verification result supplied to this ledger task, so no execution claim is made for them here.
 Converted-window command: deno task verify:qml --verbose
-The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
-Their sources are reference inventories only, never current execution evidence.
-
-Execution ownership
-The legacy AutomationEditingTest node drag suite executed under the automation editing harness. In the converted Swift suite, drawerAutomationNodeDragAndPhantomOutcomes in src/checks/automation/domain/gestures.swift exercises drag outcome policies, phantom drag resetting, and delta clamping; drawerAutomationInflightDragInvalidation in src/checks/automation/automationcanvasediting.swift exercises rebuild/parameter-switch cancellation and recovery through the page pointer route; drawerAutomationPencilOwnershipAndShift in src/checks/automation/automationselection.swift exercises the Shift axis locks and the double-click-once deletion with its count-free undo; drawerAutomationCancellationAndNoOps (:363), drawerAutomationKeyboardIngress (:365) and drawerAutomationBandEscape (:366) exercise Escape cancellation with gesture-first precedence, the Delete-key arbiter routing and dropping the right-drag band; drawerAutomationSelectionDeleteCommand (:384) exercises the Delete-key range delete. Registered run path: src/checks/automation/AutomationPageChecks.swift,384 :: runAutomationPageChecks → projectSession (swiftcore suite 10).
-
-Fixture, sequence and row constraints
-Data rows expand nodeDragCommits (horizontal-positive, horizontal-negative, vertical-positive, vertical-negative, diagonal-clamped, sub-threshold-slop), nodeDragShiftAxisLocks (dominant-x, dominant-y), scrolledOriginPhantomCommits (view-scrolled, origin-shifted), selectedRangeDragAndDelete (multi-node-drag, range-delete), escapeCancelsAdapterDrag (escape-press, escape-release), and rebuildCancelsAdapterDragAndRecovers (rebuild-during-drag, recovery-after-rebuild). Loops verify multi-node selection deltas and tick clamping.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:151
 Disposition: GAP
@@ -207,94 +183,23 @@ Original expression:
 
 A003 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:171
 Disposition: MATCHED
-Mapping/reason: asserts the same drag commits exactly once, the observable the original's single revision advance records. [S094]
-Source context since previous assertion:
-
-      const QPoint source = automation_test::windowFromContent(
-          page(), automationInput(), inputPoint(lane, kNodeTick, kNodeValue));
-      const QPoint target = automation_test::windowFromContent(
-          page(), automationInput(), inputPoint(lane, kMovedTick, kNodeValue));
-      const QPoint activation =
-          source + QPoint(AutomationGeometry::resolve().nodeDragActivationDistance + 2, 0);
-      const QPoint end = dragEnd(source, target, activation);
-      const auto effectiveMapping =
-          pointerMapping(lane, automation_test::effectiveDragContent(page(), automationInput(),
-                                                                     source, activation, end));
-      const uint64_t revision = m_tab->document().revision();
-      const int undoIndex = m_tab->document().undoStack()->index();
-
-      mousePress(Qt::LeftButton, source, Qt::NoModifier);
-      mouseMove(activation, Qt::NoModifier);
-      mouseMove(end, Qt::NoModifier);
-      mouseRelease(Qt::LeftButton, end, Qt::NoModifier);
-
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revision + 1);
+Mapping: S094
 
 A004 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:172
 Disposition: MATCHED
-Mapping/reason: asserts the drag is undoable and one undo restores the pre-drag lane, which is exactly one recorded history entry (count-free; no C++ undo index correspondence is claimed). [S095,S096]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(m_tab->document().undoStack()->index(), undoIndex + 1);
+Mapping: S095, S096
 
 A005 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:173
 Disposition: MATCHED
-Mapping/reason: asserts the grabbed node's committed destination tick/value on the same drag route. [S093]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(effectiveMapping.point.tick, kMovedTick);
+Mapping: S093
 
 A006 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:177
 Disposition: MATCHED
-Mapping/reason: asserts the committed lane points (destination plus the evicted occupant), the original's point-set equality. [S093]
-Source context since previous assertion:
-
-      const int movedValue = adapter == kTempo ? effectiveMapping.point.value : kNodeValue;
-      const std::vector<NodePoint> expected{
-          {kFirstTick, kFirstValue}, {kMovedTick, movedValue}, {kLateTick, kLateValue}};
-
-Original expression:
-  QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), expected));
+Mapping: S093
 
 A007 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:203
 Disposition: MATCHED
-Mapping/reason: asserts the same drag commits exactly once, the observable the original's single revision advance records. [S094]
-Source context since previous assertion:
-
-
-      if (adapter == kTempo) {
-          TempoEdit edit;
-          edit.remove = m_tab->document().tempoPoints();
-          edit.add = {{kNodeTick, kPreservedTempoUs},
-                      {kLateTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kLateValue)}};
-          m_tab->document().applyTempoEdit(edit);
-          const int preservedValue = int(std::lround(CoreTimeDefaults::tempoBpm(kPreservedTempoUs)));
-          const QPoint fractionalSource = automation_test::windowFromContent(
-              page(), automationInput(), inputPoint(lane, kNodeTick, preservedValue));
-          const QPoint fractionalTarget = automation_test::windowFromContent(
-              page(), automationInput(), inputPoint(lane, kMovedTick, preservedValue));
-          const QPoint fractionalActivation =
-              fractionalSource +
-              QPoint(AutomationGeometry::resolve().nodeDragActivationDistance + 2, 0);
-          const uint64_t fractionalRevision = m_tab->document().revision();
-
-          mousePress(Qt::LeftButton, fractionalSource, Qt::ShiftModifier);
-          mouseMove(fractionalActivation, Qt::ShiftModifier);
-          mouseMove(dragEnd(fractionalSource, fractionalTarget, fractionalActivation),
-                    Qt::ShiftModifier);
-          mouseRelease(Qt::LeftButton,
-                       dragEnd(fractionalSource, fractionalTarget, fractionalActivation),
-                       Qt::ShiftModifier);
-
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), fractionalRevision + 1);
+Mapping: S094
 
 A008 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:204
 Disposition: PARTIAL
@@ -316,68 +221,19 @@ Original expression:
 
 A010 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:206
 Disposition: MATCHED
-Mapping/reason: drawerAutomationBandIsolatesTempoAndCc asserts the tempo drag moves the tempo point (projected as BPM) and leaves the CC lane alone. [S176]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(m_tab->document().tempoPoints().front().microsecondsPerQuarterNote,
-                   kPreservedTempoUs);
+Mapping: S176
 
 A011 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:236
 Disposition: MATCHED
-Mapping/reason: asserts the same drag commits exactly once, the observable the original's single revision advance records. [S094]
-Source context since previous assertion:
-
-          return;
-      }
-
-      m_tab->document().writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick,
-                                        {{kLateTick, 40}});
-      SmfEvent first;
-      first.tick = kNodeTick;
-      first.status = uint8_t((0xB << 4) | (m_tab->document().channelFor(0) & 0x0F));
-      first.data0 = kController;
-      first.data1 = 10;
-      m_tab->document().insertRawEvent(m_tab->document().smfTrackFor(0), first);
-      SmfEvent second = first;
-      second.data1 = 20;
-      m_tab->document().insertRawEvent(m_tab->document().smfTrackFor(0), second);
-      const QPoint groupedSource = automation_test::windowFromContent(
-          page(), automationInput(), inputPoint(lane, kNodeTick, 20));
-      const QPoint groupedTarget = automation_test::windowFromContent(
-          page(), automationInput(), inputPoint(lane, kMovedTick, 20));
-      const QPoint groupedActivation =
-          groupedSource + QPoint(AutomationGeometry::resolve().nodeDragActivationDistance + 2, 0);
-      const uint64_t groupedRevision = m_tab->document().revision();
-
-      mousePress(Qt::LeftButton, groupedSource, Qt::NoModifier);
-      mouseMove(groupedActivation, Qt::NoModifier);
-      mouseMove(dragEnd(groupedSource, groupedTarget, groupedActivation), Qt::NoModifier);
-      mouseRelease(Qt::LeftButton, dragEnd(groupedSource, groupedTarget, groupedActivation),
-                   Qt::NoModifier);
-
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), groupedRevision + 1);
+Mapping: S094
 
 A012 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:237
 Disposition: MATCHED
-Mapping/reason: asserts the committed lane points (destination plus the evicted occupant), the original's point-set equality. [S093]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(rawValuesAt(m_tab->document(), kNodeTick).empty());
+Mapping: S093
 
 A013 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:238
 Disposition: MATCHED
-Mapping/reason: asserts every selected node moves by the same delta and the committed points land on their destinations. [S077]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(rawValuesAt(m_tab->document(), kMovedTick), std::vector<int>({10, 20}));
+Mapping: S077
 
 A014 | AutomationEditingTest::nodeDragShiftAxisLocks | src/checks/automation/automationnodedrag.cpp:258
 Disposition: GAP
@@ -418,55 +274,15 @@ Original expression:
 
 A016 | automation_test::windowFromContent | src/checks/automation/automationnodedrag.cpp:279
 Disposition: MATCHED
-Mapping/reason: asserts the same drag commits exactly once, the observable the original's single revision advance records. [S094]
-Source context since previous assertion:
-
-      const QPoint source = automation_test::windowFromContent(
-          page(), automationInput(), inputPoint(lane, kNodeTick, kNodeValue));
-      const QPoint target =
-          horizontal ? automation_test::windowFromContent(page(), automationInput(),
-                                                          inputPoint(lane, kMovedTick, kLowValue))
-                     : automation_test::windowFromContent(page(), automationInput(),
-                                                          inputPoint(lane, kNodeTick, kLowValue));
-      const QPoint activation =
-          horizontal
-              ? source + QPoint(AutomationGeometry::resolve().nodeDragActivationDistance + 2, 0)
-              : source + QPoint(2, AutomationGeometry::resolve().nodeDragActivationDistance + 2);
-      const QPoint end = dragEnd(source, target, activation);
-      const uint64_t revision = m_tab->document().revision();
-
-      mousePress(Qt::LeftButton, source, Qt::ShiftModifier);
-      mouseMove(activation, Qt::ShiftModifier);
-      mouseMove(end, Qt::ShiftModifier);
-      mouseRelease(Qt::LeftButton, end, Qt::ShiftModifier);
-
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revision + 1);
+Mapping: S094
 
 A017 | automation_test::windowFromContent | src/checks/automation/automationnodedrag.cpp:281
 Disposition: MATCHED
-Mapping/reason: drawerAutomationPencilOwnershipAndShift drives a real Shift-modified press/move/release through the page pointer route and asserts a horizontal Shift drag locks the value while moving the tick and a vertical Shift drag locks the tick while moving the value. [S165,S166]
-Source context since previous assertion:
-
-      if (horizontal) {
-
-Original expression:
-  QVERIFY(samePoints(
-              pointsOf(m_tab->document(), adapter),
-              {{kFirstTick, kFirstValue}, {kMovedTick, kNodeValue}, {kLateTick, kLateValue}}));
+Mapping: S165, S166
 
 A018 | automation_test::windowFromContent | src/checks/automation/automationnodedrag.cpp:285
 Disposition: MATCHED
-Mapping/reason: drawerAutomationPencilOwnershipAndShift drives a real Shift-modified press/move/release through the page pointer route and asserts a horizontal Shift drag locks the value while moving the tick and a vertical Shift drag locks the tick while moving the value. [S165,S166]
-Source context since previous assertion:
-
-      } else {
-
-Original expression:
-  QVERIFY(samePoints(
-              pointsOf(m_tab->document(), adapter),
-              {{kFirstTick, kFirstValue}, {kNodeTick, kLowValue}, {kLateTick, kLateValue}}));
+Mapping: S165, S166
 
 A019 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:304
 Disposition: GAP
@@ -522,56 +338,18 @@ Original expression:
 
 A022 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:316
 Disposition: MATCHED
-Mapping/reason: drawerAutomationInflightDragInvalidation asserts switching parameters cancels the live drag, that the cancelled drag writes nothing, and that releasing after the switch commits nothing. [S161]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(frozenDocumentState() == switched);
+Mapping: S161
 
 A023 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:331
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationnodedrag.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      const QPointF sourceContent(0.0, inputPoint(lane, kNodeTick, kNodeValue).y());
-      const QPointF targetContent(0.0, inputPoint(lane, kNodeTick, 110).y());
-      const QPoint source =
-          automation_test::windowFromContent(page(), automationInput(), sourceContent);
-      const QPoint target =
-          automation_test::windowFromContent(page(), automationInput(), targetContent);
-      const int armDistance = AutomationGeometry::resolve().nodeDragActivationDistance + 2;
-      const QPoint activation =
-          source + QPoint(0, target.y() < source.y() ? -armDistance : armDistance);
-      const QPoint end = dragEnd(source, target, activation);
-      const auto effectiveMapping =
-          pointerMapping(lane, automation_test::effectiveDragContent(page(), automationInput(),
-                                                                     source, activation, end));
-      auto *scene = quickScene();
-
-Original expression:
-  QVERIFY(scene);
 
 A024 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:335
 Disposition: MATCHED
-Mapping/reason: asserts the live gesture/preview publication (hasGesture, preview points) and that releasing the cancelled drag commits nothing. [S153,S155]
-Source context since previous assertion:
-
-      const auto beforeLayer = scene->layer(songview::TimelineQuickLayer::AutomationTransient);
-      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
-      QSignalSpy edited(&tab(), &SongTab::edited);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
+Mapping: S153, S155
 
 A025 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:336
 Disposition: MATCHED
-Mapping/reason: asserts the live gesture/preview publication (hasGesture, preview points) and that releasing the cancelled drag commits nothing. [S153,S155]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(edited.isValid());
+Mapping: S153, S155
 
 A026 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:339
 Disposition: GAP
@@ -666,54 +444,23 @@ Original expression:
 
 A035 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:356
 Disposition: MATCHED
-Mapping/reason: drawerAutomationNodeDragAndPhantomOutcomes asserts a reset phantom finishes as no edit, so the document stays at its frozen state while the transient preview is live. [S086]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+Mapping: S086
 
 A036 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:360
 Disposition: MATCHED
-Mapping/reason: asserts the same drag commits exactly once, the observable the original's single revision advance records. [S094]
-Source context since previous assertion:
-
-
-      mouseRelease(Qt::LeftButton, end, Qt::NoModifier);
-
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), before.revision + 1);
+Mapping: S094
 
 A037 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:364
 Disposition: MATCHED
-Mapping/reason: asserts the committed lane points (destination plus the evicted occupant), the original's point-set equality. [S093]
-Source context since previous assertion:
-
-      const int movedValue = adapter == kTempo ? effectiveMapping.point.value : 110;
-      const std::vector<NodePoint> expected{
-          {kFirstTick, kFirstValue}, {kNodeTick, movedValue}, {kLateTick, kLateValue}};
-
-Original expression:
-  QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), expected));
+Mapping: S093
 
 A038 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:365
 Disposition: MATCHED
-Mapping/reason: asserts the phantom drag is undoable through the public history API. [S095]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));
+Mapping: S095
 
 A039 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:366
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores the lane to its prior contents; the restored document state is the observable the original's serialized-byte comparison records. [S096]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(tab().document().smf().write(), before.smf);
+Mapping: S096
 
 A040 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:385
 Disposition: GAP
@@ -753,37 +500,7 @@ Original expression:
 
 A042 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:412
 Disposition: MATCHED
-Mapping/reason: asserts the same drag commits exactly once, the observable the original's single revision advance records. [S168]
-Source context since previous assertion:
-
-      songview::EditorSelectionModel::TimeSelection selection;
-      selection.startTick = kNodeTick;
-      selection.endTick = kLateTick;
-      selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
-      selection.tempo = adapter == kTempo;
-      if (adapter == kCc)
-          selection.lanes = {{0, kController}};
-      m_tab->view().selectionModel().setTimeSelection(selection);
-      const QPoint source = automation_test::windowFromContent(
-          page(), automationInput(), inputPoint(lane, kNodeTick, kNodeValue));
-      const QPoint target = automation_test::windowFromContent(page(), automationInput(),
-                                                               inputPoint(lane, 144, kNodeValue));
-      const QPoint activation =
-          source + QPoint(AutomationGeometry::resolve().nodeDragActivationDistance + 2, 0);
-      const QPoint end = dragEnd(source, target, activation);
-      const auto effectiveMapping =
-          pointerMapping(lane, automation_test::effectiveDragContent(page(), automationInput(),
-                                                                     source, activation, end));
-      const uint64_t revision = m_tab->document().revision();
-
-      mousePress(Qt::LeftButton, source, Qt::NoModifier);
-      mouseMove(activation, Qt::NoModifier);
-      mouseMove(end, Qt::NoModifier);
-      mouseRelease(Qt::LeftButton, end, Qt::NoModifier);
-
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revision + 1);
+Mapping: S168
 
 A043 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:413
 Disposition: PARTIAL
@@ -796,17 +513,7 @@ Original expression:
 
 A044 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:419
 Disposition: MATCHED
-Mapping/reason: drawerAutomationMultiCcDragExcludesOthers asserts the committed lane points of a selected-range drag, including that unselected lanes and tempo are excluded. [S178]
-Source context since previous assertion:
-
-      const int valueDelta = adapter == kTempo ? effectiveMapping.point.value - kNodeValue : 0;
-      const std::vector<NodePoint> expected{{kFirstTick, kFirstValue},
-                                            {144, kNodeValue + valueDelta},
-                                            {240, kLateValue + valueDelta},
-                                            {kLastTick, kLastValue}};
-
-Original expression:
-  QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), expected));
+Mapping: S178
 
 A045 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:420
 Disposition: PARTIAL
@@ -828,38 +535,15 @@ Original expression:
 
 A047 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:429
 Disposition: MATCHED
-Mapping/reason: The Delete-key route is executed through the production command path: EditKeyArbiter.decide(command: .delete, surface:) returns .execute for the active time selection ([S190]), and drawerAutomationSelectionDeleteCommand deletes the covered span and advances the revision by exactly one ([S191],[S193]). The native focus chain that delivers the physical key to the band stays unproved (retained GAP obligation: no Swift predicate observes native focus).
-Source context since previous assertion:
-
-
-      setPoints(m_tab->document(), adapter, fixture);
-      m_tab->view().selectionModel().setTimeSelection(selection);
-      const uint64_t deleteRevision = m_tab->document().revision();
-      const int deleteUndo = m_tab->document().undoStack()->index();
-      keyClick(Qt::Key_Delete, Qt::NoModifier);
-
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), deleteRevision + 1);
+Mapping: S190, S191, S193
 
 A048 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:430
 Disposition: MATCHED
-Mapping/reason: drawerAutomationSelectionDeleteCommand executes the Delete of the covered span and asserts one undo restores the covered points ([S194],[S195]); the arbiter routes the Delete key to the active time selection ([S190]). Count-free: no C++ undo index correspondence is claimed. The native focus chain that delivers the physical key stays unproved (retained GAP obligation).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(m_tab->document().undoStack()->index(), deleteUndo + 1);
+Mapping: S194, S195, S190
 
 A049 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:431
 Disposition: MATCHED
-Mapping/reason: drawerAutomationSelectionDeleteCommand removes the covered span while keeping the CC points outside it ([S191],[S192]), the surviving point set the original records. The native focus chain that delivers the physical key stays unproved (retained GAP obligation).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(samePoints(pointsOf(m_tab->document(), adapter),
-                         {{kFirstTick, kFirstValue}, {kLastTick, kLastValue}}));
+Mapping: S191, S192
 
 A050 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:448
 Disposition: GAP
@@ -896,40 +580,14 @@ Original expression:
 
 A052 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:458
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationnodedrag.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      const QPoint source = automation_test::windowFromContent(
-          page(), automationInput(), inputPoint(lane, kNodeTick, kNodeValue));
-      const QPoint target = automation_test::windowFromContent(
-          page(), automationInput(), inputPoint(lane, kMovedTick, kLowValue));
-      const QPoint activation =
-          source + QPoint(AutomationGeometry::resolve().nodeDragActivationDistance + 2, 0);
-      const QPoint end = dragEnd(source, target, activation);
-      auto *scene = quickScene();
-
-Original expression:
-  QVERIFY(scene);
 
 A053 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:461
 Disposition: MATCHED
-Mapping/reason: asserts the live gesture/preview publication (hasGesture, preview points) and that releasing the cancelled drag commits nothing. [S154,S155]
-Source context since previous assertion:
-
-      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
-      QSignalSpy edited(&tab(), &SongTab::edited);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
+Mapping: S154, S155
 
 A054 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:462
 Disposition: MATCHED
-Mapping/reason: asserts the live gesture/preview publication (hasGesture, preview points) and that releasing the cancelled drag commits nothing. [S154,S155]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(edited.isValid());
+Mapping: S154, S155
 
 A055 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:468
 Disposition: GAP
@@ -967,23 +625,11 @@ Original expression:
 
 A058 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:473
 Disposition: MATCHED
-Mapping/reason: drawerAutomationCancellationAndNoOps delivers Escape to the live gesture and asserts the gesture ends synchronously with the document unchanged ([S183],[S184],[S185]); drawerAutomationKeyboardIngress asserts the same claim-and-cancel for a gesture-first Escape ([S187],[S188],[S189]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+Mapping: S183, S184, S185, S187, S188, S189
 
 A059 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:476
 Disposition: MATCHED
-Mapping/reason: drawerAutomationCancellationAndNoOps asserts a cancelled gesture leaves the document unchanged ([S185]) and that a cancelled stale gesture never writes on release ([S186]), the observables the original records after the post-cancel release.
-Source context since previous assertion:
-
-      mouseMove(end, Qt::NoModifier);
-      mouseRelease(Qt::LeftButton, end, Qt::NoModifier);
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+Mapping: S185, S186
 
 A060 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:493
 Disposition: GAP
@@ -1021,43 +667,15 @@ Original expression:
 
 A062 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:505
 Disposition: MATCHED
-Mapping/reason: asserts the live gesture/preview publication (hasGesture, preview points) and that releasing the cancelled drag commits nothing. [S154,S155]
-Source context since previous assertion:
-
-      QPoint source = automation_test::windowFromContent(page(), automationInput(),
-                                                         inputPoint(lane, kNodeTick, kNodeValue));
-      QPoint activation =
-          source + QPoint(AutomationGeometry::resolve().nodeDragActivationDistance + 2, 0);
-
-      mousePress(Qt::LeftButton, source, Qt::NoModifier);
-      mouseMove(activation, Qt::NoModifier);
-      m_tab->document().writeLanePoints(0, 11, 0, CoreTimeDefaults::kNoTick, {{0, 1}});
-      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
-      QSignalSpy edited(&tab(), &SongTab::edited);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
+Mapping: S154, S155
 
 A063 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:506
 Disposition: MATCHED
-Mapping/reason: asserts the live gesture/preview publication (hasGesture, preview points) and that releasing the cancelled drag commits nothing. [S154,S155]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(edited.isValid());
+Mapping: S154, S155
 
 A064 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:510
 Disposition: MATCHED
-Mapping/reason: asserts the document rebuild cancels the live drag synchronously and that releasing the cancelled drag commits nothing. [S155]
-Source context since previous assertion:
-
-      const FrozenDocumentState rebuilt =
-          frozenDocumentState(documentChanged.count(), edited.count());
-      mouseRelease(Qt::LeftButton, activation, Qt::NoModifier);
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == rebuilt);
+Mapping: S155
 
 A065 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:513
 Disposition: GAP
@@ -1072,20 +690,7 @@ Original expression:
 
 A066 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:522
 Disposition: MATCHED
-Mapping/reason: asserts the document rebuild cancels the live drag synchronously and that releasing the cancelled drag commits nothing. [S155]
-Source context since previous assertion:
-
-      source = automation_test::windowFromContent(page(), automationInput(),
-                                                  inputPoint(lane, kNodeTick, kNodeValue));
-      activation = source + QPoint(AutomationGeometry::resolve().nodeDragActivationDistance + 2, 0);
-      mousePress(Qt::LeftButton, source, Qt::NoModifier);
-      mouseMove(activation, Qt::NoModifier);
-      m_tab->resize(m_tab->width() + 48, m_tab->height());
-      QCoreApplication::processEvents();
-      mouseRelease(Qt::LeftButton, activation, Qt::NoModifier);
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == rebuilt);
+Mapping: S155
 
 A067 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:523
 Disposition: PARTIAL
@@ -1109,48 +714,15 @@ Original expression:
 
 A069 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:542
 Disposition: MATCHED
-Mapping/reason: asserts a fresh press after the rebuild grabs the node and the recovery drag commits its destination normally. [S157]
-Source context since previous assertion:
-
-      source = automation_test::windowFromContent(page(), automationInput(),
-                                                  inputPoint(lane, kNodeTick, kNodeValue));
-      const QPoint target = automation_test::windowFromContent(
-          page(), automationInput(), inputPoint(lane, kMovedTick, kNodeValue));
-      activation = source + QPoint(AutomationGeometry::resolve().nodeDragActivationDistance + 2, 0);
-      const QPoint end = dragEnd(source, target, activation);
-      const auto effectiveMapping =
-          pointerMapping(lane, automation_test::effectiveDragContent(page(), automationInput(),
-                                                                     source, activation, end));
-      const uint64_t recoveryRevision = m_tab->document().revision();
-      mousePress(Qt::LeftButton, source, Qt::NoModifier);
-      mouseMove(activation, Qt::NoModifier);
-      mouseMove(end, Qt::NoModifier);
-      mouseRelease(Qt::LeftButton, end, Qt::NoModifier);
-
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), recoveryRevision + 1);
+Mapping: S157
 
 A070 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:543
 Disposition: MATCHED
-Mapping/reason: asserts the grabbed node's committed destination tick/value on the same drag route. [S157]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(effectiveMapping.point.tick, kMovedTick);
+Mapping: S157
 
 A071 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:547
 Disposition: MATCHED
-Mapping/reason: asserts the committed lane points (destination plus the evicted occupant), the original's point-set equality. [S157]
-Source context since previous assertion:
-
-      const int movedValue = adapter == kTempo ? effectiveMapping.point.value : kNodeValue;
-      const std::vector<NodePoint> expected{
-          {kFirstTick, kFirstValue}, {kMovedTick, movedValue}, {kLateTick, kLateValue}};
-
-Original expression:
-  QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), expected));
+Mapping: S157
 
 Remaining original source (closing sequence and helper bodies):
 
@@ -1163,1041 +735,588 @@ does not close any A entry. Preserve their surrounding setup and order in the pa
 
 S001 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "a 24-tick document's clock lattice steps one tick"
-  report.expectEqual(Tick(1), projection.snapPolicy.clockTicks, cppID: drawerAutomationSweepStepsID,
-                         what: "a 24-tick document's clock lattice steps one tick")
 
 S002 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "a drag sweep waits for the activation distance"
-  report.expect(!sweep.slopExceeded, cppID: drawerAutomationSweepStepsID,
-                    message: "a drag sweep waits for the activation distance")
 
 S003 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "a move past the activation distance arms the sweep"
-  report.expect(sweep.slopExceeded, cppID: drawerAutomationSweepStepsID,
-                    message: "a move past the activation distance arms the sweep")
 
 S004 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "each stepped tick interpolates its value across the stroke"
-  report.expectEqual((0...10).map { "\($0):\($0 * 10)" },
-                         fixture.laneValues(sweep.points), cppID: drawerAutomationSweepStepsID,
-                         what: "each stepped tick interpolates its value across the stroke")
 
 S005 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the sweep steps every lattice tick of the stroke"
-  report.expectEqual(11, sweep.points.count, cppID: drawerAutomationSweepStepsID,
-                         what: "the sweep steps every lattice tick of the stroke")
 
 S006 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the stroke's current point is its mapped one"
-  report.expectEqual("5:50", "\(update.current.tick):\(update.current.value)", cppID: drawerAutomationSweepStepsID,
-                         what: "the stroke's current point is its mapped one")
 
 S007 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the second stroke interpolates across its own span"
-  report.expectEqual((0...5).map { "\($0):\($0 * 10)" },
-                         fixture.laneValues(update.points), cppID: drawerAutomationSweepStepsID,
-                         what: "the second stroke interpolates across its own span")
 
 S008 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the second stroke has all six lattice points"
-  report.expectEqual(6, update.points.count, cppID: drawerAutomationSweepStepsID,
-                         what: "the second stroke has all six lattice points")
 
 S009 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "a ramp sweep fills every lattice tick between its endpoints"
-  report.expectEqual(11, rampPoints.count, cppID: drawerAutomationSweepStepsID,
-                         what: "a ramp sweep fills every lattice tick between its endpoints")
 
 S010 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the ramp runs from its anchor value to its release value"
-  report.expectEqual(["0:0", "10:100"],
-                         fixture.laneValues([rampPoints[0], rampPoints[10]]), cppID: drawerAutomationSweepStepsID,
-                         what: "the ramp runs from its anchor value to its release value")
 
 S011 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the ramp's midpoint interpolates linearly"
-  report.expectEqual(50, rampPoints[5].value, cppID: drawerAutomationSweepStepsID,
-                         what: "the ramp's midpoint interpolates linearly")
 
 S012 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the completed ramp is a changed span replacement"
-  report.expect(edit != nil && !edit!.unchanged, cppID: drawerAutomationSweepStepsID,
-                    message: "the completed ramp is a changed span replacement")
 
 S013 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the ramp replacement starts at its anchor"
-  report.expectEqual(Tick(0), edit?.tickBegin ?? 99, cppID: drawerAutomationSweepStepsID,
-                         what: "the ramp replacement starts at its anchor")
 
 S014 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the ramp replacement closes one lattice step past its release"
-  report.expectEqual(Tick(11), edit?.tickEnd ?? 0, cppID: drawerAutomationSweepStepsID,
-                         what: "the ramp replacement closes one lattice step past its release")
 
 S015 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the replacement keeps the ramp's first point"
-  report.expectEqual("0:0", "\(edit?.points.first?.tick ?? 0):\(edit?.points.first?.value ?? 0)",
-                         cppID: drawerAutomationSweepStepsID, what: "the replacement keeps the ramp's first point")
 
 S016 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the completion fixture is an empty lane"
-  report.expect(emptyFacts.displayPoints.isEmpty && emptyFacts.snapshot.leadInValue == nil,
-                    cppID: drawerAutomationSweepStepsID, message: "the completion fixture is an empty lane")
 
 S017 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: function
-  report.fail(drawerAutomationSweepStepsID, "the empty-lane ramp produced no completion")
 
 S018 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the empty-lane completion changes the lane"
-  report.expect(!emptyCompletion.unchanged, cppID: drawerAutomationSweepStepsID,
-                    message: "the empty-lane completion changes the lane")
 
 S019 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the completion itself contains eleven points"
-  report.expectEqual(11, emptyCompletion.points.count, cppID: drawerAutomationSweepStepsID,
-                         what: "the completion itself contains eleven points")
 
 S020 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the completion starts at the anchor"
-  report.expectEqual(AutomationLanePoint(tick: 0, value: 0), emptyCompletion.points.first,
-                         cppID: drawerAutomationSweepStepsID, what: "the completion starts at the anchor")
 
 S021 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
 Anchor: message "the empty lane adds no trailing held point"
-  report.expectEqual(AutomationLanePoint(tick: 10, value: 100), emptyCompletion.points.last,
-                         cppID: drawerAutomationSweepStepsID, what: "the empty lane adds no trailing held point")
 
 S022 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the lattice step of this document is 24 ticks"
-  report.expectEqual(Tick(24), projection.snapPolicy.clockTicks, cppID: drawerAutomationSweepTailID,
-                         what: "the lattice step of this document is 24 ticks")
 
 S023 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: function
-  report.fail(drawerAutomationSweepTailID,
-                      "the fixture song ends at \(fixture.songEndTick), shorter than the seam")
 
 S024 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the drag over a flat lane is a changed span"
-  report.expect(dragEdit != nil && !dragEdit!.unchanged, cppID: drawerAutomationSweepTailID,
-                    message: "the drag over a flat lane is a changed span")
 
 S025 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the stroke's release point is written"
-  report.expect(dragEdit?.points.contains { $0.tick == 144 && $0.value == 25 } == true,
-                    cppID: drawerAutomationSweepTailID, message: "the stroke's release point is written")
 
 S026 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the tail re-anchors the original held value one step past the release"
-  report.expectEqual("168:85",
-                         "\(dragEdit?.points.last?.tick ?? 0):\(dragEdit?.points.last?.value ?? 0)",
-                         cppID: drawerAutomationSweepTailID,
-                         what: "the tail re-anchors the original held value one step past the release")
 
 S027 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the replacement's span covers the restored tail"
-  report.expectEqual(Tick(168), dragEdit?.tickEnd ?? 0, cppID: drawerAutomationSweepTailID,
-                         what: "the replacement's span covers the restored tail")
 
 S028 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the ramp over a flat lane is a changed span"
-  report.expect(rampEdit != nil && !rampEdit!.unchanged, cppID: drawerAutomationSweepTailID,
-                    message: "the ramp over a flat lane is a changed span")
 
 S029 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the ramp's release point is written"
-  report.expect(rampEdit?.points.contains { $0.tick == 144 && $0.value == 25 } == true,
-                    cppID: drawerAutomationSweepTailID, message: "the ramp's release point is written")
 
 S030 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the ramp's tail re-anchors the original held value too"
-  report.expectEqual("168:85",
-                         "\(rampEdit?.points.last?.tick ?? 0):\(rampEdit?.points.last?.value ?? 0)",
-                         cppID: drawerAutomationSweepTailID,
-                         what: "the ramp's tail re-anchors the original held value too")
 
 S031 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "a stroke that ends at the song's end steps to the song's end"
-  report.expectEqual(endTick, endSweep.points.last?.tick ?? 0, cppID: drawerAutomationSweepTailID,
-                         what: "a stroke that ends at the song's end steps to the song's end")
 
 S032 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "a stroke that ends at the song's end restores no tail"
-  report.expect(endEdit?.points.allSatisfy { $0.tick <= endTick } == true, cppID: drawerAutomationSweepTailID,
-                    message: "a stroke that ends at the song's end restores no tail")
 
 S033 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the sweep preview is the stepped draft alone"
-  report.expectEqual(["48:85", "72:70", "96:55", "120:40", "144:25"],
-                         committed.laneValues(live.preview), cppID: drawerAutomationSweepTailID,
-                         what: "the sweep preview is the stepped draft alone")
 
 S034 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the draft writes nothing before the release"
-  report.expectEqual(beforeRelease, committed.snapshot, cppID: drawerAutomationSweepTailID,
-                         what: "the draft writes nothing before the release")
 
 S035 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: function
-  report.fail(drawerAutomationSweepTailID, "the released sweep produced no edit")
 
 S036 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the released sweep commits once"
-  report.expect(AutomationCommit.apply(committedEdit, in: committed.document), cppID: drawerAutomationSweepTailID,
-                    message: "the released sweep commits once")
 
 S037 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the committed lane holds the stroke and its restored tail"
-  report.expectEqual(["0:85", "72:70", "96:55", "120:40", "144:25", "168:85"],
-                         committed.values(committed.modulationLane), cppID: drawerAutomationSweepTailID,
-                         what: "the committed lane holds the stroke and its restored tail")
 
 S038 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "one released sweep is one revision"
-  report.expectEqual(beforeRelease.revision + 1, committed.document.revision, cppID: drawerAutomationSweepTailID,
-                         what: "one released sweep is one revision")
 
 S039 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the sweep is undoable"
-  report.expect(committed.undo(), cppID: drawerAutomationSweepTailID, message: "the sweep is undoable")
 
 S040 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "one undo restores the flat lane"
-  report.expectEqual(["0:85"], committed.values(committed.modulationLane), cppID: drawerAutomationSweepTailID,
-                         what: "one undo restores the flat lane")
 
 S041 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
 Anchor: message "the released sweep recorded exactly one history entry"
-  report.expect(!committed.document.history.canUndo, cppID: drawerAutomationSweepTailID,
-                    message: "the released sweep recorded exactly one history entry")
 
 S042 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "Pan's neutral is 64, the centered domain's midpoint"
-  report.expectEqual(64, metadata.neutral, cppID: drawerAutomationNeutralSnapID,
-                         what: "Pan's neutral is 64, the centered domain's midpoint")
 
 S043 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "the neutral snap radius covers more than one value step"
-  report.expect(threshold > 0, cppID: drawerAutomationNeutralSnapID,
-                    message: "the neutral snap radius covers more than one value step")
 
 S044 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: function
-  report.fail(drawerAutomationNeutralSnapID, "the plot contains no pixel inside the neutral snap radius")
 
 S045 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "the unsnapped value mapping preserves tick 100"
-  report.expectEqual(Tick(100), plain.tick, cppID: drawerAutomationNeutralSnapID,
-                         what: "the unsnapped value mapping preserves tick 100")
 
 S046 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "the unsnapped value mapping keeps the near-neutral pixel value"
-  report.expectEqual(valueNear, plain.value, cppID: drawerAutomationNeutralSnapID,
-                         what: "the unsnapped value mapping keeps the near-neutral pixel value")
 
 S047 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "neutral snapping preserves tick 100"
-  report.expectEqual(Tick(100), snapped.tick, cppID: drawerAutomationNeutralSnapID,
-                         what: "neutral snapping preserves tick 100")
 
 S048 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "the near-neutral pixel snaps to 64"
-  report.expectEqual(64, snapped.value, cppID: drawerAutomationNeutralSnapID,
-                         what: "the near-neutral pixel snaps to 64")
 
 S049 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "the exact neutral maps to the original tick-200 point"
-  report.expectEqual(AutomationLanePoint(tick: 200, value: 64), exact,
-                         cppID: drawerAutomationNeutralSnapID,
-                         what: "the exact neutral maps to the original tick-200 point")
 
 S050 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "an unsnapped drag keeps the value under the pointer"
-  report.expectEqual(near, metadata.snappedValue(near, snapValue: false, plotHeight: height,
-                                                     neutralSnapRadius: radius),
-                         cppID: drawerAutomationNeutralSnapID,
-                         what: "an unsnapped drag keeps the value under the pointer")
 
 S051 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "a snapped drag lands exactly on the neutral"
-  report.expectEqual(64, metadata.snappedValue(near, snapValue: true, plotHeight: height,
-                                                   neutralSnapRadius: radius),
-                         cppID: drawerAutomationNeutralSnapID, what: "a snapped drag lands exactly on the neutral")
 
 S052 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "a pointer on the neutral stays neutral"
-  report.expectEqual(64, metadata.snappedValue(64, snapValue: true, plotHeight: height,
-                                                   neutralSnapRadius: radius),
-                         cppID: drawerAutomationNeutralSnapID, what: "a pointer on the neutral stays neutral")
 
 S053 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "a value outside the radius keeps its own value"
-  report.expectEqual(outside, metadata.snappedValue(outside, snapValue: true, plotHeight: height,
-                                                        neutralSnapRadius: radius),
-                         cppID: drawerAutomationNeutralSnapID,
-                         what: "a value outside the radius keeps its own value")
 
 S054 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "a snap only ever moves a value onto the neutral"
-  report.expectEqual(19, metadata.snappedValue(19, snapValue: true, plotHeight: height,
-                                                   neutralSnapRadius: radius),
-                         cppID: drawerAutomationNeutralSnapID,
-                         what: "a snap only ever moves a value onto the neutral")
 
 S055 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "a parameter with no neutral keeps the dragged value"
-  report.expectEqual(60, volume.snappedValue(60, snapValue: true, plotHeight: height,
-                                                 neutralSnapRadius: radius),
-                         cppID: drawerAutomationNeutralSnapID,
-                         what: "a parameter with no neutral keeps the dragged value")
 
 S056 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "a snapped press grabs the node under the pointer"
-  report.expect(fixture.page.pointerPress(x: nodeX, y: nodeY, surface: 1, button: 1, modifiers: drawerAutomationQtModifiers(modifiers)),
-                    cppID: drawerAutomationNeutralSnapID, message: "a snapped press grabs the node under the pointer")
 
 S057 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "the armed preview keeps the node's own tick"
-  report.expectEqual(Tick(24), fixture.page.previewPoints.first?.tick ?? 0, cppID: drawerAutomationNeutralSnapID,
-                         what: "the armed preview keeps the node's own tick")
 
 S058 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "the preview publishes the snapped neutral"
-  report.expectEqual(64, fixture.page.previewPoints.first?.value ?? 0, cppID: drawerAutomationNeutralSnapID,
-                         what: "the preview publishes the snapped neutral")
 
 S059 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
 Anchor: message "the snapped release writes the neutral at the node's own tick"
-  report.expectEqual(["24:64"], fixture.values(fixture.panLane), cppID: drawerAutomationNeutralSnapID,
-                         what: "the snapped release writes the neutral at the node's own tick")
 
 S060 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the fixture offers three draggable nodes"
-  report.expectEqual(3, sources.count, cppID: drawerAutomationNodeDragID,
-                         what: "the fixture offers three draggable nodes")
 
 S061 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a gesture with no target finishes as a no-op"
-  report.expectEqual(AutomationPointRelease.noOp, empty.finish().release, cppID: drawerAutomationNodeDragID,
-                         what: "a gesture with no target finishes as a no-op")
 
 S062 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "an empty gesture reports no change"
-  report.expect(!empty.finish().changed, cppID: drawerAutomationNodeDragID,
-                    message: "an empty gesture reports no change")
 
 S063 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a Shift-held stationary release is a no-op"
-  report.expectEqual(AutomationPointRelease.noOp, shiftPress.finish().release, cppID: drawerAutomationNodeDragID,
-                         what: "a Shift-held stationary release is a no-op")
 
 S064 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a Shift-held stationary release changes nothing"
-  report.expect(!shiftPress.finish().changed, cppID: drawerAutomationNodeDragID,
-                    message: "a Shift-held stationary release changes nothing")
 
 S065 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a stationary release without Shift deletes"
-  report.expectEqual(AutomationPointRelease.stationaryDelete, plainPress.finish().release,
-                         cppID: drawerAutomationNodeDragID, what: "a stationary release without Shift deletes")
 
 S066 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the stationary delete reports no move"
-  report.expect(!plainPress.finish().changed, cppID: drawerAutomationNodeDragID,
-                    message: "the stationary delete reports no move")
 
 S067 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a released stroke past the slop is a move"
-  report.expectEqual(AutomationPointRelease.move, plainPress.finish().release, cppID: drawerAutomationNodeDragID,
-                         what: "a released stroke past the slop is a move")
 
 S068 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a stroke that never moved the node changes nothing"
-  report.expect(!plainPress.finish().changed, cppID: drawerAutomationNodeDragID,
-                    message: "a stroke that never moved the node changes nothing")
 
 S069 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the moved gesture is still a move"
-  report.expectEqual(AutomationPointRelease.move, moved.release, cppID: drawerAutomationNodeDragID,
-                         what: "the moved gesture is still a move")
 
 S070 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the moved node reports a change"
-  report.expect(moved.changed, cppID: drawerAutomationNodeDragID, message: "the moved node reports a change")
 
 S071 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the reported delta is the grabbed node's own tick delta"
-  report.expectEqual(6, moved.dTick, cppID: drawerAutomationNodeDragID,
-                         what: "the reported delta is the grabbed node's own tick delta")
 
 S072 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the target's preview is the mapped destination"
-  report.expectEqual(AutomationLanePoint(tick: 30, value: 80), plainPress.targets[0].current,
-                         cppID: drawerAutomationNodeDragID, what: "the target's preview is the mapped destination")
 
 S073 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the selection releases as a move"
-  report.expectEqual(AutomationPointRelease.move, groupFinish.release,
-                         cppID: drawerAutomationNodeDragID, what: "the selection releases as a move")
 
 S074 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the moved selection reports a change"
-  report.expect(groupFinish.changed, cppID: drawerAutomationNodeDragID,
-                    message: "the moved selection reports a change")
 
 S075 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the shared delta is the grabbed node's delta"
-  report.expectEqual(6, groupFinish.dTick, cppID: drawerAutomationNodeDragID,
-                         what: "the shared delta is the grabbed node's delta")
 
 S076 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the finish reports that the whole selection moved"
-  report.expect(groupFinish.selectionDrag, cppID: drawerAutomationNodeDragID,
-                    message: "the finish reports that the whole selection moved")
 
 S077 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "every selected node moves by the same delta"
-  report.expectEqual(["30:70", "54:90"], group.targets.map { "\($0.current.tick):\($0.current.value)" },
-                         cppID: drawerAutomationNodeDragID, what: "every selected node moves by the same delta")
 
 S078 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a leftward drag clamps at tick zero without collapsing the group"
-  report.expectEqual(["0:60", "24:80"], edge.targets.map { "\($0.current.tick):\($0.current.value)" },
-                         cppID: drawerAutomationNodeDragID,
-                         what: "a leftward drag clamps at tick zero without collapsing the group")
 
 S079 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the clamped delta is what the finish reports"
-  report.expectEqual(-24, edge.finish().dTick, cppID: drawerAutomationNodeDragID,
-                         what: "the clamped delta is what the finish reports")
 
 S080 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the clamped group releases as a move"
-  report.expectEqual(AutomationPointRelease.move, edge.finish().release,
-                         cppID: drawerAutomationNodeDragID, what: "the clamped group releases as a move")
 
 S081 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the clamped group reports a change"
-  report.expect(edge.finish().changed, cppID: drawerAutomationNodeDragID,
-                    message: "the clamped group reports a change")
 
 S082 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a time lock keeps the original value"
-  report.expectEqual(80, locked.targets[0].current.value, cppID: drawerAutomationNodeDragID,
-                         what: "a time lock keeps the original value")
 
 S083 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a time lock keeps the mapped tick"
-  report.expectEqual(Tick(60), locked.targets[0].current.tick, cppID: drawerAutomationNodeDragID,
-                         what: "a time lock keeps the mapped tick")
 
 S084 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a phantom drag only ever locks the value axis"
-  report.expectEqual(AutomationAxisLock.value,
-                         phantom.update(AutomationPointDrag.Update(phase: .reset, effectiveX: 100,
-                                                                   effectiveY: 100, axisLock: .none),
-                                        mappedValue: 127),
-                         cppID: drawerAutomationNodeDragID, what: "a phantom drag only ever locks the value axis")
 
 S085 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a reset restores the phantom's source value"
-  report.expectEqual(AutomationLanePoint(tick: 24, value: 60), phantom.target.current,
-                         cppID: drawerAutomationNodeDragID, what: "a reset restores the phantom's source value")
 
 S086 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a reset phantom finishes as no edit"
-  report.expect(phantom.finish() == nil, cppID: drawerAutomationNodeDragID,
-                    message: "a reset phantom finishes as no edit")
 
 S087 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: function
-  report.fail(drawerAutomationNodeDragID, "the dragged phantom publishes no target")
 
 S088 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a phantom drag never moves in time"
-  report.expectEqual(phantomTarget.original.tick, phantomTarget.current.tick, cppID: drawerAutomationNodeDragID,
-                         what: "a phantom drag never moves in time")
 
 S089 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a phantom drag clamps into the lane's domain"
-  report.expectEqual(127, phantomTarget.current.value, cppID: drawerAutomationNodeDragID,
-                         what: "a phantom drag clamps into the lane's domain")
 
 S090 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the phantom's write names its own source tick"
-  report.expectEqual(Tick(24), phantom.move?.sourceTick ?? 0, cppID: drawerAutomationNodeDragID,
-                         what: "the phantom's write names its own source tick")
 
 S091 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: function
-  report.fail(drawerAutomationNodeDragID, "the committed drag resolved no plan")
 
 S092 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the committed drag writes once"
-  report.expect(AutomationCommit.apply(plan, in: fixture.document), cppID: drawerAutomationNodeDragID,
-                    message: "the committed drag writes once")
 
 S093 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the node lands on its destination and evicts the occupant there"
-  report.expectEqual(["48:90", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationNodeDragID,
-                         what: "the node lands on its destination and evicts the occupant there")
 
 S094 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "one drag is one revision"
-  report.expectEqual(beforeCommit.revision + 1, fixture.document.revision, cppID: drawerAutomationNodeDragID,
-                         what: "one drag is one revision")
 
 S095 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the drag is undoable"
-  report.expect(fixture.undo(), cppID: drawerAutomationNodeDragID, message: "the drag is undoable")
 
 S096 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "one undo restores the moved node and the evicted occupant"
-  report.expectEqual(["24:60", "48:80", "120:40"], fixture.values(fixture.panLane),
-                         cppID: drawerAutomationNodeDragID,
-                         what: "one undo restores the moved node and the evicted occupant")
 
 S097 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the empty lane displays its projected engine node"
-  report.expectEqual(["0:64"], promotion.laneValues(promotionFacts.displayPoints), cppID: drawerAutomationNodeDragID,
-                         what: "the empty lane displays its projected engine node")
 
 S098 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: function
-  report.fail(drawerAutomationNodeDragID, "the promotion resolved no plan")
 
 S099 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "a write on the projected node resolves to a promotion"
-  report.expect(!promotionPlan.isEmpty, cppID: drawerAutomationNodeDragID,
-                    message: "a write on the projected node resolves to a promotion")
 
 S100 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the promotion commits"
-  report.expect(AutomationCommit.apply(promotionPlan, in: promotion.document), cppID: drawerAutomationNodeDragID,
-                    message: "the promotion commits")
 
 S101 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "the projected node becomes a written event at its own tick"
-  report.expectEqual(["0:20"], promotion.values(promotion.panLane), cppID: drawerAutomationNodeDragID,
-                         what: "the projected node becomes a written event at its own tick")
 
 S102 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
 Anchor: message "one undo returns the lane to its projected node alone"
-  report.expect(promotion.undo() && promotion.values(promotion.panLane).isEmpty, cppID: drawerAutomationNodeDragID,
-                    message: "one undo returns the lane to its projected node alone")
 
 S103 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the frozen lane carries the revision it was read at"
-  report.expectEqual(7, freeze.revision, cppID: drawerAutomationPointRangeID,
-                         what: "the frozen lane carries the revision it was read at")
 
 S104 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the original two-point range is unchanged"
-  report.expect(AutomationLaneReplacement.pointRange(
-          originalPointRange, begin: 24, end: 48,
-          points: [AutomationLanePoint(tick: 24, value: 64),
-                   AutomationLanePoint(tick: 48, value: 64)]).unchanged,
-          cppID: drawerAutomationPointRangeID, message: "the original two-point range is unchanged")
 
 S105 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "dropping the original range endpoint changes it"
-  report.expect(!AutomationLaneReplacement.pointRange(
-          originalPointRange, begin: 24, end: 48,
-          points: [AutomationLanePoint(tick: 24, value: 64)]).unchanged,
-          cppID: drawerAutomationPointRangeID, message: "dropping the original range endpoint changes it")
 
 S106 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the original implicit lead-in replacement changes the lane"
-  report.expect(!leadInCompletion.unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "the original implicit lead-in replacement changes the lane")
 
 S107 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the original implicit lead-in is restored at the two-point span end"
-  report.expectEqual([AutomationLanePoint(tick: 24, value: 80),
-                          AutomationLanePoint(tick: 48, value: 20)], leadInCompletion.points,
-                         cppID: drawerAutomationPointRangeID,
-                         what: "the original implicit lead-in is restored at the two-point span end")
 
 S108 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "an identical point range is unchanged"
-  report.expect(identical.unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "an identical point range is unchanged")
 
 S109 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "a range the lane does not hold is a change"
-  report.expect(!shortened.unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "a range the lane does not hold is a change")
 
 S110 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "a held-span replacement that differs is a change"
-  report.expect(!restored.unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "a held-span replacement that differs is a change")
 
 S111 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the held span closes on the original endpoint's value"
-  report.expectEqual(["24:80", "48:60"], restored.points.map { "\($0.tick):\($0.value)" },
-                         cppID: drawerAutomationPointRangeID,
-                         what: "the held span closes on the original endpoint's value")
 
 S112 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the replacement names the last tick it covers"
-  report.expectEqual(Tick(48), restored.tickEnd, cppID: drawerAutomationPointRangeID,
-                         what: "the replacement names the last tick it covers")
 
 S113 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "a replacement the lane already holds is unchanged"
-  report.expect(flat.unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "a replacement the lane already holds is unchanged")
 
 S114 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "an unchanged replacement carries no point"
-  report.expectEqual(0, flat.points.count, cppID: drawerAutomationPointRangeID,
-                         what: "an unchanged replacement carries no point")
 
 S115 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "an empty replacement over a covered span deletes it"
-  report.expect(!deletion.unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "an empty replacement over a covered span deletes it")
 
 S116 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the deleting replacement carries no point"
-  report.expectEqual(0, deletion.points.count, cppID: drawerAutomationPointRangeID,
-                         what: "the deleting replacement carries no point")
 
 S117 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "canonicalization sorts, drops the far tick and keeps the last occupant"
-  report.expectEqual(["8:20", "24:40"],
-                         AutomationLaneReplacement.canonical(
-                             [AutomationLanePoint(tick: 24, value: 30),
-                              AutomationLanePoint(tick: 8, value: 20),
-                              AutomationLanePoint(tick: 32, value: 30),
-                              AutomationLanePoint(tick: 24, value: 40)],
-                             begin: 0, end: 30, minimum: 0, maximum: 127, priorValue: nil)
-                             .map { "\($0.tick):\($0.value)" },
-                         cppID: drawerAutomationPointRangeID,
-                         what: "canonicalization sorts, drops the far tick and keeps the last occupant")
 
 S118 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "canonicalization clamps into the domain and drops repeated values"
-  report.expectEqual(["0:0", "24:9"],
-                         AutomationLaneReplacement.canonical(
-                             [AutomationLanePoint(tick: 0, value: -4),
-                              AutomationLanePoint(tick: 9, value: -4),
-                              AutomationLanePoint(tick: 24, value: 9)],
-                             begin: 0, end: 96, minimum: 0, maximum: 9, priorValue: nil)
-                             .map { "\($0.tick):\($0.value)" },
-                         cppID: drawerAutomationPointRangeID,
-                         what: "canonicalization clamps into the domain and drops repeated values")
 
 S119 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the exclusive held lookup skips a point on the tick"
-  report.expect(AutomationLaneReplacement.held(held, at: 8, inclusive: false) == nil,
-                    cppID: drawerAutomationPointRangeID,
-                    message: "the exclusive held lookup skips a point on the tick")
 
 S120 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the inclusive held lookup takes a point on the tick"
-  report.expectEqual(20, AutomationLaneReplacement.held(held, at: 8, inclusive: true) ?? -1,
-                         cppID: drawerAutomationPointRangeID,
-                         what: "the inclusive held lookup takes a point on the tick")
 
 S121 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the held lookup walks to the last point before the tick"
-  report.expectEqual(30, AutomationLaneReplacement.held(held, at: 40, inclusive: true) ?? -1,
-                         cppID: drawerAutomationPointRangeID,
-                         what: "the held lookup walks to the last point before the tick")
 
 S122 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the held lookup reports nothing before the first"
-  report.expect(AutomationLaneReplacement.held(held, at: 4, inclusive: true) == nil,
-                    cppID: drawerAutomationPointRangeID, message: "the held lookup reports nothing before the first")
 
 S123 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "an unwritten Modulation lane leads in on its engine default"
-  report.expectEqual(0, emptyFacts.snapshot.leadInValue ?? -1, cppID: drawerAutomationPointRangeID,
-                         what: "an unwritten Modulation lane leads in on its engine default")
 
 S124 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: function
-  report.fail(drawerAutomationPointRangeID, "the pencil stroke did not start on an empty lane")
 
 S125 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the stroke writes its point and restores the lane's held value"
-  report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
-                         cppID: drawerAutomationPointRangeID,
-                         what: "the stroke writes its point and restores the lane's held value")
 
 S126 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the stroke's preview matches its completion"
-  report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.preview.points),
-                         cppID: drawerAutomationPointRangeID, what: "the stroke's preview matches its completion")
 
 S127 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "an empty lane's first stroke is a change"
-  report.expect(!stroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "an empty lane's first stroke is a change")
 
 S128 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: function
-  report.fail(drawerAutomationPointRangeID, "the pencil stroke did not start past the last point")
 
 S129 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "a stroke past the last point re-anchors that point's value"
-  report.expectEqual(["24:80", "48:20"], pastLast.laneValues(pastLastStroke.completion().points),
-                         cppID: drawerAutomationPointRangeID,
-                         what: "a stroke past the last point re-anchors that point's value")
 
 S130 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "a stroke past the last point reports a change"
-  report.expect(!pastLastStroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "a stroke past the last point reports a change")
 
 S131 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the stroke fixture selects its intended value range"
-  report.expect(committed.page.consumeMenuAction(actionId: AutomationMenuAction.range127.rawValue),
-                    cppID: drawerAutomationPointRangeID, message: "the stroke fixture selects its intended value range")
 
 S132 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "preparing the display range leaves document and history unchanged"
-  report.expectEqual(committedBefore, committed.snapshot, cppID: drawerAutomationPointRangeID,
-                         what: "preparing the display range leaves document and history unchanged")
 
 S133 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the pencil press starts a stroke"
-  report.expect(committed.page.pointerPress(x: committed.x(24), y: strokeY, surface: 1, button: 1), cppID: drawerAutomationPointRangeID,
-                    message: "the pencil press starts a stroke")
 
 S134 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the page publishes the painting gesture"
-  report.expect(committed.page.isPainting, cppID: drawerAutomationPointRangeID,
-                    message: "the page publishes the painting gesture")
 
 S135 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the pencil release commits"
-  report.expect(committed.page.pointerRelease(x: committed.x(24), y: strokeY, button: 1), cppID: drawerAutomationPointRangeID,
-                    message: "the pencil release commits")
 
 S136 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "one pencil press and release is one revision"
-  report.expectEqual(committedBefore.revision + 1, committed.document.revision, cppID: drawerAutomationPointRangeID,
-                         what: "one pencil press and release is one revision")
 
 S137 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the released stroke writes the value under the pointer"
-  report.expect(committed.values(committed.modulationLane).contains { $0.hasSuffix(":60") },
-                    cppID: drawerAutomationPointRangeID,
-                    message: "the released stroke writes the value under the pointer")
 
 S138 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the stroke is undoable"
-  report.expect(committed.undo(), cppID: drawerAutomationPointRangeID, message: "the stroke is undoable")
 
 S139 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "one undo restores the pre-stroke lane"
-  report.expectEqual(["0:20"], committed.values(committed.modulationLane), cppID: drawerAutomationPointRangeID,
-                         what: "one undo restores the pre-stroke lane")
 
 S140 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
 Anchor: message "the released stroke recorded exactly one history entry"
-  report.expect(!committed.document.history.canUndo, cppID: drawerAutomationPointRangeID,
-                    message: "the released stroke recorded exactly one history entry")
 
 S141 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift
 Anchor: message "core held-span replacement including the trailing held-value seam"
-  report.expectEqual(
-          ["0:20", "24:80", "48:60", "72:90"],
-          replacement.lanePoints(track: 0, lane: .controller(7))
-              .map { "\($0.tick):\($0.value)" },
-          cppID: "automation-domain/AutomationDomainTest::pointRangeAndPencilReplacements",
-          what: "core held-span replacement including the trailing held-value seam")
 
 S142 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift
 Anchor: message "core empty-lane replacement stores the pencil value and restored tail"
-  report.expectEqual(
-          ["24:80", "48:20"],
-          emptyLane.lanePoints(track: 0, lane: .controller(7))
-              .map { "\($0.tick):\($0.value)" },
-          cppID: "automation-domain/AutomationDomainTest::pointRangeAndPencilReplacements",
-          what: "core empty-lane replacement stores the pencil value and restored tail")
 
 S143 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift
 Anchor: message "core lane write retains the explicit post-sweep held-value seam"
-  report.expectEqual(
-          ["0:85", "144:25", "168:85"],
-          trailingHold.lanePoints(track: 0, lane: .controller(7))
-              .map { "\($0.tick):\($0.value)" },
-          cppID: "automation-domain/AutomationDomainTest::sweepFinishRestoresTrailingHeldValue",
-          what: "core lane write retains the explicit post-sweep held-value seam")
 
 S144 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
 Anchor: function
-  report.fail(id, "Pan node move resolves")
 
 S145 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
 Anchor: message "node value move records its own transaction"
-  report.expect(AutomationCommit.apply(plan, in: fx.document), cppID: id,
-                    message: "node value move records its own transaction")
 
 S146 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
 Anchor: message "the move actually changes document state"
-  report.expect(moved != beforeMove, cppID: id, message: "the move actually changes document state")
 
 S147 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
 Anchor: message "awaited undo completes"
-  report.expect(undone, cppID: id, message: "awaited undo completes")
 
 S148 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
 Anchor: message "one undo restores all four written Pan occurrences"
-  report.expectEqual(beforeMove, fx.document.state, cppID: id,
-                         what: "one undo restores all four written Pan occurrences")
 
 S149 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
 Anchor: message "awaited redo completes"
-  report.expect(redone, cppID: id, message: "awaited redo completes")
 
 S150 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
 Anchor: message "redo restores the node value move"
-  report.expectEqual(moved, fx.document.state, cppID: id, what: "redo restores the node value move")
 
 S151 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
 Anchor: message "only a second undo removes the preceding Pan sweep"
-  report.expectEqual(firstWrite, fx.document.state, cppID: id,
-                         what: "only a second undo removes the preceding Pan sweep")
 
 S152 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a press grabs the node" #1
-Swift expression:
-  report.expect(page.pointerPress(x: rebuilt.x(24), y: rebuilt.y(rebuilt.panLane, 64), surface: 1, button: 1), cppID: rebuildID, message: "a press grabs the node")
 
 S153 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the drag is live past the slop"
-Swift expression:
-  report.expect(page.hasGesture, cppID: rebuildID, message: "the drag is live past the slop")
 
 S154 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the document rebuild cancels the drag synchronously"
-Swift expression:
-  report.expect(!page.hasGesture, cppID: rebuildID,
-                message: "the document rebuild cancels the drag synchronously")
 
 S155 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "releasing the cancelled drag commits nothing"
-Swift expression:
-  report.expectEqual(afterRebuild, rebuilt.snapshot, cppID: rebuildID, what: "releasing the cancelled drag commits nothing")
 
 S156 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a fresh press grabs the node after the rebuild"
-Swift expression:
-  report.expect(page.pointerPress(x: rebuilt.x(24), y: rebuilt.y(rebuilt.panLane, 64), surface: 1, button: 1), cppID: rebuildID, message: "a fresh press grabs the node after the rebuild")
 
 S157 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the recovery drag commits normally" #1
-Swift expression:
-  report.expectEqual(["24:90", "120:40", "168:5"], rebuilt.values(rebuilt.panLane), cppID: rebuildID, what: "the recovery drag commits normally")
 
 S158 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a press grabs the node" #2
-Swift expression:
-  report.expect(switched.page.pointerPress(
-      x: switched.x(24), y: switched.y(switched.panLane, 64), surface: 1, button: 1),
-                cppID: switchID, message: "a press grabs the node")
 
 S159 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the drag is live"
-Swift expression:
-  report.expect(switched.page.hasGesture, cppID: switchID, message: "the drag is live")
 
 S160 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "switching parameters cancels the drag"
-Swift expression:
-  report.expect(!switched.page.hasGesture, cppID: switchID, message: "switching parameters cancels the drag")
 
 S161 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the cancelled drag writes nothing"
-Swift expression:
-  report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID, what: "the cancelled drag writes nothing")
 
 S162 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "releasing after the switch commits nothing"
-Swift expression:
-  report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID, what: "releasing after the switch commits nothing")
 
 S163 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a fresh press grabs the node after the switch"
-Swift expression:
-  report.expect(switched.page.pointerPress(
-      x: switched.x(24), y: switched.y(switched.panLane, 64), surface: 1, button: 1),
-                cppID: switchID, message: "a fresh press grabs the node after the switch")
 
 S164 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the recovery drag commits normally" #2
-Swift expression:
-  report.expectEqual(["24:90", "120:40"], switched.values(switched.panLane), cppID: switchID, what: "the recovery drag commits normally")
 
 S165 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
 Anchor: message "a horizontal Shift drag locks the value and moves the tick"
-Swift expression:
-  report.expect(moved.count == 2 && moved[0].value == 64 && moved[0].tick > 24, cppID: lockID, message: "a horizontal Shift drag locks the value and moves the tick")
 
 S166 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
 Anchor: message "a vertical Shift drag locks the tick and moves the value"
-Swift expression:
-  report.expect(shifted.count == 2 && shifted[0].tick == 24 && shifted[0].value != 64, cppID: lockID, message: "a vertical Shift drag locks the tick and moves the value")
 
 S167 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "selected drag moves the grabbed lane"
-Swift expression:
-  report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id, what: "selected drag moves the grabbed lane")
 
 S168 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "heterogeneous selected drag is one revision"
-Swift expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id, what: "heterogeneous selected drag is one revision")
 
 S169 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "one undo restores all selected lanes"
-Swift expression:
-  report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
 
 S170 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "the drag records exactly one history entry"
-Swift expression:
-  report.expect(!fixture.document.history.canUndo, cppID: id, message: "the drag records exactly one history entry")
 
 S171 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "stationary selection click deletes grabbed node only"
-Swift expression:
-  report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id, what: "stationary selection click deletes grabbed node only")
 
 S172 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "stationary selection click preserves other lanes"
-Swift expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id, what: "stationary selection click preserves other lanes")
 
 S173 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "a band on Tempo selects Tempo alone"
-Swift expression:
-  report.expect(page.selection?.tempo == true
-                    && page.selection?.lanes == Set([AutomationParameter.tempo]),
-                cppID: id, message: "a band on Tempo selects Tempo alone")
 
 S174 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "the band publishes a lane-scoped range"
-Swift expression:
-  report.expect(page.selection?.scope == .lanes, cppID: id, message: "the band publishes a lane-scoped range")
 
 S175 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "banding writes nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id, what: "banding writes nothing")
 
 S176 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "the tempo drag moves the tempo point"
-Swift expression:
-  report.expectEqual(["48:120"], fixture.tempoValues, cppID: id, what: "the tempo drag moves the tempo point")
 
 S177 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "the tempo drag undoes"
-Swift expression:
-  report.expect(fixture.undo(), cppID: id, message: "the tempo drag undoes")
 
 S178 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "the grabbed lane moves with the selection"
-Swift expression:
-  report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id, what: "the grabbed lane moves with the selection")
 
 S179 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "the unselected volume lane is excluded"
-Swift expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id, what: "the unselected volume lane is excluded")
 
 S180 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "tempo is excluded from the CC drag"
-Swift expression:
-  report.expectEqual(["0:120"], fixture.tempoValues, cppID: id, what: "tempo is excluded from the CC drag")
 
 S181 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "one undo restores all selected lanes"
-Swift expression:
-  report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
 
 S182 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "the drag recorded exactly one history entry"
-Swift expression:
-  report.expect(!fixture.document.history.canUndo, cppID: id, message: "the drag recorded exactly one history entry")
 
 S183 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape claims the live gesture"
-Swift expression:
-  report.expect(fixture.page.handleEscape(), cppID: drawerAutomationCancelID, message: "Escape claims the live gesture")
 
 S184 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "cancelling ends the gesture synchronously"
-Swift expression:
-  report.expect(!fixture.page.hasGesture && !fixture.page.interactionActive, cppID: drawerAutomationCancelID, message: "cancelling ends the gesture synchronously")
 
 S185 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cancelled gesture mutates nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID, what: "a cancelled gesture mutates nothing")
 
 S186 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cancelled stale gesture never writes on release"
-Swift expression:
-  report.expectEqual(afterStale, fixture.snapshot, cppID: drawerAutomationCancelID, what: "a cancelled stale gesture never writes on release")
 
 S187 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape with a live gesture claims it"
-Swift expression:
-  report.expect(precedence.page.handleEscape(), cppID: selID, message: "Escape with a live gesture claims it")
 
 S188 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape cancels the gesture first"
-Swift expression:
-  report.expect(!precedence.page.hasGesture, cppID: selID, message: "Escape cancels the gesture first")
 
 S189 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a gesture-first Escape writes nothing"
-Swift expression:
-  report.expectEqual(grabbed, precedence.snapshot, cppID: selID, what: "a gesture-first Escape writes nothing")
 
 S190 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the Delete key routes to the active time selection"
-Swift expression:
-  report.expectEqual(EditKeyDecision.execute, EditKeyArbiter.decide(command: .delete, surface: armed), cppID: keyID, what: "the Delete key routes to the active time selection")
 
 S191 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "the Delete command removes the covered span"
-Swift expression:
-  report.expect(fixture.page.consumeSelectionCommand(command: .delete), cppID: id, message: "the Delete command removes the covered span")
 
 S192 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "Delete keeps CC points outside the span"
-Swift expression:
-  report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id, what: "Delete keeps CC points outside the span")
 
 S193 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "one Delete is one revision"
-Swift expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id, what: "one Delete is one revision")
 
 S194 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "the Delete undoes"
-Swift expression:
-  report.expect(fixture.undo(), cppID: id, message: "the Delete undoes")
 
 S195 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "undo restores the covered CC point"
-Swift expression:
-  report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id, what: "undo restores the covered CC point")
 
 S196 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "an empty Delete writes nothing"
-Swift expression:
-  report.expectEqual(emptyBefore, fixture.snapshot, cppID: id, what: "an empty Delete writes nothing")
-
-Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
-src/checks/automation/AutomationPageChecks.swift:402
-  report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

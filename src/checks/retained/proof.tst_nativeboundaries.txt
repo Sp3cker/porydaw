@@ -6,22 +6,9 @@ Original SHA-256: 4e8c069ea08e4750c60976b10c20eeabf95988ef2c11e27dc8f5dd7734ca88
 Swift counterpart: none identified
 Deleted in: 97dc7fea819cb7c4a97a0dac819244ee570e993f Checkpoint T7 acceptance fixes and coverage boundaries
 
-Status and evidence
-The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This file contains no QtTest macros; each numbered entry records one explicit failure/report site of the local fail() helper (qCritical plus nonzero return), which is the file's assertion mechanism. Source context preserves setup, mode dispatch, and guards between sites verbatim. No Swift counterpart was identified for this deleted native-boundary runner: every mode exercises a native service (project service, bank lease, playback engine, Swift player, audio service, mid2agb tool, WAV export), so every entry below is NATIVE. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
-The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
-
-Execution ownership
-No Swift entry point executes the deleted native-boundary modes; no Swift fixture is paired.
-
-Fixture, sequence and row constraints
-Mode dispatch (roundtrip, savecheck, vgsavecheck, vgbankcheck, loopcheck, primecheck, exportcheck, transportcheck, trackactivitycheck) expands the fail() helper into one failure site per mode precondition and per service result; semaphore waits serialize each async service call before its site.
-Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:157
 Disposition: GAP
@@ -344,15 +331,6 @@ Original expression:
 
 A012 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:236
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/retained/tst_nativeboundaries.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-          }
-          M4AEngine engine{};
-          if (!m4a_engine_init(&engine, 48'000.0f)) {
-
-Original expression:
-              result = fail(mode, QStringLiteral("cannot initialize playback fixture engine"))
 
 A013 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:241
 Disposition: GAP

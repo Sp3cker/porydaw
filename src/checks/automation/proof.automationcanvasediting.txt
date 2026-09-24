@@ -8,60 +8,9 @@ Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; the context inventory below records its rows, loops and fixtures.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-Unresolved entries remain work.
-
-Execution and ownership
-The original swiftcore suite entrypoints invoke these paired functions in their original
-order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
-VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
-Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
-
-Verification evidence
-Provided by the controller for this worktree (not re-executed by this ledger task):
-deno task verify --filter swiftcore --verbose — PASS, 1/14 harnesses selected,
-13 skipped; swiftcore green including drawerAutomationCancellationAndNoOps,
-drawerAutomationContextAndPublicationDiagnostics and
-drawerAutomationInflightDragInvalidation, and the cited
-drawerAutomationParameterSwitchAndGhosts / drawerAutomationRestoredInteractionContracts
-predicates. The predicate line anchors below were read from that settled source.
-Sites mapped to drawerAutomationInflightDragInvalidation cppIDs belong to other
-ledgers (automationnodedrag.cpp, automationownership.cpp) and are not claimed here.
-The controller additionally reports the new drawerAutomationKeyboardIngress and
-drawerAutomationBandEscape predicates (registered at AutomationPageChecks.swift
-under the selectionClearingAndMultilaneReplacement and rightBandPreviewIsolated cppIDs)
-green in that same swiftcore run; this ledger task did not re-execute them.
-
-Fixture, sequence, data-row and loop inventory
-Each line below is an exact original source anchor. Multiline declarations, helper
-implementations, native event delivery and the complete order remain in the pinned source.
-src/checks/automation/automationcanvasediting.cpp:83 | mouseMove(activationWindow);
-src/checks/automation/automationcanvasediting.cpp:120 | keyClick(Qt::Key_Escape);
-src/checks/automation/automationcanvasediting.cpp:143 | keyClick(Qt::Key_Escape);
-src/checks/automation/automationcanvasediting.cpp:150 | QTest::addColumn<int>("routeValue");
-src/checks/automation/automationcanvasediting.cpp:151 | QTest::newRow("explicit") << static_cast<int>(CancellationRoute::Explicit);
-src/checks/automation/automationcanvasediting.cpp:152 | QTest::newRow("ungrab-mouse") << static_cast<int>(CancellationRoute::UngrabMouse);
-src/checks/automation/automationcanvasediting.cpp:153 | QTest::newRow("window-deactivated") << static_cast<int>(CancellationRoute::WindowDeactivated);
-src/checks/automation/automationcanvasediting.cpp:154 | QTest::newRow("page-hidden") << static_cast<int>(CancellationRoute::PageHidden);
-src/checks/automation/automationcanvasediting.cpp:159 | QFETCH(int, routeValue);
-src/checks/automation/automationcanvasediting.cpp:177 | mouseMove(activationWindow);
-src/checks/automation/automationcanvasediting.cpp:178 | mouseMove(targetWindow);
-src/checks/automation/automationcanvasediting.cpp:235 | for (const PlaybackBoundary &boundary :
-
-Original assertion inventory
-
 A001 | AutomationEditingTest::activationSlopDoesNotCommit | src/checks/automation/automationcanvasediting.cpp:72
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the original row-handle lookup findRow(...) and LaneHandle::valid() have no Swift ingress. The production fixture addresses the lane directly as .controller(TimeDefaults.ccPan) and every press predicate indexed below (S001, S020-S026) executes on that lane without a handle. The retired C++ check is absent from the checkout (deleted at 31ea635f) and compiled into no current target.
-Original expression:
-  QVERIFY(lane.valid())
+Mapping/reason: S020, S021, S022, S023, S024, S025, S026, S001
 
 A002 | AutomationEditingTest::activationSlopDoesNotCommit | src/checks/automation/automationcanvasediting.cpp:78
 Disposition: GAP
@@ -72,27 +21,14 @@ Original expression:
 
 A003 | AutomationEditingTest::activationSlopDoesNotCommit | src/checks/automation/automationcanvasediting.cpp:86
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/automationcanvasediting.swift :: drawerAutomationCancellationAndNoOps, exact Swift predicate below. The Swift fixture presses the node, moves below the node-drag activation distance, releases, and compares the complete document snapshot. That is the same observable as the original frozen-state equality after a drag that travelled only the activation distance; S026 asserts the same for a two-pixel jitter.
-Swift counterpart expression:
-  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
-                         what: "an armed stroke that moved no node writes nothing")
-Original expression:
-  QVERIFY(frozenDocumentState() == frozen)
+Mapping: S026
 
 A004 | AutomationEditingTest::activationSlopDoesNotCommit | src/checks/automation/automationcanvasediting.cpp:87
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/automationcanvasediting.swift :: drawerAutomationCancellationAndNoOps, exact Swift predicate below. The Swift predicate compares the whole document snapshot after a press with a sub-threshold move and release, so no point was written at any tick; the original asserts the same absence through laneValue(kBlankPointTick) == -1. Swift lane accessors report written points only, which is that sentinel renamed.
-Swift counterpart expression:
-  report.expectEqual(jitter.snapshot, drawerAutomationAutomationDocumentSnapshot(jitter.document), cppID: drawerAutomationCancelID,
-                       what: "a sub-threshold move writes nothing")
-Original expression:
-  QCOMPARE(laneValue(kBlankPointTick), -1)
 
 A005 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:95
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): findRow(...) and LaneHandle::valid() have no Swift ingress; the production fixture addresses the lane directly as .controller(TimeDefaults.ccPan) and the press and selection predicates indexed below (S020-S026, S057, S059) execute on it. The retired C++ check is absent from the checkout (deleted at 31ea635f) and compiled into no current target.
-Original expression:
-  QVERIFY(lane.valid())
+Mapping/reason: S020, S021, S022, S023, S024, S025, S026, S057, S059
 
 A006 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:103
 Disposition: PARTIAL
@@ -102,113 +38,51 @@ Original expression:
 
 A007 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:108
 Disposition: MATCHED
-Mapping/reason: S057 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts applies a lane-scoped time selection and then asserts page.selection == nil after an outside right press, before the menu opens. Same observable as the original right-press clear (the original reads the selection model, the Swift page publishes it).
-Swift counterpart expression:
-  report.expect(page.selection == nil, cppID: id,
-                  message: "outside right press clears selection before opening a menu")
-Original expression:
-  QVERIFY(!view.selectionModel().timeSelection().active())
+Mapping: S057
 
 A008 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:112
 Disposition: MATCHED
-Mapping/reason: S058 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts that the production page accepts a switch to another lane and then publishes that lane as active. Same observable as the original activateParameter({Tempo,0,0}) succeeding.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
+Mapping: S058
 
 A009 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:113
 Disposition: MATCHED
-Mapping/reason: S059 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts applies an explicit lane-scoped time selection, switches the parameter, and asserts the whole AutomationTimeSelection is unchanged; a nonempty range carrying lanes is active by construction. Same observable as the original reading timeSelection().active() after the tempo switch.
-Swift counterpart expression:
-  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
-                       what: "switching a parameter keeps the explicit selection")
-Original expression:
-  QVERIFY(view.selectionModel().timeSelection().active())
+Mapping: S059
 
 A010 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:114
 Disposition: MATCHED
-Mapping/reason: S059 and S060 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts. The AutomationTimeSelection equality compares the lane set, and S060 asserts the selected-parameter indicator survives the switch; the original compares timeSelection().lanes with the applied lanes.
-Swift counterpart expression:
-  report.expectEqual([fixture.panLane], fixture.page.selectedParameters, cppID: drawerAutomationSwitchID,
-                       what: "the inactive parameter's selection indicator survives the switch")
-Original expression:
-  QVERIFY(view.selectionModel().timeSelection().lanes == selection.lanes)
+Mapping: S059, S060
 
 A011 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:115
 Disposition: MATCHED
-Mapping/reason: S059 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts. AutomationTimeSelection equality includes the scope component, so the surviving selection is still lane-scoped; the original compares timeSelection().scope.
-Swift counterpart expression:
-  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
-                       what: "switching a parameter keeps the explicit selection")
-Original expression:
-  QCOMPARE(view.selectionModel().timeSelection().scope, selection.scope)
+Mapping: S059
 
 A012 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:116
 Disposition: MATCHED
-Mapping/reason: S059 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts. AutomationTimeSelection equality includes the range start tick, so the surviving selection keeps its start; the original compares timeSelection().startTick.
-Swift counterpart expression:
-  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
-                       what: "switching a parameter keeps the explicit selection")
-Original expression:
-  QCOMPARE(view.selectionModel().timeSelection().startTick, selection.startTick)
+Mapping: S059
 
 A013 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:117
 Disposition: MATCHED
-Mapping/reason: S059 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts. AutomationTimeSelection equality includes the range end tick, so the surviving selection keeps its end; the original compares timeSelection().endTick.
-Swift counterpart expression:
-  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
-                       what: "switching a parameter keeps the explicit selection")
-Original expression:
-  QCOMPARE(view.selectionModel().timeSelection().endTick, selection.endTick)
+Mapping: S059
 
 A014 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:122
 Disposition: MATCHED
-Mapping/reason: S061 and S062 - src/checks/automation/automationcanvasediting.swift,309 :: drawerAutomationKeyboardIngress (registered at AutomationPageChecks.swift) applies a lane-scoped selection (selectRange 20-60 on the pan lane) and delivers Escape through the page handleEscape() (S061 claims it); S062 asserts page.selection == nil. A nil AutomationTimeSelection is the cleared selection, the observable of the original !cleared.active().
-Swift counterpart expression:
-  report.expect(fixture.page.handleEscape(), cppID: selID,
-                message: "Escape with only an explicit selection claims it")
-  report.expect(fixture.page.selection == nil, cppID: selID,
-                message: "Escape clears the explicit time selection")
-Original expression:
-  QVERIFY(!cleared.active())
+Mapping: S061, S062
 
 A015 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:123
 Disposition: MATCHED
-Mapping/reason: S062 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationKeyboardIngress clears the explicit selection and asserts page.selection == nil (S061 records the Escape claim). The Swift model represents a cleared selection as absence, so no scope value survives; the original cleared.scope == Tracks reads the same cleared state.
-Swift counterpart expression:
-  report.expect(fixture.page.selection == nil, cppID: selID,
-                message: "Escape clears the explicit time selection")
-Original expression:
-  QCOMPARE(cleared.scope, songview::EditorSelectionModel::TimeSelection::Tracks)
+Mapping: S062, S061
 
 A016 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:124
 Disposition: MATCHED
-Mapping/reason: S062 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationKeyboardIngress clears the explicit selection and asserts page.selection == nil (S061 records the Escape claim), so no range start survives; the original cleared.startTick == 0 reads the same cleared state.
-Swift counterpart expression:
-  report.expect(fixture.page.selection == nil, cppID: selID,
-                message: "Escape clears the explicit time selection")
-Original expression:
-  QCOMPARE(cleared.startTick, uint64_t{0})
+Mapping: S062, S061
 
 A017 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:125
 Disposition: MATCHED
-Mapping/reason: S062 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationKeyboardIngress clears the explicit selection and asserts page.selection == nil (S061 records the Escape claim), so no range end survives; the original cleared.endTick == 0 reads the same cleared state.
-Swift counterpart expression:
-  report.expect(fixture.page.selection == nil, cppID: selID,
-                message: "Escape clears the explicit time selection")
-Original expression:
-  QCOMPARE(cleared.endTick, uint64_t{0})
+Mapping: S062, S061
 
 A018 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:126
 Disposition: MATCHED
-Mapping/reason: S062 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationKeyboardIngress clears the explicit selection and asserts page.selection == nil (S061 records the Escape claim), so no lane list survives; the original cleared.lanes.empty() reads the same cleared state.
-Swift counterpart expression:
-  report.expect(fixture.page.selection == nil, cppID: selID,
-                message: "Escape clears the explicit time selection")
-Original expression:
-  QVERIFY(cleared.lanes.empty())
+Mapping: S062, S061
 
 A019 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:130
 Disposition: PARTIAL
@@ -224,45 +98,23 @@ Original expression:
 
 A021 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:138
 Disposition: MATCHED
-Mapping/reason: S059 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts applies a lane-scoped AutomationTimeSelection and asserts page.selection equals it, so the applied lane set is reported back intact. The Swift fixture applies one lane where the original applies a non-contiguous pair; the set and read-back observable is the same.
-Swift counterpart expression:
-  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
-                       what: "switching a parameter keeps the explicit selection")
-Original expression:
-  QVERIFY(view.selectionModel().timeSelection().lanes == noncontiguous.lanes)
+Mapping: S059
 
 A022 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:142
 Disposition: MATCHED
-Mapping/reason: S059 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts applies a lane-scoped AutomationTimeSelection and asserts page.selection equals it: a replacement lane set is reported back intact, the same observable as the original replacing the lane list before its second read-back.
-Swift counterpart expression:
-  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
-                       what: "switching a parameter keeps the explicit selection")
-Original expression:
-  QVERIFY(view.selectionModel().timeSelection().lanes == noncontiguous.lanes)
+Mapping: S059
 
 A023 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:144
 Disposition: MATCHED
-Mapping/reason: S061 and S062 - src/checks/automation/automationcanvasediting.swift,309 :: drawerAutomationKeyboardIngress selects the pan lane and its Escape clears the explicit selection (page.selection == nil), the observable of the original !active() after the lane list was replaced by a non-contiguous pair. The Swift fixture selects one lane where the original replaces with a pair; the clear observable is the same, and the pre-Escape read-back stays at S059.
-Swift counterpart expression:
-  report.expect(fixture.page.selection == nil, cppID: selID,
-                message: "Escape clears the explicit time selection")
-Original expression:
-  QVERIFY(!view.selectionModel().timeSelection().active())
+Mapping: S061, S062, S059
 
 A024 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:145
 Disposition: MATCHED
-Mapping/reason: S061 and S062 - src/checks/automation/automationcanvasediting.swift,309 :: drawerAutomationKeyboardIngress selects the pan lane and its Escape clears the explicit selection (page.selection == nil), leaving no lane list, the observable of the original lanes.empty() after the non-contiguous replacement. The Swift fixture selects one lane where the original replaces with a pair; the clear observable is the same.
-Swift counterpart expression:
-  report.expect(fixture.page.selection == nil, cppID: selID,
-                message: "Escape clears the explicit time selection")
-Original expression:
-  QVERIFY(view.selectionModel().timeSelection().lanes.empty())
+Mapping: S061, S062
 
 A025 | AutomationEditingTest::additionalDragCancellationRoutesLeaveDocumentUntouched | src/checks/automation/automationcanvasediting.cpp:163
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): findRow(...) and LaneHandle::valid() have no Swift ingress; the production fixture addresses the lane directly as .controller(TimeDefaults.ccPan) and the cancellation predicates in drawerAutomationCancellationAndNoOps (S001-S026) execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and compiled into no current target.
-Original expression:
-  QVERIFY(lane.valid())
+Mapping/reason: S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026
 
 A026 | AutomationEditingTest::additionalDragCancellationRoutesLeaveDocumentUntouched | src/checks/automation/automationcanvasediting.cpp:185
 Disposition: GAP
@@ -278,580 +130,284 @@ Original expression:
 
 A028 | AutomationEditingTest::additionalDragCancellationRoutesLeaveDocumentUntouched | src/checks/automation/automationcanvasediting.cpp:198
 Disposition: MATCHED
-Mapping/reason: S005 and S019 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationCancellationAndNoOps cancels a live drag explicitly (S003-S005) and through a stale document change (S018-S019) and asserts the whole document snapshot is unchanged after the trailing release. Same observable as the original frozen-state equality across its routes; the grabber and window-deactivation route mechanics stand as A026/A027.
-Swift counterpart expression:
-  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
-                         what: "a cancelled gesture mutates nothing")
-Original expression:
-  QVERIFY(frozenDocumentState() == frozen)
+Mapping: S003, S004, S005, S018, S019
 
 A029 | AutomationEditingTest::additionalDragCancellationRoutesLeaveDocumentUntouched | src/checks/automation/automationcanvasediting.cpp:199
 Disposition: MATCHED
-Mapping/reason: S005 and S019 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationCancellationAndNoOps compares the whole document snapshot after a cancelled drag, so the lane still holds its original point at the first point tick; that is what the original findLanePoint(0, kController, kFirstPointTick, nullptr) probes. The exact lane arrays at S012/S014 pin the same points after the stationary release.
-Swift counterpart expression:
-  report.expectEqual(afterStale, fixture.snapshot, cppID: drawerAutomationCancelID,
-                         what: "a cancelled stale gesture never writes on release")
-Original expression:
-  QVERIFY2(tab().document().findLanePoint(0, kController, kFirstPointTick, nullptr),
-               qPrintable(routeName(route)))
+Mapping: S005, S019, S012, S014
 
 A030 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:207
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3 and section 4, no-ingress proof): the original guards a shared_ptr<MidiTimeline> (QTRY_VERIFY(tab().timeline())). Swift PlaybackTimeline.build is non-optional, so no failure path exists to assert; the drawer no longer resolves voice context. The retired C++ check is absent from the checkout (deleted at 31ea635f) and compiled into no current target.
-Original expression:
-  QTRY_VERIFY(tab().timeline())
 
 A031 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:208
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the drawer-hosted voice context (SongView::voiceContext(24).voiceSlot) has no Swift ingress. Slot resolution moved to src/swift/app/drawer/voicechanges/VoiceLanePolicy.swift (voiceSlotAt semantics, line 77) and no executing Swift predicate asserts a voice slot for a tick. The retired C++ check is absent from the checkout (deleted at 31ea635f).
-Original expression:
-  QTRY_COMPARE(view.voiceContext(24).voiceSlot, 3)
 
 A032 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:211
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3 and section 4, no-ingress proof): QVERIFY(timeline) guards a raw pointer to the view timeline. Swift PlaybackTimeline.build returns a non-optional value, so no failure branch exists to assert and no Swift drawer surface exposes a pointer. Source deleted at 31ea635f and compiled into no current target.
-Original expression:
-  QVERIFY(timeline)
 
 A033 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:212
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): QVERIFY(drawer) guards the native EditorDrawer widget pointer. The Swift architecture constructs its drawer page inside the fixture with no nullable drawer accessor to assert. Source deleted at 31ea635f and compiled into no current target.
-Original expression:
-  QVERIFY(drawer)
 
 A034 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:217
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): QVERIFY(velocity) guards the VelocityArea child object of the legacy automation drawer. The Swift automation page hosts no velocity area; velocity presentation is owned by the velocity page lane. Source deleted at 31ea635f and compiled into no current target.
-Original expression:
-  QVERIFY(velocity)
 
 A035 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:224
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the velocity value axis (VelocityArea::axis().map()) was a child surface of the legacy automation drawer. The Swift automation page publishes no velocity axis; the velocity page owns that presentation and its coverage is not claimed here. Source deleted at 31ea635f and compiled into no current target.
-Original expression:
-  QVERIFY(velocity->axis().map() == VelocityMap::resolve(&m_bank.voices[0], std::nullopt))
 
 A036 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:234
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the timelime sample-per-tick arithmetic the retired drawer view forwarded is asserted under its own fixture by src/checks/nativegraphics/SharedPlayheadChecks.swift :: checkPureMapping (line 279: timeline.tick(for: 24_000) == 24, i.e. 1000 samples per tick, and line 286: the sample/tick round-trip). This site is about the drawer view that no longer exists, so it retires rather than claiming that predicate as the same fixture. Source deleted at 31ea635f.
-Original expression:
-  QCOMPARE(samplesPerTick, uint64_t{1000})
 
 A037 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:244
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observation is a playhead tick presented by the legacy drawer automation page (view.setPlayheadSample then view.playheadTick). No Swift drawer page presents a playhead; the authoritative mapping is asserted by SharedPlayheadChecks.swift :: checkPureMapping (lines 279-286). Source deleted at 31ea635f and compiled into no current target.
-Original expression:
-  QCOMPARE(view.playheadTick(), boundary.tick)
 
 A038 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:246
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the half-up rounding of a fractional playhead tick into a context tick (CoreTimeDefaults::tickFromDouble(playheadTick + 0.5)) was performed for the legacy drawer page. The Swift drawer publishes no playhead and no executing predicate asserts a fractional-tick rounding rule. Source deleted at 31ea635f and compiled into no current target.
-Original expression:
-  QCOMPARE(roundedPlayhead, boundary.contextTick)
 
 A039 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:248
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): QCOMPARE(context.voice, &m_bank.voices[slot]) is C++ pointer identity into the bank voice objects. Swift resolves typed voice programs instead of exposing bank object identity, so there is no ingress for the comparison. Source deleted at 31ea635f and compiled into no current target.
-Original expression:
-  QCOMPARE(context.voice, &m_bank.voices[boundary.voiceSlot])
 
 A040 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:249
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the drawer voice context slot (DrawerPageVoiceContext::voiceSlot) has no Swift ingress; slot resolution belongs to src/swift/app/drawer/voicechanges/VoiceLanePolicy.swift and no executing Swift predicate asserts a slot for a tick. Source deleted at 31ea635f and compiled into no current target.
-Original expression:
-  QCOMPARE(context.voiceSlot, boundary.voiceSlot)
 
 A041 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:250
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the per-slot velocity axis map was a child surface of the legacy automation drawer. The Swift automation page publishes no velocity axis and the velocity page owns that presentation. Source deleted at 31ea635f and compiled into no current target.
-Original expression:
-  QVERIFY(velocity->axis().map() ==
-                  VelocityMap::resolve(&m_bank.voices[boundary.voiceSlot], std::nullopt))
 
 A042 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:257
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): QCOMPARE(stopped.voice, &m_bank.voices[3]) is C++ pointer identity into the bank voice objects, with no Swift ingress. Source deleted at 31ea635f and compiled into no current target.
-Original expression:
-  QCOMPARE(stopped.voice, &m_bank.voices[3])
 
 A043 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:258
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): QCOMPARE(stopped.voiceSlot, 3) reads the drawer voice-context slot, which has no Swift ingress; slot resolution is owned by VoiceLanePolicy.swift in the voice-changes page. Source deleted at 31ea635f and compiled into no current target.
-Original expression:
-  QCOMPARE(stopped.voiceSlot, 3)
 
 A044 | AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor | src/checks/automation/automationcanvasediting.cpp:259
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the stopped-context velocity axis map was a child surface of the legacy automation drawer and no Swift equivalent surface exists. Source deleted at 31ea635f and compiled into no current target.
-Original expression:
-  QVERIFY(velocity->axis().map() == VelocityMap::resolve(&m_bank.voices[3], std::nullopt))
-
-Swift executable assertion index
-The S entries are exact predicates already called by the suite. Their presence alone
-does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
 S001 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a press on a node grabs it"
-Swift expression:
-  report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1, button: 1),
-                    cppID: drawerAutomationCancelID, message: "a press on a node grabs it")
 
 S002 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the page publishes the live gesture"
-Swift expression:
-  report.expect(fixture.page.hasGesture && fixture.page.interactionActive, cppID: drawerAutomationCancelID,
-                    message: "the page publishes the live gesture")
 
 S003 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape claims the live gesture"
-Swift expression:
-  report.expect(fixture.page.handleEscape(), cppID: drawerAutomationCancelID,
-                    message: "Escape claims the live gesture")
 
 S004 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "cancelling ends the gesture synchronously"
-Swift expression:
-  report.expect(!fixture.page.hasGesture && !fixture.page.interactionActive, cppID: drawerAutomationCancelID,
-                    message: "cancelling ends the gesture synchronously")
 
 S005 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cancelled gesture mutates nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
-                         what: "a cancelled gesture mutates nothing")
 
 S006 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape with nothing to claim stays unhandled"
-Swift expression:
-  report.expect(!fixture.page.handleEscape(), cppID: drawerAutomationCancelID,
-                    message: "Escape with nothing to claim stays unhandled")
 
 S007 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a second press grabs the node"
-Swift expression:
-  report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1, button: 1),
-                    cppID: drawerAutomationCancelID, message: "a second press grabs the node")
 
 S008 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "an armed stroke that moved no node writes nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
-                         what: "an armed stroke that moved no node writes nothing")
 
 S009 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a Shift-held press grabs the node"
-Swift expression:
-  report.expect(fixture.page.pointerPress(x: fixture.x(120), y: fixture.y(fixture.panLane, 40),
-                                              surface: 1, button: 1, modifiers: drawerAutomationQtModifiers(.init(shift: true))), cppID: drawerAutomationCancelID,
-                    message: "a Shift-held press grabs the node")
 
 S010 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a Shift-held stationary release deletes nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
-                         what: "a Shift-held stationary release deletes nothing")
 
 S011 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a plain press grabs the node"
-Swift expression:
-  report.expect(fixture.page.pointerPress(x: fixture.x(120), y: fixture.y(fixture.panLane, 40), surface: 1, button: 1),
-                    cppID: drawerAutomationCancelID, message: "a plain press grabs the node")
 
 S012 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a plain stationary release deletes the grabbed node"
-Swift expression:
-  report.expectEqual(["24:64"], fixture.values(fixture.panLane), cppID: drawerAutomationCancelID,
-                         what: "a plain stationary release deletes the grabbed node")
 
 S013 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the stationary delete is undoable"
-Swift expression:
-  report.expect(fixture.undo(), cppID: drawerAutomationCancelID, message: "the stationary delete is undoable")
 
 S014 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "one undo restores the deleted node"
-Swift expression:
-  report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationCancelID,
-                         what: "one undo restores the deleted node")
 
 S015 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the stationary delete recorded exactly one history entry"
-Swift expression:
-  report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationCancelID,
-                    message: "the stationary delete recorded exactly one history entry")
 
 S016 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a press freezes the current revision"
-Swift expression:
-  report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1, button: 1),
-                    cppID: drawerAutomationCancelID, message: "a press freezes the current revision")
 
 S017 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the frozen facts carry the revision"
-Swift expression:
-  report.expectEqual(pressRevision, fixture.page.frozenRevision ?? 0, cppID: drawerAutomationCancelID,
-                         what: "the frozen facts carry the revision")
 
 S018 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a document change outside the gesture cancels it"
-Swift expression:
-  report.expect(!fixture.page.hasGesture, cppID: drawerAutomationCancelID,
-                    message: "a document change outside the gesture cancels it")
 
 S019 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cancelled stale gesture never writes on release"
-Swift expression:
-  report.expectEqual(afterStale, fixture.snapshot, cppID: drawerAutomationCancelID,
-                         what: "a cancelled stale gesture never writes on release")
 
 S020 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a press on an empty lane starts a sweep"
-Swift expression:
-  report.expect(empty.page.pointerPress(x: pressX, y: 60, surface: 1, button: 1), cppID: drawerAutomationCancelID,
-                    message: "a press on an empty lane starts a sweep")
 
 S021 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a press that never travelled commits nothing"
-Swift expression:
-  report.expect(!empty.page.pointerRelease(x: pressX, y: 60, button: 1), cppID: drawerAutomationCancelID,
-                    message: "a press that never travelled commits nothing")
 
 S022 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the parked press leaves the document alone"
-Swift expression:
-  report.expectEqual(emptyBefore, empty.snapshot, cppID: drawerAutomationCancelID,
-                         what: "the parked press leaves the document alone")
 
 S023 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the press parks the edit cursor at the snapped tick"
-Swift expression:
-  report.expectEqual(snapped, empty.session.editCursor, cppID: drawerAutomationCancelID,
-                         what: "the press parks the edit cursor at the snapped tick")
 
 S024 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a press grabs the node"
-Swift expression:
-  report.expect(jitter.page.pointerPress(x: jitter.x(24), y: jitter.y(jitter.panLane, 64), surface: 1, button: 1),
-                    cppID: drawerAutomationCancelID, message: "a press grabs the node")
 
 S025 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a sub-threshold move previews the untouched target"
-Swift expression:
-  report.expectEqual([Tick(24): 64], [jitter.page.previewPoints.first?.tick ?? 0:
-                                              jitter.page.previewPoints.first?.value ?? 0],
-                         cppID: drawerAutomationCancelID,
-                         what: "a sub-threshold move previews the untouched target")
 
 S026 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a sub-threshold move writes nothing"
-Swift expression:
-  report.expectEqual(jitter.snapshot, drawerAutomationAutomationDocumentSnapshot(jitter.document), cppID: drawerAutomationCancelID,
-                         what: "a sub-threshold move writes nothing")
 
 S027 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a stopped page presents the edit cursor"
-Swift expression:
-  report.expectEqual(Tick(0), fixture.page.contextTick, cppID: drawerAutomationContextID,
-                         what: "a stopped page presents the edit cursor")
 
 S028 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a stopped context consumes the published edit cursor"
-Swift expression:
-  report.expectEqual(Tick(100), fixture.page.contextTick, cppID: drawerAutomationContextID,
-                         what: "a stopped context consumes the published edit cursor")
 
 S029 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the context readout is the lane's held value there"
-Swift expression:
-  report.expectEqual(64, fixture.page.contextValue ?? -1, cppID: drawerAutomationContextID,
-                         what: "the context readout is the lane's held value there")
 
 S030 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cursor-only context move is counted"
-Swift expression:
-  report.expect(fixture.page.contextChangeCount > contextChanges, cppID: drawerAutomationContextID,
-                    message: "a cursor-only context move is counted")
 
 S031 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cursor-only publication rebuilds no static content"
-Swift expression:
-  report.expectEqual(builds, fixture.page.contentBuildCount, cppID: drawerAutomationContextID,
-                         what: "a cursor-only publication rebuilds no static content")
 
 S032 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cursor-only publication changes no document or history state"
-Swift expression:
-  report.expectEqual(cursorDocument, fixture.snapshot, cppID: drawerAutomationContextID,
-                         what: "a cursor-only publication changes no document or history state")
 
 S033 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the page consumes playing"
-Swift expression:
-  report.expect(fixture.page.playing, cppID: drawerAutomationContextID, message: "the page consumes playing")
 
 S034 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a playing context consumes the shared playhead tick"
-Swift expression:
-  report.expectEqual(Tick(50), fixture.page.contextTick, cppID: drawerAutomationContextID,
-                         what: "a playing context consumes the shared playhead tick")
 
 S035 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the playing context reads the held value at its own tick"
-Swift expression:
-  report.expectEqual(127, fixture.page.contextValue ?? -1, cppID: drawerAutomationContextID,
-                         what: "the playing context reads the held value at its own tick")
 
 S036 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the presentation is counted once"
-Swift expression:
-  report.expectEqual(presentations + 1, fixture.page.playheadPresentationCount, cppID: drawerAutomationContextID,
-                         what: "the presentation is counted once")
 
 S037 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a playhead-only update rebuilds no static content"
-Swift expression:
-  report.expectEqual(buildsBeforePlayhead, fixture.page.contentBuildCount, cppID: drawerAutomationContextID,
-                         what: "a playhead-only update rebuilds no static content")
 
 S038 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "an equal presentation is dropped"
-Swift expression:
-  report.expectEqual(presentations + 1, fixture.page.playheadPresentationCount, cppID: drawerAutomationContextID,
-                         what: "an equal presentation is dropped")
 
 S039 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a moved playhead presents again"
-Swift expression:
-  report.expectEqual(presentations + 2, fixture.page.playheadPresentationCount, cppID: drawerAutomationContextID,
-                         what: "a moved playhead presents again")
 
 S040 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "repeated playhead movement still rebuilds nothing"
-Swift expression:
-  report.expectEqual(buildsBeforePlayhead, fixture.page.contentBuildCount, cppID: drawerAutomationContextID,
-                         what: "repeated playhead movement still rebuilds nothing")
 
 S041 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a stopped transport returns to the edit cursor"
-Swift expression:
-  report.expectEqual(Tick(100), fixture.page.contextTick, cppID: drawerAutomationContextID,
-                         what: "a stopped transport returns to the edit cursor")
 
 S042 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a camera change reprojects the curve once"
-Swift expression:
-  report.expectEqual(buildsBeforeCamera + 1, fixture.page.contentBuildCount, cppID: drawerAutomationContextID,
-                         what: "a camera change reprojects the curve once")
 
 S043 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a selection change rebuilds the content it displays"
-Swift expression:
-  report.expectEqual(buildsBeforeSelection + 1, fixture.page.contentBuildCount, cppID: drawerAutomationContextID,
-                         what: "a selection change rebuilds the content it displays")
 
 S044 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the selection build is counted on its own"
-Swift expression:
-  report.expectEqual(selectionBuilds + 1, fixture.page.selectionBuildCount, cppID: drawerAutomationContextID,
-                         what: "the selection build is counted on its own")
 
 S045 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the projection marks the points inside the selection"
-Swift expression:
-  report.expect(points.contains { $0.selected } && points.contains { !$0.selected },
-                    cppID: drawerAutomationContextID,
-                    message: "the projection marks the points inside the selection")
 
 S046 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the selection marks exactly the points inside its range"
-Swift expression:
-  report.expectEqual(["0:127"], fixture.laneValues(points.filter(\.selected).map {
-          AutomationLanePoint(tick: $0.tick, value: $0.value)
-      }).count == 1 ? ["0:127"] : [], cppID: drawerAutomationContextID,
-                         what: "the selection marks exactly the points inside its range")
 
 S047 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "clearing the selection clears every indicator"
-Swift expression:
-  report.expect(cleared.allSatisfy { !$0.selected },
-                cppID: drawerAutomationContextID, message: "clearing the selection clears every indicator")
 
 S048 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the content builds accumulated across the case"
-Swift expression:
-  report.expect(fixture.page.contentBuildCount > builds, cppID: drawerAutomationContextID,
-                    message: "the content builds accumulated across the case")
 
 S049 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a hover on a node publishes the node"
-Swift expression:
-  report.expect(fixture.page.hover?.hasPoint == true, cppID: drawerAutomationContextID,
-                    message: "a hover on a node publishes the node")
 
 S050 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a node hover reads out the node's value"
-Swift expression:
-  report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: drawerAutomationContextID,
-                         what: "a node hover reads out the node's value")
 
 S051 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a hover on the background publishes the tick"
-Swift expression:
-  report.expect(fixture.page.hover?.hasPoint == false, cppID: drawerAutomationContextID,
-                    message: "a hover on the background publishes the tick")
 
 S052 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a background hover reads the value the lane holds there"
-Swift expression:
-  report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: drawerAutomationContextID,
-                         what: "a background hover reads the value the lane holds there")
 
 S053 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the hover publications are counted"
-Swift expression:
-  report.expect(fixture.page.hoverBuildCount > hoverBuilds, cppID: drawerAutomationContextID,
-                    message: "the hover publications are counted")
 
 S054 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "leaving the plot clears the hover"
-Swift expression:
-  report.expect(fixture.page.hover == nil, cppID: drawerAutomationContextID,
-                    message: "leaving the plot clears the hover")
 
 S055 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "detaching drops every published value"
-Swift expression:
-  report.expect(fixture.page.projection == nil && fixture.page.rows.isEmpty
-                        && fixture.page.selection == nil,
-                    cppID: drawerAutomationContextID, message: "detaching drops every published value")
 
 S056 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a retained command subscriber observes selection after page reattachment"
-Swift expression:
-  report.expect(copyAvailable, cppID: drawerAutomationContextID,
-                    message: "a retained command subscriber observes selection after page reattachment")
 
 S057 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "outside right press clears selection before opening a menu"
-Swift expression:
-  report.expect(page.selection == nil, cppID: id,
-                  message: "outside right press clears selection before opening a menu")
 
 S058 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "a parameter switch is accepted"
-Swift expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
 
 S059 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "switching a parameter keeps the explicit selection"
-Swift expression:
-  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
-                       what: "switching a parameter keeps the explicit selection")
 
 S060 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the inactive parameter's selection indicator survives the switch"
-Swift expression:
-  report.expectEqual([fixture.panLane], fixture.page.selectedParameters, cppID: drawerAutomationSwitchID,
-                       what: "the inactive parameter's selection indicator survives the switch")
 
 S061 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape with only an explicit selection claims it"
-Swift expression:
-  report.expect(fixture.page.handleEscape(), cppID: selID,
-                message: "Escape with only an explicit selection claims it")
 
 S062 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape clears the explicit time selection"
-Swift expression:
-  report.expect(fixture.page.selection == nil, cppID: selID,
-                message: "Escape clears the explicit time selection")
 
 S063 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "clearing the selection writes nothing"
-Swift expression:
-  report.expectEqual(selected, fixture.snapshot, cppID: selID,
-                     what: "clearing the selection writes nothing")
 
 S064 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape with a live gesture claims it"
-Swift expression:
-  report.expect(precedence.page.handleEscape(), cppID: selID,
-                message: "Escape with a live gesture claims it")
 
 S065 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape cancels the gesture first"
-Swift expression:
-  report.expect(!precedence.page.hasGesture, cppID: selID,
-                message: "Escape cancels the gesture first")
 
 S066 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the selection survives a gesture-first Escape"
-Swift expression:
-  report.expect(precedence.page.selection != nil, cppID: selID,
-                message: "the selection survives a gesture-first Escape")
 
 S067 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a gesture-first Escape writes nothing"
-Swift expression:
-  report.expectEqual(grabbed, precedence.snapshot, cppID: selID,
-                     what: "a gesture-first Escape writes nothing")
 
 S068 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the Delete key routes to the active time selection"
-Swift expression:
-  report.expectEqual(EditKeyDecision.execute, EditKeyArbiter.decide(command: .delete, surface: armed),
-                     cppID: keyID, what: "the Delete key routes to the active time selection")
 
 S069 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "an unbound key stays host-owned"
-Swift expression:
-  report.expectEqual(EditKeyDecision.decline,
-                     EditKeyArbiter.decide(command: nil, surface: armed), cppID: keyID,
-                     what: "an unbound key stays host-owned")
 
 S070 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a live gesture swallows the Delete key without acting"
-Swift expression:
-  report.expectEqual(EditKeyDecision.consume,
-                     EditKeyArbiter.decide(command: .delete, surface: held), cppID: keyID,
-                     what: "a live gesture swallows the Delete key without acting")
 
 S071 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "quiescing an idle page writes nothing"
-Swift expression:
-  report.expectEqual(quietBefore, quiet.snapshot, cppID: quietID,
-                     what: "quiescing an idle page writes nothing")
 
 S072 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the right drag arms the band"
-Swift expression:
-  report.expect(band.page.bandVisible, cppID: bandID, message: "the right drag arms the band")
 
 S073 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape claims the live band"
-Swift expression:
-  report.expect(band.page.handleEscape(), cppID: bandID, message: "Escape claims the live band")
 
 S074 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape drops the band"
-Swift expression:
-  report.expect(!band.page.bandVisible, cppID: bandID, message: "Escape drops the band")
 
 S075 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
 Anchor: message "dropping the band writes nothing"
-Swift expression:
-  report.expectEqual(bandBefore, band.snapshot, cppID: bandID,
-                     what: "dropping the band writes nothing")
 
 S076 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
 Anchor: message "no pan owns the band scenario"
-Swift expression:
-  report.expect(!band.page.isPanning, cppID: bandID,
-                  message: "no pan owns the band scenario")
 
 S077 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
 Anchor: message "no gesture owns the band scenario"
-Swift expression:
-  report.expect(!band.page.hasGesture, cppID: bandID,
-                  message: "no gesture owns the band scenario")

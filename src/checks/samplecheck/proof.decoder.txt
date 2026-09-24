@@ -5,36 +5,10 @@ Original: src/checks/samplecheck/decoder.cpp
 Original SHA-256: 567e1efd7c3739345c23cadd4fd8ebbc5b9c422c74e6fd252454472f5f1e0d03
 Swift counterpart: none identified
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards, refusal oracles,
-and loop bodies. Source context preserves setup, rows, loops, and guards between
-assertions verbatim. No Swift counterpart file was identified for this suite, so no
-S predicates exist and no Swift execution is claimed.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted window.
-GAP identifies an original predicate without a replacement assertion.
-Methods cover PCM width decoding (u8/s16/s24/f32 branches), stereo downmix policy with sub-float precision, AIFF extended-80 rates and MARK/INST loops, refusal boundaries, lossy/lossless codec containers with golden hashes, codec refusals, and the optional external corpus comparison.
 Inventory: 93 sites across 7 test methods (compressedContainers, compressedRefusals, decodeAiff, decodeRefusalBoundaries, decodeStereoPolicy, decodeWidths, optionalCorpus). Tally: 93 GAP, 0 NATIVE, 0 MATCHED, 0 PARTIAL.
 
-Verification
 Command: deno task verify --filter samplecheck --verbose
 Result: pending integrated run.
-
-Execution and ownership
-No Swift entry points execute these checks. Retained native execution owns this suite:
-the samplecheck harness via the Verification command above. Shared fixture construction
-lives in src/checks/samplecheck/fixtures.h and src/checks/samplecheck/fixtures.cpp; those
-files carry no assertion sites (see Shared helpers).
-
-Fixture, sequence and row constraints
-decodeWidths_data expands 4 widths; each width takes an early-return branch, so only that branch's sites execute per row, ending in the QFAIL default for unknown widths. decodeRefusalBoundaries_data expands 3 rows (lying size accepted; garbage and AIFC refused with the early return). compressedContainers_data expands 3 codecs with per-codec branches plus a shared FLAC pipeline tail owned by the flac row. Frame-compare loops expand single sites over 64/4/200/500 frames; downmix loops assert per-frame bounds.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | SampleProcessingTest::decodeWidths | src/checks/samplecheck/decoder.cpp:39
 Disposition: GAP

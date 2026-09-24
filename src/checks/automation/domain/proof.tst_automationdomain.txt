@@ -15,915 +15,323 @@ Fixture and execution: runAutomationPageChecks executes the original legacy reso
 History caveat: Swift verifies consumer-visible document/lane state and public history traversal; the retired native Qt setup error string is not a Swift result and no test-only accessor is added.
 Registered run path: src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks -> src/checks/workspace/SessionChecks.swift :: runProjectSessionSuite -> projectSession (swiftcore suite 10); counterpart compiled in src/checks/CMakeLists.txt :: swift_core_check. The deleted original is absent from native CMake/checkcatalog.
 
-Fixture, sequence, data-row and loop inventory
-Each line below is an exact original source anchor. Multiline declarations, helper
-implementations, native event delivery and the complete order remain in the pinned source.
-src/checks/automation/domain/tst_automationdomain.cpp:48 | QVERIFY2(m_document->adoptSmf(std::move(smf), song, &error), qPrintable(error));
-src/checks/automation/domain/tst_automationdomain.cpp:78 | for (std::size_t index = 0; index < actual.size(); ++index) {
-src/checks/automation/domain/tst_automationdomain.cpp:90 | for (const DocLanePoint &point : document.lanePoints(track, controller)) {
-src/checks/automation/domain/tst_automationdomain.cpp:107 | void AutomationDomainTest::setTempo(SongDocument &document, const std::vector<TempoPoint> &points)
-src/checks/automation/domain/tst_automationdomain.cpp:117 | void AutomationDomainTest::setLane(SongDocument &document, int track, uint8_t controller,
-src/checks/automation/domain/tst_automationdomain.cpp:134 | void AutomationDomainTest::setUniquePoints(SongDocument &document, int adapterKind,
-src/checks/automation/domain/tst_automationdomain.cpp:140 | for (const NodePoint &point : points)
-src/checks/automation/domain/tst_automationdomain.cpp:142 | setTempo(document, tempo);
-src/checks/automation/domain/tst_automationdomain.cpp:147 | for (const NodePoint &point : points)
-src/checks/automation/domain/tst_automationdomain.cpp:149 | setLane(document, kTrack, kController, values);
-src/checks/automation/domain/tst_automationdomain.cpp:209 | QTest::addColumn<int>("adapterKind");
-src/checks/automation/domain/tst_automationdomain.cpp:210 | QTest::newRow("tempo") << kTempo;
-src/checks/automation/domain/tst_automationdomain.cpp:211 | QTest::newRow("cc") << kCc;
-src/checks/automation/domain/tst_automationdomain.cpp:216 | QFETCH(int, adapterKind);
-src/checks/automation/domain/tst_automationdomain.cpp:225 | setTempo(doc, {tempoPoint(288, 110), tempoPoint(0, 120), tempoPoint(96, 150)});
-src/checks/automation/domain/tst_automationdomain.cpp:245 | QFETCH(int, adapterKind);
-src/checks/automation/domain/tst_automationdomain.cpp:256 | setTempo(doc, {tempoPoint(0, 150), {96, kFractionalTempoUs}});
-src/checks/automation/domain/tst_automationdomain.cpp:294 | QFETCH(int, adapterKind);
-src/checks/automation/domain/tst_automationdomain.cpp:300 | const std::vector<NodePoint> fixture{{0, 120}, {96, 100}, {288, 110}};
-src/checks/automation/domain/tst_automationdomain.cpp:301 | setUniquePoints(doc, adapterKind, fixture);
-src/checks/automation/domain/tst_automationdomain.cpp:312 | QVERIFY(undoRedoRestores(before, fixture, {{0, 120}, {288, 110}}, lane));
-src/checks/automation/domain/tst_automationdomain.cpp:315 | setLane(doc, kTrack, kController, {{0, 64}});
-src/checks/automation/domain/tst_automationdomain.cpp:335 | QFETCH(int, adapterKind);
-src/checks/automation/domain/tst_automationdomain.cpp:343 | setTempo(doc, {{96, kPreservedTempoUs}, tempoPoint(288, 110)});
-src/checks/automation/domain/tst_automationdomain.cpp:367 | setLane(doc, kTrack, kController, {{288, 40}});
-src/checks/automation/domain/tst_automationdomain.cpp:390 | QFETCH(int, adapterKind);
-src/checks/automation/domain/tst_automationdomain.cpp:399 | setTempo(doc, {{96, kPreservedTempoUs}, tempoPoint(288, 110)});
-src/checks/automation/domain/tst_automationdomain.cpp:410 | setLane(doc, kTrack, kController, {{288, 40}});
-src/checks/automation/domain/tst_automationdomain.cpp:431 | QFETCH(int, adapterKind);
-src/checks/automation/domain/tst_automationdomain.cpp:446 | const std::vector<NodePoint> fixture{{0, 120}, {96, 100}, {288, 110}};
-src/checks/automation/domain/tst_automationdomain.cpp:447 | setUniquePoints(doc, adapterKind, fixture);
-src/checks/automation/domain/tst_automationdomain.cpp:455 | QVERIFY(undoRedoRestores(before, fixture, replacement, lane));
-src/checks/automation/domain/tst_automationdomain.cpp:461 | QVERIFY(undoRedoRestores(clearBefore, fixture, {}, lane));
-src/checks/automation/domain/tst_automationdomain.cpp:464 | setTempo(doc, {{96, kFractionalTempoUs}});
-src/checks/automation/domain/tst_automationdomain.cpp:478 | setLane(doc, kTrack, 7, {});
-src/checks/automation/domain/tst_automationdomain.cpp:479 | setLane(doc, kTrack, 10, {});
-src/checks/automation/domain/tst_automationdomain.cpp:480 | setLane(doc, kTrack, 1, {});
-src/checks/automation/domain/tst_automationdomain.cpp:481 | setLane(doc, kTrack, DOC_CC_BEND, {});
-src/checks/automation/domain/tst_automationdomain.cpp:509 | setLane(doc, kTrack, CoreTimeDefaults::kCcModType, {{0, 7}});
-
-Original assertion inventory
-
 A001 | AutomationDomainTest::init | src/checks/automation/domain/tst_automationdomain.cpp:48
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: The C++ adoptSmf bool/error-string guard has no Swift ingress: the deleted, uncompiled C++ original was the only caller here, while SongDocument(file:) non-throwingly constructs the matching division-24, one-program-track, end-9216 fixture without a failure result. Construction alone does not MATCH this setup site. The actual postconditions remain asserted by legacyMetadataRows (A002/A003); this retires only the Qt setup-return representation, not document behavior.
-Original expression:
-  QVERIFY2(m_document->adoptSmf(std::move(smf), song, &error), qPrintable(error))
 
 A002 | AutomationDomainTest::init | src/checks/automation/domain/tst_automationdomain.cpp:49
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(fixture.document.engineTracks.usedTrackCount == 1, 49, row: row)
-Original expression:
-  QCOMPARE(m_document->engineTrackCount(), 1)
 
 A003 | AutomationDomainTest::init | src/checks/automation/domain/tst_automationdomain.cpp:50
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(fixture.document.engineTracks.tracks[0].midiChunk == 0, 50, row: row)
-Original expression:
-  QCOMPARE(m_document->smfTrackFor(kTrack), 0)
 
 A004 | AutomationDomainTest::effectivePoints | src/checks/automation/domain/tst_automationdomain.cpp:223
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(fixture.points.isEmpty, 223, row: row)
-Original expression:
-  QVERIFY(lane.points().empty())
 
 A005 | AutomationDomainTest::effectivePoints | src/checks/automation/domain/tst_automationdomain.cpp:226
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(fixture.points == ["0:120", "96:150", "288:110"], 226, row: row)
-Original expression:
-  QVERIFY(samePoints(lane.points(), {{0, 120}, {96, 150}, {288, 110}}))
 
 A006 | AutomationDomainTest::effectivePoints | src/checks/automation/domain/tst_automationdomain.cpp:234
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(fixture.points == ["0:64", "96:20", "288:40"], 234, row: row)
-Original expression:
-  QVERIFY(samePoints(lane.points(), {{0, 64}, {96, 20}, {288, 40}}))
 
 A007 | AutomationDomainTest::effectivePoints | src/checks/automation/domain/tst_automationdomain.cpp:235
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(fixture.raw(96) == [10, 20], 235, row: row)
-Original expression:
-  QVERIFY(rawValuesAt(doc, kTrack, kController, 96) == (std::vector<int>{10, 20}))
 
 A008 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:253
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(AutomationCatalog.title(parameter) == "Tempo (BPM)", 253, row: row)
-Original expression:
-  QCOMPARE(lane.title(), QCoreApplication::translate("AutomationCanvas", "Tempo (BPM)"))
 
 A009 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:254
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(metadata.minimum == 20, 254, row: row)
-Original expression:
-  QCOMPARE(lane.minimumValue(), CoreTimeDefaults::kMinTempoBpm)
 
 A010 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:255
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(metadata.maximum == 255, 255, row: row)
-Original expression:
-  QCOMPARE(lane.maximumValue(), CoreTimeDefaults::kMaxTempoBpm)
 
 A011 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:258
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(metadata.valueText(150) == "150", 258, row: row)
-Original expression:
-  QCOMPARE(lane.valueText(150), QStringLiteral("150"))
 
 A012 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:259
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(metadata.valueText(fractional) == String(fractional), 259, row: row)
-Original expression:
-  QCOMPARE(lane.valueText(fractional), QString::number(fractional))
 
 A013 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:260
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(fixture.points == ["0:150", "96:\(fractional)"], 260, row: row)
-Original expression:
-  QVERIFY(samePoints(lane.points(), {{0, 150}, {96, fractional}}))
 
 A014 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:263
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(bend.minimum == -8192, 263, row: row)
-Original expression:
-  QCOMPARE(bend.minimumValue(), CoreTimeDefaults::kMinBendValue)
 
 A015 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:264
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(bend.maximum == 8191, 264, row: row)
-Original expression:
-  QCOMPARE(bend.maximumValue(), CoreTimeDefaults::kMaxBendValue)
 
 A016 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:266
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(modType.minimum == 0, 266, row: row)
-Original expression:
-  QCOMPARE(modType.minimumValue(), 0)
 
 A017 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:267
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(modType.maximum == 2, 267, row: row)
-Original expression:
-  QCOMPARE(modType.maximumValue(), 2)
 
 A018 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:272
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(prompt.minimum == -64, 272, row: row)
-Original expression:
-  QCOMPARE(prompt.minimum, -64)
 
 A019 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:273
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(prompt.maximum == 63, 273, row: row)
-Original expression:
-  QCOMPARE(prompt.maximum, 63)
 
 A020 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:274
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(prompt.initialValue == 0, 274, row: row)
-Original expression:
-  QCOMPARE(prompt.initialValue, 0)
 
 A021 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:275
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(tune.neutral == 64, 275, row: row)
-Original expression:
-  QCOMPARE(fineTune.neutralValue(), 64)
 
 A022 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:280
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(tuneSnapshot.displaySeries.map { "\($0.tick):\($0.value)" } == ["0:0", "48:64", "96:127"], 280, row: row)
-Original expression:
-  QVERIFY(samePoints(fineTune.points(), {{0, 0}, {48, 64}, {96, 127}}))
 
 A023 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:281
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(bend.neutral == 0, 281, row: row)
-Original expression:
-  QCOMPARE(bend.neutralValue(), 0)
 
 A024 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:282
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(bend.prompt(storedValue: 0).storedOffset == 0, 282, row: row)
-Original expression:
-  QCOMPARE(bend.valuePrompt(0).storedOffset, 0)
 
 A025 | AutomationDomainTest::rangesAndSelection | src/checks/automation/domain/tst_automationdomain.cpp:283
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(modType.neutral == nil, 283, row: row)
-Original expression:
-  QCOMPARE(modType.neutralValue(), -1)
 
 A026 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:303
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(!deletion.delete([]), 303)
-Original expression:
-  QVERIFY(!applyDeletes(doc, adapterKind, {}))
 
 A027 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:304
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(deletion.snapshot == beforeDelete, 304)
-Original expression:
-  QVERIFY(snapshot() == before)
 
 A028 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:305
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(!deletion.delete([99999]), 305)
-Original expression:
-  QVERIFY(!applyDeletes(doc, adapterKind, {99999}))
 
 A029 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:306
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(deletion.snapshot == beforeDelete, 306)
-Original expression:
-  QVERIFY(snapshot() == before)
 
 A030 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:307
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(deletion.delete([96]), 307)
-Original expression:
-  QVERIFY(applyDeletes(doc, adapterKind, {96}))
 
 A031 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:308
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity.
-Swift counterpart expression:
-  expect(deletion.oneEdit(beforeDelete), 308)
-Original expression:
-  QVERIFY(isOneEdit(before, snapshot()))
 
 A032 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:309
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(deletion.points == ["0:120", "288:110"], 309)
-Original expression:
-  QVERIFY(samePoints(lane.points(), {{0, 120}, {288, 110}}))
 
 A033 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:311
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(deletion.raw(96).isEmpty, 311)
-Original expression:
-  QVERIFY(rawValuesAt(doc, kTrack, kController, 96).empty())
 
 A034 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:312
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replay performs undo→redo→undo and compares bytes, prior/new history identities, and every ordered point; this replaces private Qt stack-index introspection.
-Swift counterpart expression:
-  expect(deletion.replay(beforeDelete, ["0:120", "96:100", "288:110"],
-                                 ["0:120", "288:110"]), 312)
-Original expression:
-  QVERIFY(undoRedoRestores(before, fixture, {{0, 120}, {288, 110}}, lane))
 
 A035 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:320
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(deletion.delete([96]), 320)
-Original expression:
-  QVERIFY(applyDeletes(doc, adapterKind, {96}))
 
 A036 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:321
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity.
-Swift counterpart expression:
-  expect(deletion.oneEdit(groupedBefore), 321)
-Original expression:
-  QVERIFY(isOneEdit(groupedBefore, snapshot()))
 
 A037 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:322
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(deletion.points == ["0:64"], 322)
-Original expression:
-  QVERIFY(samePoints(lane.points(), {{0, 64}}))
 
 A038 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:323
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(deletion.raw(96).isEmpty, 323)
-Original expression:
-  QVERIFY(rawValuesAt(doc, kTrack, kController, 96).empty())
 
 A039 | AutomationDomainTest::deletes | src/checks/automation/domain/tst_automationdomain.cpp:324
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replay performs undo→redo→undo and compares bytes, prior/new history identities, and every ordered point; this replaces private Qt stack-index introspection.
-Swift counterpart expression:
-  expect(deletion.replay(groupedBefore, groupedPoints, ["0:64"]), 324)
-Original expression:
-  QVERIFY(undoRedoRestores(groupedBefore, groupedPoints, {{0, 64}}, lane))
 
 A040 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:346
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(!moving.move([]), parameter.isTempo ? 346 : 372)
-Original expression:
-  QVERIFY(!applyMoves(doc, adapterKind, {}))
 
 A041 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:347
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.snapshot == movingBefore, parameter.isTempo ? 347 : 373)
-Original expression:
-  QVERIFY(snapshot() == before)
 
 A042 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:348
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(!moving.move([(99999, 192, movedValue)]), parameter.isTempo ? 348 : 374)
-Original expression:
-  QVERIFY(!applyMoves(doc, adapterKind, {{99999, {192, 120}}}))
 
 A043 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:349
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.snapshot == movingBefore, parameter.isTempo ? 349 : 375)
-Original expression:
-  QVERIFY(snapshot() == before)
 
 A044 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:351
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.move([(96, 192, movedValue)]), parameter.isTempo ? 351 : 376)
-Original expression:
-  QVERIFY(applyMoves(doc, adapterKind, {{96, {192, preservedBpm}}}))
 
 A045 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:352
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity.
-Swift counterpart expression:
-  expect(moving.oneEdit(movingBefore), parameter.isTempo ? 352 : 377)
-Original expression:
-  QVERIFY(isOneEdit(before, snapshot()))
 
 A046 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:353
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.points == movedPoints, parameter.isTempo ? 353 : 378)
-Original expression:
-  QVERIFY(samePoints(lane.points(), {{192, preservedBpm}, {288, 110}}))
 
 A047 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:354
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.document.state.tempo.first?.microsecondsPerQuarterNote == 499999, 354)
-Original expression:
-  QCOMPARE(doc.tempoPoints().front().microsecondsPerQuarterNote, kPreservedTempoUs)
 
 A048 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:355
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replay performs undo→redo→undo and compares bytes, prior/new history identities, and every ordered point; this replaces private Qt stack-index introspection.
-Swift counterpart expression:
-  expect(moving.replay(movingBefore, movingPoints, movedPoints), parameter.isTempo ? 355 : 380)
-Original expression:
-  QVERIFY(undoRedoRestores(before, beforePoints, {{192, preservedBpm}, {288, 110}}, lane))
 
 A049 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:359
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.move([(96, 192, 140)]), 359)
-Original expression:
-  QVERIFY(applyMoves(doc, adapterKind, {{96, {192, 140}}}))
 
 A050 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:360
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity.
-Swift counterpart expression:
-  expect(moving.oneEdit(rewriteBefore), 360)
-Original expression:
-  QVERIFY(isOneEdit(rewriteBefore, snapshot()))
 
 A051 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:361
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.document.state.tempo.first?.microsecondsPerQuarterNote
-                  == TimeDefaults.microsecondsPerQuarterNote(forBPM: 140), 361)
-Original expression:
-  QCOMPARE(doc.tempoPoints().front().microsecondsPerQuarterNote, tempoUsForBpm(140))
 
 A052 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:362
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replay performs undo→redo→undo and compares bytes, prior/new history identities, and every ordered point; this replaces private Qt stack-index introspection.
-Swift counterpart expression:
-  expect(moving.replay(rewriteBefore, rewritePoints, ["192:140", "288:110"]), 362)
-Original expression:
-  QVERIFY(
-              undoRedoRestores(rewriteBefore, rewriteBeforePoints, {{192, 140}, {288, 110}}, lane))
 
 A053 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:372
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(!moving.move([]), parameter.isTempo ? 346 : 372)
-Original expression:
-  QVERIFY(!applyMoves(doc, adapterKind, {}))
 
 A054 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:373
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.snapshot == movingBefore, parameter.isTempo ? 347 : 373)
-Original expression:
-  QVERIFY(snapshot() == before)
 
 A055 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:374
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(!moving.move([(99999, 192, movedValue)]), parameter.isTempo ? 348 : 374)
-Original expression:
-  QVERIFY(!applyMoves(doc, adapterKind, {{99999, {192, 20}}}))
 
 A056 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:375
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.snapshot == movingBefore, parameter.isTempo ? 349 : 375)
-Original expression:
-  QVERIFY(snapshot() == before)
 
 A057 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:376
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.move([(96, 192, movedValue)]), parameter.isTempo ? 351 : 376)
-Original expression:
-  QVERIFY(applyMoves(doc, adapterKind, {{96, {192, 20}}}))
 
 A058 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:377
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity.
-Swift counterpart expression:
-  expect(moving.oneEdit(movingBefore), parameter.isTempo ? 352 : 377)
-Original expression:
-  QVERIFY(isOneEdit(before, snapshot()))
 
 A059 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:378
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.points == movedPoints, parameter.isTempo ? 353 : 378)
-Original expression:
-  QVERIFY(samePoints(lane.points(), {{192, 20}, {288, 40}}))
 
 A060 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:379
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. Failure-first reproduced missing raw duplicate values; the resolver and RangeEdit insertion fix passes these unchanged predicates, preserving [10,20].
-Swift counterpart expression:
-  expect(moving.raw(192) == [10, 20], 379)
-Original expression:
-  QVERIFY(rawValuesAt(doc, kTrack, kController, 192) == (std::vector<int>{10, 20}))
 
 A061 | AutomationDomainTest::moves | src/checks/automation/domain/tst_automationdomain.cpp:380
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replay performs undo→redo→undo and compares bytes, prior/new history identities, and every ordered point; this replaces private Qt stack-index introspection.
-Swift counterpart expression:
-  expect(moving.replay(movingBefore, movingPoints, movedPoints), parameter.isTempo ? 355 : 380)
-Original expression:
-  QVERIFY(undoRedoRestores(before, beforePoints, {{192, 20}, {288, 40}}, lane))
 
 A062 | AutomationDomainTest::moveCollisions | src/checks/automation/domain/tst_automationdomain.cpp:402
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.move([(96, destination, movedValue)]), parameter.isTempo ? 402 : 417)
-Original expression:
-  QVERIFY(applyMoves(doc, adapterKind, {{96, {288, preservedBpm}}}))
 
 A063 | AutomationDomainTest::moveCollisions | src/checks/automation/domain/tst_automationdomain.cpp:403
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity.
-Swift counterpart expression:
-  expect(moving.oneEdit(collisionBefore), parameter.isTempo ? 403 : 418)
-Original expression:
-  QVERIFY(isOneEdit(before, snapshot()))
 
 A064 | AutomationDomainTest::moveCollisions | src/checks/automation/domain/tst_automationdomain.cpp:404
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.points == collisionAfter, parameter.isTempo ? 404 : 419)
-Original expression:
-  QVERIFY(samePoints(lane.points(), {{288, preservedBpm}}))
 
 A065 | AutomationDomainTest::moveCollisions | src/checks/automation/domain/tst_automationdomain.cpp:405
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.document.state.tempo.first?.microsecondsPerQuarterNote == 499999, 405)
-Original expression:
-  QCOMPARE(doc.tempoPoints().front().microsecondsPerQuarterNote, kPreservedTempoUs)
 
 A066 | AutomationDomainTest::moveCollisions | src/checks/automation/domain/tst_automationdomain.cpp:406
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replay performs undo→redo→undo and compares bytes, prior/new history identities, and every ordered point; this replaces private Qt stack-index introspection.
-Swift counterpart expression:
-  expect(moving.replay(collisionBefore, collisionPoints, collisionAfter), parameter.isTempo ? 406 : 421)
-Original expression:
-  QVERIFY(undoRedoRestores(before, beforePoints, {{288, preservedBpm}}, lane))
 
 A067 | AutomationDomainTest::moveCollisions | src/checks/automation/domain/tst_automationdomain.cpp:417
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.move([(96, destination, movedValue)]), parameter.isTempo ? 402 : 417)
-Original expression:
-  QVERIFY(applyMoves(doc, adapterKind, {{96, {192, 20}}}))
 
 A068 | AutomationDomainTest::moveCollisions | src/checks/automation/domain/tst_automationdomain.cpp:418
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity.
-Swift counterpart expression:
-  expect(moving.oneEdit(collisionBefore), parameter.isTempo ? 403 : 418)
-Original expression:
-  QVERIFY(isOneEdit(before, snapshot()))
 
 A069 | AutomationDomainTest::moveCollisions | src/checks/automation/domain/tst_automationdomain.cpp:419
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(moving.points == collisionAfter, parameter.isTempo ? 404 : 419)
-Original expression:
-  QVERIFY(samePoints(lane.points(), {{192, 20}, {288, 40}}))
 
 A070 | AutomationDomainTest::moveCollisions | src/checks/automation/domain/tst_automationdomain.cpp:420
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. Failure-first reproduced missing raw duplicate values; the resolver and RangeEdit insertion fix passes these unchanged predicates, preserving [10,20].
-Swift counterpart expression:
-  expect(moving.raw(192) == [10, 20], 420)
-Original expression:
-  QVERIFY(rawValuesAt(doc, kTrack, kController, 192) == (std::vector<int>{10, 20}))
 
 A071 | AutomationDomainTest::moveCollisions | src/checks/automation/domain/tst_automationdomain.cpp:421
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replay performs undo→redo→undo and compares bytes, prior/new history identities, and every ordered point; this replaces private Qt stack-index introspection.
-Swift counterpart expression:
-  expect(moving.replay(collisionBefore, collisionPoints, collisionAfter), parameter.isTempo ? 406 : 421)
-Original expression:
-  QVERIFY(undoRedoRestores(before, beforePoints, {{192, 20}, {288, 40}}, lane))
 
 A072 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:440
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.snapshot == emptyBefore, 440)
-Original expression:
-  QVERIFY(snapshot() == emptyBefore)
 
 A073 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:442
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.oneEdit(emptyBefore), 442)
-Original expression:
-  QVERIFY(isOneEdit(emptyBefore, snapshot()))
 
 A074 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:443
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.points == ["96:90"], 443)
-Original expression:
-  QVERIFY(samePoints(lane.points(), {{96, 90}}))
 
 A075 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:444
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replay performs undo→redo→undo and compares bytes, prior/new history identities, and every ordered point; this replaces private Qt stack-index introspection. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.replay(emptyBefore, [], ["96:90"]), 444)
-Original expression:
-  QVERIFY(undoRedoRestores(emptyBefore, {}, {{96, 90}}, lane))
 
 A076 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:450
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.snapshot == before, 450)
-Original expression:
-  QVERIFY(snapshot() == before)
 
 A077 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:452
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.oneEdit(before), 452)
-Original expression:
-  QVERIFY(isOneEdit(before, snapshot()))
 
 A078 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:454
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.points == replacement, 454)
-Original expression:
-  QVERIFY(samePoints(lane.points(), replacement))
 
 A079 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:455
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replay performs undo→redo→undo and compares bytes, prior/new history identities, and every ordered point; this replaces private Qt stack-index introspection. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.replay(before, original, replacement), 455)
-Original expression:
-  QVERIFY(undoRedoRestores(before, fixture, replacement, lane))
 
 A080 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:459
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.oneEdit(clearBefore), 459)
-Original expression:
-  QVERIFY(isOneEdit(clearBefore, snapshot()))
 
 A081 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:460
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.points.isEmpty, 460)
-Original expression:
-  QVERIFY(lane.points().empty())
 
 A082 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:461
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replay performs undo→redo→undo and compares bytes, prior/new history identities, and every ordered point; this replaces private Qt stack-index introspection. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.replay(clearBefore, original, []), 461)
-Original expression:
-  QVERIFY(undoRedoRestores(clearBefore, fixture, {}, lane))
 
 A083 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:469
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.oneEdit(fractionalBefore), 469)
-Original expression:
-  QVERIFY(isOneEdit(fractionalBefore, snapshot()))
 
 A084 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:470
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.document.state.tempo.first?.microsecondsPerQuarterNote
-                  == TimeDefaults.microsecondsPerQuarterNote(forBPM: displayed), 470)
-Original expression:
-  QCOMPARE(doc.tempoPoints().front().microsecondsPerQuarterNote, tempoUsForBpm(displayed))
 
 A085 | AutomationDomainTest::replaceSpans | src/checks/automation/domain/tst_automationdomain.cpp:471
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. replay performs undo→redo→undo and compares bytes, prior/new history identities, and every ordered point; this replaces private Qt stack-index introspection. replace drives the accepted AutomationCommit span boundary, corresponding to NodeLane.replaceSpan; the document performs the stored-byte no-op comparison rather than gesture-level displayed-value planning.
-Swift counterpart expression:
-  expect(fixture.replay(fractionalBefore, beforePoints, ["96:\(displayed)"]), 471)
-Original expression:
-  QVERIFY(undoRedoRestores(fractionalBefore, beforePoints, {{96, displayed}}, lane))
 
 A086 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:486
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(points(volume) == ["0:127"], 486)
-Original expression:
-  QVERIFY(samePoints(volume.points(), {{0, 127}}))
 
 A087 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:487
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(points(pan) == ["0:64"], 487)
-Original expression:
-  QVERIFY(samePoints(pan.points(), {{0, 64}}))
 
 A088 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:488
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(points(modulation).isEmpty, 488)
-Original expression:
-  QVERIFY(modulation.points().empty())
 
 A089 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:490
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. Swift represents the implicit tick-zero lead-in as an optional scalar; tick zero is inherent in that representation, and its consumption in freeze(includingLeadIn:) inserts at zero.
-Swift counterpart expression:
-  expect(lane(modulation).leadInValue == 0, 490)
-Original expression:
-  QVERIFY(modulationLeadIn && modulationLeadIn->tick == 0 && modulationLeadIn->value == 0)
 
 A090 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:491
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(points(bend).isEmpty, 491)
-Original expression:
-  QVERIFY(bend.points().empty())
 
 A091 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:493
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. Swift represents the implicit tick-zero lead-in as an optional scalar; tick zero is inherent in that representation, and its consumption in freeze(includingLeadIn:) inserts at zero.
-Swift counterpart expression:
-  expect(lane(bend).leadInValue == 0, 493)
-Original expression:
-  QVERIFY(bendLeadIn && bendLeadIn->tick == 0 && bendLeadIn->value == 0)
 
 A092 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:499
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. Swift represents the implicit tick-zero lead-in as an optional scalar; tick zero is inherent in that representation, and its consumption in freeze(includingLeadIn:) inserts at zero.
-Swift counterpart expression:
-  expect(lane(.controlChange(track: 0, controller: TimeDefaults.ccFineTune)).leadInValue == 64, 499)
-Original expression:
-  QVERIFY(fineTuneLeadIn && fineTuneLeadIn->tick == 0 && fineTuneLeadIn->value == 64)
 
 A093 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:502
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. Swift represents the implicit tick-zero lead-in as an optional scalar; tick zero is inherent in that representation, and its consumption in freeze(includingLeadIn:) inserts at zero.
-Swift counterpart expression:
-  expect(lane(.controlChange(track: 0, controller: TimeDefaults.ccModulationType)).leadInValue == 0, 502)
-Original expression:
-  QVERIFY(modTypeLeadIn && modTypeLeadIn->tick == 0 && modTypeLeadIn->value == 0)
 
 A094 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:505
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. Swift represents the implicit tick-zero lead-in as an optional scalar; tick zero is inherent in that representation, and its consumption in freeze(includingLeadIn:) inserts at zero.
-Swift counterpart expression:
-  expect(lane(.controlChange(track: 0, controller: TimeDefaults.ccLFODelay)).leadInValue == 0, 505)
-Original expression:
-  QVERIFY(lfoDelayLeadIn && lfoDelayLeadIn->tick == 0 && lfoDelayLeadIn->value == 0)
 
 A095 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:510
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows.
-Swift counterpart expression:
-  expect(document.lanePoints(track: 0, lane: .controller(TimeDefaults.ccModulationType))
-          .filter { $0.tick == 0 }.map(\.value) == [2], 510)
-Original expression:
-  QVERIFY(rawValuesAt(doc, kTrack, CoreTimeDefaults::kCcModType, 0) == (std::vector<int>{2}))
 
 A096 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:514
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. The promotion loop expands base514 to Volume(value100) and base527 to Pan(value32); offsets identify each original assertion separately.
-Swift counterpart expression:
-  expect(resolved != nil, base)
-Original expression:
-  QVERIFY(volumeResolved.has_value())
 
 A097 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:517
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. The promotion loop expands base514 to Volume(value100) and base527 to Pan(value32); offsets identify each original assertion separately.
-Swift counterpart expression:
-  expect(!resolved.isEmpty, base + 3)
-Original expression:
-  QVERIFY(!volumeEdit.empty())
 
 A098 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:519
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. The promotion loop expands base514 to Volume(value100) and base527 to Pan(value32); offsets identify each original assertion separately. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity.
-Swift counterpart expression:
-  expect(fixture.oneEdit(before), base + 5)
-Original expression:
-  QVERIFY(isOneEdit(volumeBefore, snapshot()))
 
 A099 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:520
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. The promotion loop expands base514 to Volume(value100) and base527 to Pan(value32); offsets identify each original assertion separately.
-Swift counterpart expression:
-  expect(document.lanePoints(track: 0, lane: parameter.lane!)
-              .filter { $0.tick == 96 }.map(\.value) == [value], base + 6)
-Original expression:
-  QVERIFY(rawValuesAt(doc, kTrack, 7, 96) == (std::vector<int>{100}))
 
 A100 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:522
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. The promotion loop expands base514 to Volume(value100) and base527 to Pan(value32); offsets identify each original assertion separately.
-Swift counterpart expression:
-  expect(fixture.snapshot.bytes == before.bytes, base + 8)
-Original expression:
-  QCOMPARE(doc.smf().write(), volumeBefore.smf)
 
 A101 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:523
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. The promotion loop expands base514 to Volume(value100) and base527 to Pan(value32); offsets identify each original assertion separately.
-Swift counterpart expression:
-  expect(points(parameter) == defaultPoints, base + 9)
-Original expression:
-  QVERIFY(samePoints(volume.points(), {{0, 127}}))
 
 A102 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:527
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. The promotion loop expands base514 to Volume(value100) and base527 to Pan(value32); offsets identify each original assertion separately.
-Swift counterpart expression:
-  expect(resolved != nil, base)
-Original expression:
-  QVERIFY(panResolved.has_value())
 
 A103 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:530
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. The promotion loop expands base514 to Volume(value100) and base527 to Pan(value32); offsets identify each original assertion separately.
-Swift counterpart expression:
-  expect(!resolved.isEmpty, base + 3)
-Original expression:
-  QVERIFY(!panEdit.empty())
 
 A104 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:532
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. The promotion loop expands base514 to Volume(value100) and base527 to Pan(value32); offsets identify each original assertion separately. oneEdit checks revision+1 and changed identity; the associated replay or undo checks that exactly one history step restores the baseline bytes and identity.
-Swift counterpart expression:
-  expect(fixture.oneEdit(before), base + 5)
-Original expression:
-  QVERIFY(isOneEdit(panBefore, snapshot()))
 
 A105 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:533
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. The promotion loop expands base514 to Volume(value100) and base527 to Pan(value32); offsets identify each original assertion separately.
-Swift counterpart expression:
-  expect(document.lanePoints(track: 0, lane: parameter.lane!)
-              .filter { $0.tick == 96 }.map(\.value) == [value], base + 6)
-Original expression:
-  QVERIFY(rawValuesAt(doc, kTrack, 10, 96) == (std::vector<int>{32}))
 
 A106 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:535
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. The promotion loop expands base514 to Volume(value100) and base527 to Pan(value32); offsets identify each original assertion separately.
-Swift counterpart expression:
-  expect(fixture.snapshot.bytes == before.bytes, base + 8)
-Original expression:
-  QCOMPARE(doc.smf().write(), panBefore.smf)
 
 A107 | AutomationDomainTest::defaultNodePromotion | src/checks/automation/domain/tst_automationdomain.cpp:536
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/tst_automationdomain.swift, exact predicate below, using the original fixture values. Final integer/ternary identifies this source site; tempo and CC11 loop rows reproduce the original adapter data rows. The promotion loop expands base514 to Volume(value100) and base527 to Pan(value32); offsets identify each original assertion separately.
-Swift counterpart expression:
-  expect(points(parameter) == defaultPoints, base + 9)
-Original expression:
-  QVERIFY(samePoints(pan.points(), {{0, 64}}))
-
-Shared helper contract
-DrawerDomainCheckFixture in the paired source constructs the original one-track fixture.
-set/insert call document semantic/raw insertion APIs; move/delete call the production
-AutomationNodeResolver and AutomationCommit. snapshot captures serialized MIDI, revision
-and history identity; replay checks the original undo/redo/undo sequence. Existing page
-scenarios and assertions remain in the same paired source and original suite order.

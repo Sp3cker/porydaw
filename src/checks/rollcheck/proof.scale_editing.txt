@@ -6,45 +6,9 @@ Original SHA-256: cbe3d727ae2a6731de8863136f0bfc86e412d5ebbe1bf645aa0138153b3f9b
 Swift counterpart: src/checks/rollcheck/scale_editing.swift (runScaleEditingChecks, runFoldScaleIntegrationChecks)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below. Source context preserves setup, rows,
-loops, and guards between assertions verbatim. MATCHED identifies an equivalent
-Swift predicate with execution; PARTIAL a related predicate with an explicit
-unproved condition; NATIVE a retained native-window/rendering/input or harness
-obligation a presenter-level Swift check cannot establish; GAP an original
-predicate without a replacement assertion. S001-S004 execute live production-grid
-commands for chromatic, Fold-degree, octave, repeated-pitch, and exception
-outcomes, but do not deliver QML key events. Pointer drag, draw rejection,
-sounding preview and their undo-lifecycle checks remain GAP. No disposition
-claims whole-case or pixel equivalence.
 
-Verification
 Command: deno task verify --filter swiftcore
 Result: verify: 1/31 ok (35.15s, 30 skipped); run_checks: PASS (all harnesses in 35.15s).
-
-Execution and ownership
-SwiftCoreCheck executes runScaleEditingChecks and runFoldScaleIntegrationChecks, using PianoGrid.performCommand. The original slots run under
-PianoRollTest (checks/rollcheck/tst_pianoroll.h): scaleFoldKeyboardNudges
-(plus scaleFoldKeyboardNudges_data), scaleFoldMultiNoteMapping,
-scaleFoldRepeatedPitchMapping, scaleFoldExceptionNudge, scaleFoldExceptionDraw,
-scaleFoldExceptionAudition, scaleFoldPointerDrag, scaleFoldHorizontalException,
-scaleFoldOutOfRange. Each slot builds on the per-slot PianoRollFixture
-(checks/rollcheck/rollcheck.h, m_fixture): production SongTab/document/view,
-roll and gutter Quick inputs, key-stroke/mouse delivery through checks::events
-(checks/support/eventsynth.h), and Quick pumping (checks/support/quickframebuffer.h).
-
-Fixture, sequence and row constraints
-scaleFoldKeyboardNudges_data expands one failure site into three rows
-(fold-degree Up moves C 60 to D 62; fold-octave Shift+Up moves C 60 to 72;
-chromatic Off Up moves C 60 to C# 61). Most slots close with the same two
-guards: the gesture pass must leave the undo index at its entry value and
-doc.smf().write() must equal the entry bytes. The D7/D8/D9+D12/D10/D11 pointer
-and audition sequences apply explicit ViewStates, pump Quick, and observe
-auditionNote spy lambdas, note selection, projection row counts, and document
-lookups in order.
-
-Original assertion inventory and source sequence
 
 A001 | PianoRollTest::scaleFoldKeyboardNudges | src/checks/rollcheck/scale_editing.cpp:71
 Disposition: PARTIAL
@@ -881,22 +845,12 @@ Swift assertion predicates
 
 S001 | runScaleEditingChecks | src/checks/rollcheck/scale_editing.swift
 Anchor: message "Off Up moved C up a semitone to C#"
-        report.expect(document.note(noteID)?.pitch == 61, cppID: keyboardID,
-                      message: "Off Up moved C up a semitone to C#")
 
 S002 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
 Anchor: message "folded Up maps exceptions to distinct degrees and repeated C to D"
-    report.expect(document.note(ids[0])?.pitch == 62
-                  && document.note(ids[1])?.pitch == 64
-                  && document.note(ids[2])?.pitch == 62,
-                  cppID: id, message: "folded Up maps exceptions to distinct degrees and repeated C to D")
 
 S003 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
 Anchor: message "folded Shift+Up moves an exact octave"
-    report.expect(document.note(ids[0])?.pitch == 72, cppID: id,
-                  message: "folded Shift+Up moves an exact octave")
 
 S004 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
 Anchor: message "occupied off-scale exception nudges to the next scale degree"
-    report.expect(document.note(ids[1])?.pitch == 62, cppID: id,
-                  message: "occupied off-scale exception nudges to the next scale degree")

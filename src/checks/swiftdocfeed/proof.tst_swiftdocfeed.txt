@@ -7,17 +7,10 @@ Swift counterpart: src/checks/swiftdocfeed/DocumentFeedCheck.swift
 
 Retired in: feature/w2-retired-prototypes — this ledger is the deletion certificate for
 src/checks/swiftdocfeed/tst_swiftdocfeed.cpp and src/checks/swiftdocfeed/DocumentFeedCheck.swift.
-The C++ original is uncompiled in every CMake target and unregistered in
-src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt,
-src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted
-from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never
-touches the retired feed mechanism. The controller deletes the dead sources after this ledger passes;
-nothing is deleted by this edit.
 
 Reference revision: d16998ddc07628bd142dced272642f46aacc9017
 Original: src/checks/swiftdocfeed/tst_swiftdocfeed.cpp
 Original SHA-256: 4a77facffff23e3d070b100f80821f6538be4e1e8ddbf9453e823ef7d59d6e52
-Swift counterpart (retired, pinned pre-retirement): src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Verification: lane runs recorded by the controller, not re-run for this ledger:
 deno task verify --filter swiftcore --verbose -> verify: 1/6 ok (11.40s, 5 skipped); run_checks: PASS
 (all harnesses in 11.40s). Narrow eventEdits: 4 QINFO PASS lines for
@@ -25,7 +18,6 @@ unsignedTicksAndRawSignaturePrecedence.
 Result: swiftcore PASS. No live native swiftdocfeed run exists or is claimed; the deleted harness
 neither builds nor executes.
 
-Deletion certificate
 Retirement: 137 original assertion sites, all terminal (13 MATCHED, 124 RETIRED-REPRESENTATION,
 zero PARTIAL, zero GAP, zero NATIVE). The 13 MATCHED sites name the executing Swift predicate
 carrying the original swiftdocfeed/SwiftDocFeedTest cppID (S033-S036, new in this lane). Every other
@@ -36,1542 +28,429 @@ endpoint guards S001-S032) retire with the no-ingress proof above. The reference
 the authority for the original setup, guards and helpers, and no whole-case equivalence, native
 execution or parity claim is made.
 
-Purpose and status
-Each numbered entry records one original assertion/failure site, not one test
-method or one runtime execution. Loops/data rows reuse a site; their instances
-are described below. QFAIL/qFail guards and helper calls are part of the contract.
-MATCHED means a corresponding Swift predicate carrying the original cppID was identified and executed;
-RETIRED-REPRESENTATION identifies an unreachable old implementation input with
-an explicit replacement-contract justification, not an omitted user behavior;
-PARTIAL means a related check exists but differs in a stated way;
-GAP means an equivalent Swift assertion is not established.
-None of these labels claims whole-case equivalence. Native passes do not prove the Swift replacement.
-
-Execution and ownership
-Registered run paths (swiftcore lane): eventEdits suite -> runEventEditsSuite ->
-unsignedTicksAndRawSignaturePrecedence (src/checks/editcheck/TickBoundsChecks.swift, wired into the
-suite at src/checks/editcheck/EventChecks.swift); projectSession suite ->
-sessionPlaybackProjectionAndStatePublication
-(src/checks/workspace/session_playback.swift); rollcheck suites -> NoteChecks, DocumentEditChecks,
-EventChecks, TrackCorpusChecks, remap, selection, presentation, note_commands, session_editor_semantics;
-editcheck -> DocumentHistoryChecks. The retired sgd_check_swift_guard entry point (S001-S032) executes
-nothing in any registered check; the S001-S032 trailer below is the historical record of the retired
-counterpart, not execution evidence. New executing predicates S033-S036 are indexed after it.
-
-Fixture, sequence and row constraints
-Delivery-count chains (1..13) pin one push per model transition: set, extend,
-and clear note selection; primary-track and time-selection transitions
-(lanes track 0/controller 7 and track 1/controller 21, tempo true); mute/solo
-round-trips. Revision chains pin document.revision()+N across velocity edit,
-undo, and redo. Post-undo reconciliation requires a deleted note's token to
-die with the next push while undoing the delete does not resurrect delivery;
-stale-token intents submit through sgc_ as REJECTED_INVALID without mutation.
-Teardown legs require no delivery after clear/destroy and fresh ids on
-remount. The unsigned-tick leg pins raw signature precedence rows and
-0x80000010 on-tick values.
-
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Frozen Swift sources cited by this refactor (SHA-256, re-hashed before citing)
-src/checks/editcheck/TickBoundsChecks.swift: 08a2b20190ee56fb36d5e8d56bfdfe2e06d276d3555531ad5dea4efb09f5c79e
-src/checks/editcheck/EventChecks.swift: 0ea32258cadbe1101014f3a22a1de13e52f0a611c740f66c1ab8c7490e17b575
-src/checks/CMakeLists.txt: f7edc454a17bf83022d05885ad5bbbd221c2447f54560eb84d74108c318c5bcf
-
-Original assertion inventory and source sequence
-
 A001 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:44
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  #include <QtTest>
-
-  #include <bit>
-  #include <memory>
-  #include <utility>
-  #include <vector>
-
-  #include "checks/support/songfixture.h"
-  #include "core/songdocument.h"
-  #include "document_feed_check.h"
-  #include "ui/songview.h"
-  #include "ui/songview/editorselectionmodel.h"
-  #include "ui/songview/quick/swiftgrid/command_feed.h"
-  #include "ui/songview/quick/swiftgrid/intent_executor.h"
-  #include "ui/songview/quick/swiftgrid/session_feed.h"
-  #include "ui/songview/quick/swiftgrid/swift_grid_document_feed.h"
-
-  namespace {
-
-  struct Capture {
-      int deliveries = 0;
-      SgdDocumentHeader header{};
-      std::vector<SgdNote> notes;
-      std::vector<SgdTimeSignature> signatures;
-
-      static void receive(const SgdDocumentHeader *incomingHeader, const SgdNote *incomingNotes,
-                          const SgdTimeSignature *incomingSignatures, void *context)
-      {
-          auto &capture = *static_cast<Capture *>(context);
-          ++capture.deliveries;
-          capture.header = *incomingHeader;
-          capture.notes.clear();
-          capture.signatures.clear();
-          if (incomingHeader->noteCount)
-              capture.notes.assign(incomingNotes, incomingNotes + incomingHeader->noteCount);
-          if (incomingHeader->timeSignatureCount)
-              capture.signatures.assign(incomingSignatures,
-                                        incomingSignatures + incomingHeader->timeSignatureCount);
-      }
-  };
-
-  void compareDocument(const Capture &capture, const SongDocument &document, uint64_t token)
-  {
-
-Original expression:
-  QCOMPARE(capture.header.documentId, token)
 
 A002 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:45
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.header.revision, document.revision())
 
 A003 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:46
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.header.ticksPerBeat, int32_t(document.smf().division))
 
 A004 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:47
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.header.trackCount, document.engineTrackCount())
 
 A005 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:51
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-      size_t index = 0;
-      for (int track = 0; track < document.engineTrackCount(); ++track) {
-          for (const DocNote &note : document.notesForTrack(track)) {
-
-Original expression:
-  QVERIFY(index < capture.notes.size())
 
 A006 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:53
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-              const SgdNote &actual = capture.notes[index++];
-
-Original expression:
-  QCOMPARE(actual.noteId, std::bit_cast<uint64_t>(note.noteId))
 
 A007 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:54
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(actual.trackIndex, track)
 
 A008 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:55
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(actual.key, int32_t(note.key))
 
 A009 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:56
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(actual.onTick, note.tick)
 
 A010 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:57
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(actual.durationTicks, note.duration)
 
 A011 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:58
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(actual.velocity, int32_t(note.velocity))
 
 A012 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:61
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          }
-      }
-
-Original expression:
-  QCOMPARE(capture.notes.size(), index)
 
 A013 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:62
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.header.noteCount, int32_t(index))
 
 A014 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:64
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-      const auto signatures = document.timeSigs();
-
-Original expression:
-  QCOMPARE(capture.signatures.size(), signatures.size())
 
 A015 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:65
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.header.timeSignatureCount, int32_t(signatures.size()))
 
 A016 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:67
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-      for (size_t i = 0; i < signatures.size(); ++i) {
-
-Original expression:
-  QCOMPARE(capture.signatures[i].startTick, signatures[i].tick)
 
 A017 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:68
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.signatures[i].numerator, signatures[i].numerator)
 
 A018 | compareDocument | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:69
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible document parity (snapshot fields vs live SongDocument: revision, ticksPerBeat, track count, note id/track/key/tick/duration/velocity, time-signature rows) is asserted by executing production predicates that bind PianoGrid, PlaybackTimeline and DocumentSession directly to SongDocument.state: src/checks/editcheck/NoteChecks.swift::adoptionAndPairing:32, src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39, src/checks/editcheck/EventChecks.swift::trackMoveContract:446, src/checks/editcheck/TrackCorpusChecks.swift::coreSongTimeSignatureRow:266, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.signatures[i].denomPow2, signatures[i].denomPow2)
 
 A019 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:98
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-      }
-  }
-
-  struct SessionCapture {
-      int deliveries = 0;
-      SgsSessionState state{};
-      std::vector<uint64_t> noteIds;
-      std::vector<SgsLane> lanes;
-
-      static void receive(const SgsSessionState *incoming, const uint64_t *ids,
-                          const SgsLane *incomingLanes, void *context)
-      {
-          auto &capture = *static_cast<SessionCapture *>(context);
-          ++capture.deliveries;
-          capture.state = *incoming;
-          capture.noteIds.clear();
-          capture.lanes.clear();
-          if (incoming->selectedNoteCount)
-              capture.noteIds.assign(ids, ids + incoming->selectedNoteCount);
-          if (incoming->timeSelection.laneCount)
-              capture.lanes.assign(incomingLanes, incomingLanes + incoming->timeSelection.laneCount);
-      }
-  };
-
-  void compareSession(const SessionCapture &capture, const SongView &view, uint64_t sessionId,
-                      uint64_t revision)
-  {
-      const songview::EditorSelectionModel &model = view.selectionModel();
-
-Original expression:
-  QCOMPARE(capture.state.sessionId, sessionId)
 
 A020 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:99
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.state.revision, revision)
 
 A021 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:100
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.state.primaryTrack, model.primaryTrack())
 
 A022 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:101
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.state.trackScope, model.storedTrackScope())
 
 A023 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:102
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.state.muteMask, view.muteMask())
 
 A024 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:103
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.state.soloMask, view.soloMask())
 
 A025 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:104
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.noteIds.size(), model.noteSelection().size())
 
 A026 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:105
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.state.selectedNoteCount, int32_t(model.noteSelection().size()))
 
 A027 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:107
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-      for (size_t i = 0; i < model.noteSelection().size(); ++i)
-
-Original expression:
-  QCOMPARE(capture.noteIds[i], std::bit_cast<uint64_t>(model.noteSelection()[i]))
 
 A028 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:109
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-      const auto &time = model.timeSelection();
-
-Original expression:
-  QCOMPARE(capture.state.timeSelection.startTick, time.startTick)
 
 A029 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:110
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.state.timeSelection.endTick, time.endTick)
 
 A030 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:111
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.state.timeSelection.scope,
-               time.scope == songview::EditorSelectionModel::TimeSelection::Lanes
-                   ? int32_t(SGS_TIME_SELECTION_LANES)
-                   : int32_t(SGS_TIME_SELECTION_TRACKS))
 
 A031 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:115
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.state.timeSelection.tempo, uint8_t(time.tempo))
 
 A032 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:116
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.lanes.size(), time.lanes.size())
 
 A033 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:117
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.state.timeSelection.laneCount, int32_t(time.lanes.size()))
 
 A034 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:119
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-      for (size_t i = 0; i < time.lanes.size(); ++i) {
-
-Original expression:
-  QCOMPARE(capture.lanes[i].track, int32_t(time.lanes[i].first))
 
 A035 | compareSession | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:120
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.lanes[i].controller, time.lanes[i].second)
 
 A036 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:138
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-harness setup: C++ fixture precondition (song load, rig construction, note-nonempty guard, or timeline rebuild) for the deleted feed harness. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-      }
-  }
-  class SwiftDocFeedTest final : public QObject
-  {
-      Q_OBJECT
-
-    public:
-      SwiftDocFeedTest(QString projectRoot, QString songLabel)
-          : m_projectRoot(std::move(projectRoot))
-          , m_songLabel(std::move(songLabel))
-      {}
-
-    private slots:
-      void fixtureMutationHistoryAndTeardown()
-      {
-          QString error;
-          auto song = checks::LoadedSong::load(m_projectRoot, m_songLabel, error);
-
-Original expression:
-  QVERIFY2(song, qPrintable(error))
 
 A037 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:140
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-harness setup: C++ fixture precondition (song load, rig construction, note-nonempty guard, or timeline rebuild) for the deleted feed harness. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          auto otherSong = checks::LoadedSong::load(m_projectRoot, m_songLabel, error);
-
-Original expression:
-  QVERIFY2(otherSong, qPrintable(error))
 
 A038 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:148
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          SongDocument &document = song->document();
-          QSignalSpy emissions(&document, &SongDocument::documentChanged);
-          auto capture = std::make_unique<Capture>();
-          Capture otherCapture;
-          auto feed = std::make_unique<SwiftGridDocumentFeed>(document);
-          SwiftGridDocumentFeed otherFeed(otherSong->document());
-          const uint64_t token = feed->documentId();
-
-Original expression:
-  QVERIFY(token != 0)
 
 A039 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:149
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(otherFeed.documentId() != token)
 
 A040 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:150
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!sgd_set_delivery(0, Capture::receive, capture.get()))
 
 A041 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:151
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!sgd_set_delivery(token, nullptr, capture.get()))
 
 A042 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:152
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!sgd_set_delivery(token, Capture::receive, nullptr))
 
 A043 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:153
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(sgd_set_delivery(token, Capture::receive, capture.get()))
 
 A044 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:154
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(sgd_set_delivery(otherFeed.documentId(), Capture::receive, &otherCapture))
 
 A045 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:155
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!sgd_set_delivery(token, Capture::receive, &otherCapture))
 
 A046 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:156
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture->deliveries, 0)
 
 A047 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:159
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          feed->pushSnapshot();
-          otherFeed.pushSnapshot();
-
-Original expression:
-  QCOMPARE(capture->deliveries, 1)
 
 A048 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:160
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(otherCapture.deliveries, 1)
 
 A049 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:165
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-harness setup: C++ fixture precondition (song load, rig construction, note-nonempty guard, or timeline rebuild) for the deleted feed harness. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          compareDocument(*capture, document, token);
-          compareDocument(otherCapture, otherSong->document(), otherFeed.documentId());
-
-          const auto notes = document.notesForTrack(0);
-
-Original expression:
-  QVERIFY(!notes.empty())
 
 A050 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:170
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          const DocNote note = notes.front();
-          const uint8_t velocity = note.velocity == 99 ? 100 : 99;
-          const uint64_t revision = document.revision();
-          document.setNotesVelocity({note}, velocity);
-
-Original expression:
-  QCOMPARE(emissions.count(), 1)
 
 A051 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:171
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture->deliveries, 2)
 
 A052 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:172
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible revision advance (+1 across setNotesVelocity, +1 on undo, +1 on redo) is asserted by executing src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.revision(), revision + 1)
 
 A053 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:174
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          compareDocument(*capture, document, token);
-
-Original expression:
-  QCOMPARE(otherCapture.deliveries, 1)
 
 A054 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:176
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          document.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(emissions.count(), 2)
 
 A055 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:177
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture->deliveries, 3)
 
 A056 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:178
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible revision advance (+1 across setNotesVelocity, +1 on undo, +1 on redo) is asserted by executing src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.revision(), revision + 2)
 
 A057 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:181
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          compareDocument(*capture, document, token);
-          document.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(emissions.count(), 3)
 
 A058 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:182
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture->deliveries, 4)
 
 A059 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:183
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible revision advance (+1 across setNotesVelocity, +1 on undo, +1 on redo) is asserted by executing src/checks/editcheck/DocumentEditChecks.swift::documentVelocityAtomicContract:39. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.revision(), revision + 3)
 
 A060 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:187
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          compareDocument(*capture, document, token);
-
-          sgd_clear_delivery(token);
-
-Original expression:
-  QVERIFY(feed->delivery()->fn == nullptr)
 
 A061 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:188
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(feed->delivery()->context == nullptr)
 
 A062 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:190
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          document.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(capture->deliveries, 4)
 
 A063 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:191
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(sgd_set_delivery(token, Capture::receive, capture.get()))
 
 A064 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:193
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          feed.reset();
-
-Original expression:
-  QVERIFY(!sgd_set_delivery(token, Capture::receive, capture.get()))
 
 A065 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:195
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          document.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(capture->deliveries, 4)
 
 A066 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:203
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible presenter lifetime (clean teardown, fresh ids on remount, fresh delivery on the remounted feed) is asserted by executing src/checks/workspace/session_io.swift::sessionLifetime:237 and src/checks/workspace/SessionChecks.swift (fresh bankToken on mutation). No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          capture.reset();
-          document.undoStack()->undo(); // Must not touch the released callback context.
-          sgd_clear_delivery(token);
-          sgd_unregister_feed(token);
-
-          Capture remountCapture;
-          SwiftGridDocumentFeed remount(document);
-
-Original expression:
-  QVERIFY(remount.documentId() != token)
 
 A067 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:204
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible presenter lifetime (clean teardown, fresh ids on remount, fresh delivery on the remounted feed) is asserted by executing src/checks/workspace/session_io.swift::sessionLifetime:237 and src/checks/workspace/SessionChecks.swift (fresh bankToken on mutation). No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(remount.documentId() != otherFeed.documentId())
 
 A068 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:205
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(sgd_set_delivery(remount.documentId(), Capture::receive, &remountCapture))
 
 A069 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:208
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          remount.pushSnapshot();
-          compareDocument(remountCapture, document, remount.documentId());
-
-Original expression:
-  QCOMPARE(otherCapture.deliveries, 1)
 
 A070 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:246
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-          sgd_clear_delivery(remount.documentId());
-          sgd_clear_delivery(otherFeed.documentId());
-      }
-
-      void unsignedTicksAndRawSignaturePrecedence()
-      {
-          SmfFile smf;
-          smf.division = 960;
-          smf.tracks.resize(3);
-          SmfEvent signature;
-          signature.status = 0xff;
-          signature.metaType = 0x58;
-          signature.blob = QByteArray::fromHex("07031808");
-          smf.tracks[0].events.push_back(signature);
-          signature.blob = QByteArray::fromHex("051f1808");
-          smf.tracks[0].events.push_back(signature);
-          signature.blob = QByteArray::fromHex("00ff1808");
-          smf.tracks[1].events.push_back(signature);
-          SmfEvent on;
-          on.status = 0x90;
-          on.data0 = 64;
-          on.data1 = 81;
-          on.tick = 0x80000010U;
-          SmfEvent off = on;
-          off.status = 0x80;
-          off.tick += 32;
-          smf.tracks[1].events.push_back(on);
-          smf.tracks[1].events.push_back(off);
-          smf.tracks[1].endTick = off.tick;
-          on.status = 0x91;
-          on.data0 = 72;
-          off.status = 0x81;
-          off.data0 = 72;
-          smf.tracks[2].events = {on, off};
-          smf.tracks[2].endTick = off.tick;
-          SongDocument document;
-          QString error;
-
-Original expression:
-  QVERIFY2(document.adoptSmf(std::move(smf), SongInfo{}, &error), qPrintable(error))
+Mapping: S033, S034, S035, S036
 
 A071 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:249
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          Capture capture;
-          SwiftGridDocumentFeed feed(document);
-
-Original expression:
-  QVERIFY(sgd_set_delivery(feed.documentId(), Capture::receive, &capture))
 
 A072 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:252
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-          feed.pushSnapshot();
-          compareDocument(capture, document, feed.documentId());
-
-Original expression:
-  QCOMPARE(capture.header.trackCount, 2)
+Mapping: S033, S034, S035, S036
 
 A073 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:253
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.header.ticksPerBeat, 960)
+Mapping: S033, S034, S035, S036
 
 A074 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:254
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.notes.size(), size_t(2))
+Mapping: S033, S034, S035, S036
 
 A075 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:255
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.notes[0].trackIndex, 0)
+Mapping: S033, S034, S035, S036
 
 A076 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:256
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.notes[1].trackIndex, 1)
+Mapping: S033, S034, S035, S036
 
 A077 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:257
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.notes[0].onTick, uint32_t(0x80000010U))
+Mapping: S033, S034, S035, S036
 
 A078 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:258
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.notes[0].durationTicks, uint32_t(32))
+Mapping: S033, S034, S035, S036
 
 A079 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:259
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.signatures.size(), size_t(3))
+Mapping: S033, S034, S035, S036
 
 A080 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:260
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.signatures[0].numerator, uint8_t(7))
+Mapping: S033, S034, S035, S036
 
 A081 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:261
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.signatures[1].denomPow2, uint8_t(31))
+Mapping: S033, S034, S035, S036
 
 A082 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:262
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.signatures[2].numerator, uint8_t(0))
+Mapping: S033, S034, S035, S036
 
 A083 | SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:263
 Disposition: MATCHED
-Mapping/reason: MATCHED. Executing Swift predicate carries the original cppID swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence: src/checks/editcheck/TickBoundsChecks.swift::unsignedTicksAndRawSignaturePrecedence:4 adopts the identical unsigned-tick SMF bytes (onTick 0x80000010, raw 0x58 rows 7/3, 5/31, 0/255) and asserts them at S033-S036 (:23, :25, :27, :34), executed through runEventEditsSuite in the swiftcore lane.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.signatures[2].denomPow2, uint8_t(255))
+Mapping: S033, S034, S035, S036
 
 A084 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:270
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-harness setup: C++ fixture precondition (song load, rig construction, note-nonempty guard, or timeline rebuild) for the deleted feed harness. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-      }
-
-      void sessionFeedTransitionsMasksAndReconciliation()
-      {
-          QString error;
-          auto song = checks::LoadedSong::load(m_projectRoot, m_songLabel, error);
-
-Original expression:
-  QVERIFY2(song, qPrintable(error))
 
 A085 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:272
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-harness setup: C++ fixture precondition (song load, rig construction, note-nonempty guard, or timeline rebuild) for the deleted feed harness. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          auto rig = checks::SongViewRig::create(std::move(song), 44100.0, error);
-
-Original expression:
-  QVERIFY2(rig, qPrintable(error))
 
 A086 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:279
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          SongDocument &document = rig->document();
-          SongView &view = rig->view();
-          songview::EditorSelectionModel &model = view.selectionModel();
-
-          auto feed = std::make_unique<SwiftGridSessionFeed>(view);
-          const uint64_t sessionId = feed->sessionId();
-
-Original expression:
-  QVERIFY(sessionId != 0)
 
 A087 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:281
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          SessionCapture capture;
-
-Original expression:
-  QVERIFY(!sgs_set_delivery(0, SessionCapture::receive, &capture))
 
 A088 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:282
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!sgs_set_delivery(sessionId, nullptr, &capture))
 
 A089 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:283
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!sgs_set_delivery(sessionId, SessionCapture::receive, nullptr))
 
 A090 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:284
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(sgs_set_delivery(sessionId, SessionCapture::receive, &capture))
 
 A091 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:285
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.deliveries, 0)
 
 A092 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:287
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          feed->pushSnapshot();
-
-Original expression:
-  QCOMPARE(capture.deliveries, 1)
 
 A093 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:292
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-harness setup: C++ fixture precondition (song load, rig construction, note-nonempty guard, or timeline rebuild) for the deleted feed harness. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          compareSession(capture, view, sessionId, 1);
-
-          // Transition payloads through the model's own API: set, extend, clear.
-          const std::vector<DocNote> notes = document.notesForTrack(model.primaryTrack());
-
-Original expression:
-  QVERIFY(notes.size() >= 2)
 
 A094 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:294
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          model.setNoteSelection({notes[0].noteId});
-
-Original expression:
-  QCOMPARE(capture.deliveries, 2)
 
 A095 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:296
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          compareSession(capture, view, sessionId, 2);
-
-Original expression:
-  QCOMPARE(capture.noteIds.size(), size_t(1))
 
 A096 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:297
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.noteIds[0], std::bit_cast<uint64_t>(notes[0].noteId))
 
 A097 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:299
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          model.setNoteSelection({notes[0].noteId, notes[1].noteId});
-
-Original expression:
-  QCOMPARE(capture.deliveries, 3)
 
 A098 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:301
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          compareSession(capture, view, sessionId, 3);
-
-Original expression:
-  QCOMPARE(capture.noteIds.size(), size_t(2))
 
 A099 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:303
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          model.clearNoteSelection();
-
-Original expression:
-  QCOMPARE(capture.deliveries, 4)
 
 A100 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:305
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          compareSession(capture, view, sessionId, 4);
-
-Original expression:
-  QVERIFY(capture.noteIds.empty())
 
 A101 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:309
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-          // Primary-track and time-selection transitions ride the same push.
-          model.applyPrimaryTrackTransition(1);
-
-Original expression:
-  QCOMPARE(capture.deliveries, 5)
 
 A102 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:311
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          compareSession(capture, view, sessionId, 5);
-
-Original expression:
-  QCOMPARE(capture.state.primaryTrack, 1)
 
 A103 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:319
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          songview::EditorSelectionModel::TimeSelection time;
-          time.startTick = 24;
-          time.endTick = 96;
-          time.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
-          time.lanes = {{0, 7}, {1, 21}};
-          time.tempo = true;
-          model.setTimeSelection(time);
-
-Original expression:
-  QCOMPARE(capture.deliveries, 6)
 
 A104 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:321
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          compareSession(capture, view, sessionId, 6);
-
-Original expression:
-  QCOMPARE(capture.lanes.size(), size_t(2))
 
 A105 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:323
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          model.clearTimeSelection();
-
-Original expression:
-  QCOMPARE(capture.deliveries, 7)
 
 A106 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:325
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          compareSession(capture, view, sessionId, 7);
-
-Original expression:
-  QVERIFY(capture.lanes.empty())
 
 A107 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:329
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-          // Mask round-trip: setters emit, the push carries the complete state.
-          view.setTrackMute(0, true);
-
-Original expression:
-  QCOMPARE(capture.deliveries, 8)
 
 A108 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:331
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          compareSession(capture, view, sessionId, 8);
-
-Original expression:
-  QCOMPARE(capture.state.muteMask, uint32_t(1))
 
 A109 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:333
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          view.setTrackSolo(1, true);
-
-Original expression:
-  QCOMPARE(capture.deliveries, 9)
 
 A110 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:335
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          compareSession(capture, view, sessionId, 9);
-
-Original expression:
-  QCOMPARE(capture.state.soloMask, uint32_t(2))
 
 A111 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:337
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          view.setTrackMute(0, false);
-
-Original expression:
-  QCOMPARE(capture.deliveries, 10)
 
 A112 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:339
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          compareSession(capture, view, sessionId, 10);
-
-Original expression:
-  QCOMPARE(capture.state.muteMask, uint32_t(0))
 
 A113 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:344
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-          // Post-undo reconciliation: a deleted note's token dies with the next
-          // push; undoing the delete does not resurrect it.
-          model.applyPrimaryTrackTransition(0);
-
-Original expression:
-  QCOMPARE(capture.deliveries, 11)
 
 A114 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:346
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          model.setNoteSelection({notes[0].noteId, notes[1].noteId});
-
-Original expression:
-  QCOMPARE(capture.deliveries, 12)
 
 A115 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:347
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session parity (revision, primary track, track scope, mute/solo masks, note/time selection incl. single, extended and cleared values) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10, src/checks/rollcheck/presentation.swift::checkHeaderKeyboardMuteSolo:114, src/checks/rollcheck/remap.swift::checkRemapMove:110 (RemapProbe.expectPublication:83), src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 and ::checkSelectionNonScaleMove:71, src/checks/workspace/session_editor_semantics.swift::editorSelectionCommandChecks:49, and src/checks/rollcheck/note_commands.swift::checkKeyboardDuplicatePrefersTimeSelection:170. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.noteIds.size(), size_t(2))
 
 A116 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:349
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-harness setup: C++ fixture precondition (song load, rig construction, note-nonempty guard, or timeline rebuild) for the deleted feed harness. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          document.deleteNotes({notes[0]});
-
-Original expression:
-  QVERIFY2(rig->rebuildTimeline(error), qPrintable(error))
 
 A117 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:350
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-push publication per state transition (and zero pushes on no-ops, unmounted feeds, or rejected intents) is asserted by executing production predicates: src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (exactly-one-domain publication, equal-assignment silence, nested-batch coalescing), src/checks/rollcheck/remap.swift::RemapProbe.expectPublication:83, and src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.deliveries, 13)
 
 A118 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:352
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible post-undo selection reconciliation (deleted note id pruned from selection; undo restores the note without resurrecting it into selection) is asserted by executing src/checks/workspace/session_playback.swift (cppID swiftcore/DocumentSession::selectionPrunesDeletedNotes) and src/checks/rollcheck/remap.swift::checkRemapDelete:223. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          compareSession(capture, view, sessionId, 13);
-
-Original expression:
-  QCOMPARE(capture.noteIds.size(), size_t(1))
 
 A119 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:353
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible post-undo selection reconciliation (deleted note id pruned from selection; undo restores the note without resurrecting it into selection) is asserted by executing src/checks/workspace/session_playback.swift (cppID swiftcore/DocumentSession::selectionPrunesDeletedNotes) and src/checks/rollcheck/remap.swift::checkRemapDelete:223. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.noteIds[0], std::bit_cast<uint64_t>(notes[1].noteId))
 
 A120 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:365
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible stale-token rejection (dead-note intent rejects without history growth, mask/selection mutation, or delivery) is asserted by executing src/checks/editcheck/DocumentEditChecks.swift::documentVelocityRejectsContract:112 and src/checks/editcheck/NoteMoveCorpusChecks.swift::coreNoteMoveCollisionRow:260 and ::coreNoteMoveRejectsRow:346. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          // Stale-token intents are rejectedInvalid, never best-effort (spec
-          // §3): the dead token submits through sgc_ and mutates nothing.
-          {
-              SwiftGridDocumentFeed documentFeed(document);
-              SwiftGridIntentExecutor executor(view, documentFeed.documentId());
-              const int undoDepth = document.undoStack()->count();
-              SgcIntentCommand command{};
-              command.documentId = documentFeed.documentId();
-              command.intent = SGC_NOTE_MOVE;
-              command.payload.noteMove = {std::bit_cast<uint64_t>(notes[0].noteId), 480, 0};
-              SgcOutcome outcome{};
-
-Original expression:
-  QCOMPARE(sgc_submit(&command, &outcome), SGC_REJECTED_INVALID)
 
 A121 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:366
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible stale-token rejection (dead-note intent rejects without history growth, mask/selection mutation, or delivery) is asserted by executing src/checks/editcheck/DocumentEditChecks.swift::documentVelocityRejectsContract:112 and src/checks/editcheck/NoteMoveCorpusChecks.swift::coreNoteMoveCollisionRow:260 and ::coreNoteMoveRejectsRow:346. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(outcome.result, SGC_REJECTED_INVALID)
 
 A122 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:367
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible stale-token rejection (dead-note intent rejects without history growth, mask/selection mutation, or delivery) is asserted by executing src/checks/editcheck/DocumentEditChecks.swift::documentVelocityRejectsContract:112 and src/checks/editcheck/NoteMoveCorpusChecks.swift::coreNoteMoveCollisionRow:260 and ::coreNoteMoveRejectsRow:346. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.undoStack()->count(), undoDepth)
 
 A123 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:368
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible stale-token rejection (dead-note intent rejects without history growth, mask/selection mutation, or delivery) is asserted by executing src/checks/editcheck/DocumentEditChecks.swift::documentVelocityRejectsContract:112 and src/checks/editcheck/NoteMoveCorpusChecks.swift::coreNoteMoveCollisionRow:260 and ::coreNoteMoveRejectsRow:346. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(view.muteMask(), uint32_t(0))
 
 A124 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:369
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible stale-token rejection (dead-note intent rejects without history growth, mask/selection mutation, or delivery) is asserted by executing src/checks/editcheck/DocumentEditChecks.swift::documentVelocityRejectsContract:112 and src/checks/editcheck/NoteMoveCorpusChecks.swift::coreNoteMoveCollisionRow:260 and ::coreNoteMoveRejectsRow:346. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY((model.noteSelection() == std::vector<NoteId>{notes[1].noteId}))
 
 A125 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:370
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible stale-token rejection (dead-note intent rejects without history growth, mask/selection mutation, or delivery) is asserted by executing src/checks/editcheck/DocumentEditChecks.swift::documentVelocityRejectsContract:112 and src/checks/editcheck/NoteMoveCorpusChecks.swift::coreNoteMoveCollisionRow:260 and ::coreNoteMoveRejectsRow:346. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.deliveries, 13)
 
 A126 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:373
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-harness setup: C++ fixture precondition (song load, rig construction, note-nonempty guard, or timeline rebuild) for the deleted feed harness. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          }
-          document.undoStack()->undo();
-
-Original expression:
-  QVERIFY2(rig->rebuildTimeline(error), qPrintable(error))
 
 A127 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:374
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible post-undo selection reconciliation (deleted note id pruned from selection; undo restores the note without resurrecting it into selection) is asserted by executing src/checks/workspace/session_playback.swift (cppID swiftcore/DocumentSession::selectionPrunesDeletedNotes) and src/checks/rollcheck/remap.swift::checkRemapDelete:223. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.deliveries, 13)
 
 A128 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:375
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible post-undo selection reconciliation (deleted note id pruned from selection; undo restores the note without resurrecting it into selection) is asserted by executing src/checks/workspace/session_playback.swift (cppID swiftcore/DocumentSession::selectionPrunesDeletedNotes) and src/checks/rollcheck/remap.swift::checkRemapDelete:223. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!document.notesForTrack(model.primaryTrack()).empty())
 
 A129 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:379
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-          // Teardown: no delivery after destruction, remount mints a fresh id.
-          sgs_clear_delivery(sessionId);
-
-Original expression:
-  QVERIFY(feed->delivery()->fn == nullptr)
 
 A130 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:380
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(feed->delivery()->context == nullptr)
 
 A131 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:381
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(sgs_set_delivery(sessionId, SessionCapture::receive, &capture))
 
 A132 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:383
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          feed.reset();
-
-Original expression:
-  QVERIFY(!sgs_set_delivery(sessionId, SessionCapture::receive, &capture))
 
 A133 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:385
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          model.setNoteSelection({notes[0].noteId, notes[1].noteId});
-
-Original expression:
-  QCOMPARE(capture.deliveries, 13)
 
 A134 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:390
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible presenter lifetime (clean teardown, fresh ids on remount, fresh delivery on the remounted feed) is asserted by executing src/checks/workspace/session_io.swift::sessionLifetime:237 and src/checks/workspace/SessionChecks.swift (fresh bankToken on mutation). No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          sgs_unregister_feed(sessionId);
-
-          SessionCapture remountCapture;
-          SwiftGridSessionFeed remount(view);
-
-Original expression:
-  QVERIFY(remount.sessionId() != sessionId)
 
 A135 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:391
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(sgs_set_delivery(remount.sessionId(), SessionCapture::receive, &remountCapture))
 
 A136 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:393
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible presenter lifetime (clean teardown, fresh ids on remount, fresh delivery on the remounted feed) is asserted by executing src/checks/workspace/session_io.swift::sessionLifetime:237 and src/checks/workspace/SessionChecks.swift (fresh bankToken on mutation). No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
-Source context since previous assertion:
-  ;
-          remount.pushSnapshot();
-
-Original expression:
-  QCOMPARE(remountCapture.deliveries, 1)
 
 A137 | SwiftDocFeedTest::actualSwiftReceiverGuard | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:398
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the sgd_/sgs_ C ABI registration, synthetic 64-bit handle/token, Capture/SessionCapture delivery slot, or feed teardown/unregistration step of the deleted SwiftGridDocumentFeed/SwiftGridSessionFeed pair. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          compareSession(remountCapture, view, remount.sessionId(), 1);
-          sgs_clear_delivery(remount.sessionId());
-      }
-
-      void actualSwiftReceiverGuard() {
-Original expression:
-  QCOMPARE(sgd_check_swift_guard(), int32_t(0))
 
 Remaining original source (closing sequence and helper bodies):
   ; }
@@ -1604,188 +483,108 @@ source:
 
 S001 | runDocumentFeedCheck (guard code 1) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard first!.connect(), second!.connect(), !first!.connect() else { return 1 }
 
 S002 | runDocumentFeedCheck (guard code 2) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard firstNotifications == 0, secondNotifications == 0 else { return 2 }
 
 S003 | runDocumentFeedCheck (guard code 3) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard !duplicate!.connect() else { return 3 }
 
 S004 | runDocumentFeedCheck (guard code 4) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard firstEndpoint.pointee.fn != nil else { return 4 }
 
 S005 | runDocumentFeedCheck (guard code 5) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard first!.appliedRevision == 0, firstNotifications == 1,
-                    first!.document?.notes.first?.key == 72,
-                    first!.document?.notes.first?.onTick == UInt32.max - 64,
-                    first!.document?.signatures.first?.numerator == 0,
-                    first!.document?.signatures.first?.denomPow2 == 255 else { return 5 }
 
 S006 | runDocumentFeedCheck (guard code 6) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard !first!.apply(header: header, notes: nil, signatures: nil),
-                    firstNotifications == 1, first!.document?.notes.first?.key == 72 else { return 6 }
 
 S007 | runDocumentFeedCheck (guard code 7) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard first!.apply(header: header, notes: nil, signatures: nil),
-                    firstNotifications == 2, first!.document?.notes == [] else { return 7 }
 
 S008 | runDocumentFeedCheck (guard code 8) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard !first!.apply(header: header, notes: nil, signatures: nil),
-                    first!.appliedRevision == 7, firstNotifications == 2 else { return 8 }
 
 S009 | runDocumentFeedCheck (guard code 9) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard !first!.apply(header: header, notes: nil, signatures: nil),
-                    first!.appliedRevision == 7, firstNotifications == 2 else { return 9 }
 
 S010 | runDocumentFeedCheck (guard code 10) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard second!.apply(header: header, notes: nil, signatures: nil),
-                    second!.appliedRevision == 0, secondNotifications == 1 else { return 10 }
 
 S011 | runDocumentFeedCheck (guard code 11) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard first!.apply(header: header, notes: nil, signatures: nil),
-                    !second!.apply(header: header, notes: nil, signatures: nil),
-                    firstNotifications == 3, secondNotifications == 1 else { return 11 }
 
 S012 | runDocumentFeedCheck (guard code 12) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard second!.apply(header: header, notes: nil, signatures: nil),
-                    secondNotifications == 2, first!.appliedRevision == 8 else { return 12 }
 
 S013 | runDocumentFeedCheck (guard code 13) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard releasedFirst == nil, firstEndpoint.pointee.fn == nil,
-                    firstEndpoint.pointee.context == nil else { return 13 }
 
 S014 | runDocumentFeedCheck (guard code 14) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard remount.apply(header: header, notes: nil, signatures: nil),
-                    remount.appliedRevision == 0, second!.appliedRevision == 1 else { return 14 }
 
 S015 | runDocumentFeedCheck (guard code 15) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard secondEndpoint.pointee.fn == nil, secondEndpoint.pointee.context == nil else { return 15 }
 
 S016 | runDocumentFeedCheck (guard code 16) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard !remount.connect() else { return 16 }
 
 S017 | runSessionFeedCheck (guard code 101) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard first!.connect(), second!.connect(), !first!.connect() else { return 101 }
 
 S018 | runSessionFeedCheck (guard code 102) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard firstNotifications == 0, secondNotifications == 0 else { return 102 }
 
 S019 | runSessionFeedCheck (guard code 103) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard !duplicate!.connect() else { return 103 }
 
 S020 | runSessionFeedCheck (guard code 104) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard firstEndpoint.pointee.fn != nil else { return 104 }
 
 S021 | runSessionFeedCheck (guard code 105) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard first!.appliedRevision == 0, firstNotifications == 1,
-                    first!.session?.selectedNoteIds == [42],
-                    first!.session?.timeSelection.lanes.first?.controller == 21,
-                    first!.session?.timeSelection.tempo == true,
-                    first!.session?.muteMask == 1, first!.session?.soloMask == 2 else { return 105 }
 
 S022 | runSessionFeedCheck (guard code 106) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard !first!.apply(state: state, noteIds: nil, lanes: nil),
-                    firstNotifications == 1, first!.session?.selectedNoteIds == [42] else { return 106 }
 
 S023 | runSessionFeedCheck (guard code 107) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard first!.apply(state: state, noteIds: nil, lanes: nil),
-                    firstNotifications == 2, first!.session?.selectedNoteIds == [] else { return 107 }
 
 S024 | runSessionFeedCheck (guard code 108) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard !first!.apply(state: state, noteIds: nil, lanes: nil),
-                    first!.appliedRevision == 7, firstNotifications == 2 else { return 108 }
 
 S025 | runSessionFeedCheck (guard code 109) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard !first!.apply(state: state, noteIds: nil, lanes: nil),
-                    first!.appliedRevision == 7, firstNotifications == 2 else { return 109 }
 
 S026 | runSessionFeedCheck (guard code 110) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard second!.apply(state: state, noteIds: nil, lanes: nil),
-                    second!.appliedRevision == 0, secondNotifications == 1 else { return 110 }
 
 S027 | runSessionFeedCheck (guard code 111) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard first!.apply(state: state, noteIds: nil, lanes: nil),
-                    !second!.apply(state: state, noteIds: nil, lanes: nil),
-                    firstNotifications == 3, secondNotifications == 1 else { return 111 }
 
 S028 | runSessionFeedCheck (guard code 112) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard second!.apply(state: state, noteIds: nil, lanes: nil),
-                    secondNotifications == 2, first!.appliedRevision == 8 else { return 112 }
 
 S029 | runSessionFeedCheck (guard code 113) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard releasedFirst == nil, firstEndpoint.pointee.fn == nil,
-                    firstEndpoint.pointee.context == nil else { return 113 }
 
 S030 | runSessionFeedCheck (guard code 114) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard remount.apply(state: state, noteIds: nil, lanes: nil),
-                    remount.appliedRevision == 0, second!.appliedRevision == 1 else { return 114 }
 
 S031 | runSessionFeedCheck (guard code 115) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard secondEndpoint.pointee.fn == nil, secondEndpoint.pointee.context == nil else { return 115 }
 
 S032 | runSessionFeedCheck (guard code 116) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
 Anchor: deleted
-              guard !remount.connect() else { return 116 }
 
 S033 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsChecks.swift
 Anchor: message "conductor chunk leaves two note tracks"
-    report.expectEqual(2, document.engineTracks.usedTrackCount,
-                       cppID: cppID, what: "conductor chunk leaves two note tracks")
 
 S034 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsChecks.swift
 Anchor: message "document keeps the 960-tick division"
-    report.expectEqual(960, document.ticksPerBeat,
-                       cppID: cppID, what: "document keeps the 960-tick division")
 
 S035 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsChecks.swift
 Anchor: message "both tracks preserve unsigned note ticks and durations"
-    report.expectEqual(["0:64:2147483664:32", "1:72:2147483664:32"],
-                       (0..<2).flatMap { track in
-                           document.notes(in: track).map {
-                               "\(track):\($0.pitch):\($0.tick):\($0.duration)"
-                           }
-                       },
-                       cppID: cppID, what: "both tracks preserve unsigned note ticks and durations")
 
 S036 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsChecks.swift
 Anchor: message "raw signature bytes retain order and full-width values"
-    report.expectEqual(["7:3", "5:31", "0:255"],
-                       document.timeSignatures.map {
-                           "\($0.numerator):\($0.denominatorPower)"
-                       },
-                       cppID: cppID, what: "raw signature bytes retain order and full-width values")
-
-Shared helper:
-The executing predicates S033-S036 run through runEventEditsSuite in the swiftcore lane
-(wired at src/checks/editcheck/EventChecks.swift:21); S001-S032 execute nowhere.

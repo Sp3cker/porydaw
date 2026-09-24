@@ -9,49 +9,15 @@ Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellVoicegroup.qml
 Shared helper: none; saveCoreBankRoundTrip and saveCoreSourceSaveAndPreview are file-private in SaveCoreChecks.swift.
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below (81 sites). Source context preserves
-setup, rows, loops, and guards between assertions verbatim. S identifiers
-identify exact Swift predicates in the counterpart files, listed under Swift
-assertion predicates after the inventory.
-MATCHED means a corresponding Swift predicate was identified and executed;
-PARTIAL means a related check exists but differs in a stated way; NATIVE
-identifies retained native-window/rendering or native setup obligations; GAP
-identifies an original predicate without a replacement assertion. Unsure cases
-are recorded as GAP, never PARTIAL, and none of these labels authorizes deletion
-or claims whole-case equivalence.
-The store-side byte and clean-load predicates cover part of this suite.
-Workspace session predicates also cover failed rebind stability, clean
-song-and-bank save, and stale save snapshot handling; a mounted QML check
-covers editor save completion. PARTIAL rows retain their missing native
-receipt, widget, song-document, or exact stimulus conditions. Remaining
-GAP rows are not inferred from adjacent Swift assertions.
 
-Verification
 Command: deno task verify --filter projectstore-checks --verbose;
 deno task verify --filter swiftcore --verbose;
 deno task verify:shell --filter shell-voicegroup --verbose.
 Result: PASS for all three focused runs; whole-project validation is separate.
 
-Execution ownership
-The historical C++ owner is runVoicegroupSaveCheck in
-src/checks/voicegroupsave/fixture.cpp, which constructs VoicegroupSaveTest and
-qExecs it under the "voicegroup-save" application id; init()/cleanup() bracket
-every test method and failedRebindRetainsBinding, catalogOutageRetainsLastValid,
-releaseEditDirtiesOnlyBank (plus its _data row factory),
-undoShortcutRestoresWithoutWrite, unifiedSavePersistsSongAndBank,
-queuedSaveSnapshotPreservesNewerEdit, undoSaveRoundTripsBankBytes and
-cleanSaveEmitsNoReceipt are the cases inventoried below. Shared per-test state
-(m_window, m_document, m_tab, m_browser, m_dsSlot, m_originalVoice,
-m_homeId/m_homeArg, voicegroup/MIDI baselines, save receipts) is built by
 VoicegroupSaveTest::openSong with VoicegroupBrowserDriver and the song/project
 fixtures declared in src/checks/voicegroupsave/tst_voicegroupsave.h. That
 harness is a MainWindow/SongDocument surface and is not the ported seam.
-The Swift entry point for the ported rows is
-src/checks/support/corecheck/CoreCheckSupport.swift :: pdc_suite_run case 19
-(PDC_SUITE_SAVECORE) and case 22 (PDC_SUITE_PROJECTSTORE_CHECKS), both calling
-runSaveCoreSuite; src/checks/support/corecheck/tst_swiftcore.cpp ::
 SwiftCoreTest::saveCore/projectStoreChecks dispatch them, and checkcatalog.cpp ::
 projectstore-save and projectstore-checks register the harnesses with
 fixtureRootKind DecompProject. runSaveCoreSuite calls saveCoreBankRoundTrip (a
@@ -60,17 +26,6 @@ VoicegroupStore(projectRoot:) under _savecheck, then a release edit, a save, a
 reversal and a second save) and saveCoreSourceSaveAndPreview (VoicegroupSource
 preview/shadow rows that do not pair with this ledger); A079/A051/A076 evaluate
 inside saveCoreBankRoundTrip.
-
-Fixture, sequence and row constraints
-releaseEditDirtiesOnlyBank_data publishes three rows (adjacent, lower-bound, upper-bound) that reuse every site of releaseEditDirtiesOnlyBank with the release resolved from the row. No other data rows or loops expand these sites. The queued-save sequence stages a stale snapshot, posts a queued heartbeat turn, adds a newer note, and retries; the catalog-outage sequence hides and restores the fixture sound directory around a catalog refresh; undo chains re-dirty past save points exactly as sequenced below.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-The ported rows execute through VoicegroupStore/VoicegroupSource only: the
-MainWindow save/undo path (QAction shortcut dispatch, m_document->isDirty,
-save receipts, catalog-outage handling) has no ingress in this lane and is
-exercised, if at all, by the workspace session suite.
-
-Original assertion inventory and source sequence
 
 A001 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:50
 Disposition: GAP
@@ -980,12 +935,7 @@ QVERIFY(m_browser->selectedBankView())
 
 A079 | VoicegroupSaveTest::cleanSaveEmitsNoReceipt | src/checks/voicegroupsave/savecore.cpp:284
 Disposition: MATCHED
-Mapping/reason: S001 (src/checks/projectstore/SaveCoreChecks.swift saveCoreBankRoundTrip) asserts !initial.dirty for the bank loaded from the clean savecheck fixture, the same observable the original selectedBankView()->dirty guard established under cleanSaveEmitsNoReceipt.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(!m_browser->selectedBankView()->dirty)
+Mapping: S001
 
 A080 | VoicegroupSaveTest::cleanSaveEmitsNoReceipt | src/checks/voicegroupsave/savecore.cpp:285
 Disposition: GAP
@@ -1019,52 +969,21 @@ the predicate expression verbatim. The other 78 sites have no paired predicate.
 
 S001 | saveCoreBankRoundTrip | src/checks/projectstore/SaveCoreChecks.swift
 Anchor: message "A079: initially selected bank is clean"
-    report.expect(!initial.dirty, cppID: "savecore/A079",
-                  message: "A079: initially selected bank is clean")
 
 S002 | saveCoreBankRoundTrip | src/checks/projectstore/SaveCoreChecks.swift
 Anchor: message "A051: partial — bank-only save changes its on-disk voicegroup bytes"
-    report.expectEqual(true, try Data(contentsOf: path) != original,
-                       cppID: "savecore/A051",
-                       what: "A051: partial — bank-only save changes its on-disk voicegroup bytes")
 
 S003 | saveCoreBankRoundTrip | src/checks/projectstore/SaveCoreChecks.swift
 Anchor: message "A076: partial — bank-only reversal and save restore the original voicegroup bytes"
-    report.expectEqual(original, try Data(contentsOf: path),
-                       cppID: "savecore/A076",
-                       what: "A076: partial — bank-only reversal and save restore the original voicegroup bytes")
 
 S004 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
 Anchor: message "failed source load does not change the lease or history"
-        report.expect(failed && session.bankLease.bankToken == beforeFailed
-                      && session.document.history.undoIndex == indexBeforeFailed
-                      && session.document.state.config.voicegroupArgument == "_fixture_alt",
-                      cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
-                      message: "failed source load does not change the lease or history")
 
 S005 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
 Anchor: message "save of song and edited home bank refreshes the clean lease"
-        report.expect(!session.bankDirty && !session.document.isDirty
-                      && session.bankLease.bankToken != beforeSave,
-                      cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                      message: "save of song and edited home bank refreshes the clean lease")
 
 S006 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "stale snapshot completion leaves the newer document dirty"
-        report.expectEqual(true, session.document.isDirty,
-                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
-                           what: "stale snapshot completion leaves the newer document dirty")
 
 S007 | test_editorSaveCommitsCleanBank | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "mounted save completes: "
-        verify(waitForNative(function() {
-            return !controller.bankDirty || app.lastSaveError.length > 0
-        }, 15000), "mounted save completes: " + app.lastSaveError)
-
-Related Swift source scope
-Store-specific byte and clean-load predicates reside in
-src/checks/projectstore/SaveCoreChecks.swift; session-level selection/save
-predicates reside in src/checks/workspace/bank_switching.swift and
-src/checks/workspace/session_save.swift. The mounted editor save check is in
-src/checks/editorqml/tst_ShellVoicegroup.qml. Other original native receipt
-and widget-state conditions remain open unless mapped above.

@@ -10,76 +10,14 @@ Additional Swift counterpart: src/checks/automation/tst_automationediting.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; the context inventory below records its rows, loops and fixtures.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-Unresolved entries remain work.
-
-Execution and ownership
-The original swiftcore suite entrypoints invoke these paired functions in their original
-order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
-VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
-Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
-
-Verification evidence
-Provided by the controller for this worktree (not re-executed by this ledger task):
-deno task verify --filter swiftcore --verbose — PASS, 1/14 harnesses selected,
-13 skipped; swiftcore green including drawerAutomationBandIsolatesTempoAndCc,
-drawerAutomationMultiCcDragExcludesOthers, drawerAutomationGhostViewOnlyAndSurvives,
-drawerAutomationInflightDragInvalidation, drawerAutomationSelectionDeleteCommand
-(which emits the original multiLaneSelectionDeleteAndEmptyDeleteNoop cppID) and the
-cited drawerAutomationRestoredInteractionContracts / drawerAutomationParameterSwitchAndGhosts /
-drawerAutomationHistoryUndoRedo predicates. The rendered Control-press route is
-covered by the editorqml drawer lane (src/checks/editorqml/tst_EditorDrawer.qml
-test_productionAutomationTabSwitchAndGhosts), not by this swiftcore run.
-
-Fixture, sequence, data-row and loop inventory
-Each line below is an exact original source anchor. Multiline declarations, helper
-implementations, native event delivery and the complete order remain in the pinned source.
-src/checks/automation/automationselection.cpp:100 | for (const DocLanePoint &point : document.lanePoints(kTrack, controller)) {
-src/checks/automation/automationselection.cpp:111 | for (const DocLanePoint &point : document.lanePoints(kTrack, controller))
-src/checks/automation/automationselection.cpp:121 | for (std::size_t index = 0; index < left.size(); ++index) {
-src/checks/automation/automationselection.cpp:130 | for (const TempoPoint &point : document.tempoPoints()) {
-src/checks/automation/automationselection.cpp:143 | for (const TimelineEvent &event : timeline->events) {
-src/checks/automation/automationselection.cpp:157 | for (const TempoMapPoint &point : timeline->tempoMap) {
-src/checks/automation/automationselection.cpp:210 | mouseMove(automationWindowPoint(tempoBandEnd));
-src/checks/automation/automationselection.cpp:239 | mouseMove(activationWindow, Qt::ShiftModifier);
-src/checks/automation/automationselection.cpp:240 | mouseMove(dragEnd, Qt::ShiftModifier);
-src/checks/automation/automationselection.cpp:261 | mouseMove(automationWindowPoint(panBandEnd));
-src/checks/automation/automationselection.cpp:316 | mouseMove(activationWindow, Qt::ShiftModifier);
-src/checks/automation/automationselection.cpp:317 | mouseMove(end, Qt::ShiftModifier);
-src/checks/automation/automationselection.cpp:396 | keyClick(Qt::Key_Delete);
-src/checks/automation/automationselection.cpp:425 | // The shared fixture deliberately keeps pan occupants at kDestinationTick for
-src/checks/automation/automationselection.cpp:434 | keyClick(Qt::Key_Delete);
-src/checks/automation/automationselection.cpp:463 | mouseMove(activationWindow, Qt::ShiftModifier);
-src/checks/automation/automationselection.cpp:464 | mouseMove(end, Qt::ShiftModifier);
-src/checks/automation/automationselection.cpp:526 | mouseMove(activationWindow, Qt::ShiftModifier);
-src/checks/automation/automationselection.cpp:527 | mouseMove(end, Qt::ShiftModifier);
-
-Original assertion inventory
-
 A001 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:189
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ stage(mixedSelectionSmf()) decode-and-install guard has no Swift failure branch: the production fixture builds the same mixed-selection document in memory (editcheck spec 2.1 non-throwing-construction rule). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(stage(mixedSelectionSmf()))
 
 A002 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:194
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(tempoLane.valid())
 
 A003 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:195
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(panLane.valid())
 
 A004 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:196
 Disposition: GAP
@@ -95,82 +33,39 @@ Original expression:
 
 A006 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:200
 Disposition: MATCHED
-Mapping/reason: S061 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the production page accepts a switch to another lane, the observable of the original activateParameter({Tempo,0,0}) guard. The Swift band fixture performs the same Tempo activation before banding.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
+Mapping: S061
 
 A007 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:203
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The QtTest QSignalSpy construction has no Swift ingress; the publication behavior it instrumented is asserted by the Swift revision and history predicates cited at the sibling count sites (S004, S008). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(documentChanged.isValid())
+Mapping/reason: S004, S008
 
 A008 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:204
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The QtTest QSignalSpy construction has no Swift ingress; the publication behavior it instrumented is asserted by the Swift revision and history predicates cited at the sibling count sites (S004, S008). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(edited.isValid())
+Mapping/reason: S004, S008
 
 A009 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:214
 Disposition: MATCHED
-Mapping/reason: S036 and S037 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc. The Swift band on the Tempo lane publishes AutomationTimeSelection with tempo true, lanes exactly {tempo} and scope .lanes; the original selectionMatches(tempoSelection, ..., true, {}) asserts the same scope, tempo flag and empty lane list, with its own fixture range constants.
-Swift counterpart expression:
-  report.expect(page.selection?.tempo == true
-                      && page.selection?.lanes == Set([AutomationParameter.tempo]),
-                  cppID: id, message: "a band on Tempo selects Tempo alone")
-Original expression:
-  QVERIFY(selectionMatches(tempoSelection, kSelectionTick - 24, kDestinationTick, true, {}))
+Mapping: S036, S037
 
 A010 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:215
 Disposition: MATCHED
-Mapping/reason: S036 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc. The published tempo flag true is exactly timeSelectionCoversTempo.
-Swift counterpart expression:
-  report.expect(page.selection?.tempo == true
-                      && page.selection?.lanes == Set([AutomationParameter.tempo]),
-                  cppID: id, message: "a band on Tempo selects Tempo alone")
-Original expression:
-  QVERIFY(tab().view().selectionModel().timeSelectionCoversTempo(1u))
+Mapping: S036
 
 A011 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:216
 Disposition: MATCHED
-Mapping/reason: S036 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc. lanes exactly {tempo} means the Pan lane is not covered by the band.
-Swift counterpart expression:
-  report.expect(page.selection?.tempo == true
-                      && page.selection?.lanes == Set([AutomationParameter.tempo]),
-                  cppID: id, message: "a band on Tempo selects Tempo alone")
-Original expression:
-  QVERIFY(!tab().view().selectionModel().timeSelectionCoversLane(kTrack, kPanController, 1u))
+Mapping: S036
 
 A012 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:217
 Disposition: MATCHED
-Mapping/reason: S036 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc. lanes exactly {tempo} means the LFO lane is not covered by the band.
-Swift counterpart expression:
-  report.expect(page.selection?.tempo == true
-                      && page.selection?.lanes == Set([AutomationParameter.tempo]),
-                  cppID: id, message: "a band on Tempo selects Tempo alone")
-Original expression:
-  QVERIFY(!tab().view().selectionModel().timeSelectionCoversLane(kTrack, kLfoController, 1u))
+Mapping: S036
 
 A013 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:220
 Disposition: MATCHED
-Mapping/reason: S036 and S064 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc publishes the covered lane set, and src/checks/automation/presentation/tst_automationpresentation.swift :29 asserts the page selected-parameter indicator list for the active lane; the original compares canvas selectedParameters with the Tempo-only index list.
-Swift counterpart expression:
-  report.expectEqual([fixture.panLane], fixture.page.selectedParameters, cppID: drawerAutomationSwitchID,
-                       what: "the inactive parameter's selection indicator survives the switch")
-Original expression:
-  QCOMPARE(page().canvas()->selectedParameters(), tempoOnly)
+Mapping: S036, S064
 
 A014 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:221
 Disposition: MATCHED
-Mapping/reason: S038 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc compares the complete document snapshot before and after the banding gesture (banding writes nothing), the same frozen-facts observable.
-Swift counterpart expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                       what: "banding writes nothing")
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == beforeBand)
+Mapping: S038
 
 A015 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:241
 Disposition: PARTIAL
@@ -180,39 +75,19 @@ Original expression:
 
 A016 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:244
 Disposition: MATCHED
-Mapping/reason: S048 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers asserts a selected drag advances the document revision by exactly one, the same one-publication observable; the band fixture does not repeat the revision count.
-Swift counterpart expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                       what: "the multi-lane drag is one revision")
-Original expression:
-  QCOMPARE(tab().document().revision(), beforeTempoDrag.revision + 1)
+Mapping: S048
 
 A017 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:245
 Disposition: MATCHED
-Mapping/reason: S041 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc asserts the CC lane values are untouched by the tempo drag.
-Swift counterpart expression:
-  report.expectEqual(["48:60"], fixture.values(fixture.panLane), cppID: id,
-                       what: "the tempo drag leaves the CC lane alone")
-Original expression:
-  QVERIFY(sameLaneValues(laneValues(tab().document(), kPanController), panBefore))
+Mapping: S041
 
 A018 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:246
 Disposition: MATCHED
-Mapping/reason: S041 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc asserts a CC lane is untouched by the tempo drag; the Swift band fixture holds one CC lane where the original holds Pan and LFO.
-Swift counterpart expression:
-  report.expectEqual(["48:60"], fixture.values(fixture.panLane), cppID: id,
-                       what: "the tempo drag leaves the CC lane alone")
-Original expression:
-  QVERIFY(sameLaneValues(laneValues(tab().document(), kLfoController), lfoBefore))
+Mapping: S041
 
 A019 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:247
 Disposition: MATCHED
-Mapping/reason: S040 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc asserts the exact tempo stream after the tempo drag, the same destination value the original reads with tempoAt(kDestinationTick).
-Swift counterpart expression:
-  report.expectEqual(["48:120"], fixture.tempoValues, cppID: id,
-                       what: "the tempo drag moves the tempo point")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kDestinationTick), kPreservedTempoUs)
+Mapping: S040
 
 A020 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:248
 Disposition: PARTIAL
@@ -223,154 +98,71 @@ Original expression:
 
 A021 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:251
 Disposition: MATCHED
-Mapping/reason: S042 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc asserts the tempo drag undo succeeds, which requires canUndo as the original asserts.
-Swift counterpart expression:
-  report.expect(fixture.undo(), cppID: id, message: "the tempo drag undoes")
-Original expression:
-  QVERIFY(tab().history().canUndo())
+Mapping: S042
 
 A022 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:252
 Disposition: MATCHED
-Mapping/reason: S042 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc applies the undo through the production history, the same requestUndo outcome the original checks.
-Swift counterpart expression:
-  report.expect(fixture.undo(), cppID: id, message: "the tempo drag undoes")
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()))
+Mapping: S042
 
 A023 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:253
 Disposition: MATCHED
-Mapping/reason: S007 and S042 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts one undo restores the secondary Tempo stream and S042 asserts the band drag undo applies; the original reads the restored tempo at the selection tick.
-Swift counterpart expression:
-  report.expectEqual(["0:120", "36:150"], fixture.tempoValues, cppID: id,
-                         what: "undo restores secondary Tempo lane")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs)
+Mapping: S007, S042
 
 A024 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:257
 Disposition: MATCHED
-Mapping/reason: S061 and S043 - src/checks/automation/presentation/tst_automationpresentation.swift :19 asserts the pan switch is accepted and src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc requires the activated Pan lane for its second band.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, kTrack, kPanController}))
+Mapping: S061, S043
 
 A025 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:265
 Disposition: MATCHED
-Mapping/reason: S043 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc: a band on Pan publishes tempo false and lanes exactly {panLane}, the original selectionMatches(ccSelection, ..., false, {{track, pan}}).
-Swift counterpart expression:
-  report.expect(page.selection?.tempo == false
-                      && page.selection?.lanes == Set([fixture.panLane]),
-                  cppID: id, message: "a band on Pan selects the Pan lane alone")
-Original expression:
-  QVERIFY(selectionMatches(ccSelection, kSelectionTick - 24, kDestinationTick, false,
-                               {{kTrack, kPanController}}))
+Mapping: S043
 
 A026 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:267
 Disposition: MATCHED
-Mapping/reason: S043 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc. The published tempo flag false is exactly !timeSelectionCoversTempo.
-Swift counterpart expression:
-  report.expect(page.selection?.tempo == false
-                      && page.selection?.lanes == Set([fixture.panLane]),
-                  cppID: id, message: "a band on Pan selects the Pan lane alone")
-Original expression:
-  QVERIFY(!tab().view().selectionModel().timeSelectionCoversTempo(1u))
+Mapping: S043
 
 A027 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:268
 Disposition: MATCHED
-Mapping/reason: S043 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc. lanes exactly {panLane} is timeSelectionCoversLane(track, pan).
-Swift counterpart expression:
-  report.expect(page.selection?.tempo == false
-                      && page.selection?.lanes == Set([fixture.panLane]),
-                  cppID: id, message: "a band on Pan selects the Pan lane alone")
-Original expression:
-  QVERIFY(tab().view().selectionModel().timeSelectionCoversLane(kTrack, kPanController, 1u))
+Mapping: S043
 
 A028 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:271
 Disposition: MATCHED
-Mapping/reason: S043 and S064 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc publishes the Pan-only covered lane set and src/checks/automation/presentation/tst_automationpresentation.swift :29 the selected-parameter indicator list.
-Swift counterpart expression:
-  report.expect(page.selection?.tempo == false
-                      && page.selection?.lanes == Set([fixture.panLane]),
-                  cppID: id, message: "a band on Pan selects the Pan lane alone")
-Original expression:
-  QCOMPARE(page().canvas()->selectedParameters(), panOnly)
+Mapping: S043, S064
 
 A029 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:276
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ stage(mixedSelectionSmf()) decode-and-install guard has no Swift failure branch: the production fixture builds the same mixed-selection document in memory (editcheck spec 2.1 non-throwing-construction rule). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(stage(mixedSelectionSmf()))
 
 A030 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:282
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(tempoLane.valid())
 
 A031 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:283
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(panLane.valid())
 
 A032 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:284
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(lfoLane.valid())
 
 A033 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:287
 Disposition: MATCHED
-Mapping/reason: S063 and S064 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts applies an explicit lane-scoped AutomationTimeSelection and asserts page.selection equals it (with the indicator list); the original seeds the same scope through setTimeSelection and reads it back.
-Swift counterpart expression:
-  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
-                       what: "switching a parameter keeps the explicit selection")
-Original expression:
-  QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kSelectionTick,
-                               kDestinationTick, true,
-                               {{kTrack, kPanController}, {kTrack, kLfoController}}))
+Mapping: S063, S064
 
 A034 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:292
 Disposition: MATCHED
-Mapping/reason: S061 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts a switch to another lane is accepted.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, kTrack, kPanController}))
+Mapping: S061
 
 A035 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:293
 Disposition: MATCHED
-Mapping/reason: S061 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts a switch to another lane is accepted.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
+Mapping: S061
 
 A036 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:294
 Disposition: MATCHED
-Mapping/reason: S063 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the applied selection is unchanged across the parameter switch, the observable of the original selectionMatches after two activations.
-Swift counterpart expression:
-  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
-                       what: "switching a parameter keeps the explicit selection")
-Original expression:
-  QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kSelectionTick,
-                               kDestinationTick, true,
-                               {{kTrack, kPanController}, {kTrack, kLfoController}}))
+Mapping: S063
 
 A037 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:301
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The QtTest QSignalSpy construction has no Swift ingress; the publication behavior it instrumented is asserted by the Swift revision and history predicates cited at the sibling count sites (S004, S008). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(documentChanged.isValid())
+Mapping/reason: S004, S008
 
 A038 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:302
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The QtTest QSignalSpy construction has no Swift ingress; the publication behavior it instrumented is asserted by the Swift revision and history predicates cited at the sibling count sites (S004, S008). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(edited.isValid())
+Mapping/reason: S004, S008
 
 A039 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:318
 Disposition: PARTIAL
@@ -380,12 +172,7 @@ Original expression:
 
 A040 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:321
 Disposition: MATCHED
-Mapping/reason: S004 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts the selected drag advances the document revision by exactly one, i.e. exactly one document publication.
-Swift counterpart expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                         what: "heterogeneous selected drag is one revision")
-Original expression:
-  QCOMPARE(documentChanged.count(), 1)
+Mapping: S004
 
 A041 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:322
 Disposition: PARTIAL
@@ -395,94 +182,43 @@ Original expression:
 
 A042 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:323
 Disposition: MATCHED
-Mapping/reason: S004 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts the selected drag advances the document revision by exactly one.
-Swift counterpart expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                         what: "heterogeneous selected drag is one revision")
-Original expression:
-  QCOMPARE(tab().document().revision(), preview.revision + 1)
+Mapping: S004
 
 A043 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:324
 Disposition: MATCHED
-Mapping/reason: S008 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts one undo consumes the drag entry (!canUndo), i.e. exactly one entry was recorded; the original reads the undo-stack count.
-Swift counterpart expression:
-  report.expect(!fixture.document.history.canUndo, cppID: id,
-                    message: "the drag records exactly one history entry")
-Original expression:
-  QCOMPARE(tab().document().undoStack()->count(), preview.undoCount + 1)
+Mapping: S008
 
 A044 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:325
 Disposition: MATCHED
-Mapping/reason: S008 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts the single-entry observable; the original reads the undo-stack index.
-Swift counterpart expression:
-  report.expect(!fixture.document.history.canUndo, cppID: id,
-                    message: "the drag records exactly one history entry")
-Original expression:
-  QCOMPARE(tab().document().undoStack()->index(), preview.undoIndex + 1)
+Mapping: S008
 
 A045 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:326
 Disposition: MATCHED
-Mapping/reason: S003 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts the exact post-drag Tempo stream, so the dragged tempo point no longer sits at its source tick where the original reads 0.
-Swift counterpart expression:
-  report.expectEqual(["0:120", "36:160"], fixture.tempoValues, cppID: id,
-                         what: "selected drag resolves Tempo through its own stream")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kSelectionTick), uint32_t{0})
+Mapping: S003
 
 A046 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:327
 Disposition: MATCHED
-Mapping/reason: S003 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts the moved Tempo point at its destination tick with its BPM preserved.
-Swift counterpart expression:
-  report.expectEqual(["0:120", "36:160"], fixture.tempoValues, cppID: id,
-                         what: "selected drag resolves Tempo through its own stream")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kDestinationTick), kPreservedTempoUs)
+Mapping: S003
 
 A047 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:328
 Disposition: MATCHED
-Mapping/reason: S001 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts the post-drag document values of the covered CC lane.
-Swift counterpart expression:
-  report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id,
-                         what: "selected drag moves the grabbed lane")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kPanController, kSelectionTick), std::vector<int>{})
+Mapping: S001
 
 A048 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:329
 Disposition: MATCHED
-Mapping/reason: S001 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts the grabbed CC lane holds the dragged values at the destination.
-Swift counterpart expression:
-  report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id,
-                         what: "selected drag moves the grabbed lane")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kPanController, kDestinationTick),
-               std::vector<int>({10, 20}))
+Mapping: S001
 
 A049 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:331
 Disposition: MATCHED
-Mapping/reason: S002 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts the second covered CC lane resolves its own post-drag values.
-Swift counterpart expression:
-  report.expectEqual(["48:80"], fixture.values(fixture.volumeLane), cppID: id,
-                         what: "selected drag resolves a disjoint CC snapshot")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kLfoController, kSelectionTick), std::vector<int>{})
+Mapping: S002
 
 A050 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:332
 Disposition: MATCHED
-Mapping/reason: S002 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts the second covered CC lane post-drag snapshot.
-Swift counterpart expression:
-  report.expectEqual(["48:80"], fixture.values(fixture.volumeLane), cppID: id,
-                         what: "selected drag resolves a disjoint CC snapshot")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kLfoController, kDestinationTick), std::vector<int>({96}))
+Mapping: S002
 
 A051 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:333
 Disposition: MATCHED
-Mapping/reason: S046 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers asserts the unselected volume lane is excluded from a selected drag; the original asserts the same lane is unchanged by the tempo drag.
-Swift counterpart expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                       what: "the unselected volume lane is excluded")
-Original expression:
-  QVERIFY(sameLaneValues(laneValues(tab().document(), kVolumeController), volumeBefore))
+Mapping: S046
 
 A052 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:334
 Disposition: PARTIAL
@@ -513,47 +249,23 @@ Original expression:
 
 A056 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:345
 Disposition: MATCHED
-Mapping/reason: S005 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts applies the production undo, which requires canUndo as the original asserts.
-Swift counterpart expression:
-  report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
-Original expression:
-  QVERIFY(tab().history().canUndo())
+Mapping: S005
 
 A057 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:346
 Disposition: MATCHED
-Mapping/reason: S005 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts applies the undo through the production history, the same requestUndo outcome the original checks.
-Swift counterpart expression:
-  report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()))
+Mapping: S005
 
 A058 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:347
 Disposition: MATCHED
-Mapping/reason: S007 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts the post-undo Tempo stream is restored, the same value the original reads with tempoAt after undo.
-Swift counterpart expression:
-  report.expectEqual(["0:120", "36:150"], fixture.tempoValues, cppID: id,
-                         what: "undo restores secondary Tempo lane")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs)
+Mapping: S007
 
 A059 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:348
 Disposition: MATCHED
-Mapping/reason: S006 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts the post-undo CC lane values are restored across the selected lanes.
-Swift counterpart expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                         what: "undo restores secondary CC lane")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kPanController, kSelectionTick),
-               std::vector<int>({10, 20}))
+Mapping: S006
 
 A060 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:350
 Disposition: MATCHED
-Mapping/reason: S006 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts post-undo restoration of the second covered CC lane (the Swift fixture covers Volume, the original LFO).
-Swift counterpart expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                         what: "undo restores secondary CC lane")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kLfoController, kSelectionTick), std::vector<int>({96}))
+Mapping: S006
 
 A061 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:351
 Disposition: PARTIAL
@@ -563,48 +275,23 @@ Original expression:
 
 A062 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:353
 Disposition: MATCHED
-Mapping/reason: S066 - src/checks/automation/tst_automationediting.swift :: drawerAutomationHistoryUndoRedo asserts the undone transaction is redoable, the same canRedo observable.
-Swift counterpart expression:
-  report.expect(fixture.document.history.canRedo, cppID: drawerAutomationHistoryID,
-                  message: "the undone transaction is redoable")
-Original expression:
-  QVERIFY(tab().history().canRedo())
+Mapping: S066
 
 A063 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:354
 Disposition: MATCHED
-Mapping/reason: S067 - tst_automationediting.swift :: drawerAutomationHistoryUndoRedo redoes the undone transaction and asserts the committed lane values return, the same requestRedo outcome the original checks.
-Swift counterpart expression:
-  report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                       what: "redo restores the committed lane")
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestRedo()))
+Mapping: S067
 
 A064 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:355
 Disposition: MATCHED
-Mapping/reason: S067 - the redo replays the committed edit and the destination values return; the original reads the moved tempo at its destination tick after redo.
-Swift counterpart expression:
-  report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                       what: "redo restores the committed lane")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kDestinationTick), kPreservedTempoUs)
+Mapping: S067
 
 A065 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:356
 Disposition: MATCHED
-Mapping/reason: S067 - the redo restores the committed document lane values, the same observable for the covered CC lane.
-Swift counterpart expression:
-  report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                       what: "redo restores the committed lane")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kPanController, kDestinationTick), movedPan)
+Mapping: S067
 
 A066 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:357
 Disposition: MATCHED
-Mapping/reason: S067 - the redo restores the committed document lane values, the same observable for the second covered CC lane.
-Swift counterpart expression:
-  report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                       what: "redo restores the committed lane")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kLfoController, kDestinationTick), movedLfo)
+Mapping: S067
 
 A067 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:358
 Disposition: PARTIAL
@@ -614,58 +301,27 @@ Original expression:
 
 A068 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:363
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ stage(mixedSelectionSmf()) decode-and-install guard has no Swift failure branch: the production fixture builds the same mixed-selection document in memory (editcheck spec 2.1 non-throwing-construction rule). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(stage(mixedSelectionSmf()))
 
 A069 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:369
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(tempoLane.valid())
 
 A070 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:370
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(panLane.valid())
 
 A071 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:371
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(lfoLane.valid())
 
 A072 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:377
 Disposition: MATCHED
-Mapping/reason: S061 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the Tempo switch is accepted before the delete gesture.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
+Mapping: S061
 
 A073 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:379
 Disposition: MATCHED
-Mapping/reason: S036 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc publishes a covered lane set containing Tempo, the same coverage the original reads from canvas selectedParameters.
-Swift counterpart expression:
-  report.expect(page.selection?.tempo == true
-                      && page.selection?.lanes == Set([AutomationParameter.tempo]),
-                  cppID: id, message: "a band on Tempo selects Tempo alone")
-Original expression:
-  QVERIFY(covered.contains(checks::support::automationParameterIndex(
-          *page().canvas(), {EditorAutomationRowKind::Tempo, 0, 0})))
+Mapping: S036
 
 A074 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:381
 Disposition: MATCHED
-Mapping/reason: S043 - src/checks/automation/automationselection.swift :: drawerAutomationBandIsolatesTempoAndCc publishes a covered lane set exactly {panLane}, the same coverage the original reads for the Pan lane.
-Swift counterpart expression:
-  report.expect(page.selection?.tempo == false
-                      && page.selection?.lanes == Set([fixture.panLane]),
-                  cppID: id, message: "a band on Pan selects the Pan lane alone")
-Original expression:
-  QVERIFY(covered.contains(checks::support::automationParameterIndex(
-          *page().canvas(), {EditorAutomationRowKind::ControlChange, kTrack, kPanController})))
+Mapping: S043
 
 A075 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:383
 Disposition: PARTIAL
@@ -676,13 +332,7 @@ Original expression:
 
 A076 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:385
 Disposition: MATCHED
-Mapping/reason: S046 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers asserts the unselected Volume lane is excluded from the covered set.
-Swift counterpart expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                       what: "the unselected volume lane is excluded")
-Original expression:
-  QVERIFY(!covered.contains(checks::support::automationParameterIndex(
-          *page().canvas(), {EditorAutomationRowKind::ControlChange, kTrack, kVolumeController})))
+Mapping: S046
 
 A077 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:387
 Disposition: GAP
@@ -692,24 +342,15 @@ Original expression:
 
 A078 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:392
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The QtTest QSignalSpy construction has no Swift ingress; the publication behavior it instrumented is asserted by the Swift revision and history predicates cited at the sibling count sites (S004, S008). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(documentChanged.isValid())
+Mapping/reason: S004, S008
 
 A079 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:393
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The QtTest QSignalSpy construction has no Swift ingress; the publication behavior it instrumented is asserted by the Swift revision and history predicates cited at the sibling count sites (S004, S008). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(edited.isValid())
+Mapping/reason: S004, S008
 
 A080 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:398
 Disposition: MATCHED
-Mapping/reason: S075 - src/checks/automation/automationselection.swift :: drawerAutomationSelectionDeleteCommand asserts one Delete selection command publishes exactly one document revision, the same publication count the original reads from its documentChanged spy.
-Swift counterpart expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                       what: "one Delete is one revision")
-Original expression:
-  QCOMPARE(documentChanged.count(), 1)
+Mapping: S075
 
 A081 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:399
 Disposition: PARTIAL
@@ -719,57 +360,27 @@ Original expression:
 
 A082 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:400
 Disposition: MATCHED
-Mapping/reason: S075 - src/checks/automation/automationselection.swift :: drawerAutomationSelectionDeleteCommand asserts the Delete command advances the revision by exactly one, the same single-revision publication.
-Swift counterpart expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                       what: "one Delete is one revision")
-Original expression:
-  QCOMPARE(tab().document().revision(), beforeDelete.revision + 1)
+Mapping: S075
 
 A083 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:401
 Disposition: MATCHED
-Mapping/reason: S008 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts one undo consumes the single recorded history entry; the original reads the undo-stack count.
-Swift counterpart expression:
-  report.expect(!fixture.document.history.canUndo, cppID: id,
-                    message: "the drag records exactly one history entry")
-Original expression:
-  QCOMPARE(tab().document().undoStack()->count(), beforeDelete.undoCount + 1)
+Mapping: S008
 
 A084 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:402
 Disposition: MATCHED
-Mapping/reason: S074 - src/checks/automation/automationselection.swift :: drawerAutomationSelectionDeleteCommand consumes the production .delete selection command on a range covering the Tempo lane and asserts the covered tempo stream is empty, the same removal the original reads as tempoAt(kSelectionTick) == 0 after the Delete key.
-Swift counterpart expression:
-  report.expect(fixture.tempoValues.isEmpty, cppID: id,
-                  message: "Delete removes the covered tempo point")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kSelectionTick), uint32_t{0})
+Mapping: S074
 
 A085 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:403
 Disposition: MATCHED
-Mapping/reason: S073 - src/checks/automation/automationselection.swift :: drawerAutomationSelectionDeleteCommand consumes the .delete command for a range covering the Pan lane and asserts only the point outside the span survives, so the covered Pan point is removed, the original valuesAt(kSelectionTick) == {}.
-Swift counterpart expression:
-  report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id,
-                       what: "Delete keeps CC points outside the span")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kPanController, kSelectionTick), std::vector<int>{})
+Mapping: S073
 
 A086 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:404
 Disposition: MATCHED
-Mapping/reason: S073 and S074 - src/checks/automation/automationselection.swift :: drawerAutomationSelectionDeleteCommand executes the same covered-span delete for a second covered lane; the Swift fixture second covered lane is Tempo where the original uses LFO, and the covered CC lane removal is asserted by S073.
-Swift counterpart expression:
-  report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id,
-                       what: "Delete keeps CC points outside the span")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kLfoController, kSelectionTick), std::vector<int>{})
+Mapping: S073, S074
 
 A087 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:405
 Disposition: MATCHED
-Mapping/reason: S010 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts the other lane keeps its values across the selection-scoped delete.
-Swift counterpart expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                         what: "stationary selection click preserves other lanes")
-Original expression:
-  QVERIFY(sameLaneValues(laneValues(tab().document(), kVolumeController), volumeBefore))
+Mapping: S010
 
 A088 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:407
 Disposition: PARTIAL
@@ -785,47 +396,23 @@ Original expression:
 
 A090 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:410
 Disposition: MATCHED
-Mapping/reason: S005 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts applies the production undo, which requires canUndo as the original asserts.
-Swift counterpart expression:
-  report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
-Original expression:
-  QVERIFY(tab().history().canUndo())
+Mapping: S005
 
 A091 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:411
 Disposition: MATCHED
-Mapping/reason: S076 - src/checks/automation/automationselection.swift :: drawerAutomationSelectionDeleteCommand applies the undo through the production history after the Delete command, the same requestUndo outcome the original checks.
-Swift counterpart expression:
-  report.expect(fixture.undo(), cppID: id, message: "the Delete undoes")
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()))
+Mapping: S076
 
 A092 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:412
 Disposition: MATCHED
-Mapping/reason: S078 - src/checks/automation/automationselection.swift :: drawerAutomationSelectionDeleteCommand asserts the undo restores the covered Tempo point, the same restored tempo value the original reads at the selection tick.
-Swift counterpart expression:
-  report.expectEqual(["48:100"], fixture.tempoValues, cppID: id,
-                       what: "undo restores the covered tempo point")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs)
+Mapping: S078
 
 A093 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:413
 Disposition: MATCHED
-Mapping/reason: S077 - src/checks/automation/automationselection.swift :: drawerAutomationSelectionDeleteCommand asserts the undo restores the covered CC point, the same valueAt restoration the original checks.
-Swift counterpart expression:
-  report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
-                       what: "undo restores the covered CC point")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kPanController, kSelectionTick),
-               std::vector<int>({10, 20}))
+Mapping: S077
 
 A094 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:415
 Disposition: MATCHED
-Mapping/reason: S077 and S078 - src/checks/automation/automationselection.swift :: drawerAutomationSelectionDeleteCommand restores both covered streams on undo; the Swift fixture second covered lane is Tempo where the original uses LFO.
-Swift counterpart expression:
-  report.expectEqual(["48:100"], fixture.tempoValues, cppID: id,
-                       what: "undo restores the covered tempo point")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kLfoController, kSelectionTick), std::vector<int>({96}))
+Mapping: S077, S078
 
 A095 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:416
 Disposition: PARTIAL
@@ -836,30 +423,15 @@ Original expression:
 
 A096 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:419
 Disposition: MATCHED
-Mapping/reason: S066 - tst_automationediting.swift :: drawerAutomationHistoryUndoRedo asserts the undone transaction is redoable.
-Swift counterpart expression:
-  report.expect(fixture.document.history.canRedo, cppID: drawerAutomationHistoryID,
-                  message: "the undone transaction is redoable")
-Original expression:
-  QVERIFY(tab().history().canRedo())
+Mapping: S066
 
 A097 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:420
 Disposition: MATCHED
-Mapping/reason: S067 - tst_automationediting.swift :: drawerAutomationHistoryUndoRedo redoes the undone transaction and asserts the committed values return, the same requestRedo outcome.
-Swift counterpart expression:
-  report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                       what: "redo restores the committed lane")
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestRedo()))
+Mapping: S067
 
 A098 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:421
 Disposition: MATCHED
-Mapping/reason: S067 - the redo replays the committed delete, so the covered tempo point is absent again as the original reads.
-Swift counterpart expression:
-  report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                       what: "redo restores the committed lane")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kSelectionTick), uint32_t{0})
+Mapping: S067
 
 A099 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:423
 Disposition: PARTIAL
@@ -869,129 +441,63 @@ Original expression:
 
 A100 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:435
 Disposition: MATCHED
-Mapping/reason: S079 and S080 - src/checks/automation/automationselection.swift :: drawerAutomationSelectionDeleteCommand clears the time selection and asserts the .delete command is refused and the whole document snapshot is unchanged, the same empty-selection no-op as the original frozen-facts equality.
-Swift counterpart expression:
-  report.expect(!fixture.page.consumeSelectionCommand(command: .delete), cppID: id,
-                  message: "Delete with no selection commits nothing")
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == beforeEmptyDelete)
+Mapping: S079, S080
 
 A101 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:436
 Disposition: MATCHED
-Mapping/reason: S080 - src/checks/automation/automationselection.swift :: drawerAutomationSelectionDeleteCommand asserts the refused empty Delete leaves the whole document snapshot unchanged, which covers the untouched lane values the original compares.
-Swift counterpart expression:
-  report.expectEqual(emptyBefore, fixture.snapshot, cppID: id,
-                       what: "an empty Delete writes nothing")
-Original expression:
-  QVERIFY(sameLaneValues(laneValues(tab().document(), kVolumeController), volumeBefore))
+Mapping: S080
 
 A102 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:441
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ stage(mixedSelectionSmf()) decode-and-install guard has no Swift failure branch: the production fixture builds the same mixed-selection document in memory (editcheck spec 2.1 non-throwing-construction rule). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(stage(mixedSelectionSmf()))
 
 A103 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:447
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(tempoLane.valid())
 
 A104 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:448
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(panLane.valid())
 
 A105 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:449
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(lfoLane.valid())
 
 A106 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:452
 Disposition: MATCHED
-Mapping/reason: S061 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the Tempo switch is accepted before the aborted drag.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
+Mapping: S061
 
 A107 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:472
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The QtTest QSignalSpy construction has no Swift ingress; the publication behavior it instrumented is asserted by the Swift revision and history predicates cited at the sibling count sites (S004, S008). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(documentChanged.isValid())
+Mapping/reason: S004, S008
 
 A108 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:473
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The QtTest QSignalSpy construction has no Swift ingress; the publication behavior it instrumented is asserted by the Swift revision and history predicates cited at the sibling count sites (S004, S008). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(edited.isValid())
+Mapping/reason: S004, S008
 
 A109 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:482
 Disposition: MATCHED
-Mapping/reason: S068 and S069 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationInflightDragInvalidation drives a live drag, rebuilds the document, and asserts the rebuild cancels the gesture synchronously with the trailing release committing nothing, i.e. the rebuild itself changes no document state, which is what the original compares across its frozen rebuild facts.
-Swift counterpart expression:
-  report.expect(!page.hasGesture, cppID: rebuildID,
-                  message: "the document rebuild cancels the drag synchronously")
-Original expression:
-  QVERIFY(afterRebuild == beforeRebuild)
+Mapping: S068, S069
 
 A110 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:485
 Disposition: MATCHED
-Mapping/reason: S069 - drawerAutomationInflightDragInvalidation asserts releasing a rebuild-cancelled drag commits nothing, the same post-release frozen-state equality.
-Swift counterpart expression:
-  report.expectEqual(afterRebuild, rebuilt.snapshot, cppID: rebuildID,
-                       what: "releasing the cancelled drag commits nothing")
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == afterRebuild)
+Mapping: S069
 
 A111 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:486
 Disposition: MATCHED
-Mapping/reason: S069 and S071 - the cancelled drag writes nothing, so the covered Tempo point keeps the value the original reads.
-Swift counterpart expression:
-  report.expectEqual(afterRebuild, rebuilt.snapshot, cppID: rebuildID,
-                       what: "releasing the cancelled drag commits nothing")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs)
+Mapping: S069, S071
 
 A112 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:487
 Disposition: MATCHED
-Mapping/reason: S069 and S071 - the cancelled drag writes nothing, so no tempo point lands at the destination tick.
-Swift counterpart expression:
-  report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID,
-                       what: "the cancelled drag writes nothing")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kDestinationTick), uint32_t{0})
+Mapping: S069, S071
 
 A113 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:488
 Disposition: MATCHED
-Mapping/reason: S069 and S071 - the cancelled drag writes nothing, so the covered CC lanes keep their values.
-Swift counterpart expression:
-  report.expectEqual(afterRebuild, rebuilt.snapshot, cppID: rebuildID,
-                       what: "releasing the cancelled drag commits nothing")
-Original expression:
-  QVERIFY(sameLaneValues(laneValues(tab().document(), kPanController), panBefore))
+Mapping: S069, S071
 
 A114 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:489
 Disposition: MATCHED
-Mapping/reason: S069 and S071 - the cancelled drag writes nothing, so the second covered CC lane keeps its values.
-Swift counterpart expression:
-  report.expectEqual(afterRebuild, rebuilt.snapshot, cppID: rebuildID,
-                       what: "releasing the cancelled drag commits nothing")
-Original expression:
-  QVERIFY(sameLaneValues(laneValues(tab().document(), kLfoController), lfoBefore))
+Mapping: S069, S071
 
 A115 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:490
 Disposition: MATCHED
-Mapping/reason: S069 and S071 - the cancelled drag writes nothing, so the unselected Volume lane keeps its values.
-Swift counterpart expression:
-  report.expectEqual(afterRebuild, rebuilt.snapshot, cppID: rebuildID,
-                       what: "releasing the cancelled drag commits nothing")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kVolumeController, 24), std::vector<int>({32}))
+Mapping: S069, S071
 
 A116 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:491
 Disposition: PARTIAL
@@ -1009,42 +515,24 @@ Original expression:
 
 A118 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:500
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ stage(mixedSelectionSmf()) decode-and-install guard has no Swift failure branch: the production fixture builds the same mixed-selection document in memory (editcheck spec 2.1 non-throwing-construction rule). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(stage(mixedSelectionSmf()))
 
 A119 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:505
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(panLane.valid())
 
 A120 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:506
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped predicates below execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(lfoLane.valid())
 
 A121 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:509
 Disposition: MATCHED
-Mapping/reason: S061 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the Pan switch is accepted before the CC drag.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, kTrack, kPanController}))
+Mapping: S061
 
 A122 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:514
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The QtTest QSignalSpy construction has no Swift ingress; the publication behavior it instrumented is asserted by the Swift revision and history predicates cited at the sibling count sites (S004, S008). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(documentChanged.isValid())
+Mapping/reason: S004, S008
 
 A123 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:515
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The QtTest QSignalSpy construction has no Swift ingress; the publication behavior it instrumented is asserted by the Swift revision and history predicates cited at the sibling count sites (S004, S008). The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(edited.isValid())
+Mapping/reason: S004, S008
 
 A124 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:528
 Disposition: PARTIAL
@@ -1054,58 +542,27 @@ Original expression:
 
 A125 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:531
 Disposition: MATCHED
-Mapping/reason: S048 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers asserts the CC selection drag advances the revision by exactly one.
-Swift counterpart expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                       what: "the multi-lane drag is one revision")
-Original expression:
-  QCOMPARE(tab().document().revision(), beforeDrag.revision + 1)
+Mapping: S048
 
 A126 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:532
 Disposition: MATCHED
-Mapping/reason: S047 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers asserts the Tempo stream is unchanged by the CC drag, the same tempoAt value the original reads.
-Swift counterpart expression:
-  report.expectEqual(["0:120"], fixture.tempoValues, cppID: id,
-                       what: "tempo is excluded from the CC drag")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs)
+Mapping: S047
 
 A127 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:533
 Disposition: MATCHED
-Mapping/reason: S047 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers asserts the Tempo stream is unchanged, so no tempo point lands at the destination tick.
-Swift counterpart expression:
-  report.expectEqual(["0:120"], fixture.tempoValues, cppID: id,
-                       what: "tempo is excluded from the CC drag")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kDestinationTick), uint32_t{0})
+Mapping: S047
 
 A128 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:534
 Disposition: MATCHED
-Mapping/reason: S044 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers asserts the grabbed CC lane holds the dragged values at the destination.
-Swift counterpart expression:
-  report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id,
-                       what: "the grabbed lane moves with the selection")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kPanController, kDestinationTick),
-               std::vector<int>({10, 20}))
+Mapping: S044
 
 A129 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:536
 Disposition: MATCHED
-Mapping/reason: S045 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers asserts the second selected lane shares the drag delta.
-Swift counterpart expression:
-  report.expectEqual(["48:80"], fixture.values(fixture.modulationLane), cppID: id,
-                       what: "the second selected lane shares the delta")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kLfoController, kDestinationTick), std::vector<int>({96}))
+Mapping: S045
 
 A130 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:537
 Disposition: MATCHED
-Mapping/reason: S046 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers asserts the unselected Volume lane is excluded from the drag.
-Swift counterpart expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                       what: "the unselected volume lane is excluded")
-Original expression:
-  QVERIFY(sameLaneValues(laneValues(tab().document(), kVolumeController), volumeBefore))
+Mapping: S046
 
 A131 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:538
 Disposition: PARTIAL
@@ -1129,272 +586,124 @@ Original expression:
 
 A134 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:547
 Disposition: MATCHED
-Mapping/reason: S049 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers applies the production undo, which requires canUndo.
-Swift counterpart expression:
-  report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
-Original expression:
-  QVERIFY(tab().history().canUndo())
+Mapping: S049
 
 A135 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:548
 Disposition: MATCHED
-Mapping/reason: S049 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers applies the undo through the production history, the same requestUndo outcome.
-Swift counterpart expression:
-  report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()))
+Mapping: S049
 
 A136 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:549
 Disposition: MATCHED
-Mapping/reason: S047 and S049 - the Tempo stream stays excluded across the drag and the undo applies.
-Swift counterpart expression:
-  report.expectEqual(["0:120"], fixture.tempoValues, cppID: id,
-                       what: "tempo is excluded from the CC drag")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs)
+Mapping: S047, S049
 
 A137 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:550
 Disposition: MATCHED
-Mapping/reason: S050 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers asserts the post-undo values of the grabbed lane.
-Swift counterpart expression:
-  report.expectEqual(["24:60"], fixture.values(fixture.panLane), cppID: id,
-                       what: "undo restores the grabbed lane")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kPanController, kSelectionTick),
-               std::vector<int>({10, 20}))
+Mapping: S050
 
 A138 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:552
 Disposition: MATCHED
-Mapping/reason: S051 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers asserts the post-undo values of the second selected lane.
-Swift counterpart expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.modulationLane), cppID: id,
-                       what: "undo restores the second selected lane")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kLfoController, kSelectionTick), std::vector<int>({96}))
+Mapping: S051
 
 A139 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:554
 Disposition: MATCHED
-Mapping/reason: S066 - tst_automationediting.swift :: drawerAutomationHistoryUndoRedo asserts the undone transaction is redoable.
-Swift counterpart expression:
-  report.expect(fixture.document.history.canRedo, cppID: drawerAutomationHistoryID,
-                  message: "the undone transaction is redoable")
-Original expression:
-  QVERIFY(tab().history().canRedo())
+Mapping: S066
 
 A140 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:555
 Disposition: MATCHED
-Mapping/reason: S067 - tst_automationediting.swift :: drawerAutomationHistoryUndoRedo redoes the undone transaction and asserts the committed values return.
-Swift counterpart expression:
-  report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                       what: "redo restores the committed lane")
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestRedo()))
+Mapping: S067
 
 A141 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:556
 Disposition: MATCHED
-Mapping/reason: S047 - src/checks/automation/automationselection.swift :: drawerAutomationMultiCcDragExcludesOthers asserts the Tempo stream is excluded from the CC drag, so it stays absent after the redo.
-Swift counterpart expression:
-  report.expectEqual(["0:120"], fixture.tempoValues, cppID: id,
-                       what: "tempo is excluded from the CC drag")
-Original expression:
-  QCOMPARE(tempoAt(tab().document(), kDestinationTick), uint32_t{0})
+Mapping: S047
 
 A142 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:557
 Disposition: MATCHED
-Mapping/reason: S067 and S044 - the redo restores the committed grabbed-lane values.
-Swift counterpart expression:
-  report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                       what: "redo restores the committed lane")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kPanController, kDestinationTick), movedPan)
+Mapping: S067, S044
 
 A143 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:558
 Disposition: MATCHED
-Mapping/reason: S067 and S045 - the redo restores the committed second-lane values.
-Swift counterpart expression:
-  report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                       what: "redo restores the committed lane")
-Original expression:
-  QCOMPARE(valuesAt(tab().document(), kLfoController, kDestinationTick), movedLfo)
+Mapping: S067, S045
 
 A144 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:564
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): QVERIFY(canvas) guards the native AutomationCanvas pointer; the Swift page is constructed by the fixture and publishes no nullable canvas accessor. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(canvas)
 
 A145 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:571
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the C++ catalog-index lookup precondition (volumeIndex >= 0) has no Swift ingress; the production page addresses parameters as typed AutomationParameter values and resolves its own catalog index. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(volumeIndex >= 0)
 
 A146 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:572
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the C++ catalog-index lookup precondition (panIndex >= 0) has no Swift ingress; the ghost predicates below resolve the index inside the page. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(panIndex >= 0)
 
 A147 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:573
 Disposition: MATCHED
-Mapping/reason: S061 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the Volume switch is accepted before the ghost pin.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter(volume))
+Mapping: S061
 
 A148 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:580
 Disposition: MATCHED
-Mapping/reason: S053, S055 and src/checks/editorqml/tst_EditorDrawer.qml test_productionAutomationTabSwitchAndGhosts (pressAutomationTabWithControl on a drawn tab, then bootstrap.automationGhostParameters becomes non-empty) - the original Control-clicks the rendered parameter tab; the converted lane exercises both the rendered Control-press route and the presenter route for the same pin.
-Swift counterpart expression:
-  report.expect(page.toggleGhostParameter(index: panIndex), cppID: id,
-                  message: "a lane with events pins as a ghost")
-Original expression:
-  QVERIFY(clickParameterTab(pan, Qt::ControlModifier))
+Mapping: S053, S055
 
 A149 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:581
 Disposition: MATCHED
-Mapping/reason: S053 and S055 - src/checks/automation/automationselection.swift :: drawerAutomationGhostViewOnlyAndSurvives asserts the pin is accepted and the page publishes the pinned ghost lane.
-Swift counterpart expression:
-  report.expect(page.ghostParameters.contains(fixture.panLane), cppID: id,
-                  message: "the page publishes the pinned ghost")
-Original expression:
-  QTRY_COMPARE(canvas->ghostParameters(), QList<int>({panIndex}))
+Mapping: S053, S055
 
 A150 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:582
 Disposition: MATCHED
-Mapping/reason: S056 - src/checks/automation/automationselection.swift :: drawerAutomationGhostViewOnlyAndSurvives asserts the active parameter is unchanged by the pin.
-Swift counterpart expression:
-  report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: id,
-                       what: "pinning keeps the active parameter")
-Original expression:
-  QCOMPARE(canvas->activeParameter(), volumeIndex)
+Mapping: S056
 
 A151 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:583
 Disposition: MATCHED
-Mapping/reason: S064 - src/checks/automation/presentation/tst_automationpresentation.swift :29 asserts the selected-parameter indicator list of the active lane is unchanged by the switch; the original asserts the canvas selection list is unchanged by the ghost pin.
-Swift counterpart expression:
-  report.expectEqual([fixture.panLane], fixture.page.selectedParameters, cppID: drawerAutomationSwitchID,
-                       what: "the inactive parameter's selection indicator survives the switch")
-Original expression:
-  QCOMPARE(canvas->selectedParameters(), selectionBefore)
+Mapping: S064
 
 A152 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:584
 Disposition: MATCHED
-Mapping/reason: S054 - src/checks/automation/automationselection.swift :: drawerAutomationGhostViewOnlyAndSurvives asserts pinning a ghost leaves the complete document snapshot unchanged; that snapshot equality replaces the original byte-level smf().write() dump (the byte dump is C++ representation of the same no-write observable).
-Swift counterpart expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                       what: "pinning a ghost writes nothing")
-Original expression:
-  QCOMPARE(tab().document().smf().write(), documentBefore)
+Mapping: S054
 
 A153 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:585
 Disposition: MATCHED
-Mapping/reason: S054 - src/checks/automation/automationselection.swift :: drawerAutomationGhostViewOnlyAndSurvives asserts the unchanged document snapshot, which carries the revision the original compares.
-Swift counterpart expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                       what: "pinning a ghost writes nothing")
-Original expression:
-  QCOMPARE(tab().document().revision(), revisionBefore)
+Mapping: S054
 
 A154 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:586
 Disposition: MATCHED
-Mapping/reason: S054 - src/checks/automation/automationselection.swift :: drawerAutomationGhostViewOnlyAndSurvives asserts the unchanged document snapshot and history state (the original reads the undo-stack index).
-Swift counterpart expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                       what: "pinning a ghost writes nothing")
-Original expression:
-  QCOMPARE(tab().document().undoStack()->index(), undoIndexBefore)
+Mapping: S054
 
 A155 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:587
 Disposition: MATCHED
-Mapping/reason: S054 - src/checks/automation/automationselection.swift :: drawerAutomationGhostViewOnlyAndSurvives asserts the unchanged document snapshot and history state (the original reads the undo-stack count).
-Swift counterpart expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                       what: "pinning a ghost writes nothing")
-Original expression:
-  QCOMPARE(tab().document().undoStack()->count(), undoCountBefore)
+Mapping: S054
 
 A156 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:589
 Disposition: MATCHED
-Mapping/reason: S061 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts a switch away from the pinned lane is accepted.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter(tempo))
+Mapping: S061
 
 A157 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:590
 Disposition: MATCHED
-Mapping/reason: S061 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the switch back is accepted.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter(volume))
+Mapping: S061
 
 A158 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:591
 Disposition: MATCHED
-Mapping/reason: S057 - src/checks/automation/automationselection.swift :: drawerAutomationGhostViewOnlyAndSurvives asserts the ghost survives the parameter activations.
-Swift counterpart expression:
-  report.expect(page.ghostParameters.contains(fixture.panLane), cppID: id,
-                  message: "the ghost survives parameter activation")
-Original expression:
-  QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex})
+Mapping: S057
 
 A159 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:593
 Disposition: MATCHED
-Mapping/reason: S061 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts activating the pinned lane itself is accepted.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter(pan))
+Mapping: S061
 
 A160 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:594
 Disposition: MATCHED
-Mapping/reason: S062 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the switched parameter becomes active.
-Swift counterpart expression:
-  report.expectEqual(fixture.panLane, fixture.page.activeParameter, cppID: drawerAutomationSwitchID,
-                       what: "the switched parameter becomes active")
-Original expression:
-  QCOMPARE(canvas->activeParameter(), panIndex)
+Mapping: S062
 
 A161 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:595
 Disposition: MATCHED
-Mapping/reason: S057 - src/checks/automation/automationselection.swift :: drawerAutomationGhostViewOnlyAndSurvives asserts the ghost survives activating its own lane.
-Swift counterpart expression:
-  report.expect(page.ghostParameters.contains(fixture.panLane), cppID: id,
-                  message: "the ghost survives parameter activation")
-Original expression:
-  QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex})
+Mapping: S057
 
 A162 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:597
 Disposition: MATCHED
-Mapping/reason: S059 and src/checks/editorqml/tst_EditorDrawer.qml test_productionAutomationTabSwitchAndGhosts (the second pressAutomationTabWithControl verifies the ghost list empties again) - the original Control-clicks the pinned tab a second time.
-Swift counterpart expression:
-  report.expect(page.toggleGhostParameter(index: panIndex), cppID: id,
-                  message: "the pin toggles off again")
-Original expression:
-  QVERIFY(clickParameterTab(pan, Qt::ControlModifier))
+Mapping: S059
 
 A163 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:598
 Disposition: MATCHED
-Mapping/reason: S060 - src/checks/automation/automationselection.swift :: drawerAutomationGhostViewOnlyAndSurvives asserts unpinning drops the ghost.
-Swift counterpart expression:
-  report.expect(!page.ghostParameters.contains(fixture.panLane), cppID: id,
-                  message: "unpinning drops the ghost")
-Original expression:
-  QTRY_VERIFY(canvas->ghostParameters().isEmpty())
+Mapping: S060
 
 A164 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:599
 Disposition: MATCHED
-Mapping/reason: S057 and S062 - the pinned lane stays the active parameter while its ghost is retained.
-Swift counterpart expression:
-  report.expectEqual(fixture.panLane, fixture.page.activeParameter, cppID: drawerAutomationSwitchID,
-                       what: "the switched parameter becomes active")
-Original expression:
-  QCOMPARE(canvas->activeParameter(), panIndex)
+Mapping: S057, S062
 
 A165 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:602
 Disposition: PARTIAL
@@ -1404,24 +713,13 @@ Original expression:
 
 A166 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:608
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): QVERIFY(canvas) guards the native AutomationCanvas pointer; the Swift page is constructed by the fixture and publishes no nullable canvas accessor. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(canvas)
 
 A167 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:611
 Disposition: MATCHED
-Mapping/reason: S061 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the Volume switch is accepted before the eventless Control press.
-Swift counterpart expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
-Original expression:
-  QVERIFY(activateParameter(volume))
+Mapping: S061
 
 A168 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:613
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the C++ catalog-index lookup precondition (volumeIndex >= 0) has no Swift ingress; the production page resolves its own catalog index. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(volumeIndex >= 0)
 
 A169 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:616
 Disposition: PARTIAL
@@ -1431,18 +729,10 @@ Original expression:
 
 A170 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:617
 Disposition: MATCHED
-Mapping/reason: S065 and src/checks/editorqml/tst_EditorDrawer.qml test_productionAutomationTabSwitchAndGhosts (rendered Control-press route) - a parameter with no events cannot be pinned, the outcome the original Control press asserts.
-Swift counterpart expression:
-  report.expect(!fixture.page.toggleGhostParameter(index: emptyIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter with no events cannot be pinned")
-Original expression:
-  QVERIFY(clickParameterTab(modulation, Qt::ControlModifier))
+Mapping: S065
 
 A171 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:618
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the C++ catalog-index lookup precondition (automationParameterIndex(modulation) >= 0) has no Swift ingress. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
-Original expression:
-  QVERIFY(checks::support::automationParameterIndex(*canvas, modulation) >= 0)
 
 A172 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:619
 Disposition: PARTIAL
@@ -1452,498 +742,247 @@ Original expression:
 
 A173 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:620
 Disposition: MATCHED
-Mapping/reason: S065 - src/checks/automation/presentation/tst_automationpresentation.swift :60 asserts the eventless pin is rejected, which is what leaves the ghost list empty as the original asserts.
-Swift counterpart expression:
-  report.expect(!fixture.page.toggleGhostParameter(index: emptyIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter with no events cannot be pinned")
-Original expression:
-  QVERIFY(canvas->ghostParameters().isEmpty())
-
-Swift executable assertion index
-The S entries are exact predicates already called by the suite. Their presence alone
-does not close any A entry. Preserve their surrounding setup and order in the paired source.
+Mapping: S065
 
 S001 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "selected drag moves the grabbed lane"
-Swift expression:
-  report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id,
-                         what: "selected drag moves the grabbed lane")
 
 S002 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "selected drag resolves a disjoint CC snapshot"
-Swift expression:
-  report.expectEqual(["48:80"], fixture.values(fixture.volumeLane), cppID: id,
-                         what: "selected drag resolves a disjoint CC snapshot")
 
 S003 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "selected drag resolves Tempo through its own stream"
-Swift expression:
-  report.expectEqual(["0:120", "36:160"], fixture.tempoValues, cppID: id,
-                         what: "selected drag resolves Tempo through its own stream")
 
 S004 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "heterogeneous selected drag is one revision"
-Swift expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                         what: "heterogeneous selected drag is one revision")
 
 S005 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "one undo restores all selected lanes"
-Swift expression:
-  report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
 
 S006 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "undo restores secondary CC lane"
-Swift expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                         what: "undo restores secondary CC lane")
 
 S007 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "undo restores secondary Tempo lane"
-Swift expression:
-  report.expectEqual(["0:120", "36:150"], fixture.tempoValues, cppID: id,
-                         what: "undo restores secondary Tempo lane")
 
 S008 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "the drag records exactly one history entry"
-Swift expression:
-  report.expect(!fixture.document.history.canUndo, cppID: id,
-                    message: "the drag records exactly one history entry")
 
 S009 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "stationary selection click deletes grabbed node only"
-Swift expression:
-  report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
-                         what: "stationary selection click deletes grabbed node only")
 
 S010 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "stationary selection click preserves other lanes"
-Swift expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                         what: "stationary selection click preserves other lanes")
 
 S011 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "outside right press clears selection before opening a menu"
-Swift expression:
-  report.expect(page.selection == nil, cppID: id,
-                    message: "outside right press clears selection before opening a menu")
 
 S012 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "activated zero-width band clears selection"
-Swift expression:
-  report.expect(page.selection == nil, cppID: id,
-                    message: "activated zero-width band clears selection")
 
 S013 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "zoomable lane consumes range choice"
-Swift expression:
-  report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
-                    cppID: id, message: "zoomable lane consumes range choice")
 
 S014 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "range choice changes displayed maximum"
-Swift expression:
-  report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
-                         what: "range choice changes displayed maximum")
 
 S015 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "range choice changes neither document nor history"
-Swift expression:
-  report.expectEqual(rangeBefore, fixture.snapshot, cppID: id,
-                         what: "range choice changes neither document nor history")
 
 S016 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "centered lane has no value range submenu"
-Swift expression:
-  report.expect(!page.menuRowActions.contains(AutomationMenuAction.valueRange.rawValue),
-                    cppID: id, message: "centered lane has no value range submenu")
 
 S017 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "range persists independently across parameter switches"
-Swift expression:
-  report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
-                         what: "range persists independently across parameter switches")
 
 S018 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "synthetic engine default cannot be deleted"
-Swift expression:
-  report.expect(synthetic.page.publishedMenuRows.first {
-              $0.actionId == AutomationMenuAction.deleteNode.rawValue
-          }?.enabled == false, cppID: id, message: "synthetic engine default cannot be deleted")
 
 S019 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "Set Value promotes the synthetic default"
-Swift expression:
-  report.expect(synthetic.page.acceptPrompt(displayedValue: 80), cppID: id,
-                        message: "Set Value promotes the synthetic default")
 
 S020 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "promoted value is a written tick-zero event"
-Swift expression:
-  report.expectEqual(["0:80"], synthetic.values(synthetic.volumeLane), cppID: id,
-                             what: "promoted value is a written tick-zero event")
 
 S021 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "a prompt cannot follow a primary-track change"
-Swift expression:
-  report.expect(!synthetic.page.acceptPrompt(displayedValue: 70), cppID: id,
-                        message: "a prompt cannot follow a primary-track change")
 
 S022 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "stale prompt leaves document and history untouched"
-Swift expression:
-  report.expectEqual(stale, synthetic.snapshot, cppID: id,
-                             what: "stale prompt leaves document and history untouched")
 
 S023 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: function
-Swift expression:
-  report.fail(id, "synthetic default projection missing")
 
 S024 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "pencil blank hover consumes deletion without falling through"
-Swift expression:
-  report.expect(hover.page.consumeHoverDelete(), cppID: id,
-                    message: "pencil blank hover consumes deletion without falling through")
 
 S025 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "blank hover deletion changes nothing"
-Swift expression:
-  report.expectEqual(hoverBefore, hover.snapshot, cppID: id,
-                         what: "blank hover deletion changes nothing")
 
 S026 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "time selection retains semantic delete priority"
-Swift expression:
-  report.expect(!hover.page.consumeHoverDelete(), cppID: id,
-                    message: "time selection retains semantic delete priority")
 
 S027 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "arrow hover cannot claim pencil deletion"
-Swift expression:
-  report.expect(!hover.page.consumeHoverDelete(), cppID: id,
-                    message: "arrow hover cannot claim pencil deletion")
 
 S028 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "an empty range owns its nudge command"
-Swift expression:
-  report.expect(emptyRange.page.consumeSelectionCommand(command: .nudgeRight), cppID: id,
-                    message: "an empty range owns its nudge command")
 
 S029 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "an empty range advances on the camera grid without changing its span"
-Swift expression:
-  report.expect((emptyRange.page.selection?.range.startTick ?? 0) > 48
-                        && emptyRange.page.selection?.range.span == 48, cppID: id,
-                    message: "an empty range advances on the camera grid without changing its span")
 
 S030 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "empty-band movement creates no document edit or history"
-Swift expression:
-  report.expectEqual(emptyBefore, emptyRange.snapshot, cppID: id,
-                         what: "empty-band movement creates no document edit or history")
 
 S031 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "range duplicate is consumed through the canonical command seam"
-Swift expression:
-  report.expect(duplicate.page.consumeSelectionCommand(command: .duplicate), cppID: id,
-                    message: "range duplicate is consumed through the canonical command seam")
 
 S032 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "duplicate moves the band onto the inserted span"
-Swift expression:
-  report.expectEqual(TimeRange(startTick: 48, endTick: 96), duplicate.page.selection?.range,
-                         cppID: id, what: "duplicate moves the band onto the inserted span")
 
 S033 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "duplicate advances the edit cursor to the new span end"
-Swift expression:
-  report.expectEqual(Tick(96), duplicate.session.editCursor, cppID: id,
-                         what: "duplicate advances the edit cursor to the new span end")
 
 S034 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "duplicate remains one undo entry"
-Swift expression:
-  report.expect(duplicate.undo() && !duplicate.document.history.canUndo, cppID: id,
-                    message: "duplicate remains one undo entry")
 
 S035 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "undo restores the original range contents"
-Swift expression:
-  report.expectEqual(["24:30"], duplicate.values(duplicate.panLane), cppID: id,
-                         what: "undo restores the original range contents")
 
 S036 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "a band on Tempo selects Tempo alone"
-Swift expression:
-  report.expect(page.selection?.tempo == true
-                      && page.selection?.lanes == Set([AutomationParameter.tempo]),
-                  cppID: id, message: "a band on Tempo selects Tempo alone")
 
 S037 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "the band publishes a lane-scoped range"
-Swift expression:
-  report.expect(page.selection?.scope == .lanes, cppID: id,
-                  message: "the band publishes a lane-scoped range")
 
 S038 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "banding writes nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                       what: "banding writes nothing")
 
 S039 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "the pointer route takes the tempo drag"
-Swift expression:
-  report.expect(fixture.drag(.tempo, from: (48, 100), to: 120, modifiers: 0),
-                  cppID: id, message: "the pointer route takes the tempo drag")
 
 S040 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "the tempo drag moves the tempo point"
-Swift expression:
-  report.expectEqual(["48:120"], fixture.tempoValues, cppID: id,
-                       what: "the tempo drag moves the tempo point")
 
 S041 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "the tempo drag leaves the CC lane alone"
-Swift expression:
-  report.expectEqual(["48:60"], fixture.values(fixture.panLane), cppID: id,
-                       what: "the tempo drag leaves the CC lane alone")
 
 S042 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "the tempo drag undoes"
-Swift expression:
-  report.expect(fixture.undo(), cppID: id, message: "the tempo drag undoes")
 
 S043 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
 Anchor: message "a band on Pan selects the Pan lane alone"
-Swift expression:
-  report.expect(page.selection?.tempo == false
-                      && page.selection?.lanes == Set([fixture.panLane]),
-                  cppID: id, message: "a band on Pan selects the Pan lane alone")
 
 S044 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "the grabbed lane moves with the selection"
-Swift expression:
-  report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id,
-                       what: "the grabbed lane moves with the selection")
 
 S045 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "the second selected lane shares the delta"
-Swift expression:
-  report.expectEqual(["48:80"], fixture.values(fixture.modulationLane), cppID: id,
-                       what: "the second selected lane shares the delta")
 
 S046 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "the unselected volume lane is excluded"
-Swift expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                       what: "the unselected volume lane is excluded")
 
 S047 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "tempo is excluded from the CC drag"
-Swift expression:
-  report.expectEqual(["0:120"], fixture.tempoValues, cppID: id,
-                       what: "tempo is excluded from the CC drag")
 
 S048 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "the multi-lane drag is one revision"
-Swift expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                       what: "the multi-lane drag is one revision")
 
 S049 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "one undo restores all selected lanes"
-Swift expression:
-  report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
 
 S050 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "undo restores the grabbed lane"
-Swift expression:
-  report.expectEqual(["24:60"], fixture.values(fixture.panLane), cppID: id,
-                       what: "undo restores the grabbed lane")
 
 S051 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "undo restores the second selected lane"
-Swift expression:
-  report.expectEqual(["48:70"], fixture.values(fixture.modulationLane), cppID: id,
-                       what: "undo restores the second selected lane")
 
 S052 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift
 Anchor: message "the drag recorded exactly one history entry"
-Swift expression:
-  report.expect(!fixture.document.history.canUndo, cppID: id,
-                  message: "the drag recorded exactly one history entry")
 
 S053 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
 Anchor: message "a lane with events pins as a ghost"
-Swift expression:
-  report.expect(page.toggleGhostParameter(index: panIndex), cppID: id,
-                  message: "a lane with events pins as a ghost")
 
 S054 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
 Anchor: message "pinning a ghost writes nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                       what: "pinning a ghost writes nothing")
 
 S055 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
 Anchor: message "the page publishes the pinned ghost"
-Swift expression:
-  report.expect(page.ghostParameters.contains(fixture.panLane), cppID: id,
-                  message: "the page publishes the pinned ghost")
 
 S056 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
 Anchor: message "pinning keeps the active parameter"
-Swift expression:
-  report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: id,
-                       what: "pinning keeps the active parameter")
 
 S057 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
 Anchor: message "the ghost survives parameter activation"
-Swift expression:
-  report.expect(page.ghostParameters.contains(fixture.panLane), cppID: id,
-                  message: "the ghost survives parameter activation")
 
 S058 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
 Anchor: message "activation around a ghost writes nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                       what: "activation around a ghost writes nothing")
 
 S059 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
 Anchor: message "the pin toggles off again"
-Swift expression:
-  report.expect(page.toggleGhostParameter(index: panIndex), cppID: id,
-                  message: "the pin toggles off again")
 
 S060 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift
 Anchor: message "unpinning drops the ghost"
-Swift expression:
-  report.expect(!page.ghostParameters.contains(fixture.panLane), cppID: id,
-                  message: "unpinning drops the ghost")
 
 S061 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "a parameter switch is accepted"
-Swift expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter switch is accepted")
 
 S062 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the switched parameter becomes active"
-Swift expression:
-  report.expectEqual(fixture.panLane, fixture.page.activeParameter, cppID: drawerAutomationSwitchID,
-                       what: "the switched parameter becomes active")
 
 S063 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "switching a parameter keeps the explicit selection"
-Swift expression:
-  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
-                       what: "switching a parameter keeps the explicit selection")
 
 S064 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the inactive parameter's selection indicator survives the switch"
-Swift expression:
-  report.expectEqual([fixture.panLane], fixture.page.selectedParameters, cppID: drawerAutomationSwitchID,
-                       what: "the inactive parameter's selection indicator survives the switch")
 
 S065 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "a parameter with no events cannot be pinned"
-Swift expression:
-  report.expect(!fixture.page.toggleGhostParameter(index: emptyIndex), cppID: drawerAutomationSwitchID,
-                  message: "a parameter with no events cannot be pinned")
 
 S066 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "the undone transaction is redoable"
-Swift expression:
-  report.expect(fixture.document.history.canRedo, cppID: drawerAutomationHistoryID,
-                  message: "the undone transaction is redoable")
 
 S067 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
 Anchor: message "redo restores the committed lane"
-Swift expression:
-  report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
-                       what: "redo restores the committed lane")
 
 S068 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the document rebuild cancels the drag synchronously"
-Swift expression:
-  report.expect(!page.hasGesture, cppID: rebuildID,
-                  message: "the document rebuild cancels the drag synchronously")
 
 S069 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "releasing the cancelled drag commits nothing"
-Swift expression:
-  report.expectEqual(afterRebuild, rebuilt.snapshot, cppID: rebuildID,
-                       what: "releasing the cancelled drag commits nothing")
 
 S070 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "switching parameters cancels the drag"
-Swift expression:
-  report.expect(!switched.page.hasGesture, cppID: switchID,
-                  message: "switching parameters cancels the drag")
 
 S071 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the cancelled drag writes nothing"
-Swift expression:
-  report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID,
-                       what: "the cancelled drag writes nothing")
 
 S072 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "the Delete command removes the covered span"
-Swift expression:
-  report.expect(fixture.page.consumeSelectionCommand(command: .delete), cppID: id,
-                  message: "the Delete command removes the covered span")
 
 S073 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "Delete keeps CC points outside the span"
-Swift expression:
-  report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id,
-                       what: "Delete keeps CC points outside the span")
 
 S074 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "Delete removes the covered tempo point"
-Swift expression:
-  report.expect(fixture.tempoValues.isEmpty, cppID: id,
-                  message: "Delete removes the covered tempo point")
 
 S075 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "one Delete is one revision"
-Swift expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                       what: "one Delete is one revision")
 
 S076 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "the Delete undoes"
-Swift expression:
-  report.expect(fixture.undo(), cppID: id, message: "the Delete undoes")
 
 S077 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "undo restores the covered CC point"
-Swift expression:
-  report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
-                       what: "undo restores the covered CC point")
 
 S078 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "undo restores the covered tempo point"
-Swift expression:
-  report.expectEqual(["48:100"], fixture.tempoValues, cppID: id,
-                       what: "undo restores the covered tempo point")
 
 S079 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "Delete with no selection commits nothing"
-Swift expression:
-  report.expect(!fixture.page.consumeSelectionCommand(command: .delete), cppID: id,
-                  message: "Delete with no selection commits nothing")
 
 S080 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "an empty Delete writes nothing"
-Swift expression:
-  report.expectEqual(emptyBefore, fixture.snapshot, cppID: id,
-                       what: "an empty Delete writes nothing")
 
 S081 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the Delete key routes to the active time selection"
-Swift expression:
-  report.expectEqual(EditKeyDecision.execute, EditKeyArbiter.decide(command: .delete, surface: armed),
-                     cppID: keyID, what: "the Delete key routes to the active time selection")

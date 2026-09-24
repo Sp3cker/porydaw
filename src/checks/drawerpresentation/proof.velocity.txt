@@ -6,339 +6,11 @@ Original SHA-256: 04258c2fe60a26ad1d11f8457296b0150ed1890a4d3bf09626f8775af7fff1
 Swift counterpart: src/checks/drawerpresentation/velocity.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; the context inventory below records its rows, loops and fixtures.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-Unresolved entries remain work.
-
-Execution and ownership
-The original swiftcore suite entrypoints invoke these paired functions in their original
-order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
-VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
-Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
-
-Verification evidence
-`deno task verify --filter swiftcore --verbose` PASS (1/14 ok, 13 skipped, swiftcore 16.06s),
-recorded by the drawer lane owner for this tree; production velocity QML cases PASS
-(test_productionVelocityPageMountsAndRenders, test_productionVelocityPointerEdit,
-test_productionVelocityPromptTransaction, test_productionVelocityNumericInput,
-test_productionVelocityCancellation, test_productionVelocityPlayheadPerformance,
-test_productionVelocityContextIsExact and test_velocityHintsResumeAfterOutsideRelease)
-plus reference profiles verified. Converted-window predicates:
-src/checks/editorqml/tst_EditorDrawer.qml, SHA-256
-9f6d32838f67d4c2db01aa30de9a55c0e0642784950e70cff4f362f28725e8bf.
-That evidence is reused as given; this ledger ran no build, suite, formatter or lint.
-Re-run after the noise row predicate landed: `deno task verify --filter swiftcore --verbose`
-PASS (1/14 ok, swiftcore 10.14s), with the new Noise predicate string confirmed in the test
-binary by the lane owner. Neither run was repeated by this ledger.
-
-Additional conversion regression (not credited as an original C++ assertion match)
-drawerVelocityProjectionRefresh now exercises the selected note's voice-context cache
-across an unresolved program change and session undo. Exact predicates, in order:
-  !page.contextUnsupported && page.contextSlot == 0
-  page.contextUnsupported && page.contextSlot == 127
-  !page.openSelectedVelocityPrompt()
-  !page.interactionActive after press/move WITHOUT release
-  session.undo() must not throw
-  !page.contextUnsupported && page.contextSlot == 0
-  page.openSelectedVelocityPrompt()
-  page.interactionActive after press/move WITHOUT release
-Both gesture attempts are cancelled explicitly; the successful prompt is cancelled.
-This isolates the model/projection seam implicated by the integration failure where
-the preceding header test left program 127 active. It does not establish shown-window
-undo dispatch, focus, numeric input, or popup event delivery. The central command
-`deno task verify --filter swiftcore --verbose` covers these predicates (see
-Verification evidence); the checked
-Swift SHA-256 is d71c1f93239c4178d247cf41d5fce1b8585cda8cc7de673a8f0f2d96efcabb26.
-Original-site dispositions below are reconciled against this counterpart; QML/native
-execution is separate.
-
-Fixture, sequence, data-row and loop inventory
-Each line below is an exact original source anchor. Multiline declarations, helper
-implementations, native event delivery and the complete order remain in the pinned source.
-src/checks/drawerpresentation/velocity.cpp:35 | void createVelocityFixture(VelocityFixture &fixture)
-src/checks/drawerpresentation/velocity.cpp:38 | if (!fixture.create(error))
-src/checks/drawerpresentation/velocity.cpp:42 | void createVelocityFixture(VelocityTransactionFixture &fixture)
-src/checks/drawerpresentation/velocity.cpp:45 | if (!fixture.create(error))
-src/checks/drawerpresentation/velocity.cpp:56 | void setVoice(VelocityFixture &fixture, const ToneData &voice)
-src/checks/drawerpresentation/velocity.cpp:58 | fixture.voicegroup.voices[0] = voice;
-src/checks/drawerpresentation/velocity.cpp:59 | fixture.rig->view().setVoicegroup(&fixture.voicegroup);
-src/checks/drawerpresentation/velocity.cpp:60 | fixture.area->songChanged();
-src/checks/drawerpresentation/velocity.cpp:61 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:68 | for (int y = 0; y < left.height(); ++y)
-src/checks/drawerpresentation/velocity.cpp:69 | for (int x = 0; x < left.width(); ++x)
-src/checks/drawerpresentation/velocity.cpp:87 | auto song = checks::LoadedSong::load(project->root(), m_songLabel, error);
-src/checks/drawerpresentation/velocity.cpp:92 | for (ToneData &voice : voices.voices)
-src/checks/drawerpresentation/velocity.cpp:141 | VelocityFixture fixture;
-src/checks/drawerpresentation/velocity.cpp:142 | createVelocityFixture(fixture);
-src/checks/drawerpresentation/velocity.cpp:143 | SongView &view = fixture.rig->view();
-src/checks/drawerpresentation/velocity.cpp:144 | DrawerChrome &chrome = *fixture.drawerChrome;
-src/checks/drawerpresentation/velocity.cpp:145 | QVERIFY(fixture.barItem->isVisible());
-src/checks/drawerpresentation/velocity.cpp:146 | QCOMPARE(fixture.barItem->interaction(), &chrome.interaction(DrawerChromeTarget::Bar));
-src/checks/drawerpresentation/velocity.cpp:151 | QVERIFY(fixture.barItem->bounds().contains(chrome.velocityToggleRect().center() -
-src/checks/drawerpresentation/velocity.cpp:153 | QVERIFY(!fixture.detentItem->isVisible());
-src/checks/drawerpresentation/velocity.cpp:155 | QCOMPARE(fixture.area->axis().mode(), VelocityAxis::Mode::Continuous);
-src/checks/drawerpresentation/velocity.cpp:161 | sendMouse(*fixture.barItem, QEvent::MouseButtonPress, toggle, Qt::LeftButton, Qt::LeftButton);
-src/checks/drawerpresentation/velocity.cpp:162 | sendMouse(*fixture.barItem, QEvent::MouseButtonRelease, toggle, Qt::LeftButton);
-src/checks/drawerpresentation/velocity.cpp:165 | sendMouse(*fixture.barItem, QEvent::MouseButtonPress, toggle, Qt::LeftButton, Qt::LeftButton);
-src/checks/drawerpresentation/velocity.cpp:166 | sendMouse(*fixture.barItem, QEvent::MouseButtonRelease, toggle, Qt::LeftButton);
-src/checks/drawerpresentation/velocity.cpp:172 | VelocityFixture fixture;
-src/checks/drawerpresentation/velocity.cpp:173 | createVelocityFixture(fixture);
-src/checks/drawerpresentation/velocity.cpp:174 | SongView &view = fixture.rig->view();
-src/checks/drawerpresentation/velocity.cpp:177 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:178 | QCOMPARE(fixture.area->axis().tickCount(), 9);
-src/checks/drawerpresentation/velocity.cpp:179 | QCOMPARE(fixture.area->axis().labelCount(), 5);
-src/checks/drawerpresentation/velocity.cpp:180 | const auto &labels = fixture.area->axis().labels();
-src/checks/drawerpresentation/velocity.cpp:188 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:193 | VelocityFixture fixture;
-src/checks/drawerpresentation/velocity.cpp:194 | createVelocityFixture(fixture);
-src/checks/drawerpresentation/velocity.cpp:195 | SongView &view = fixture.rig->view();
-src/checks/drawerpresentation/velocity.cpp:196 | const auto &timeline = fixture.rig->timeline();
-src/checks/drawerpresentation/velocity.cpp:199 | const QPointF gridPoint(fixture.xForTick(double(firstPastEnd)),
-src/checks/drawerpresentation/velocity.cpp:200 | fixture.plotRect().center().y());
-src/checks/drawerpresentation/velocity.cpp:207 | *fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityGrid,
-src/checks/drawerpresentation/velocity.cpp:208 | QRectF(gridPoint - QPointF(2, 0), QSizeF(4, fixture.plotRect().height())), color);
-src/checks/drawerpresentation/velocity.cpp:211 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:212 | const QImage before = checks::support::captureQuickBand(view, fixture.bandRect());
-src/checks/drawerpresentation/velocity.cpp:214 | const QPointF start(layout::space(layout::Space::Two), fixture.plotRect().center().y());
-src/checks/drawerpresentation/velocity.cpp:215 | sendMouse(*fixture.inputItem, QEvent::MouseButtonPress, start, Qt::MiddleButton,
-src/checks/drawerpresentation/velocity.cpp:217 | sendMouse(*fixture.inputItem, QEvent::MouseMove,
-src/checks/drawerpresentation/velocity.cpp:220 | sendMouse(*fixture.inputItem, QEvent::MouseButtonRelease,
-src/checks/drawerpresentation/velocity.cpp:223 | QVERIFY(samePixels(before, checks::support::captureQuickBand(view, fixture.bandRect())));
-src/checks/drawerpresentation/velocity.cpp:228 | QTest::addColumn<int>("voiceType");
-src/checks/drawerpresentation/velocity.cpp:229 | QTest::addColumn<int>("graduations");
-src/checks/drawerpresentation/velocity.cpp:230 | QTest::newRow("square") << int(VOICE_SQUARE_1) << 16;
-src/checks/drawerpresentation/velocity.cpp:231 | QTest::newRow("wave") << int(VOICE_PROGRAMMABLE_WAVE) << 5;
-src/checks/drawerpresentation/velocity.cpp:232 | QTest::newRow("noise") << int(VOICE_NOISE) << 16;
-src/checks/drawerpresentation/velocity.cpp:237 | QFETCH(int, voiceType);
-src/checks/drawerpresentation/velocity.cpp:238 | QFETCH(int, graduations);
-src/checks/drawerpresentation/velocity.cpp:239 | VelocityFixture fixture;
-src/checks/drawerpresentation/velocity.cpp:240 | createVelocityFixture(fixture);
-src/checks/drawerpresentation/velocity.cpp:241 | fixture.rig->view().selectionModel().setNoteSelection({fixture.notes[0].noteId});
-src/checks/drawerpresentation/velocity.cpp:242 | setVoice(fixture, tone(voiceType));
-src/checks/drawerpresentation/velocity.cpp:243 | QCOMPARE(fixture.area->axis().mode(), VelocityAxis::Mode::Intrinsic);
-src/checks/drawerpresentation/velocity.cpp:244 | QCOMPARE(fixture.area->axis().graduationCount(), graduations);
-src/checks/drawerpresentation/velocity.cpp:249 | VelocityFixture fixture;
-src/checks/drawerpresentation/velocity.cpp:250 | createVelocityFixture(fixture);
-src/checks/drawerpresentation/velocity.cpp:252 | setVoice(fixture, noise);
-src/checks/drawerpresentation/velocity.cpp:253 | SongView &view = fixture.rig->view();
-src/checks/drawerpresentation/velocity.cpp:254 | view.selectionModel().setNoteSelection({fixture.notes[0].noteId});
-src/checks/drawerpresentation/velocity.cpp:255 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:256 | QVERIFY(view.beginVelocityGesture({fixture.notes[1]}));
-src/checks/drawerpresentation/velocity.cpp:257 | QVERIFY(view.updateVelocityGesture({{fixture.notes[1].noteId, 74}}));
-src/checks/drawerpresentation/velocity.cpp:264 | setVoice(fixture, split);
-src/checks/drawerpresentation/velocity.cpp:265 | view.selectionModel().setNoteSelection({fixture.notes[2].noteId});
-src/checks/drawerpresentation/velocity.cpp:266 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:267 | const VelocityMap noiseMap = VelocityMap::resolve(&noise, fixture.notes[1].key);
-src/checks/drawerpresentation/velocity.cpp:268 | const QPointF hovered(fixture.xForTick(double(fixture.notes[1].tick)),
-src/checks/drawerpresentation/velocity.cpp:269 | VelocityAxis(noiseMap, fixture.area->axis().geometry()).levelToY(9));
-src/checks/drawerpresentation/velocity.cpp:270 | sendMouse(*fixture.inputItem, QEvent::MouseMove, hovered);
-src/checks/drawerpresentation/velocity.cpp:271 | QCOMPARE(fixture.area->axis().map(), noiseMap);
-src/checks/drawerpresentation/velocity.cpp:272 | QVERIFY(fixture.area->axis().graduations()[9].active);
-src/checks/drawerpresentation/velocity.cpp:273 | sendMouse(*fixture.inputItem, QEvent::Leave, {});
-src/checks/drawerpresentation/velocity.cpp:279 | VelocityFixture fixture;
-src/checks/drawerpresentation/velocity.cpp:280 | createVelocityFixture(fixture);
-src/checks/drawerpresentation/velocity.cpp:281 | SongView &view = fixture.rig->view();
-src/checks/drawerpresentation/velocity.cpp:283 | setVoice(fixture, noise);
-src/checks/drawerpresentation/velocity.cpp:284 | view.selectionModel().setNoteSelection({fixture.notes[0].noteId});
-src/checks/drawerpresentation/velocity.cpp:285 | QVERIFY(view.beginVelocityGesture({fixture.notes[1]}));
-src/checks/drawerpresentation/velocity.cpp:286 | QVERIFY(view.updateVelocityGesture({{fixture.notes[1].noteId, 74}}));
-src/checks/drawerpresentation/velocity.cpp:287 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:288 | const VelocityMap map = VelocityMap::resolve(&noise, fixture.notes[1].key);
-src/checks/drawerpresentation/velocity.cpp:289 | const QPointF hover(fixture.xForTick(double(fixture.notes[1].tick)),
-src/checks/drawerpresentation/velocity.cpp:290 | fixture.area->axis().levelToY(9));
-src/checks/drawerpresentation/velocity.cpp:291 | const QImage snapped = checks::support::captureQuickBand(view, fixture.bandRect());
-src/checks/drawerpresentation/velocity.cpp:292 | sendMouse(*fixture.inputItem, QEvent::MouseMove, hover);
-src/checks/drawerpresentation/velocity.cpp:295 | QVERIFY(fixture.area->useDetents());
-src/checks/drawerpresentation/velocity.cpp:297 | std::count_if(fixture.area->axis().graduations().cbegin(),
-src/checks/drawerpresentation/velocity.cpp:298 | fixture.area->axis().graduations().cbegin() +
-src/checks/drawerpresentation/velocity.cpp:299 | fixture.area->axis().graduationCount(),
-src/checks/drawerpresentation/velocity.cpp:302 | QVERIFY(fixture.area->axis().graduations()[9].active);
-src/checks/drawerpresentation/velocity.cpp:303 | const qreal separatorX = fixture.gutterItem->bounds().right() - layout::singlePixel();
-src/checks/drawerpresentation/velocity.cpp:305 | fixture.area->axis().graduations()[9].y - 2.0,
-src/checks/drawerpresentation/velocity.cpp:307 | QVERIFY(layerTouches(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityAxis,
-src/checks/drawerpresentation/velocity.cpp:308 | accentProbe, fixture.gutterItem->palette().highlight().color()));
-src/checks/drawerpresentation/velocity.cpp:309 | fixture.area->setUseDetents(false);
-src/checks/drawerpresentation/velocity.cpp:311 | QCOMPARE(fixture.area->axis().markers()[0].velocity, 74);
-src/checks/drawerpresentation/velocity.cpp:312 | QVERIFY(checks::support::captureQuickBand(view, fixture.bandRect()) != snapped);
-src/checks/drawerpresentation/velocity.cpp:313 | fixture.area->setUseDetents(true);
-src/checks/drawerpresentation/velocity.cpp:314 | sendMouse(*fixture.inputItem, QEvent::Leave, {});
-src/checks/drawerpresentation/velocity.cpp:315 | QVERIFY(samePixels(snapped, checks::support::captureQuickBand(view, fixture.bandRect())));
-src/checks/drawerpresentation/velocity.cpp:317 | const auto selectedLevel = map.levelOf(fixture.notes[0].velocity);
-src/checks/drawerpresentation/velocity.cpp:318 | const auto outsiderLevel = map.levelOf(fixture.notes[1].velocity);
-src/checks/drawerpresentation/velocity.cpp:321 | const qreal nodeX = fixture.xForTick(double(fixture.notes[0].tick));
-src/checks/drawerpresentation/velocity.cpp:322 | const qreal selectedY = fixture.area->axis().levelToY(int(*selectedLevel));
-src/checks/drawerpresentation/velocity.cpp:323 | const qreal outsiderY = fixture.area->axis().levelToY(9);
-src/checks/drawerpresentation/velocity.cpp:329 | fixture.rig->quickScene()->layer(songview::TimelineQuickLayer::VelocityNodes);
-src/checks/drawerpresentation/velocity.cpp:331 | fixture.rig->quickScene()->layer(songview::TimelineQuickLayer::VelocityStems);
-src/checks/drawerpresentation/velocity.cpp:335 | fixture.xForTick(double(fixture.notes[1].tick + fixture.notes[1].duration)) - nodeX,
-src/checks/drawerpresentation/velocity.cpp:339 | fixture.inputItem->palette().highlight().color()));
-src/checks/drawerpresentation/velocity.cpp:342 | view.selectionModel().setNoteSelection({fixture.notes[0].noteId, fixture.notes[2].noteId});
-src/checks/drawerpresentation/velocity.cpp:343 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:345 | fixture.rig->quickScene()->layer(songview::TimelineQuickLayer::VelocityNodes);
-src/checks/drawerpresentation/velocity.cpp:347 | fixture.inputItem->palette().mid().color()));
-src/checks/drawerpresentation/velocity.cpp:351 | setVoice(fixture, tone(VOICE_PROGRAMMABLE_WAVE));
-src/checks/drawerpresentation/velocity.cpp:352 | view.selectionModel().setNoteSelection({fixture.notes[0].noteId});
-src/checks/drawerpresentation/velocity.cpp:353 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:354 | QVERIFY(fixture.detentItem->isVisible());
-src/checks/drawerpresentation/velocity.cpp:355 | QVERIFY(fixture.drawerChrome->detentVisible());
-src/checks/drawerpresentation/velocity.cpp:356 | QCOMPARE(fixture.detentItem->interaction(),
-src/checks/drawerpresentation/velocity.cpp:357 | &fixture.drawerChrome->interaction(DrawerChromeTarget::Detent));
-src/checks/drawerpresentation/velocity.cpp:358 | QCOMPARE(fixture.detentItem->bounds(),
-src/checks/drawerpresentation/velocity.cpp:359 | QRectF(QPointF{}, fixture.drawerChrome->detentRect().size()));
-src/checks/drawerpresentation/velocity.cpp:360 | const QRect band = fixture.bandRect();
-src/checks/drawerpresentation/velocity.cpp:361 | const QRectF detentRect = fixture.drawerChrome->detentRect();
-src/checks/drawerpresentation/velocity.cpp:364 | QVERIFY(detentRect.right() < fixture.plotRect().left());
-src/checks/drawerpresentation/velocity.cpp:366 | QPointF(detentRect.center().x(), fixture.area->axis().graduations()[0].y)));
-src/checks/drawerpresentation/velocity.cpp:367 | setVoice(fixture, tone(VOICE_DIRECTSOUND));
-src/checks/drawerpresentation/velocity.cpp:368 | view.selectionModel().setNoteSelection({fixture.notes[0].noteId, fixture.notes[2].noteId});
-src/checks/drawerpresentation/velocity.cpp:369 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:370 | const QImage directSoundBand = checks::support::captureQuickBand(view, fixture.bandRect());
-src/checks/drawerpresentation/velocity.cpp:371 | setVoice(fixture, tone(VOICE_PROGRAMMABLE_WAVE));
-src/checks/drawerpresentation/velocity.cpp:372 | const int checkedIconRevision = fixture.drawerChrome->iconRevision();
-src/checks/drawerpresentation/velocity.cpp:373 | const QPointF detent = fixture.detentItem->bounds().center();
-src/checks/drawerpresentation/velocity.cpp:374 | sendMouse(*fixture.detentItem, QEvent::MouseButtonPress, detent, Qt::LeftButton,
-src/checks/drawerpresentation/velocity.cpp:376 | sendMouse(*fixture.detentItem, QEvent::MouseButtonRelease, detent, Qt::LeftButton);
-src/checks/drawerpresentation/velocity.cpp:377 | QVERIFY(!fixture.drawerChrome->detentChecked());
-src/checks/drawerpresentation/velocity.cpp:378 | QVERIFY(!fixture.area->useDetents());
-src/checks/drawerpresentation/velocity.cpp:379 | const QImage continuousBand = checks::support::captureQuickBand(view, fixture.bandRect());
-src/checks/drawerpresentation/velocity.cpp:381 | const QRect rulerBounds(0, 0, qCeil(double(fixture.fixedSpan()) * imageScale),
-src/checks/drawerpresentation/velocity.cpp:384 | QVERIFY(fixture.drawerChrome->iconRevision() > checkedIconRevision);
-src/checks/drawerpresentation/velocity.cpp:385 | const int uncheckedIconRevision = fixture.drawerChrome->iconRevision();
-src/checks/drawerpresentation/velocity.cpp:386 | sendMouse(*fixture.detentItem, QEvent::MouseButtonPress, detent, Qt::LeftButton,
-src/checks/drawerpresentation/velocity.cpp:388 | sendMouse(*fixture.detentItem, QEvent::MouseButtonRelease, detent, Qt::LeftButton);
-src/checks/drawerpresentation/velocity.cpp:389 | QVERIFY(fixture.drawerChrome->detentChecked());
-src/checks/drawerpresentation/velocity.cpp:390 | QVERIFY(fixture.area->useDetents());
-src/checks/drawerpresentation/velocity.cpp:391 | QVERIFY(fixture.drawerChrome->iconRevision() > uncheckedIconRevision);
-src/checks/drawerpresentation/velocity.cpp:392 | setVoice(fixture, tone(VOICE_DIRECTSOUND));
-src/checks/drawerpresentation/velocity.cpp:393 | QTRY_VERIFY(!fixture.detentItem->isVisible());
-src/checks/drawerpresentation/velocity.cpp:398 | VelocityFixture fixture;
-src/checks/drawerpresentation/velocity.cpp:399 | createVelocityFixture(fixture);
-src/checks/drawerpresentation/velocity.cpp:400 | SongView &view = fixture.rig->view();
-src/checks/drawerpresentation/velocity.cpp:405 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:408 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:411 | fixture.area->clearTrackHeaderSelection();
-src/checks/drawerpresentation/velocity.cpp:417 | for (const ToneData &voice : voices) {
-src/checks/drawerpresentation/velocity.cpp:418 | setVoice(fixture, voice);
-src/checks/drawerpresentation/velocity.cpp:419 | for (int index = 0; index < 4; ++index) {
-src/checks/drawerpresentation/velocity.cpp:420 | fixture.area->presentPlayhead(inputs[index]);
-src/checks/drawerpresentation/velocity.cpp:421 | fixture.area->refresh(DrawerScope::Content);
-src/checks/drawerpresentation/velocity.cpp:422 | QCOMPARE(view.voiceContext(expected[index]).voice, &fixture.voicegroup.voices[0]);
-src/checks/drawerpresentation/velocity.cpp:429 | VelocityFixture fixture;
-src/checks/drawerpresentation/velocity.cpp:430 | createVelocityFixture(fixture);
-src/checks/drawerpresentation/velocity.cpp:431 | SongView &view = fixture.rig->view();
-src/checks/drawerpresentation/velocity.cpp:432 | setVoice(fixture, tone(VOICE_NOISE));
-src/checks/drawerpresentation/velocity.cpp:433 | view.selectionModel().setNoteSelection({fixture.notes[0].noteId});
-src/checks/drawerpresentation/velocity.cpp:434 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:435 | const QRectF selector(layout::space(layout::Space::One), fixture.plotRect().height() / 3.0,
-src/checks/drawerpresentation/velocity.cpp:441 | sendMouse(*fixture.inputItem, QEvent::MouseButtonPress, selector.topLeft(), Qt::RightButton,
-src/checks/drawerpresentation/velocity.cpp:443 | sendMouse(*fixture.inputItem, QEvent::MouseMove, selector.bottomRight(), Qt::NoButton,
-src/checks/drawerpresentation/velocity.cpp:446 | QVERIFY(layerTouches(*fixture.rig->quickScene(),
-src/checks/drawerpresentation/velocity.cpp:448 | QVERIFY(layerTouches(*fixture.rig->quickScene(),
-src/checks/drawerpresentation/velocity.cpp:450 | sendMouse(*fixture.inputItem, QEvent::MouseButtonRelease, selector.bottomRight(),
-src/checks/drawerpresentation/velocity.cpp:454 | layerEmpty(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityTransient));
-src/checks/drawerpresentation/velocity.cpp:456 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:458 | QVERIFY(fixture.document.findNote(fixture.notes[0].noteId, &first));
-src/checks/drawerpresentation/velocity.cpp:459 | fixture.document.addNote(0, first.tick + 8, first.key, first.duration, first.velocity);
-src/checks/drawerpresentation/velocity.cpp:460 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:461 | const auto notes = fixture.document.notesForTrack(0);
-src/checks/drawerpresentation/velocity.cpp:466 | const VelocityMap map = VelocityMap::resolve(&fixture.voicegroup.voices[0], overlap->key);
-src/checks/drawerpresentation/velocity.cpp:469 | const QPointF stacked(fixture.xForTick(double(overlap->tick)),
-src/checks/drawerpresentation/velocity.cpp:470 | fixture.area->axis().levelToY(int(*overlapLevel)));
-src/checks/drawerpresentation/velocity.cpp:471 | sendMouse(*fixture.inputItem, QEvent::MouseButtonPress, stacked, Qt::LeftButton,
-src/checks/drawerpresentation/velocity.cpp:474 | QVERIFY(layerTouches(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityNodes,
-src/checks/drawerpresentation/velocity.cpp:476 | fixture.inputItem->palette().highlight().color()));
-src/checks/drawerpresentation/velocity.cpp:477 | sendMouse(*fixture.inputItem, QEvent::MouseButtonRelease, stacked, Qt::LeftButton);
-src/checks/drawerpresentation/velocity.cpp:478 | view.selectionModel().setNoteSelection({fixture.notes[0].noteId, fixture.notes[2].noteId});
-src/checks/drawerpresentation/velocity.cpp:479 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:482 | const QPointF selected(fixture.xForTick(double(first.tick)),
-src/checks/drawerpresentation/velocity.cpp:483 | fixture.area->axis().levelToY(int(*selectedLevel)));
-src/checks/drawerpresentation/velocity.cpp:484 | sendMouse(*fixture.inputItem, QEvent::MouseButtonPress, selected, Qt::RightButton,
-src/checks/drawerpresentation/velocity.cpp:487 | QVERIFY(layerTouches(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityNodes,
-src/checks/drawerpresentation/velocity.cpp:489 | fixture.inputItem->palette().highlight().color()));
-src/checks/drawerpresentation/velocity.cpp:490 | sendMouse(*fixture.inputItem, QEvent::MouseButtonRelease, selected, Qt::RightButton);
-src/checks/drawerpresentation/velocity.cpp:495 | VelocityFixture fixture;
-src/checks/drawerpresentation/velocity.cpp:496 | createVelocityFixture(fixture);
-src/checks/drawerpresentation/velocity.cpp:497 | SongView &view = fixture.rig->view();
-src/checks/drawerpresentation/velocity.cpp:499 | setVoice(fixture, noise);
-src/checks/drawerpresentation/velocity.cpp:500 | const VelocityMap map = VelocityMap::resolve(&noise, fixture.notes[0].key);
-src/checks/drawerpresentation/velocity.cpp:503 | QVERIFY(fixture.document.findNote(fixture.notes[0].noteId, &first));
-src/checks/drawerpresentation/velocity.cpp:504 | QVERIFY(fixture.document.findNote(fixture.notes[2].noteId, &third));
-src/checks/drawerpresentation/velocity.cpp:505 | fixture.document.setNotesVelocity({first}, map.representative(0));
-src/checks/drawerpresentation/velocity.cpp:506 | fixture.document.setNotesVelocity({third}, map.representative(4));
-src/checks/drawerpresentation/velocity.cpp:507 | fixture.document.addNote(0, 36, first.key, 12, map.representative(3));
-src/checks/drawerpresentation/velocity.cpp:508 | const std::vector<DocNote> notes = fixture.document.notesForTrack(0);
-src/checks/drawerpresentation/velocity.cpp:513 | {fixture.notes[0].noteId, middle->noteId, fixture.notes[2].noteId});
-src/checks/drawerpresentation/velocity.cpp:514 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:515 | const QPointF start(fixture.xForTick(double(first.tick)), fixture.area->axis().levelToY(0));
-src/checks/drawerpresentation/velocity.cpp:516 | const QPointF end(fixture.xForTick(double(third.tick)), fixture.area->axis().levelToY(4));
-src/checks/drawerpresentation/velocity.cpp:517 | sendMouse(*fixture.inputItem, QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton,
-src/checks/drawerpresentation/velocity.cpp:519 | sendMouse(*fixture.inputItem, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
-src/checks/drawerpresentation/velocity.cpp:523 | QVERIFY(layerTouches(*fixture.rig->quickScene(),
-src/checks/drawerpresentation/velocity.cpp:527 | sendMouse(*fixture.inputItem, QEvent::MouseButtonRelease, end, Qt::LeftButton, Qt::NoButton,
-src/checks/drawerpresentation/velocity.cpp:529 | fixture.document.deleteNotes({*middle});
-src/checks/drawerpresentation/velocity.cpp:530 | view.selectionModel().setNoteSelection({fixture.notes[0].noteId, fixture.notes[1].noteId});
-src/checks/drawerpresentation/velocity.cpp:531 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:532 | auto *roll = fixture.rig->quickRoot()->findChild<songview::TimelineInputItem *>(
-src/checks/drawerpresentation/velocity.cpp:550 | VelocityTransactionFixture fixture;
-src/checks/drawerpresentation/velocity.cpp:551 | createVelocityFixture(fixture);
-src/checks/drawerpresentation/velocity.cpp:552 | SongView &view = fixture.view();
-src/checks/drawerpresentation/velocity.cpp:553 | view.selectionModel().setNoteSelection({fixture.notes[0].noteId, fixture.notes[2].noteId});
-src/checks/drawerpresentation/velocity.cpp:554 | const Snapshot baseline = fixture.snapshot();
-src/checks/drawerpresentation/velocity.cpp:555 | const QPointF start(fixture.xForTick(double(fixture.notes[0].tick)),
-src/checks/drawerpresentation/velocity.cpp:556 | fixture.area().axis().velocityToY(fixture.notes[0].velocity));
-src/checks/drawerpresentation/velocity.cpp:559 | sendMouse(fixture.input(), QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton);
-src/checks/drawerpresentation/velocity.cpp:560 | sendMouse(fixture.input(), QEvent::MouseMove, raised, Qt::NoButton, Qt::LeftButton);
-src/checks/drawerpresentation/velocity.cpp:561 | QVERIFY(view.previewVelocity(fixture.notes[0].noteId).has_value());
-src/checks/drawerpresentation/velocity.cpp:562 | QVERIFY(fixture.snapshot() == baseline);
-src/checks/drawerpresentation/velocity.cpp:563 | sendKey(fixture.input(), Qt::Key_Escape);
-src/checks/drawerpresentation/velocity.cpp:564 | QVERIFY(fixture.snapshot() == baseline);
-src/checks/drawerpresentation/velocity.cpp:565 | QVERIFY(!view.previewVelocity(fixture.notes[0].noteId).has_value());
-src/checks/drawerpresentation/velocity.cpp:567 | sendMouse(fixture.input(), QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton);
-src/checks/drawerpresentation/velocity.cpp:568 | sendMouse(fixture.input(), QEvent::MouseMove, raised, Qt::NoButton, Qt::LeftButton);
-src/checks/drawerpresentation/velocity.cpp:569 | sendMouse(fixture.input(), QEvent::MouseButtonRelease, raised, Qt::LeftButton);
-src/checks/drawerpresentation/velocity.cpp:570 | const Snapshot committed = fixture.snapshot();
-src/checks/drawerpresentation/velocity.cpp:574 | fixture.document().undoStack()->undo();
-src/checks/drawerpresentation/velocity.cpp:575 | const Snapshot undone = fixture.snapshot();
-src/checks/drawerpresentation/velocity.cpp:579 | fixture.document().undoStack()->redo();
-src/checks/drawerpresentation/velocity.cpp:580 | const Snapshot redone = fixture.snapshot();
-src/checks/drawerpresentation/velocity.cpp:588 | VelocityFixture fixture;
-src/checks/drawerpresentation/velocity.cpp:589 | createVelocityFixture(fixture);
-src/checks/drawerpresentation/velocity.cpp:590 | auto *scene = fixture.rig->quickScene();
-src/checks/drawerpresentation/velocity.cpp:603 | fixture.area->songChanged();
-src/checks/drawerpresentation/velocity.cpp:604 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:606 | fixture.rig->view().setEditorHorizontalScroll(layout::space(layout::Space::Eight));
-src/checks/drawerpresentation/velocity.cpp:607 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:609 | fixture.rig->view().setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
-src/checks/drawerpresentation/velocity.cpp:610 | fixture.rig->view().setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
-src/checks/drawerpresentation/velocity.cpp:611 | fixture.refresh();
-src/checks/drawerpresentation/velocity.cpp:613 | fixture.refresh(true, -1.0);
-src/checks/drawerpresentation/velocity.cpp:617 | fixture.refresh(true, 0.0);
-src/checks/drawerpresentation/velocity.cpp:618 | const VelocityAreaDiagnostics warm = fixture.area->diagnostics();
-src/checks/drawerpresentation/velocity.cpp:619 | for (int tick = 1; tick <= 120; ++tick)
-src/checks/drawerpresentation/velocity.cpp:620 | fixture.refresh(true, double(tick));
-src/checks/drawerpresentation/velocity.cpp:621 | QCOMPARE(fixture.area->diagnostics().contentBuildCount, warm.contentBuildCount);
-src/checks/drawerpresentation/velocity.cpp:622 | QCOMPARE(fixture.area->diagnostics().presentedPlayheadTick, 120.0);
-src/checks/drawerpresentation/velocity.cpp:623 | QCOMPARE(fixture.area->diagnostics().playheadPresentationCount,
-
-Original assertion inventory
-
 A001 | createVelocityFixture | src/checks/drawerpresentation/velocity.cpp:39
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/velocity.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  qFatal("%s", qPrintable(error))
 
 A002 | createVelocityFixture | src/checks/drawerpresentation/velocity.cpp:46
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/velocity.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  qFatal("%s", qPrintable(error))
 
 A003 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:86
 Disposition: PARTIAL
@@ -428,21 +100,15 @@ Original expression:
 
 A017 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:131
 Disposition: MATCHED
-Mapping/reason: The ladder's unresolved voice publishes VelocityAxisModel.Mode.continuous, the continuous 1-127 ruler mode asserted here. [S001]
-Original expression:
-  QCOMPARE(drawer->velocityArea()->axis().mode(), VelocityAxis::Mode::Continuous)
+Mapping: S001
 
 A018 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:132
 Disposition: MATCHED
-Mapping/reason: The ladder collapses equal displayed values to one marker; one selected note is one displayed value here. [S009]
-Original expression:
-  QCOMPARE(drawer->velocityArea()->axis().markerCount(), size_t(1))
+Mapping: S009
 
 A019 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:133
 Disposition: MATCHED
-Mapping/reason: The ladder names each marker with its displayed value; this site's single selected note supplies that displayed value. [S006]
-Original expression:
-  QCOMPARE(drawer->velocityArea()->axis().markers()[0].velocity, notes.front().velocity)
+Mapping: S006
 
 A020 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:134
 Disposition: PARTIAL
@@ -499,9 +165,7 @@ Original expression:
 
 A028 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:155
 Disposition: MATCHED
-Mapping/reason: The ladder's unresolved voice publishes the continuous axis mode asserted here. [S001]
-Original expression:
-  QCOMPARE(fixture.area->axis().mode(), VelocityAxis::Mode::Continuous)
+Mapping: S001
 
 A029 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:156
 Disposition: GAP
@@ -535,45 +199,31 @@ Original expression:
 
 A034 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:178
 Disposition: MATCHED
-Mapping/reason: The mid density band publishes 9 ticks and 5 labels in the ladder predicate. [S002]
-Original expression:
-  QCOMPARE(fixture.area->axis().tickCount(), 9)
+Mapping: S002
 
 A035 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:179
 Disposition: MATCHED
-Mapping/reason: The mid density band publishes 5 labels in the ladder predicate. [S002]
-Original expression:
-  QCOMPARE(fixture.area->axis().labelCount(), 5)
+Mapping: S002
 
 A036 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:181
 Disposition: MATCHED
-Mapping/reason: The ladder predicate's density band labels descend from 127, the first label asserted here. [S003]
-Original expression:
-  QCOMPARE(labels[0].velocity, 127)
+Mapping: S003
 
 A037 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:182
 Disposition: MATCHED
-Mapping/reason: The ladder predicate's second band label is 96. [S003]
-Original expression:
-  QCOMPARE(labels[1].velocity, 96)
+Mapping: S003
 
 A038 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:183
 Disposition: MATCHED
-Mapping/reason: The ladder predicate's third band label is 64. [S003]
-Original expression:
-  QCOMPARE(labels[2].velocity, 64)
+Mapping: S003
 
 A039 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:184
 Disposition: MATCHED
-Mapping/reason: The ladder predicate's fourth band label is 32. [S003]
-Original expression:
-  QCOMPARE(labels[3].velocity, 32)
+Mapping: S003
 
 A040 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:185
 Disposition: MATCHED
-Mapping/reason: The ladder predicate's last band label is 1. [S003]
-Original expression:
-  QCOMPARE(labels[4].velocity, 1)
+Mapping: S003
 
 A041 | VelocityPageTest::gridAndPanClamp | src/checks/drawerpresentation/velocity.cpp:205
 Disposition: GAP
@@ -599,15 +249,11 @@ Original expression:
 
 A044 | VelocityPageTest::psgAxisContexts | src/checks/drawerpresentation/velocity.cpp:243
 Disposition: MATCHED
-Mapping/reason: The PSG ladder predicate publishes Mode.intrinsic for a PSG voice. [S022]
-Original expression:
-  QCOMPARE(fixture.area->axis().mode(), VelocityAxis::Mode::Intrinsic)
+Mapping: S022
 
 A045 | VelocityPageTest::psgAxisContexts | src/checks/drawerpresentation/velocity.cpp:244
 Disposition: MATCHED
-Mapping/reason: The ladder predicate asserts the square row's 16 (S023), the wave row's 5 (S024) and the noise row's 16 (S108) graduations, so every data row this site executes is asserted. [S023][S024][S108]
-Original expression:
-  QCOMPARE(fixture.area->axis().graduationCount(), graduations)
+Mapping: S023, S024, S108
 
 A046 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:256
 Disposition: PARTIAL
@@ -623,9 +269,7 @@ Original expression:
 
 A048 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:271
 Disposition: MATCHED
-Mapping/reason: The key-split predicate moves the pointer onto a published handle and asserts the axis map resolves the hovered note key's own map. [S060]
-Original expression:
-  QCOMPARE(fixture.area->axis().map(), noiseMap)
+Mapping: S060
 
 A049 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:272
 Disposition: PARTIAL
@@ -647,9 +291,7 @@ Original expression:
 
 A052 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:294
 Disposition: MATCHED
-Mapping/reason: The PSG ladder predicate asserts level 9's representative velocity is 76. [S026]
-Original expression:
-  QCOMPARE(map.representative(9), 76)
+Mapping: S026
 
 A053 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:295
 Disposition: PARTIAL
@@ -701,15 +343,11 @@ Original expression:
 
 A060 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:319
 Disposition: MATCHED
-Mapping/reason: The key-split predicate resolves each selected note's own level through VelocityMap.level(of:) and places its handle at that level. [S059]
-Original expression:
-  QVERIFY(selectedLevel)
+Mapping: S059
 
 A061 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:320
 Disposition: MATCHED
-Mapping/reason: The key-split predicate resolves each selected note's own level through VelocityMap.level(of:) and places its handle at that level. [S059]
-Original expression:
-  QVERIFY(outsiderLevel)
+Mapping: S059
 
 A062 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:332
 Disposition: GAP
@@ -807,15 +445,11 @@ Original expression:
 
 A076 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:377
 Disposition: MATCHED
-Mapping/reason: The QML drawer case clicks the composed detent control and asserts the page's toggled preference in the converted slice. [S100]
-Original expression:
-  QVERIFY(!fixture.drawerChrome->detentChecked())
+Mapping: S100
 
 A077 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:378
 Disposition: MATCHED
-Mapping/reason: The QML drawer case's click on the composed detent control flips the page's own detent preference. [S100]
-Original expression:
-  QVERIFY(!fixture.area->useDetents())
+Mapping: S100
 
 A078 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:383
 Disposition: GAP
@@ -831,15 +465,11 @@ Original expression:
 
 A080 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:389
 Disposition: MATCHED
-Mapping/reason: The QML drawer case's second click on the composed detent control restores the preference it started from. [S100]
-Original expression:
-  QVERIFY(fixture.drawerChrome->detentChecked())
+Mapping: S100
 
 A081 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:390
 Disposition: MATCHED
-Mapping/reason: The QML drawer case's second click restores the page's own detent preference. [S100]
-Original expression:
-  QVERIFY(fixture.area->useDetents())
+Mapping: S100
 
 A082 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:391
 Disposition: PARTIAL
@@ -932,9 +562,7 @@ Original expression:
 
 A096 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:481
 Disposition: MATCHED
-Mapping/reason: The key-split predicate resolves each selected note's own level through VelocityMap.level(of:) and places its handle at that level. [S059]
-Original expression:
-  QVERIFY(selectedLevel)
+Mapping: S059
 
 A097 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:487
 Disposition: GAP
@@ -1069,15 +697,11 @@ Original expression:
 
 A118 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:592
 Disposition: MATCHED
-Mapping/reason: The QML page-mount case reads the page's drawn nodes and asserts every note of the primary track published one. [S097]
-Original expression:
-  QVERIFY(text)
+Mapping: S097
 
 A119 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:594
 Disposition: MATCHED
-Mapping/reason: The QML pointer-edit case requires the grid to publish its notes and the mount case requires one node per published note. [S097][S101]
-Original expression:
-  QVERIFY(rows > 0)
+Mapping: S097, S101
 
 A120 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:605
 Disposition: PARTIAL
@@ -1099,700 +723,336 @@ Original expression:
 
 A123 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:621
 Disposition: MATCHED
-Mapping/reason: The converted playhead case asserts 128 shared-playhead presentations rebuilt no velocity content, the retention rule asserted here across its own tick loop. [S107]
-Original expression:
-  QCOMPARE(fixture.area->diagnostics().contentBuildCount, warm.contentBuildCount)
+Mapping: S107
 
 A124 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:622
 Disposition: MATCHED
-Mapping/reason: The Swift predicate asserts the presented context tick published by the last playhead presentation through the same rounding rule. [S075]
-Original expression:
-  QCOMPARE(fixture.area->diagnostics().presentedPlayheadTick, 120.0)
+Mapping: S075
 
 A125 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:623
 Disposition: MATCHED
-Mapping/reason: The converted playhead case asserts every published presentation reached the page's diagnostics, the count rule asserted here. [S106]
-Original expression:
-  QCOMPARE(fixture.area->diagnostics().playheadPresentationCount,
-               warm.playheadPresentationCount + 120)
-
-Executable assertion index
-The S entries are exact predicates already called by the suite: S001-S084 and S108 are paired
-counterpart predicates, S085-S091 are the context-invalidation predicates of the same
-counterpart, and S092-S107 are converted editor-QML predicates from
-src/checks/editorqml/tst_EditorDrawer.qml. S108 is the later-added noise row predicate of
-drawerVelocityPsgIntrinsicRows. Their presence alone does not close any A entry.
-Preserve their surrounding setup and order in the paired source.
+Mapping: S106
 
 S001 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "an unresolved voice uses the continuous 1-127 ruler"
-Swift expression:
-  report.expectEqual(VelocityAxisModel.Mode.continuous.rawValue, continuous.mode.rawValue,
-                         cppID: drawerVelocityAxisID,
-                         what: "an unresolved voice uses the continuous 1-127 ruler")
 
 S002 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the mid density band publishes 9 ticks and 5 labels"
-Swift expression:
-  report.expect(continuous.labels.count == 5 && continuous.ticks.count == 9, cppID: drawerVelocityAxisID,
-                    message: "the mid density band publishes 9 ticks and 5 labels")
 
 S003 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the density band's labels descend from 127 to 1"
-Swift expression:
-  report.expect(continuous.labels.map(\.velocity) == [127, 96, 64, 32, 1], cppID: drawerVelocityAxisID,
-                    message: "the density band's labels descend from 127 to 1")
 
 S004 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the density band's ticks step by sixteen"
-Swift expression:
-  report.expect(continuous.ticks.map(\.velocity) == [127, 112, 96, 80, 64, 48, 32, 16, 1],
-                    cppID: drawerVelocityAxisID, message: "the density band's ticks step by sixteen")
 
 S005 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "one marker per distinct displayed value"
-Swift expression:
-  report.expectEqual(2, continuous.markers.count, cppID: drawerVelocityAxisID,
-                         what: "one marker per distinct displayed value")
 
 S006 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the lowest displayed value names the first marker"
-Swift expression:
-  report.expectEqual(64, continuous.markers[0].velocity, cppID: drawerVelocityAxisID,
-                         what: "the lowest displayed value names the first marker")
 
 S007 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the highest displayed value names the second marker"
-Swift expression:
-  report.expectEqual(100, continuous.markers[1].velocity, cppID: drawerVelocityAxisID,
-                         what: "the highest displayed value names the second marker")
 
 S008 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a lower velocity draws lower on the ruler"
-Swift expression:
-  report.expect(continuous.markers[0].y > continuous.markers[1].y, cppID: drawerVelocityAxisID,
-                    message: "a lower velocity draws lower on the ruler")
 
 S009 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "equal displayed values collapse to one marker"
-Swift expression:
-  report.expectEqual(1, single.markers.count, cppID: drawerVelocityAxisID,
-                         what: "equal displayed values collapse to one marker")
 
 S010 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the ruler's top is velocity 127"
-Swift expression:
-  report.expectEqual(127, continuous.yToVelocity(continuous.top), cppID: drawerVelocityAxisID,
-                         what: "the ruler's top is velocity 127")
 
 S011 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the ruler's bottom is velocity 1"
-Swift expression:
-  report.expectEqual(1, continuous.yToVelocity(continuous.bottom), cppID: drawerVelocityAxisID,
-                         what: "the ruler's bottom is velocity 1")
 
 S012 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a pointer above the ruler clamps to the maximum velocity"
-Swift expression:
-  report.expectEqual(127, continuous.yToVelocity(-500), cppID: drawerVelocityAxisID,
-                         what: "a pointer above the ruler clamps to the maximum velocity")
 
 S013 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a 40px body uses the first density band"
-Swift expression:
-  report.expect(dense.ticks.count == 5 && dense.labels.count == 3, cppID: drawerVelocityAxisID,
-                    message: "a 40px body uses the first density band")
 
 S014 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the first band labels 127/64/1 only"
-Swift expression:
-  report.expect(dense.labels.map(\.velocity) == [127, 64, 1], cppID: drawerVelocityAxisID,
-                    message: "the first band labels 127/64/1 only")
 
 S015 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the first band omits the mid values"
-Swift expression:
-  report.expect(dense.hasLabel(64) && !dense.hasLabel(96), cppID: drawerVelocityAxisID,
-                    message: "the first band omits the mid values")
 
 S016 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a 400px body reaches the finest band's tick and label caps"
-Swift expression:
-  report.expect(finest.ticks.count == 32 && finest.labels.count == 17, cppID: drawerVelocityAxisID,
-                    message: "a 400px body reaches the finest band's tick and label caps")
 
 S017 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a ruler press inside a label row takes its value"
-Swift expression:
-  report.expectEqual(64, continuous.rulerVelocityAt(y: labelY, labelHeight: 14), cppID: drawerVelocityAxisID,
-                         what: "a ruler press inside a label row takes its value")
 
 S018 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a ruler press between rows reports no value"
-Swift expression:
-  report.expectEqual(-1, continuous.rulerVelocityAt(y: betweenRows, labelHeight: 2),
-                         cppID: drawerVelocityAxisID, what: "a ruler press between rows reports no value")
 
 S019 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the ruler owns x = 0"
-Swift expression:
-  report.expect(continuous.inRuler(x: 0, rulerWidth: 56), cppID: drawerVelocityAxisID,
-                    message: "the ruler owns x = 0")
 
 S020 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the ruler ends at the gutter width"
-Swift expression:
-  report.expect(!continuous.inRuler(x: 56, rulerWidth: 56), cppID: drawerVelocityAxisID,
-                    message: "the ruler ends at the gutter width")
 
 S021 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the continuous ruler's description is the plain domain"
-Swift expression:
-  report.expectEqual("Velocity", continuous.accessibleDescription, cppID: drawerVelocityAxisID,
-                         what: "the continuous ruler's description is the plain domain")
 
 S022 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a PSG voice uses the intrinsic level ruler"
-Swift expression:
-  report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, square.mode.rawValue, cppID: drawerVelocityPsgID,
-                         what: "a PSG voice uses the intrinsic level ruler")
 
 S023 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "Square 1 publishes sixteen volume levels"
-Swift expression:
-  report.expectEqual(16, square.graduations.count, cppID: drawerVelocityPsgID,
-                         what: "Square 1 publishes sixteen volume levels")
 
 S024 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "Programmable Wave publishes five volume levels"
-Swift expression:
-  report.expectEqual(5, wave.graduations.count, cppID: drawerVelocityPsgID,
-                         what: "Programmable Wave publishes five volume levels")
 
 S025 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a graduation names its own level"
-Swift expression:
-  report.expectEqual("Vol 10", square.graduations[9].text, cppID: drawerVelocityPsgID,
-                         what: "a graduation names its own level")
 
 S026 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "level 9's representative velocity is 76"
-Swift expression:
-  report.expectEqual(76, square.graduations[9].velocity, cppID: drawerVelocityPsgID,
-                         what: "level 9's representative velocity is 76")
 
 S027 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the displayed value marks its own graduation active"
-Swift expression:
-  report.expect(square.graduations[9].active, cppID: drawerVelocityPsgID,
-                    message: "the displayed value marks its own graduation active")
 
 S028 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "an audible level is not the silent level"
-Swift expression:
-  report.expect(square.graduations[9].audible, cppID: drawerVelocityPsgID,
-                    message: "an audible level is not the silent level")
 
 S029 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "level 0 is the silent level"
-Swift expression:
-  report.expect(!square.graduations[0].audible, cppID: drawerVelocityPsgID,
-                    message: "level 0 is the silent level")
 
 S030 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "lower levels draw lower"
-Swift expression:
-  report.expect(square.levelToY(0) > square.levelToY(15), cppID: drawerVelocityPsgID,
-                    message: "lower levels draw lower")
 
 S031 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a level center maps back to its own level"
-Swift expression:
-  report.expectEqual(9, square.yToLevel(square.levelToY(9)), cppID: drawerVelocityPsgID,
-                         what: "a level center maps back to its own level")
 
 S032 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a level boundary sits between the two row centers"
-Swift expression:
-  report.expect(boundary < square.levelToY(8) && boundary > square.levelToY(9), cppID: drawerVelocityPsgID,
-                    message: "a level boundary sits between the two row centers")
 
 S033 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "an intrinsic ruler press takes the level's value"
-Swift expression:
-  report.expectEqual(76, square.rulerVelocityAt(y: square.levelToY(9), labelHeight: 14),
-                         cppID: drawerVelocityPsgID, what: "an intrinsic ruler press takes the level's value")
 
 S034 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the accessible description names the voice"
-Swift expression:
-  report.expect(square.accessibleDescription.contains("Square 1"), cppID: drawerVelocityPsgID,
-                    message: "the accessible description names the voice")
 
 S035 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "macro \(macro) names \(expected)"
-Swift expression:
-  report.expect(VelocityContextPolicy.voiceKind(macro: macro) == expected, cppID: drawerVelocityContextID,
-                        message: "macro \(macro) names \(expected)")
 
 S036 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a keysplit macro names no exact top-level map"
-Swift expression:
-  report.expect(VelocityContextPolicy.voiceKind(macro: BankVoiceMacro.keysplit) == nil,
-                    cppID: drawerVelocityContextID, message: "a keysplit macro names no exact top-level map")
 
 S037 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a drumkit macro names no exact top-level map"
-Swift expression:
-  report.expect(VelocityContextPolicy.voiceKind(macro: BankVoiceMacro.keysplitAll) == nil,
-                    cppID: drawerVelocityContextID, message: "a drumkit macro names no exact top-level map")
 
 S038 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the last voice change at or before the tick wins"
-Swift expression:
-  report.expectEqual(5, early.slot, cppID: drawerVelocityContextID,
-                         what: "the last voice change at or before the tick wins")
 
 S039 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the section ends at the next voice change"
-Swift expression:
-  report.expectEqual(Tick(96), early.endTick ?? 0, cppID: drawerVelocityContextID,
-                         what: "the section ends at the next voice change")
 
 S040 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the later change takes over"
-Swift expression:
-  report.expectEqual(2, late.slot, cppID: drawerVelocityContextID, what: "the later change takes over")
 
 S041 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a context with no later change runs to the song's end"
-Swift expression:
-  report.expect(late.endTick == nil, cppID: drawerVelocityContextID,
-                    message: "a context with no later change runs to the song's end")
 
 S042 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "an unchanged program is the track's first program"
-Swift expression:
-  report.expectEqual(7, opening.slot, cppID: drawerVelocityContextID,
-                         what: "an unchanged program is the track's first program")
 
 S043 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "an editable square-1 slot resolves exactly"
-Swift expression:
-  report.expectEqual(VelocityContextStatus.resolved.rawValue, square.status.rawValue,
-                         cppID: drawerVelocityContextID, what: "an editable square-1 slot resolves exactly")
 
 S044 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the resolved map is the slot's top-level voice"
-Swift expression:
-  report.expect(square.map == VelocityMap(voiceKind: .square1), cppID: drawerVelocityContextID,
-                    message: "the resolved map is the slot's top-level voice")
 
 S045 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the context keeps its section boundary"
-Swift expression:
-  report.expectEqual(Tick(96), square.endTick ?? 0, cppID: drawerVelocityContextID,
-                         what: "the context keeps its section boundary")
 
 S046 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a resolved context is editable"
-Swift expression:
-  report.expect(square.editable, cppID: drawerVelocityContextID, message: "a resolved context is editable")
 
 S047 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a slot that publishes no parsed voice is unresolved"
-Swift expression:
-  report.expectEqual(VelocityContextStatus.unresolvedVoice.rawValue, readOnly.status.rawValue,
-                         cppID: drawerVelocityContextID,
-                         what: "a slot that publishes no parsed voice is unresolved")
 
 S048 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "an unresolved voice publishes a diagnostic and refuses editing"
-Swift expression:
-  report.expect(!readOnly.editable && !readOnly.diagnostic.isEmpty, cppID: drawerVelocityContextID,
-                    message: "an unresolved voice publishes a diagnostic and refuses editing")
 
 S049 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a program outside the bank is unresolved"
-Swift expression:
-  report.expectEqual(VelocityContextStatus.unresolvedVoice.rawValue, missing.status.rawValue,
-                         cppID: drawerVelocityContextID, what: "a program outside the bank is unresolved")
 
 S050 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the staged bank publishes at least one parsed voice"
-Swift expression:
-  report.expect(firstEditable >= 0, cppID: drawerVelocityContextID,
-                    message: "the staged bank publishes at least one parsed voice")
 
 S051 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the staged bank's first parsed slot resolves exactly"
-Swift expression:
-  report.expectEqual(VelocityContextStatus.resolved.rawValue, real.status.rawValue, cppID: drawerVelocityContextID,
-                         what: "the staged bank's first parsed slot resolves exactly")
 
 S052 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the resolved slot is the editable line kind"
-Swift expression:
-  report.expectEqual(BankSlotKind.editable, session.bankSlots[firstEditable].kind, cppID: drawerVelocityContextID,
-                         what: "the resolved slot is the editable line kind")
 
 S053 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a split without a note key remains keyless"
-Swift expression:
-  report.expect(keyless.map == VelocityMap(voiceKind: .keyless) && !keyless.editable,
-                    cppID: drawerVelocityKeysplitID, message: "a split without a note key remains keyless")
 
 S054 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "invalid child facts never borrow another key"
-Swift expression:
-  report.expect(invalid.map == VelocityMap(voiceKind: .invalid) && !invalid.editable,
-                    cppID: drawerVelocityKeysplitID, message: "invalid child facts never borrow another key")
 
 S055 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "key \(key) resolves its own child map"
-Swift expression:
-  report.expect(context.editable && context.map == VelocityMap(voiceKind: kind),
-                        cppID: drawerVelocityKeysplitID, message: "key \(key) resolves its own child map")
 
 S056 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "out-of-domain keys do not resolve"
-Swift expression:
-  report.expect(split.subvoiceMacro(forKey: -1) == nil
-                        && split.subvoiceMacro(forKey: 128) == nil,
-                    cppID: drawerVelocityKeysplitID, message: "out-of-domain keys do not resolve")
 
 S057 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "compatible per-key PSG notes retain detents"
-Swift expression:
-  report.expect(page.detentsAvailable && !page.contextUnsupported
-                        && page.axisMode == VelocityAxisModel.Mode.intrinsic.rawValue,
-                    cppID: drawerVelocityKeysplitID, message: "compatible per-key PSG notes retain detents")
 
 S058 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "mixed PSG maps remain editable and continuous"
-Swift expression:
-  report.expect(!page.detentsAvailable && !page.contextUnsupported
-                        && page.axisMode == VelocityAxisModel.Mode.continuous.rawValue,
-                    cppID: drawerVelocityKeysplitID, message: "mixed PSG maps remain editable and continuous")
 
 S059 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "mixed selection places each handle using its own level boundaries"
-Swift expression:
-  report.expect(handle?.y == noteAxis.levelToY(map.level(of: Int(note.velocity))!),
-                        cppID: drawerVelocityKeysplitID,
-                        message: "mixed selection places each handle using its own level boundaries")
 
 S060 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "hover resolves the hovered note key"
-Swift expression:
-  report.expect(page.axisModel.map == VelocityMap(voiceKind: .wave),
-                        cppID: drawerVelocityKeysplitID, message: "hover resolves the hovered note key")
 
 S061 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "mixed per-key selection opens its prompt"
-Swift expression:
-  report.expect(page.openSelectedVelocityPrompt(), cppID: drawerVelocityKeysplitID,
-                    message: "mixed per-key selection opens its prompt")
 
 S062 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "per-key prompt drafts never mutate history"
-Swift expression:
-  report.expect(drawerVelocityDocumentSnapshot(document) == before, cppID: drawerVelocityKeysplitID,
-                    message: "per-key prompt drafts never mutate history")
 
 S063 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "per-key prompt accepts one captured transaction"
-Swift expression:
-  report.expect(page.acceptPrompt(), cppID: drawerVelocityKeysplitID,
-                    message: "per-key prompt accepts one captured transaction")
 
 S064 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "acceptance changes only captured notes once"
-Swift expression:
-  report.expect(document.note(notes[0].id)?.velocity == 127
-                        && document.note(notes[1].id)?.velocity == 127
-                        && document.note(notes[2].id)?.velocity == notes[2].velocity
-                        && accepted.revision == before.revision + 1,
-                    cppID: drawerVelocityKeysplitID, message: "acceptance changes only captured notes once")
 
 S065 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "repeated acceptance cannot duplicate a transaction"
-Swift expression:
-  report.expect(!page.acceptPrompt() && drawerVelocityDocumentSnapshot(document) == accepted,
-                    cppID: drawerVelocityKeysplitID, message: "repeated acceptance cannot duplicate a transaction")
 
 S066 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "one undo restores both captured values"
-Swift expression:
-  report.expect(document.note(notes[0].id)?.velocity == notes[0].velocity
-                        && document.note(notes[1].id)?.velocity == notes[1].velocity,
-                    cppID: drawerVelocityKeysplitID, message: "one undo restores both captured values")
 
 S067 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the invalid bank context advertises that velocity editing is unavailable"
-Swift expression:
-  report.expect(page.contextUnsupported, cppID: drawerVelocityKeysplitID,
-                    message: "the invalid bank context advertises that velocity editing is unavailable")
 
 S068 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "an unsupported paint press never suspends follow or owns Escape"
-Swift expression:
-  report.expect(!page.interactionActive, cppID: drawerVelocityKeysplitID,
-                    message: "an unsupported paint press never suspends follow or owns Escape")
 
 S069 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
 Anchor: message "dragging an unsupported velocity context cannot change notes or history"
-Swift expression:
-  report.expect(drawerVelocityDocumentSnapshot(document) == invalidBefore, cppID: drawerVelocityKeysplitID,
-                    message: "dragging an unsupported velocity context cannot change notes or history")
 
 S070 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
 Anchor: message "camera refresh moves the handle without changing its value axis"
-Swift expression:
-  report.expect(moved.x == expectedX && moved.x != oldX && moved.y == oldY
-                        && moved.value == oldValue,
-                    cppID: drawerVelocityProjectionID, message: "camera refresh moves the handle without changing its value axis")
 
 S071 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the QML model receives the moved handle"
-Swift expression:
-  report.expect(row.x == expectedX, cppID: drawerVelocityProjectionID,
-                    message: "the QML model receives the moved handle")
 
 S072 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
 Anchor: message "hit testing follows the camera-refreshed handle"
-Swift expression:
-  report.expect(page.hoveredNoteText == "\(note.id.rawValue)", cppID: drawerVelocityProjectionID,
-                    message: "hit testing follows the camera-refreshed handle")
 
 S073 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
 Anchor: message "document edits invalidate cached note values"
-Swift expression:
-  report.expect(fixture.handle(note)?.value == 127, cppID: drawerVelocityProjectionID,
-                    message: "document edits invalidate cached note values")
 
 S074 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
 Anchor: message "undo invalidates cached note values again"
-Swift expression:
-  report.expect(fixture.handle(note)?.value == oldValue, cppID: drawerVelocityProjectionID,
-                    message: "undo invalidates cached note values again")
 
 S075 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the presented context tick is the rounded playhead tick"
-Swift expression:
-  report.expectEqual(Tick(16), page.presentedContextTick, cppID: drawerVelocityDiagnosticsID,
-                         what: "the presented context tick is the rounded playhead tick")
 
 S076 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the presented context slot is the bank slot at that tick"
-Swift expression:
-  report.expectEqual(0, page.presentedContextSlot, cppID: drawerVelocityDiagnosticsID,
-                         what: "the presented context slot is the bank slot at that tick")
 
 S077 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
 Anchor: message "playhead movement preserves the displayed note count"
-Swift expression:
-  report.expectEqual(handleCount, fixture.handles.count, cppID: drawerVelocityDiagnosticsID,
-                         what: "playhead movement preserves the displayed note count")
 
 S078 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the new section resolves the slot of its own tick"
-Swift expression:
-  report.expectEqual(2, page.presentedContextSlot, cppID: drawerVelocityDiagnosticsID,
-                         what: "the new section resolves the slot of its own tick")
 
 S079 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the stopped velocity context consumes the published edit cursor"
-Swift expression:
-  report.expectEqual(2, page.context.slot, cppID: drawerVelocityDiagnosticsID,
-                         what: "the stopped velocity context consumes the published edit cursor")
 
 S080 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
 Anchor: message "cursor-only publication changes no document or history state"
-Swift expression:
-  report.expectEqual(cursorDocument, drawerVelocityDocumentSnapshot(fixture.document), cppID: drawerVelocityDiagnosticsID,
-                         what: "cursor-only publication changes no document or history state")
 
 S081 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the selected handle publishes its own count"
-Swift expression:
-  report.expectEqual(1, page.selectedCount, cppID: drawerVelocityProjectionID,
-                         what: "the selected handle publishes its own count")
 
 S082 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the hovered handle publishes its displayed value as the readout"
-Swift expression:
-  report.expectEqual(fixture.handle(fixture.notes[0])?.label ?? "", page.readoutText,
-                         cppID: drawerVelocityProjectionID,
-                         what: "the hovered handle publishes its displayed value as the readout")
 
 S083 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the hovered handle publishes its own identity"
-Swift expression:
-  report.expectEqual("\(fixture.notes[0].id.rawValue)", page.hoveredNoteText, cppID: drawerVelocityProjectionID,
-                         what: "the hovered handle publishes its own identity")
 
 S084 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
 Anchor: message "hover leaving every handle hides the readout"
-Swift expression:
-  report.expect(!page.readoutVisible, cppID: drawerVelocityProjectionID,
-                    message: "hover leaving every handle hides the readout")
 
 S085 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the selected note starts with a parsed, editable opening voice"
-Swift expression:
-  report.expect(!page.contextUnsupported && page.contextSlot == 0,
-                    cppID: drawerVelocityProjectionID,
-                    message: "the selected note starts with a parsed, editable opening voice")
 
 S086 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
 Anchor: message "an unresolved program change invalidates the selected velocity context"
-Swift expression:
-  report.expect(page.contextUnsupported && page.contextSlot == 127,
-                    cppID: drawerVelocityProjectionID,
-                    message: "an unresolved program change invalidates the selected velocity context")
 
 S087 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
 Anchor: message "an unresolved selected voice cannot open the velocity prompt"
-Swift expression:
-  report.expect(!page.openSelectedVelocityPrompt(), cppID: drawerVelocityProjectionID,
-                    message: "an unresolved selected voice cannot open the velocity prompt")
 
 S088 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
 Anchor: message "an unresolved selected voice cannot start a velocity drag"
-Swift expression:
-  report.expect(!page.interactionActive, cppID: drawerVelocityProjectionID,
-                    message: "an unresolved selected voice cannot start a velocity drag")
 
 S089 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
 Anchor: message "undo restores the parsed context rather than retaining the unresolved projection"
-Swift expression:
-  report.expect(!page.contextUnsupported && page.contextSlot == 0,
-                    cppID: drawerVelocityProjectionID,
-                    message: "undo restores the parsed context rather than retaining the unresolved projection")
 
 S090 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the restored voice makes the selected velocity prompt available again"
-Swift expression:
-  report.expect(page.openSelectedVelocityPrompt(), cppID: drawerVelocityProjectionID,
-                    message: "the restored voice makes the selected velocity prompt available again")
 
 S091 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
 Anchor: message "the restored voice makes the selected velocity drag available again"
-Swift expression:
-  report.expect(page.interactionActive, cppID: drawerVelocityProjectionID,
-                    message: "the restored voice makes the selected velocity drag available again")
 
 S092 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the page composed its ruler and plot"
-QML expression:
-  verify(ruler && plot, "the page composed its ruler and plot")
 
 S093 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the ruler is the shared gutter column"
-QML expression:
-  fuzzyCompare(ruler.width, testCase.surface.timelineSplitX, 0.01,
-               "the ruler is the shared gutter column")
 
 S094 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the plot starts at the shared origin"
-QML expression:
-  fuzzyCompare(plot.x, ruler.width, 0.01, "the plot starts at the shared origin")
 
 S095 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the plot spans the body beside the ruler"
-QML expression:
-  fuzzyCompare(plot.width, page.width - ruler.width, 0.01,
-               "the plot spans the body beside the ruler")
 
 S096 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the plot spans the body height"
-QML expression:
-  fuzzyCompare(plot.height, page.height, 0.01, "the plot spans the body height")
 
 S097 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "every note of the primary track published a node"
-QML expression:
-  compare(nodes.length, testCase.gridNotes().length,
-          "every note of the primary track published a node")
 
 S098 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the ruler rendered its value ladder"
-QML expression:
-  verify(testCase.collectByName(ruler, "velocityTick", []).length
-             + testCase.collectByName(ruler, "velocityGraduation", []).length > 0,
-         "the ruler rendered its value ladder")
 
 S099 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the drawer composed its original detent control"
-QML expression:
-  verify(detent, "the drawer composed its original detent control")
-  compare(detent.Accessible.role, Accessible.CheckBox, "the original detent control is a checkbox")
-  compare(detent.Accessible.checkable, true, "the detent control is checkable")
-  compare(detent.Accessible.checked, testCase.velocityModel().detentsEnabled,
-          "the detent control shows the page's own preference")
 
 S100 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the drawer control toggles the velocity preference"
-QML expression:
-  mouseClick(detent, detent.width / 2, detent.height / 2, Qt.LeftButton)
-  compare(testCase.velocityModel().detentsEnabled, !enabledBefore,
-          "the drawer control toggles the velocity preference")
-  mouseClick(detent, detent.width / 2, detent.height / 2, Qt.LeftButton)
-  compare(testCase.velocityModel().detentsEnabled, enabledBefore)
 
 S101 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the grid published its notes"
-QML expression:
-  compare(notes.length > 0, true, "the grid published its notes")
 
 S102 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "a live drag reports an active interaction to the container"
-QML expression:
-  compare(testCase.velocityModel().interactionActive, true,
-          "a live drag reports an active interaction to the container")
 
 S103 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the released drag committed one velocity change"
-QML expression:
-  tryVerify(function() {
-      return testCase.noteVelocity(targetId) !== before
-  }, 1000, "the released drag committed one velocity change")
 
 S104 | test_productionVelocityCancellation | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the section hid"
-QML expression:
-  tryVerify(function() { return !testCase.section(testCase.velocityKind).visible }, 1000,
-            "the section hid")
-  compare(model.interactionActive, false, "hiding the section cancelled the gesture")
 
 S105 | test_productionVelocityCancellation | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the section is visible again"
-QML expression:
-  tryVerify(function() { return testCase.section(testCase.velocityKind).visible }, 1000,
-            "the section is visible again")
 
 S106 | test_productionVelocityPlayheadPerformance | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message ")" #1
-QML expression:
-  tryVerify(function() {
-      return bootstrap.velocityPlayheadPresentations() === presented + updates
-  }, 2000, "every published presentation reached the page's diagnostics")
 
 S107 | test_productionVelocityPlayheadPerformance | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "128 shared-playhead presentations rebuilt no velocity content"
-QML expression:
-  compare(bootstrap.velocityContentBuilds(), builds,
-          "128 shared-playhead presentations rebuilt no velocity content")
 
 S108 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "Noise publishes sixteen volume levels"
-Swift expression:
-  report.expectEqual(16, noise.graduations.count, cppID: drawerVelocityPsgID,
-                         what: "Noise publishes sixteen volume levels")
-
-OMP structural correction checkpoint
-The context-invalidating supplementary assertions now belong to drawerVelocityVoiceContextInvalidation, called explicitly immediately after drawerVelocityProjectionRefresh in runVelocityPageChecks. It owns a fresh identical velocity fixture; projection/camera cache checks retain their separate fixture. All original assertion expressions remain unchanged.
-Suite order is explicit; no generic fixture abstraction was introduced.
-Static diff check passed; Debug execution of this refactor is pending root.
-Original-site dispositions below are reconciled against the current counterpart; this is not a completion claim.

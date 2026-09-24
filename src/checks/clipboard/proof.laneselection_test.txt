@@ -4,51 +4,12 @@ Reference revision: 17942fef3dff1fce4d45c7b1aac7428f3027f395
 Original: src/checks/clipboard/laneselection_test.cpp
 Original SHA-256: ab2d332f404a73461b3ec5ccd4aca0b1c74d1955c5bf29d4bd552c2ad90a9485
 Swift counterpart: src/checks/editcheck/SelectionChecks.swift
-Production counterpart (AutomationRowStack projection): src/swift/app/drawer/automation/AutomationLaneProjection.swift
 Production SHA-256: 0500ae4898050f756894d99b3b92ebc5978af268e0f9ac188f352ee30d76a324
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below (70 sites across seven test methods),
-including fixture guards. Source context preserves setup, rows, loops, and
-guards between assertions verbatim. The current Swift counterpart is
-src/checks/editcheck/SelectionChecks.swift :: clipboardLaneSelectionChecks; its
-executed predicates cover the empty/lane/track coverage rows, the ready-model
-coverage and visible-lane queries, the document-facts event counts and the
-page-not-ready rows, and are indexed as S001-S028 below.
-The eight NATIVE sites are the native ProjectionRig fixture
-guards (adoptSmf document plus a shown EditorRig window); no Swift counterpart
-constructs that rig.
-Production parity fix recorded with this reconciliation:
-src/swift/app/drawer/automation/AutomationLaneProjection.swift (Tempo row)
-changed coversLane from "coversTempo && range != nil && selection?.scope ==
-.lanes" to "coversTempo", so a full-track Tempo selection covers the Tempo lane
-as this original asserts. It is verified by SelectionChecks.swift
-(full-track Tempo lane and nodes) and :276-279 (partial-track exclusion).
-The visibleLanes(selection) query executes through the check-local
-visibleSelectedLanes helper (visibleRows covering non-Tempo parameters):
-A009 (empty selection), A024 (lane scope), A042 (ready model) and A046
-(page-not-ready) are MATCHED; the production row stack still exposes no
-visible-lane list. The remaining families have no predicate under this cppID
-and stay GAP:
-A010-A011/A061-A070 record the endpoint-driven laneSet(first, second) API, a UI
-ingress not ported to Swift (anchor A010);
-A053-A059 record the lane-aware hitTest over zoom, horizontal scroll and device
-pixel ratio, which has no Swift seam (anchor A053).
-A030/A031 cite only the actual CC7 projection split (track scope covers CC nodes
-while leaving the lane uncovered); they are never evidence for endpoint laneSet
-or for pointer hit-testing.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-harness obligations (ProjectionRig document
-plus EditorRig window); it does not establish coverage of any converted check.
-GAP identifies an original predicate without a replacement assertion.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS: build ok; "ok: swiftcore (10.20s)"; "verify: 1/6 ok (5 skipped)";
-"run_checks: PASS".
 Provenance: observed verification reported for this round-2 re-pin; this
 proof-only reconciliation did not rebuild or re-run any suite. LSP diagnostics
 were clean on all touched files. The Swift and production SHA-256 values above
@@ -58,32 +19,9 @@ Command: deno task verify:shell --filter shell-clipboard --verbose
 Result: PASS: "ok: shell-clipboard (1.15s)"; "verify: 1/11 ok"; "run_checks: PASS".
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS: build ok (13.31s); "ok: swiftcore (16.81s)"; "verify: 1/6 ok (5 skipped)";
-"run_checks: PASS" (controller-observed for this re-pin; not rerun by this proof-only pass).
 
 
-Execution ownership
-The executing entry point is clipboardLaneSelectionChecks, called from
-runClipboardSelectionChecks (src/checks/editcheck/SelectionChecks.swift) and
-invoked from runProjectSessionSuite
-(src/checks/workspace/SessionChecks.swift) through pdcSuiteRun case 10
-(src/checks/support/corecheck/CoreCheckSupport.swift); the counterpart
-is compiled into swift_core_check at src/checks/CMakeLists.txt:109.
-The legacy original is the C++ AutomationCoverageTest methods
-emptySelectionAndEndpointPayload, laneScopeCoverage,
-trackScopeSeparatesLaneAndNodeCoverage, hiddenLanesAreNotCovered,
-documentFactsFollowIdentity, hitTest (data rows base_dpr1, zoomed_out_scrolled,
-zoomed_in_dpr2, inactive_reversed_selection) and endpointSemantics, run
-historically by runLaneSelectionCheck. Neither that file nor its runner appears
-in any CMake target or check catalog entry in this checkout (worktree search
-excluding build output and external, 2026-09-24), so no native execution is
-claimed for it here; its eight fixture guards remain recorded as NATIVE
-obligations.
-Automation-page Swift checks (SessionChecks page-selection paths,
-automationselection.swift band selection over drawer rows) assert a different
-selection surface over AutomationTimeSelection, not the AutomationViewModel
-coversLane/coversNodes/visibleLanes/hitTest/laneSet contract inventoried here.
 
-Fixture, sequence and row constraints
 ProjectionRig::create builds a one-track (optionally two-track) SongDocument
 via adoptSmf plus a shown EditorRig at a given zoom and horizontal scroll.
 selectedModel assembles an EditorSelectionModel with an explicit scope, lane
@@ -93,237 +31,41 @@ that returns early). endpointSemantics exercises laneSet over tempo/CC/invalid
 endpoint pairs. Keep each method's zoom, scroll, selection ticks, lane lists,
 and tempo flags; they are the inputs the paired check must carry.
 Swift-side fixture and sequence: clipboardLaneSelectionChecks builds
-AutomationTimeSelection values over the same three-note SongDocument (songEndTick
-96, primaryTrack 0) through
-AutomationRowStack.build(document:primaryTrack:selection:ready:songEndTick:),
-using the CC10 (pan), CC7 (volume) and CC21 (modulation) rows and an unsupported
-CC99 row; the partial-track Tempo case adds a second engine track, and the
-document-facts case writes one CC7 point with document.writeLane(track: 0,
-lane: .controller(7), from: 0, through: noTick, tick 24 value 64).
-
-Original assertion inventory and source sequence
 
 A001 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:150
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  #include <QtTest>
-
-  #include <memory>
-  #include <utility>
-  #include <vector>
-
-  #include "checks/support/editorrig.h"
-  #include "core/smf.h"
-  #include "core/songdocument.h"
-  #include "ui/editordrawer/automationprojection.h"
-  #include "ui/editordrawer/automationviewmodel.h"
-  #include "ui/editorviewstate.h"
-  #include "ui/songview.h"
-  #include "ui/songview/editorselectionmodel.h"
-
-  namespace {
-
-  using EditorSelectionModel = songview::EditorSelectionModel;
-
-  EditorAutomationRowId ccId(int track, uint8_t controller)
-  {
-      return {EditorAutomationRowKind::ControlChange, uint8_t(track), controller};
-  }
-
-  EditorAutomationRowId tempoId()
-  {
-      return {EditorAutomationRowKind::Tempo, 0, 0};
-  }
-
-  EditorAutomationRowId invalidId()
-  {
-      return ccId(0, 99);
-  }
-
-  EditorSelectionModel selectedModel(Tick startTick, Tick endTick,
-                                     EditorSelectionModel::TimeSelection::Scope scope,
-                                     std::vector<std::pair<int, uint8_t>> lanes = {},
-                                     bool tempo = false)
-  {
-      EditorSelectionModel model;
-      EditorSelectionModel::TimeSelection selection;
-      selection.startTick = startTick;
-      selection.endTick = endTick;
-      selection.scope = scope;
-      selection.lanes = std::move(lanes);
-      selection.tempo = tempo;
-      model.setTimeSelection(std::move(selection));
-      return model;
-  }
-
-  class ProjectionRig final
-  {
-    public:
-      static std::unique_ptr<ProjectionRig> create(double zoom, double horizontalScroll,
-                                                   QString &error, bool includeSecondary = false)
-      {
-          error.clear();
-          auto rig = std::unique_ptr<ProjectionRig>(new ProjectionRig);
-          SmfFile smf;
-          smf.format = 1;
-          smf.division = 24;
-
-          SmfTrack primary;
-          primary.events.push_back(noteEvent(0x90, 0, 60, 64));
-          primary.endTick = 1;
-          smf.tracks.push_back(std::move(primary));
-          if (includeSecondary) {
-              SmfTrack secondary;
-              secondary.events.push_back(noteEvent(0x91, 0, 67, 64));
-              secondary.endTick = 1;
-              smf.tracks.push_back(std::move(secondary));
-          }
-
-          SongInfo info;
-          info.label = QStringLiteral("automation-coverage-check");
-          if (!rig->m_document.adoptSmf(std::move(smf), info, &error))
-              return nullptr;
-
-          checks::EditorRigConfig config;
-          config.timeZoom = zoom;
-          config.show = true;
-          rig->m_editor = checks::EditorRig::create(rig->m_document, config, error);
-          if (!rig->m_editor)
-              return nullptr;
-          rig->m_editor->view().setEditorHorizontalScroll(horizontalScroll);
-          QCoreApplication::processEvents();
-          return rig;
-      }
-
-      SongDocument &document() noexcept { return m_document; }
-      const SongDocument &document() const noexcept { return m_document; }
-      const MidiTimeline *timeline() const noexcept { return &m_editor->timeline(); }
-
-      AutomationProjection projection() const
-      {
-          return AutomationProjection(AutomationGeometry::resolve(), &m_editor->view());
-      }
-
-    private:
-      static SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
-      {
-          SmfEvent event;
-          event.status = status;
-          event.tick = tick;
-          event.data0 = key;
-          event.data1 = velocity;
-          return event;
-      }
-
-      SongDocument m_document;
-      std::unique_ptr<checks::EditorRig> m_editor;
-  };
-
-  AutomationViewModel modelFor(const ProjectionRig &rig, const EditorSelectionModel &selection)
-  {
-      return buildAutomationViewModel(rig.document(), rig.timeline(), selection, true);
-  }
-
-  const AutomationViewModel::Row *rowFor(const AutomationViewModel &model,
-                                         const EditorAutomationRowId &id)
-  {
-      return model.find(id);
-  }
-
-  bool coversLane(const AutomationViewModel &model, const EditorAutomationRowId &id)
-  {
-      const auto *const row = rowFor(model, id);
-      return row && row->coversLane;
-  }
-
-  bool coversNodes(const AutomationViewModel &model, const EditorAutomationRowId &id)
-  {
-      const auto *const row = rowFor(model, id);
-      return row && row->coversNodes;
-  }
-
-  class AutomationCoverageTest final : public QObject
-  {
-      Q_OBJECT
-
-    public:
-      AutomationCoverageTest() = default;
-      Q_DISABLE_COPY_MOVE(AutomationCoverageTest)
-
-    private slots:
-      void emptySelectionAndEndpointPayload()
-      {
-          QString error;
-          const auto rig = ProjectionRig::create(96.0, 0.0, error);
-Original expression:
-  QVERIFY2(rig, qPrintable(error));
 
 A002 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:154
 Disposition: MATCHED
-Mapping/reason: MATCHED: with selection nil, expect(empty.activeTickRange == nil); S001, the empty selection has no active tick range.
-Source context since previous assertion:
-          const EditorSelectionModel selection;
-          const AutomationViewModel model = modelFor(*rig, selection);
-
-Original expression:
-  QVERIFY(!model.activeTickRange);
+Mapping: S001
 
 A003 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:155
 Disposition: MATCHED
-Mapping/reason: MATCHED: the nil-selection Tempo row has coversLane == false && coversNodes == false; S002, the loop predicate over the tempo and CC7 rows.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversLane(model, tempoId()));
+Mapping: S002
 
 A004 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:156
 Disposition: MATCHED
-Mapping/reason: MATCHED: Tempo coversNodes == false for the nil selection; S002.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversNodes(model, tempoId()));
+Mapping: S002
 
 A005 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:157
 Disposition: MATCHED
-Mapping/reason: MATCHED: the CC7 (volume) row has coversLane == false for the nil selection; S002.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversLane(model, ccId(0, 7)));
+Mapping: S002
 
 A006 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:158
 Disposition: MATCHED
-Mapping/reason: MATCHED: the CC7 row has coversNodes == false for the nil selection; S002.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversNodes(model, ccId(0, 7)));
+Mapping: S002
 
 A007 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:159
 Disposition: MATCHED
-Mapping/reason: MATCHED: empty.row(for: .controlChange(track: 0, controller: 99)) == nil for the unsupported controller; S003. The C++ helper returns false for a missing row, so row absence is the same observable as !coversLane.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversLane(model, invalidId()));
+Mapping: S003
 
 A008 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:160
 Disposition: MATCHED
-Mapping/reason: MATCHED: the same nil row is the !coversNodes observable of the unsupported controller; S003.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversNodes(model, invalidId()));
+Mapping: S003
 
 A009 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:161
 Disposition: MATCHED
-Mapping/reason: MATCHED: visibleSelectedLanes(empty).isEmpty for the empty selection; S021. The check-local helper derives the visible list from the row-stack model (visibleRows covering non-Tempo parameters, the visibleLanes pair domain). This covers the empty-selection query only and is not evidence for endpoint laneSet.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(model.visibleLanes(selection).empty());
+Mapping: S021
 
 A010 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:165
 Disposition: GAP
@@ -344,399 +86,161 @@ Original expression:
 
 A012 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:173
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      }
-
-      void laneScopeCoverage()
-      {
-          QString error;
-          const auto rig = ProjectionRig::create(96.0, 0.0, error);
-Original expression:
-  QVERIFY2(rig, qPrintable(error));
 
 A013 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:178
 Disposition: MATCHED
-Mapping/reason: MATCHED: expectEqual(range, covered.activeTickRange) for the lane-scoped selection (ticks 24..48); S004.
-Source context since previous assertion:
-          const EditorSelectionModel selection = selectedModel(
-              24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}, {0, 21}}, true);
-          const AutomationViewModel model = modelFor(*rig, selection);
-
-Original expression:
-  QVERIFY(model.activeTickRange == (std::optional<std::pair<Tick, Tick>>{{24, 48}}));
+Mapping: S004
 
 A014 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:179
 Disposition: MATCHED
-Mapping/reason: MATCHED: the lane-scoped Tempo row (tempo: true) has coversLane == true; S005.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(coversLane(model, tempoId()));
+Mapping: S005
 
 A015 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:180
 Disposition: MATCHED
-Mapping/reason: MATCHED: the lane-scoped Tempo row has coversNodes == true; S005.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(coversNodes(model, tempoId()));
+Mapping: S005
 
 A016 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:181
 Disposition: MATCHED
-Mapping/reason: MATCHED: the lane-scoped CC7 row has coversLane == true; S005.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(coversLane(model, ccId(0, 7)));
+Mapping: S005
 
 A017 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:182
 Disposition: MATCHED
-Mapping/reason: MATCHED: the lane-scoped CC7 row has coversNodes == true; S005.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(coversNodes(model, ccId(0, 7)));
+Mapping: S005
 
 A018 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:183
 Disposition: MATCHED
-Mapping/reason: MATCHED: the lane-scoped CC21 row (controller 21, not CC1) has coversLane == true; S005.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(coversLane(model, ccId(0, 21)));
+Mapping: S005
 
 A019 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:184
 Disposition: MATCHED
-Mapping/reason: MATCHED: the lane-scoped CC21 row has coversNodes == true; S005.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(coversNodes(model, ccId(0, 21)));
+Mapping: S005
 
 A020 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:185
 Disposition: MATCHED
-Mapping/reason: MATCHED: the unselected supported controller CC10 (pan) has coversLane == false && coversNodes == false; S006.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversLane(model, ccId(0, 10)));
+Mapping: S006
 
 A021 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:186
 Disposition: MATCHED
-Mapping/reason: MATCHED: the CC10 row has coversNodes == false; S006.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversNodes(model, ccId(0, 10)));
+Mapping: S006
 
 A022 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:187
 Disposition: MATCHED
-Mapping/reason: MATCHED: the unsupported CC99 has no row, so coversLane is false; S007.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversLane(model, ccId(0, 99)));
+Mapping: S007
 
 A023 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:188
 Disposition: MATCHED
-Mapping/reason: MATCHED: the unsupported CC99 has no row, so coversNodes is false; S007.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversNodes(model, ccId(0, 99)));
+Mapping: S007
 
 A024 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:189
 Disposition: MATCHED
-Mapping/reason: MATCHED: visibleSelectedLanes(covered) == [volume, modulation] for lanes {{0, 7}, {0, 21}} in catalog order; S022. This covers the lane-scope visible query only and is not evidence for endpoint laneSet.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY((model.visibleLanes(selection) ==
-           std::vector<std::pair<int, uint8_t>>{{0, 7}, {0, 21}}));
+Mapping: S022
 
 A025 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:195
 Disposition: MATCHED
-Mapping/reason: MATCHED: with tempo: false and lanes {CC7}, the Tempo row has coversLane == false; S008.
-Source context since previous assertion:
-
-          const EditorSelectionModel noTempoSelection =
-              selectedModel(24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}}, false);
-          const AutomationViewModel noTempo = modelFor(*rig, noTempoSelection);
-Original expression:
-  QVERIFY(!coversLane(noTempo, tempoId()));
+Mapping: S008
 
 A026 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:196
 Disposition: MATCHED
-Mapping/reason: MATCHED: the same lane-scoped Tempo row has coversNodes == false; S008.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversNodes(noTempo, tempoId()));
+Mapping: S008
 
 A027 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:203
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      }
-
-      void trackScopeSeparatesLaneAndNodeCoverage()
-      {
-          QString error;
-          const auto rig = ProjectionRig::create(96.0, 0.0, error);
-Original expression:
-  QVERIFY2(rig, qPrintable(error));
 
 A028 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:208
 Disposition: MATCHED
-Mapping/reason: MATCHED: under scope .tracks([0]) the Tempo row has coversLane == true; S010. Production parity fix recorded with this reconciliation: AutomationLaneProjection.swift coverLane for the Tempo row is now coversTempo (previously coversTempo && range != nil && selection?.scope == .lanes), matching this original observable; AutomationTimeSelection.coversTempo requires the selection track scope to contain every used track.
-Source context since previous assertion:
-          const EditorSelectionModel selection =
-              selectedModel(24, 48, EditorSelectionModel::TimeSelection::Tracks);
-          const AutomationViewModel full = modelFor(*rig, selection);
-
-Original expression:
-  QVERIFY(coversLane(full, tempoId()));
+Mapping: S010
 
 A029 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:209
 Disposition: MATCHED
-Mapping/reason: MATCHED: the track-scoped Tempo row has coversNodes == true; S011.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(coversNodes(full, tempoId()));
+Mapping: S011
 
 A030 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:210
 Disposition: MATCHED
-Mapping/reason: MATCHED: under scope .tracks([0]) the CC7 row has coversLane == false && coversNodes == true; S009. This covers the actual CC7 projection only and is not evidence for endpoint laneSet or pointer hit-testing.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversLane(full, ccId(0, 7)));
+Mapping: S009
 
 A031 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:211
 Disposition: MATCHED
-Mapping/reason: MATCHED: the CC7 node coverage of the track-scoped selection; S009, the same predicate as A030.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(coversNodes(full, ccId(0, 7)));
+Mapping: S009
 
 A032 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:215
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-          QString secondaryError;
-          const auto secondaryRig = ProjectionRig::create(96.0, 0.0, secondaryError, true);
-Original expression:
-  QVERIFY2(secondaryRig, qPrintable(secondaryError));
 
 A033 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:217
 Disposition: MATCHED
-Mapping/reason: MATCHED: with a second engine track present, the track-scoped Tempo row has coversLane == false; S012, partial track coverage.
-Source context since previous assertion:
-          const AutomationViewModel partial = modelFor(*secondaryRig, selection);
-Original expression:
-  QVERIFY(!coversLane(partial, tempoId()));
+Mapping: S012
 
 A034 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:218
 Disposition: MATCHED
-Mapping/reason: MATCHED: the partial track scope also excludes Tempo nodes; S013.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversNodes(partial, tempoId()));
+Mapping: S013
 
 A035 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:225
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      }
-
-      void hiddenLanesAreNotCovered()
-      {
-          QString error;
-          const auto rig = ProjectionRig::create(96.0, 0.0, error);
-Original expression:
-  QVERIFY2(rig, qPrintable(error));
 
 A036 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:231
 Disposition: MATCHED
-Mapping/reason: MATCHED: ready.row(for: volume)?.coversLane == true for the ready model with lanes {{0, 7}, {0, 99}} and tempo excluded; S023. This covers the ready-model selected-lane site only and is not evidence for endpoint laneSet or pointer hit-testing.
-Source context since previous assertion:
-          // Supported controllers (including CC21) always have rows; CC99 is absent.
-          const EditorSelectionModel selection = selectedModel(
-              24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}, {0, 99}}, false);
-          const AutomationViewModel model = modelFor(*rig, selection);
-
-Original expression:
-  QVERIFY(coversLane(model, ccId(0, 7)));
+Mapping: S023
 
 A037 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:232
 Disposition: MATCHED
-Mapping/reason: MATCHED: ready.row(for: volume)?.coversNodes == true for the same ready model; S024. This covers the ready-model selected-nodes site only and is not evidence for endpoint laneSet or pointer hit-testing.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(coversNodes(model, ccId(0, 7)));
+Mapping: S024
 
 A038 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:233
 Disposition: MATCHED
-Mapping/reason: MATCHED: ready.row(for: pan)?.coversLane == false for the unselected CC10 lane in the same ready model; S025. This covers the ready-model unselected-lane site only and is not evidence for endpoint laneSet or pointer hit-testing.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversLane(model, ccId(0, 10)));
+Mapping: S025
 
 A039 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:234
 Disposition: MATCHED
-Mapping/reason: MATCHED: ready.row(for: pan)?.coversNodes == false for the unselected CC10 lane in the same ready model; S026. This covers the ready-model unselected-nodes site only and is not evidence for endpoint laneSet or pointer hit-testing.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversNodes(model, ccId(0, 10)));
+Mapping: S026
 
 A040 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:235
 Disposition: MATCHED
-Mapping/reason: MATCHED: the unsupported CC99 has no row in the page-not-ready model, so coversLane is false; S016. Row absence for an unsupported controller is not a readiness artifact: S014 shows supported rows survive ready: false, and S007 asserts the same absent row on the ready model under the laneScopeCoverage cppID.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversLane(model, invalidId()));
+Mapping: S016, S014, S007
 
 A041 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:236
 Disposition: MATCHED
-Mapping/reason: MATCHED: the same absent row is the !coversNodes observable of the unsupported controller; S016.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversNodes(model, invalidId()));
+Mapping: S016
 
 A042 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:237
 Disposition: MATCHED
-Mapping/reason: MATCHED: visibleSelectedLanes(ready) == [volume] for the ready model with lanes {{0, 7}, {0, 99}}: the unsupported controller drops out; S027. This covers the ready-model visible query only and is not evidence for endpoint laneSet.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY((model.visibleLanes(selection) == std::vector<std::pair<int, uint8_t>>{{0, 7}}));
+Mapping: S027
 
 A043 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:242
 Disposition: MATCHED
-Mapping/reason: MATCHED: with ready == false the supported CC7 row is still present (row != nil); S014.
-Source context since previous assertion:
-
-          // Page readiness hides supported rows without removing their document facts.
-          const AutomationViewModel hidden =
-              buildAutomationViewModel(rig->document(), rig->timeline(), selection, false);
-Original expression:
-  QVERIFY(rowFor(hidden, ccId(0, 7)));
+Mapping: S014
 
 A044 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:243
 Disposition: MATCHED
-Mapping/reason: MATCHED: the not-ready CC7 row has coversLane == false; S015.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversLane(hidden, ccId(0, 7)));
+Mapping: S015
 
 A045 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:244
 Disposition: MATCHED
-Mapping/reason: MATCHED: the not-ready CC7 row has coversNodes == false; S015.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!coversNodes(hidden, ccId(0, 7)));
+Mapping: S015
 
 A046 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:245
 Disposition: MATCHED
-Mapping/reason: MATCHED: visibleSelectedLanes(hidden).isEmpty for the page-not-ready model; S028. This covers the not-ready visible query only and is not evidence for endpoint laneSet.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(hidden.visibleLanes(selection).empty());
+Mapping: S028
 
 A047 | AutomationCoverageTest::documentFactsFollowIdentity | src/checks/clipboard/laneselection_test.cpp:252
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      }
-
-      void documentFactsFollowIdentity()
-      {
-          QString error;
-          const auto rig = ProjectionRig::create(96.0, 0.0, error);
-Original expression:
-  QVERIFY2(rig, qPrintable(error));
 
 A048 | AutomationCoverageTest::documentFactsFollowIdentity | src/checks/clipboard/laneselection_test.cpp:256
 Disposition: MATCHED
-Mapping/reason: MATCHED: prior == 0, a freshly built supported CC7 row has no written events; S017.
-Source context since previous assertion:
-          const EditorSelectionModel selection =
-              selectedModel(24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}}, false);
-          AutomationViewModel model = modelFor(*rig, selection);
-Original expression:
-  QCOMPARE(rowFor(model, ccId(0, 7))->eventCount, std::size_t{0});
+Mapping: S017
 
 A049 | AutomationCoverageTest::documentFactsFollowIdentity | src/checks/clipboard/laneselection_test.cpp:260
 Disposition: MATCHED
-Mapping/reason: MATCHED: after document.writeLane(track: 0, lane: .controller(7), tick 24, value 64) the rebuilt row has eventCount == 1; S018, the Swift form of addLanePoint(0, 7, 24, 64).
-Source context since previous assertion:
-          rig->document().addLanePoint(0, 7, 24, 64);
-          model = modelFor(*rig, selection);
-Original expression:
-  QCOMPARE(rowFor(model, ccId(0, 7))->eventCount, std::size_t{1});
+Mapping: S018
 
 A050 | AutomationCoverageTest::documentFactsFollowIdentity | src/checks/clipboard/laneselection_test.cpp:261
 Disposition: MATCHED
-Mapping/reason: MATCHED: a supported CC10 (pan) row exists even when it is not in the selection lane list; S019.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(rowFor(model, ccId(0, 10)));
+Mapping: S019
 
 A051 | AutomationCoverageTest::documentFactsFollowIdentity | src/checks/clipboard/laneselection_test.cpp:262
 Disposition: MATCHED
-Mapping/reason: MATCHED: the unsupported CC99 row is absent; S020.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!rowFor(model, invalidId()));
+Mapping: S020
 
 A052 | AutomationCoverageTest::hitTest | src/checks/clipboard/laneselection_test.cpp:285
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      }
-
-      void hitTest_data()
-      {
-          QTest::addColumn<double>("zoom");
-          QTest::addColumn<double>("scroll");
-          QTest::addColumn<double>("dpr");
-          QTest::addColumn<bool>("active");
-          QTest::newRow("base_dpr1") << 96.0 << 0.0 << 1.0 << true;
-          QTest::newRow("zoomed_out_scrolled") << 64.0 << 96.0 << 1.0 << true;
-          QTest::newRow("zoomed_in_dpr2") << 144.0 << 192.0 << 2.0 << true;
-          QTest::newRow("inactive_reversed_selection") << 96.0 << 48.0 << 2.0 << false;
-      }
-
-      void hitTest()
-      {
-          QFETCH(double, zoom);
-          QFETCH(double, scroll);
-          QFETCH(double, dpr);
-          QFETCH(bool, active);
-          QString error;
-          const auto rig = ProjectionRig::create(zoom, scroll, error);
-Original expression:
-  QVERIFY2(rig, qPrintable(error));
 
 A053 | AutomationCoverageTest::hitTest | src/checks/clipboard/laneselection_test.cpp:298
 Disposition: GAP
@@ -809,17 +313,6 @@ Original expression:
 
 A060 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:314
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      }
-
-      void endpointSemantics()
-      {
-          QString error;
-          const auto rig = ProjectionRig::create(96.0, 0.0, error);
-Original expression:
-  QVERIFY2(rig, qPrintable(error));
 
 A061 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:319
 Disposition: GAP
@@ -937,239 +430,87 @@ factsID = clipboard/AutomationCoverageTest::documentFactsFollowIdentity.
 
 S001 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A002 empty selection has no active tick range"
-cppID: clipboard/AutomationCoverageTest::emptySelectionAndEndpointPayload
-Covers: A002
-Swift expression:
-  report.expect(empty.activeTickRange == nil, cppID: emptyID,
-                message: "A002 empty selection has no active tick range")
 
 S002 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A002 empty selection has no active tick range"
-cppID: clipboard/AutomationCoverageTest::emptySelectionAndEndpointPayload
-Covers: A003-A006
-Swift expression:
-  for (site, parameter) in [("A003-A004", AutomationParameter.tempo),
-                            ("A005-A006", volume)] {
-      report.expect(empty.row(for: parameter)?.coversLane == false
-                    && empty.row(for: parameter)?.coversNodes == false,
-                    cppID: emptyID, message: "\(site) empty selection covers neither lane nor nodes")
-  }
 
 S003 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A007-A008 unsupported controller covers nothing"
-cppID: clipboard/AutomationCoverageTest::emptySelectionAndEndpointPayload
-Covers: A007-A008
-Swift expression:
-  report.expect(empty.row(for: .controlChange(track: 0, controller: 99)) == nil,
-                cppID: emptyID, message: "A007-A008 unsupported controller covers nothing")
 
 S021 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A007-A008 unsupported controller covers nothing"
-cppID: clipboard/AutomationCoverageTest::emptySelectionAndEndpointPayload
-Covers: A009
-Swift expression:
-  report.expect(visibleSelectedLanes(empty).isEmpty, cppID: emptyID,
-                message: "A009 empty selection exposes no selected visible lanes")
 
 S004 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A013 lane-scoped range keeps its tick endpoints"
-cppID: clipboard/AutomationCoverageTest::laneScopeCoverage
-Covers: A013
-Swift expression:
-  report.expectEqual(range, covered.activeTickRange, cppID: lanesID,
-                     what: "A013 lane-scoped range keeps its tick endpoints")
 
 S005 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A013 lane-scoped range keeps its tick endpoints"
-cppID: clipboard/AutomationCoverageTest::laneScopeCoverage
-Covers: A014-A019
-Swift expression:
-  for (site, parameter) in [("A014-A015", AutomationParameter.tempo),
-                            ("A016-A017", volume), ("A018-A019", modulation)] {
-      report.expect(covered.row(for: parameter)?.coversLane == true
-                    && covered.row(for: parameter)?.coversNodes == true,
-                    cppID: lanesID, message: "\(site) selected row covers lane and nodes")
-  }
 
 S006 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A020-A021 unselected supported controller stays uncovered"
-cppID: clipboard/AutomationCoverageTest::laneScopeCoverage
-Covers: A020-A021
-Swift expression:
-  report.expect(covered.row(for: pan)?.coversLane == false
-                && covered.row(for: pan)?.coversNodes == false,
-                cppID: lanesID, message: "A020-A021 unselected supported controller stays uncovered")
 
 S007 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A020-A021 unselected supported controller stays uncovered"
-cppID: clipboard/AutomationCoverageTest::laneScopeCoverage
-Covers: A022-A023 (and A040-A041 on the ready model)
-Swift expression:
-  report.expect(covered.row(for: .controlChange(track: 0, controller: 99)) == nil,
-                cppID: lanesID, message: "A022-A023 unsupported controller has no row")
 
 S022 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A022-A023 unsupported controller has no row"
-cppID: clipboard/AutomationCoverageTest::laneScopeCoverage
-Covers: A024
-Swift expression:
-  report.expectEqual([volume, modulation], visibleSelectedLanes(covered), cppID: lanesID,
-                     what: "A024 only selected supported lanes are visible in catalog order")
 
 S008 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A025-A026 lane scope excludes unselected Tempo"
-cppID: clipboard/AutomationCoverageTest::laneScopeCoverage
-Covers: A025-A026
-Swift expression:
-  report.expect(noTempo.row(for: .tempo)?.coversLane == false
-                && noTempo.row(for: .tempo)?.coversNodes == false,
-                cppID: lanesID, message: "A025-A026 lane scope excludes unselected Tempo")
 
 S009 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A030-A031 track scope covers CC nodes, not entire lane"
-cppID: clipboard/AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage
-Covers: A030-A031
-Swift expression:
-  report.expect(trackStack.row(for: volume)?.coversLane == false
-                && trackStack.row(for: volume)?.coversNodes == true,
-                cppID: tracksID, message: "A030-A031 track scope covers CC nodes, not entire lane")
 
 S010 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A030-A031 track scope covers CC nodes, not entire lane"
-cppID: clipboard/AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage
-Covers: A028 (the production-parity Tempo lane site)
-Swift expression:
-  report.expect(trackStack.row(for: .tempo)?.coversLane == true,
-                cppID: tracksID, message: "A028 full track scope covers Tempo lane")
 
 S011 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A028 full track scope covers Tempo lane"
-cppID: clipboard/AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage
-Covers: A029
-Swift expression:
-  report.expect(trackStack.row(for: .tempo)?.coversNodes == true,
-                cppID: tracksID, message: "A029 full track scope covers Tempo nodes")
 
 S012 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A033 partial track scope excludes Tempo lane"
-cppID: clipboard/AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage
-Covers: A033
-Swift expression:
-  report.expect(partial.row(for: .tempo)?.coversLane == false,
-                cppID: tracksID, message: "A033 partial track scope excludes Tempo lane")
 
 S013 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A033 partial track scope excludes Tempo lane"
-cppID: clipboard/AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage
-Covers: A034
-Swift expression:
-  report.expect(partial.row(for: .tempo)?.coversNodes == false,
-                cppID: tracksID, message: "A034 partial track scope excludes Tempo nodes")
 
 S023 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A036 ready selected CC7 lane is covered"
-cppID: clipboard/AutomationCoverageTest::hiddenLanesAreNotCovered
-Covers: A036
-Swift expression:
-  report.expect(ready.row(for: volume)?.coversLane == true, cppID: hiddenID,
-                message: "A036 ready selected CC7 lane is covered")
 
 S024 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A036 ready selected CC7 lane is covered"
-cppID: clipboard/AutomationCoverageTest::hiddenLanesAreNotCovered
-Covers: A037
-Swift expression:
-  report.expect(ready.row(for: volume)?.coversNodes == true, cppID: hiddenID,
-                message: "A037 ready selected CC7 nodes are covered")
 
 S025 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A037 ready selected CC7 nodes are covered"
-cppID: clipboard/AutomationCoverageTest::hiddenLanesAreNotCovered
-Covers: A038
-Swift expression:
-  report.expect(ready.row(for: pan)?.coversLane == false, cppID: hiddenID,
-                message: "A038 ready unselected CC10 lane is uncovered")
 
 S026 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A038 ready unselected CC10 lane is uncovered"
-cppID: clipboard/AutomationCoverageTest::hiddenLanesAreNotCovered
-Covers: A039
-Swift expression:
-  report.expect(ready.row(for: pan)?.coversNodes == false, cppID: hiddenID,
-                message: "A039 ready unselected CC10 nodes are uncovered")
 
 S027 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A039 ready unselected CC10 nodes are uncovered"
-cppID: clipboard/AutomationCoverageTest::hiddenLanesAreNotCovered
-Covers: A042
-Swift expression:
-  report.expectEqual([volume], visibleSelectedLanes(ready), cppID: hiddenID,
-                     what: "A042 ready model exposes only selected supported lanes")
 
 S014 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A043 page-not-ready still carries supported controller row"
-cppID: clipboard/AutomationCoverageTest::hiddenLanesAreNotCovered
-Covers: A043
-Swift expression:
-  report.expect(hidden.row(for: volume) != nil, cppID: hiddenID,
-                message: "A043 page-not-ready still carries supported controller row")
 
 S015 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A043 page-not-ready still carries supported controller row"
-cppID: clipboard/AutomationCoverageTest::hiddenLanesAreNotCovered
-Covers: A044-A045
-Swift expression:
-  report.expect(hidden.row(for: volume)?.coversLane == false
-                && hidden.row(for: volume)?.coversNodes == false,
-                cppID: hiddenID, message: "A044-A045 hidden row covers nothing")
 
 S016 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A044-A045 hidden row covers nothing"
-cppID: clipboard/AutomationCoverageTest::hiddenLanesAreNotCovered
-Covers: A040-A041
-Swift expression:
-  report.expect(hidden.row(for: .controlChange(track: 0, controller: 99)) == nil,
-                cppID: hiddenID, message: "A040-A041 unsupported controller stays absent")
 
 S028 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A040-A041 unsupported controller stays absent"
-cppID: clipboard/AutomationCoverageTest::hiddenLanesAreNotCovered
-Covers: A046
-Swift expression:
-  report.expect(visibleSelectedLanes(hidden).isEmpty, cppID: hiddenID,
-                message: "A046 page-not-ready exposes no selected visible lanes")
 
 S017 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A048 initially empty controller row has zero written events"
-cppID: clipboard/AutomationCoverageTest::documentFactsFollowIdentity
-Covers: A048
-Swift expression:
-  report.expect(prior == 0, cppID: factsID,
-                message: "A048 initially empty controller row has zero written events")
 
 S018 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A048 initially empty controller row has zero written events"
-cppID: clipboard/AutomationCoverageTest::documentFactsFollowIdentity
-Covers: A049
-Swift expression:
-  report.expect(after == 1, cppID: factsID,
-                message: "A049 rebuilding after a write counts its event")
 
 S019 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A049 rebuilding after a write counts its event"
-cppID: clipboard/AutomationCoverageTest::documentFactsFollowIdentity
-Covers: A050
-Swift expression:
-  report.expect(stack(selection).row(for: pan) != nil, cppID: factsID,
-                message: "A050 supported controller is present without a selection")
 
 S020 | clipboardLaneSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A050 supported controller is present without a selection"
-cppID: clipboard/AutomationCoverageTest::documentFactsFollowIdentity
-Covers: A051
-Swift expression:
-  report.expect(stack(selection).row(for: .controlChange(track: 0, controller: 99)) == nil,
-                cppID: factsID, message: "A051 unsupported controller is absent")
 
 Shared helpers
 None: the fixture above is local to the counterpart function and carries no

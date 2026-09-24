@@ -5,42 +5,10 @@ Original: src/checks/voicegroupsave/switching.cpp
 Original SHA-256: f4a4c944efbb52d6f293323025ad3aba5a6c11bf586b10ebcb0ed3eb1290aa8b
 Swift counterpart: src/checks/workspace/bank_switching.swift
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below (46 sites). Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-MATCHED means a corresponding Swift predicate was identified and executed;
-PARTIAL means a related check exists but differs in a stated way;
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of a converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-Selected Swift session predicates cover selector rebinding, undo/redo
-and clean song-and-bank save. Source replacement, native widget handles
-and unmapped assertions remain GAP; no whole-case parity is claimed.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose.
 Result: PASS for the Swift session predicates; the retained native harness
 is not Swift parity evidence.
-
-Execution ownership
-The retained native harness owns this file. runVoicegroupSaveCheck in
-src/checks/voicegroupsave/fixture.cpp constructs VoicegroupSaveTest and qExecs
-it under the "voicegroup-save" application id; init()/cleanup() bracket every
-test method. switchCarriesUnsavedBankEdit, selectorSwitchUsesUndoableCfgEdit, valueCommandSurvivesSourceReplacement, and blankTokenRebasesAcrossSourceReplacement execute the checks inventoried below.
-Shared per-test state (m_window, m_document, m_tab, m_browser, m_dsSlot,
-m_originalVoice, m_homeId/m_homeArg, voicegroup/MIDI baselines, save receipts)
-is built by VoicegroupSaveTest::openSong with VoicegroupBrowserDriver and the
-song/project fixtures declared in src/checks/voicegroupsave/tst_voicegroupsave.h.
-Swift session predicates are listed below as S entries; native widget and
-source-replacement conditions without equivalents stay open.
-
-Fixture, sequence and row constraints
-No data rows, loops, or branch guards expand these sites. The reopenCleanHome lambda is defined separately in valueCommandSurvivesSourceReplacement and blankTokenRebasesAcrossSourceReplacement and replays a clean -G round trip inside each test. Undo/redo chains (unsaved-edit replay, value-command rebind resolution, blank-token rebase against an externally edited sibling source) execute once per run in the order sequenced below.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:26
 Disposition: GAP
@@ -94,31 +62,11 @@ QVERIFY2(waitForBankRelease(m_dsSlot, edited.release, true),
 
 A003 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:40
 Disposition: MATCHED
-Mapping/reason: S001 asserts switching away changes the -G arg, publishes an alternate bank voice, and replaces the original bank lease.
-Source context since previous assertion:
-;
-
-    SongCfg cfg = m_document->cfg();
-    cfg.voicegroupArg = other;
-    m_document->setCfg(cfg);
-
-Original expression:
-QVERIFY2(settle([this, &other] {
-                 return m_document->cfg().voicegroupArg == other && m_tab->voicegroupId() &&
-                        *m_tab->voicegroupId() != *m_homeId;
-             }),
-             "-G switch did not load the other voicegroup")
+Mapping: S001
 
 A004 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:47
 Disposition: MATCHED
-Mapping/reason: S002 asserts undo of the -G switch rebinds the unsaved home voicegroup with the exact edited voice intact.
-Source context since previous assertion:
-;
-
-    requestUndo();
-
-Original expression:
-QVERIFY2(waitForVoicegroup(homeArg, *m_homeId), "undo did not reopen the home voicegroup")
+Mapping: S002
 
 A005 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:48
 Disposition: GAP
@@ -139,17 +87,7 @@ QVERIFY2(settle([this, &edited] {
 
 A006 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:58
 Disposition: MATCHED
-Mapping/reason: S005 asserts save clears both bank and document dirty state and publishes a fresh clean lease.
-Source context since previous assertion:
-;
-    requestUndo();
-
-Original expression:
-QVERIFY2(settle([this] {
-                 const LoadedBankView *const bank = m_browser->selectedBankView();
-                 return bank && !bank->dirty && !m_document->isDirty();
-             }),
-             "undoing replayed bank edit did not restore clean state")
+Mapping: S005
 
 A007 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:63
 Disposition: GAP
@@ -220,26 +158,11 @@ QVERIFY(QMetaObject::invokeMethod(selector, "activated", Qt::DirectConnection, Q
 
 A013 | VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit | src/checks/voicegroupsave/switching.cpp:82
 Disposition: MATCHED
-Mapping/reason: S001 asserts selector selection changes the undoable -G argument, dirties the document, and rebinds to another bank lease.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(settle([this, &other] {
-                 return m_document->cfg().voicegroupArg == other && m_document->isDirty() &&
-                        m_tab->voicegroupId() && *m_tab->voicegroupId() != *m_homeId;
-             }),
-             "selector did not drive the undoable -G seam")
+Mapping: S001
 
 A014 | VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit | src/checks/voicegroupsave/switching.cpp:88
 Disposition: MATCHED
-Mapping/reason: S002 asserts undo restores the original voicegroup argument and its unsaved home bank voice.
-Source context since previous assertion:
-;
-    requestUndo();
-
-Original expression:
-QVERIFY2(waitForVoicegroup(homeArg, *m_homeId), "selector undo did not restore home binding")
+Mapping: S002
 
 A015 | VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit | src/checks/voicegroupsave/switching.cpp:89
 Disposition: GAP
@@ -683,36 +606,15 @@ Swift assertion predicates
 
 S001 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
 Anchor: message "selector binds the alternate source and makes -G undoable"
-        report.expect(session.document.isDirty && !session.bankDirty
-                      && session.document.state.config.voicegroupArgument == "_fixture_alt"
-                      && session.bankSlots[0].voice?.macro == BankVoiceMacro.square2
-                      && session.bankLease !== originalLease,
-                      cppID: id, message: "selector binds the alternate source and makes -G undoable")
 
 S002 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
 Anchor: message "undo of -G rebinds the unsaved home voicegroup"
-        report.expect(session.document.state.config.voicegroupArgument == originalArg
-                      && session.bankSlots[0].voice == edited && session.bankDirty,
-                      cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
-                      message: "undo of -G rebinds the unsaved home voicegroup")
 
 S003 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
 Anchor: message "redo of -G rebinds the alternate bank"
-        report.expect(session.bankSlots[0].voice?.macro == BankVoiceMacro.square2
-                      && !session.bankDirty,
-                      cppID: id, message: "redo of -G rebinds the alternate bank")
 
 S004 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
 Anchor: message "failed source load does not change the lease or history"
-        report.expect(failed && session.bankLease.bankToken == beforeFailed
-                      && session.document.history.undoIndex == indexBeforeFailed
-                      && session.document.state.config.voicegroupArgument == "_fixture_alt",
-                      cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
-                      message: "failed source load does not change the lease or history")
 
 S005 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
 Anchor: message "save of song and edited home bank refreshes the clean lease"
-        report.expect(!session.bankDirty && !session.document.isDirty
-                      && session.bankLease.bankToken != beforeSave,
-                      cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                      message: "save of song and edited home bank refreshes the clean lease")

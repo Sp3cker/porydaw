@@ -15,2316 +15,777 @@ Fixture and execution: Nine synthetic cases use the format-1, division-24 time-r
 History caveat: coreEditHistoryCountAtTip counts undo entries by public undo/redo traversal, verifies equal replay count and exact state/identity restoration; no test-only history accessor.
 Registered run path: src/checks/editcheck/TimeChecks.swift :: runTimeEditsSuite (removalAndSeams, insertionAndBoundaries, duplicationAndGlobals), swiftcore suite 9 via src/checks/support/corecheck/CoreCheckSupport.swift :: pdc_suite_run; counterpart compiled in src/checks/CMakeLists.txt :: swift_core_check. Legacy editcheck source is absent from active CMake/checkcatalog.
 
-Original assertion inventory
-
 A001 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:38
 Disposition: MATCHED
-Swift: S026 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S026 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  #include "checks/editcheck/tst_songdocument.h"
-
-  #include <QtTest>
-
-  #include <algorithm>
-  #include <array>
-
-  #include "checks/editcheck/tst_songdocument_support.h"
-  #include "core/miditimeline.h"
-
-  namespace {
-
-  SmfFile timeRangeFile()
-  {
-      SmfFile smf;
-      smf.format = 1;
-      smf.division = 24;
-      smf.tracks.push_back({{}, 200});
-      smf.tracks.push_back({{songdocument_test::channel(0xC0, 0, 1, 0)}, 200});
-      smf.tracks.push_back({{songdocument_test::channel(0xC1, 0, 2, 0)}, 200});
-      return smf;
-  }
-
-  SongDocument::TimeScope trackZero()
-  {
-      SongDocument::TimeScope scope;
-      scope.tracks = {0};
-      return scope;
-  }
-
-  } // namespace
-
-  void EditCheckTest::timeRangeRemoveRippleTrim()
-  {
-      using namespace songdocument_test;
-      for (Tick earlierEnd : {Tick(100), Tick(80), Tick(70)}) {
-          auto fixture = makeDocument(timeRangeFile());
-
-Original expression:
-  QVERIFY(fixture)
+Mapping: S026
 
 A002 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:42
 Disposition: MATCHED
-Swift: S027 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S027 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          auto &doc = fixture->document;
-          doc.addNotes(0, {{0, 60, earlierEnd, 81}, {110, 60, 10, 92}});
-          doc.addNotes(1, {{0, 60, 100, 73}, {110, 60, 10, 74}});
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
+Mapping: S027
 
 A003 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:43
 Disposition: MATCHED
-Swift: S028 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S028 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 1))
+Mapping: S028
 
 A004 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:47
 Disposition: MATCHED
-Swift: S001 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S001 asserts removeTime({20,50}, tracks [0]) commits under the same cppID, covering the removeTimeRange({20,50}, trackZero()) commit here.
-Source context since previous assertion:
-  ;
-          const auto original = doc.notesForTrack(0);
-          const auto other = doc.smf().tracks[size_t(doc.smfTrackFor(1))].events;
-          const SavedDocState before = captureDocState(doc);
-
-Original expression:
-  QVERIFY(doc.removeTimeRange({20, 50}, trackZero()))
+Mapping: S001
 
 A005 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:48
 Disposition: MATCHED
-Swift: S029 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S029 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
+Mapping: S029
 
 A006 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:49
 Disposition: MATCHED
-Swift: S030 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S030 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 1))
+Mapping: S030
 
 A007 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:51
 Disposition: MATCHED
-Swift: S031 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S031 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          const auto notes = doc.notesForTrack(0);
-
-Original expression:
-  QCOMPARE(notes.size(), size_t(2))
+Mapping: S031
 
 A008 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:52
 Disposition: MATCHED
-Swift: S032 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S032 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(notes[0].tick, Tick(0))
+Mapping: S032
 
 A009 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:53
 Disposition: MATCHED
-Swift: S033 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S033 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(notes[0].duration, uint32_t(std::min(earlierEnd, Tick(80))))
+Mapping: S033
 
 A010 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:54
 Disposition: MATCHED
-Swift: S034 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S034 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(notes[1].tick, Tick(80))
+Mapping: S034
 
 A011 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:55
 Disposition: MATCHED
-Swift: S035 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S035 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(notes[1].duration, uint32_t(10))
+Mapping: S035
 
 A012 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:57
 Disposition: MATCHED
-Swift: S036 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S036 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          for (size_t i = 0; i < notes.size(); ++i) {
-
-Original expression:
-  QCOMPARE(notes[i].noteId, original[i].noteId)
+Mapping: S036
 
 A013 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:58
 Disposition: MATCHED
-Swift: S037 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S037 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(notes[i].velocity, original[i].velocity)
+Mapping: S037
 
 A014 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:60
 Disposition: MATCHED
-Swift: S038 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S038 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          }
-
-Original expression:
-  QVERIFY(doc.smf().tracks[size_t(doc.smfTrackFor(1))].events == other)
+Mapping: S038
 
 A015 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:61
 Disposition: MATCHED
-Swift: S039 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S039 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(doc.undoStack()->count(), before.undoCount + 1)
+Mapping: S039
 
 A016 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:64
 Disposition: MATCHED
-Swift: S040 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S040 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          const SavedDocState after = captureDocState(doc);
-          doc.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(doc.smf().write(), before.bytes)
+Mapping: S040
 
 A017 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:66
 Disposition: MATCHED
-Swift: S041 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S041 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          doc.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(doc.smf().write(), after.bytes)
+Mapping: S041
 
 A018 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:67
 Disposition: MATCHED
-Swift: S042 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S042 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
+Mapping: S042
 
 A019 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:68
 Disposition: MATCHED
-Swift: S043 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S043 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 1))
+Mapping: S043
 
 A020 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:72
 Disposition: MATCHED
-Swift: S044 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S044 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      }
-      for (bool duplicate : {false, true}) {
-          auto fixture = makeDocument(timeRangeFile());
-
-Original expression:
-  QVERIFY(fixture)
+Mapping: S044
 
 A021 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:75
 Disposition: MATCHED
-Swift: S045 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S045 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          auto &doc = fixture->document;
-          doc.addNotes(0, {{0, 60, 30, 81}, {30, 60, 20, 92}});
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
+Mapping: S045
 
 A022 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:78
 Disposition: MATCHED
-Swift: S046 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S046 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          const SavedDocState before = captureDocState(doc);
-          if (duplicate)
-
-Original expression:
-  QVERIFY(doc.duplicateTimeRange({10, 40}, trackZero()))
+Mapping: S046
 
 A023 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:80
 Disposition: MATCHED
-Swift: S047 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S047 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          else
-
-Original expression:
-  QVERIFY(doc.insertBlankTime({10, 40}, trackZero()))
+Mapping: S047
 
 A024 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:81
 Disposition: MATCHED
-Swift: S048 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S048 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
+Mapping: S048
 
 A025 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:84
 Disposition: MATCHED
-Swift: S049 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S049 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          const SavedDocState after = captureDocState(doc);
-          doc.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(doc.smf().write(), before.bytes)
+Mapping: S049
 
 A026 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:86
 Disposition: MATCHED
-Swift: S050 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S050 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          doc.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(doc.smf().write(), after.bytes)
+Mapping: S050
 
 A027 | EditCheckTest::timeRangeRemoveRippleTrim | src/checks/editcheck/tst_songdocument_timerange.cpp:87
 Disposition: MATCHED
-Swift: S051 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S051 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
+Mapping: S051
 
 A028 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:94
 Disposition: MATCHED
-Swift: S052 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S052 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      }
-  }
-
-  void EditCheckTest::timeRangeNoOps()
-  {
-      auto fixture = songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-noops"));
-
-Original expression:
-  QVERIFY(fixture)
+Mapping: S052
 
 A029 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:100
 Disposition: MATCHED
-Swift: S016 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S016 conjoins !removeTime({20,20}, empty scope) under the same cppID, covering the empty-range removal rejection here.
-Source context since previous assertion:
-  ;
-      SongDocument &document = fixture->document;
-      const QByteArray bytes = document.smf().write();
-      const auto tempos = document.tempoPoints();
-      const int undoCount = document.undoStack()->count();
-      SongDocument::TimeScope empty;
-
-Original expression:
-  QVERIFY(!document.removeTimeRange({20, 20}, empty))
+Mapping: S016
 
 A030 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:101
 Disposition: MATCHED
-Swift: S016 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S016 conjoins !insertBlankTime({20,10}, empty scope) under the same cppID, covering the empty-range insertion rejection here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!document.insertBlankTime({20, 10}, empty))
+Mapping: S016
 
 A031 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:102
 Disposition: MATCHED
-Swift: S053 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S053 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!document.duplicateTimeRange({20, 10}, empty))
+Mapping: S053
 
 A032 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:105
 Disposition: MATCHED
-Swift: S054 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S054 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      SongDocument::TimeScope invalid;
-      invalid.tracks = {99};
-
-Original expression:
-  QVERIFY(!document.removeTimeRange({20, 30}, invalid))
+Mapping: S054
 
 A033 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:106
 Disposition: MATCHED
-Swift: S055 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S055 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!document.insertBlankTime({20, 30}, invalid))
+Mapping: S055
 
 A034 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:107
 Disposition: MATCHED
-Swift: S056 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S056 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!document.duplicateTimeRange({20, 30}, invalid))
+Mapping: S056
 
 A035 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:108
 Disposition: MATCHED
-Swift: S016 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S016 asserts the compound rejection creates no state or history (revision unchanged) under the same cppID, which entails identical serialized bytes here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.smf().write(), bytes)
+Mapping: S016
 
 A036 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:109
 Disposition: MATCHED
-Swift: S016 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S016 asserts revision unchanged with no state or history created under the same cppID, which entails identical tempo state here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.tempoPoints() == tempos)
+Mapping: S016
 
 A037 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:110
 Disposition: MATCHED
-Swift: S057 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S057 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.undoStack()->count(), undoCount)
+Mapping: S057
 
 A038 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:117
 Disposition: MATCHED
-Swift: S058 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S058 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-      // A reserved kNoTick endpoint is rejected before any range arithmetic,
-      // even when the range would otherwise move real content.
-      document.addNote(0, 30, 60, 10, 90);
-      const QByteArray sentinelBytes = document.smf().write();
-      const int sentinelUndoCount = document.undoStack()->count();
-
-Original expression:
-  QVERIFY(!document.removeTimeRange({20, CoreTimeDefaults::kNoTick}, trackZero()))
+Mapping: S058
 
 A039 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:118
 Disposition: MATCHED
-Swift: S059 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S059 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!document.insertBlankTime({20, CoreTimeDefaults::kNoTick}, trackZero()))
+Mapping: S059
 
 A040 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:119
 Disposition: MATCHED
-Swift: S016 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S016 conjoins !duplicateTime({20,noTick}, tracks [0]) under the same cppID, covering the reserved-endpoint duplication rejection here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!document.duplicateTimeRange({20, CoreTimeDefaults::kNoTick}, trackZero()))
+Mapping: S016
 
 A041 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:120
 Disposition: MATCHED
-Swift: S060 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S060 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.smf().write(), sentinelBytes)
+Mapping: S060
 
 A042 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:121
 Disposition: MATCHED
-Swift: S061 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S061 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.tempoPoints() == tempos)
+Mapping: S061
 
 A043 | EditCheckTest::timeRangeNoOps | src/checks/editcheck/tst_songdocument_timerange.cpp:122
 Disposition: MATCHED
-Swift: S062 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S062 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.undoStack()->count(), sentinelUndoCount)
+Mapping: S062
 
 A044 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:128
 Disposition: MATCHED
-Swift: S063 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S063 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-  }
-
-  void EditCheckTest::timeRangeInsertScopeAndSplit()
-  {
-      auto fixture = songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-insert"));
-
-Original expression:
-  QVERIFY(fixture)
+Mapping: S063
 
 A045 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:134
 Disposition: MATCHED
-Swift: S064 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S064 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      SongDocument &document = fixture->document;
-      const SongDocument::TimeScope trackScope = trackZero();
-      document.addNote(0, 35, 60, 10, 90);
-      document.addNote(0, 60, 61, 5, 80);
-      DocNote later;
-
-Original expression:
-  QVERIFY(document.findNote(0, 60, 61, &later))
+Mapping: S064
 
 A046 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:138
 Disposition: MATCHED
-Swift: S011 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S011 asserts insertBlankTime({40,45}, tracks [0]) commits under the same cppID on the re-expressed split fixture, covering the insert commit here.
-Source context since previous assertion:
-  ;
-      const NoteId laterId = later.noteId;
-      const QByteArray before = document.smf().write();
-      const int undoCount = document.undoStack()->count();
-
-Original expression:
-  QVERIFY(document.insertBlankTime({40, 45}, trackScope))
+Mapping: S011
 
 A047 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:141
 Disposition: MATCHED
-Swift: S012 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S012 asserts split shapes ["35:60:5","45:60:5"] under the same cppID, covering the left-half find at (0,35,60) here.
-Source context since previous assertion:
-  ;
-      DocNote left;
-      DocNote right;
-
-Original expression:
-  QVERIFY(document.findNote(0, 35, 60, &left))
+Mapping: S012
 
 A048 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:142
 Disposition: MATCHED
-Swift: S012 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S012 asserts split shapes ["35:60:5","45:60:5"] under the same cppID, covering left.duration == 5 here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(left.duration, uint32_t(5))
+Mapping: S012
 
 A049 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:143
 Disposition: MATCHED
-Swift: S012 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S012 asserts split shapes ["35:60:5","45:60:5"] under the same cppID, covering the right-half find at (0,45,60) here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(0, 45, 60, &right))
+Mapping: S012
 
 A050 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:144
 Disposition: MATCHED
-Swift: S012 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S012 asserts split shapes ["35:60:5","45:60:5"] under the same cppID, covering right.duration == 5 here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(right.duration, uint32_t(5))
+Mapping: S012
 
 A051 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:145
 Disposition: MATCHED
-Swift: S014 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S014 asserts Tick(65) == note(laterID).tick under the same cppID, covering the shifted find at (0,65,61) here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(0, 65, 61, &later))
+Mapping: S014
 
 A052 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:146
 Disposition: MATCHED
-Swift: S014 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S014 asserts Tick(65) == note(laterID).tick under the same cppID; the identity-keyed lookup entails later.noteId == laterId here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(later.noteId, laterId)
+Mapping: S014
 
 A053 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:147
 Disposition: MATCHED
-Swift: S065 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S065 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.undoStack()->count(), undoCount + 1)
+Mapping: S065
 
 A054 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:150
 Disposition: MATCHED
-Swift: S015 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S015 asserts one undo restores the split (coreTimeBytes equal) under the same cppID, covering undo-to-before here.
-Source context since previous assertion:
-  ;
-      const QByteArray after = document.smf().write();
-      document.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(document.smf().write(), before)
+Mapping: S015
 
 A055 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:152
 Disposition: MATCHED
-Swift: S066 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S066 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      document.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(document.smf().write(), after)
+Mapping: S066
 
 A056 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:156
 Disposition: MATCHED
-Swift: S067 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S067 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-      auto laneFixture =
-          songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-lanes"));
-
-Original expression:
-  QVERIFY(laneFixture)
+Mapping: S067
 
 A057 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:166
 Disposition: MATCHED
-Swift: S068 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S068 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      SongDocument &lane = laneFixture->document;
-      lane.addLanePoint(0, 7, 300, 10);
-      lane.addLanePoint(0, 10, 300, 20);
-      lane.addLanePoint(1, 7, 300, 30);
-      SongDocument::TimeScope laneScope;
-      laneScope.lanes = {{0, 7}};
-      const uint64_t selectedEnd = lane.smf().tracks[1].endTick;
-      const uint64_t untouchedEnd = lane.smf().tracks[2].endTick;
-      const QByteArray laneBefore = lane.smf().write();
-
-Original expression:
-  QVERIFY(lane.insertBlankTime({300, 320}, laneScope))
+Mapping: S068
 
 A058 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:168
 Disposition: MATCHED
-Swift: S069 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S069 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      DocLanePoint point;
-
-Original expression:
-  QVERIFY(lane.findLanePoint(0, 7, 320, &point))
+Mapping: S069
 
 A059 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:169
 Disposition: MATCHED
-Swift: S069 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S069 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(point.value, 10)
+Mapping: S069
 
 A060 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:170
 Disposition: MATCHED
-Swift: S070 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S070 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(lane.findLanePoint(0, 10, 300, &point))
+Mapping: S070
 
 A061 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:171
 Disposition: MATCHED
-Swift: S070 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S070 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(point.value, 20)
+Mapping: S070
 
 A062 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:172
 Disposition: MATCHED
-Swift: S071 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S071 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(lane.findLanePoint(1, 7, 300, &point))
+Mapping: S071
 
 A063 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:173
 Disposition: MATCHED
-Swift: S071 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S071 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(point.value, 30)
+Mapping: S071
 
 A064 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:174
 Disposition: MATCHED
-Swift: S072 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S072 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(lane.smf().tracks[1].endTick, selectedEnd + 20)
+Mapping: S072
 
 A065 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:175
 Disposition: MATCHED
-Swift: S073 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S073 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(lane.smf().tracks[2].endTick, untouchedEnd)
+Mapping: S073
 
 A066 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:178
 Disposition: MATCHED
-Swift: S074 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S074 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const QByteArray laneAfter = lane.smf().write();
-      lane.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(lane.smf().write(), laneBefore)
+Mapping: S074
 
 A067 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:180
 Disposition: MATCHED
-Swift: S075 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S075 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      lane.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(lane.smf().write(), laneAfter)
+Mapping: S075
 
 A068 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:184
 Disposition: MATCHED
-Swift: S076 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S076 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-      auto trackFixture =
-          songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-track-scope"));
-
-Original expression:
-  QVERIFY(trackFixture)
+Mapping: S076
 
 A069 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:193
 Disposition: MATCHED
-Swift: S077 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S077 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      SongDocument &track = trackFixture->document;
-      track.addNote(0, 400, 62, 5, 90);
-      track.addNote(1, 400, 63, 5, 90);
-      track.addLanePoint(0, 7, 400, 40);
-      track.addLanePoint(1, 7, 400, 50);
-      const uint64_t trackEnd = track.smf().tracks[1].endTick;
-      const uint64_t otherEnd = track.smf().tracks[2].endTick;
-      const QByteArray trackBefore = track.smf().write();
-
-Original expression:
-  QVERIFY(track.insertBlankTime({400, 420}, trackScope))
+Mapping: S077
 
 A070 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:196
 Disposition: MATCHED
-Swift: S078 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S078 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      DocNote shifted;
-      DocNote untouched;
-
-Original expression:
-  QVERIFY(track.findNote(0, 420, 62, &shifted))
+Mapping: S078
 
 A071 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:197
 Disposition: MATCHED
-Swift: S079 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S079 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(track.findNote(1, 400, 63, &untouched))
+Mapping: S079
 
 A072 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:198
 Disposition: MATCHED
-Swift: S080 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S080 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(track.smf().tracks[1].endTick, trackEnd + 20)
+Mapping: S080
 
 A073 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:199
 Disposition: MATCHED
-Swift: S081 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S081 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(track.smf().tracks[2].endTick, otherEnd)
+Mapping: S081
 
 A074 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:202
 Disposition: MATCHED
-Swift: S082 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S082 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const QByteArray trackAfter = track.smf().write();
-      track.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(track.smf().write(), trackBefore)
+Mapping: S082
 
 A075 | EditCheckTest::timeRangeInsertScopeAndSplit | src/checks/editcheck/tst_songdocument_timerange.cpp:204
 Disposition: MATCHED
-Swift: S083 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S083 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      track.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(track.smf().write(), trackAfter)
+Mapping: S083
 
 A076 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:211
 Disposition: MATCHED
-Swift: S084 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S084 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-  }
-
-  void EditCheckTest::timeRangeUnterminated()
-  {
-      auto fixture =
-          songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-unterminated"));
-
-Original expression:
-  QVERIFY(fixture)
+Mapping: S084
 
 A077 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:215
 Disposition: MATCHED
-Swift: S085 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S085 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      SongDocument &document = fixture->document;
-      const SongDocument::TimeScope scope = trackZero();
-      const int smfTrack = document.smfTrackFor(0);
-
-Original expression:
-  QVERIFY(smfTrack >= 0)
+Mapping: S085
 
 A078 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:218
 Disposition: MATCHED
-Swift: S086 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S086 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      document.insertRawEvent(smfTrack, songdocument_test::channel(0x90, 220, 68, 77));
-      DocNote unterminated;
-
-Original expression:
-  QVERIFY(document.findNote(0, 220, 68, &unterminated))
+Mapping: S086
 
 A079 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:219
 Disposition: MATCHED
-Swift: S087 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S087 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(unterminated.unterminated())
+Mapping: S087
 
 A080 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:222
 Disposition: MATCHED
-Swift: S088 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S088 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const NoteId leftId = unterminated.noteId;
-      const QByteArray before = document.smf().write();
-
-Original expression:
-  QVERIFY(document.insertBlankTime({240, 250}, scope))
+Mapping: S088
 
 A081 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:225
 Disposition: MATCHED
-Swift: S089 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S089 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      DocNote left;
-      DocNote right;
-
-Original expression:
-  QVERIFY(document.findNote(0, 220, 68, &left))
+Mapping: S089
 
 A082 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:226
 Disposition: MATCHED
-Swift: S090 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S090 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!left.unterminated())
+Mapping: S090
 
 A083 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:227
 Disposition: MATCHED
-Swift: S023 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S023 asserts parts[0].duration == 20 under the same cppID, covering left.duration == 20 here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(left.duration, uint32_t(20))
+Mapping: S023
 
 A084 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:228
 Disposition: MATCHED
-Swift: S023 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S023 asserts parts[0].id == leftID under the same cppID, covering left.noteId == leftId here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(left.noteId, leftId)
+Mapping: S023
 
 A085 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:229
 Disposition: MATCHED
-Swift: S091 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S091 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(0, 250, 68, &right))
+Mapping: S091
 
 A086 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:230
 Disposition: MATCHED
-Swift: S023 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S023 asserts parts[1].isUnterminated under the same cppID, covering right.unterminated() here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(right.unterminated())
+Mapping: S023
 
 A087 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:231
 Disposition: MATCHED
-Swift: S023 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S023 asserts parts[1].id != leftID under the same cppID, covering right.noteId != left.noteId here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(right.noteId != left.noteId)
+Mapping: S023
 
 A088 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:243
 Disposition: MATCHED
-Swift: S092 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S092 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      bool sourceOn = false;
-      bool generatedOff = false;
-      bool resumedOn = false;
-      for (const SmfEvent &event : document.smf().tracks[size_t(smfTrack)].events) {
-          sourceOn |=
-              event.tick == 220 && event.status == 0x90 && event.data0 == 68 && event.data1 == 77;
-          generatedOff |=
-              event.tick == 240 && event.status == 0x80 && event.data0 == 68 && event.data1 == 0;
-          resumedOn |=
-              event.tick == 250 && event.status == 0x90 && event.data0 == 68 && event.data1 == 77;
-      }
-
-Original expression:
-  QVERIFY(sourceOn)
+Mapping: S092
 
 A089 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:244
 Disposition: MATCHED
-Swift: S092 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S092 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(generatedOff)
+Mapping: S092
 
 A090 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:245
 Disposition: MATCHED
-Swift: S092 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S092 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(resumedOn)
+Mapping: S092
 
 A091 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:248
 Disposition: MATCHED
-Swift: S093 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S093 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const QByteArray after = document.smf().write();
-      document.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(document.smf().write(), before)
+Mapping: S093
 
 A092 | EditCheckTest::timeRangeUnterminated | src/checks/editcheck/tst_songdocument_timerange.cpp:250
 Disposition: MATCHED
-Swift: S094 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S094 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      document.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(document.smf().write(), after)
+Mapping: S094
 
 A093 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:257
 Disposition: MATCHED
-Swift: S095 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S095 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-  }
-
-  void EditCheckTest::timeRangeDuplicateClippingAndOrder()
-  {
-      auto fixture =
-          songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-clipping"));
-
-Original expression:
-  QVERIFY(fixture)
+Mapping: S095
 
 A094 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:269
 Disposition: MATCHED
-Swift: S096 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S096 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      SongDocument &document = fixture->document;
-      const SongDocument::TimeScope scope = trackZero();
-      constexpr Tick start = 600;
-      document.addNote(0, start + 10, 64, 10, 90);
-      document.addNote(0, start - 5, 65, 15, 80);
-      document.addNote(0, start + 10, 66, 20, 70);
-      document.addNote(0, start - 5, 67, 30, 60);
-      DocNote contained;
-      DocNote leftCross;
-      DocNote rightCross;
-      DocNote bothCross;
-
-Original expression:
-  QVERIFY(document.findNote(0, start + 10, 64, &contained))
+Mapping: S096
 
 A095 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:270
 Disposition: MATCHED
-Swift: S096 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S096 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(0, start - 5, 65, &leftCross))
+Mapping: S096
 
 A096 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:271
 Disposition: MATCHED
-Swift: S096 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S096 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(0, start + 10, 66, &rightCross))
+Mapping: S096
 
 A097 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:272
 Disposition: MATCHED
-Swift: S096 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S096 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(0, start - 5, 67, &bothCross))
+Mapping: S096
 
 A098 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:276
 Disposition: MATCHED
-Swift: S019 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S019 asserts duplicateTime({600,620}, tracks [0]) commits under the same cppID, covering duplicateTimeRange({start,start+20}, scope) here (start == 600).
-Source context since previous assertion:
-  ;
-      const std::array<NoteId, 4> original = {contained.noteId, leftCross.noteId, rightCross.noteId,
-                                              bothCross.noteId};
-      const QByteArray before = document.smf().write();
-
-Original expression:
-  QVERIFY(document.duplicateTimeRange({start, start + 20}, scope))
+Mapping: S019
 
 A099 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:281
 Disposition: MATCHED
-Swift: S097 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S097 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      DocNote copiedContained;
-      DocNote copiedLeft;
-      DocNote copiedRight;
-      DocNote copiedBoth;
-
-Original expression:
-  QVERIFY(document.findNote(0, start + 30, 64, &copiedContained))
+Mapping: S097
 
 A100 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:282
 Disposition: MATCHED
-Swift: S098 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S098 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(copiedContained.duration, uint32_t(10))
+Mapping: S098
 
 A101 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:283
 Disposition: MATCHED
-Swift: S099 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S099 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(0, start + 20, 65, &copiedLeft))
+Mapping: S099
 
 A102 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:284
 Disposition: MATCHED
-Swift: S100 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S100 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(copiedLeft.duration, uint32_t(10))
+Mapping: S100
 
 A103 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:285
 Disposition: MATCHED
-Swift: S101 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S101 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(0, start + 30, 66, &copiedRight))
+Mapping: S101
 
 A104 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:286
 Disposition: MATCHED
-Swift: S102 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S102 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(copiedRight.duration, uint32_t(10))
+Mapping: S102
 
 A105 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:287
 Disposition: MATCHED
-Swift: S103 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S103 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(0, start + 20, 67, &copiedBoth))
+Mapping: S103
 
 A106 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:288
 Disposition: MATCHED
-Swift: S104 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S104 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(copiedBoth.duration, uint32_t(20))
+Mapping: S104
 
 A107 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:293
 Disposition: MATCHED
-Swift: S105 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S105 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const std::array<NoteId, 4> copies = {copiedContained.noteId, copiedLeft.noteId,
-                                            copiedRight.noteId, copiedBoth.noteId};
-      for (size_t i = 0; i < copies.size(); ++i) {
-          for (const NoteId id : original)
-
-Original expression:
-  QVERIFY(copies[i] != id)
+Mapping: S105
 
 A108 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:295
 Disposition: MATCHED
-Swift: S106 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S106 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          for (size_t j = i + 1; j < copies.size(); ++j)
-
-Original expression:
-  QVERIFY(copies[i] != copies[j])
+Mapping: S106
 
 A109 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:299
 Disposition: MATCHED
-Swift: S022 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S022 asserts one undo restores the duplicated range (coreTimeBytes equal) under the same cppID, covering undo-to-before here.
-Source context since previous assertion:
-  ;
-      }
-      const QByteArray after = document.smf().write();
-      document.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(document.smf().write(), before)
+Mapping: S022
 
 A110 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:301
 Disposition: MATCHED
-Swift: S107 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S107 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      document.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(document.smf().write(), after)
+Mapping: S107
 
 A111 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:305
 Disposition: MATCHED
-Swift: S108 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S108 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const int smfTrack = document.smfTrackFor(0);
-      document.insertRawEvent(smfTrack, songdocument_test::channel(0x80, 700, 72, 0));
-      document.insertRawEvent(smfTrack, songdocument_test::channel(0x90, 700, 72, 55));
-
-Original expression:
-  QVERIFY(document.duplicateTimeRange({700, 720}, scope))
+Mapping: S108
 
 A112 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:306
 Disposition: MATCHED
-Swift: S109 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S109 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(songdocument_test::noteEndsBeforeOnsAt(document, 0, 720))
+Mapping: S109
 
 A113 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:309
 Disposition: MATCHED
-Swift: S110 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S110 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      document.insertRawEvent(smfTrack, songdocument_test::channel(0x80, 800, 73, 0));
-      document.insertRawEvent(smfTrack, songdocument_test::channel(0x90, 800, 73, 66));
-
-Original expression:
-  QVERIFY(document.insertBlankTime({800, 820}, scope))
+Mapping: S110
 
 A114 | EditCheckTest::timeRangeDuplicateClippingAndOrder | src/checks/editcheck/tst_songdocument_timerange.cpp:310
 Disposition: MATCHED
-Swift: S111 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S111 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(songdocument_test::noteEndsBeforeOnsAt(document, 0, 820))
+Mapping: S111
 
 A115 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:317
 Disposition: MATCHED
-Swift: S112 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S112 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-  }
-
-  void EditCheckTest::timeRangeSignatureAndOrphans()
-  {
-      auto fixture =
-          songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-signature"));
-
-Original expression:
-  QVERIFY(fixture)
+Mapping: S112
 
 A116 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:326
 Disposition: MATCHED
-Swift: S113 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S113 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      SongDocument &document = fixture->document;
-      constexpr Tick seam = 960;
-      const Tick bar = 3 * Tick(document.smf().division);
-      document.setTimeSig(0, 4, 2);
-      document.setTimeSig(seam, 3, 2);
-      SongDocument::TimeScope whole;
-      whole.wholeSong = true;
-      const QByteArray before = document.smf().write();
-
-Original expression:
-  QVERIFY(document.insertBlankTime({seam, seam + bar}, whole))
+Mapping: S113
 
 A117 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:334
 Disposition: MATCHED
-Swift: S114 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S114 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      bool start = false;
-      bool end = false;
-      for (const DocTimeSig &signature : document.timeSigs())
-          if (signature.numerator == 3 && signature.denomPow2 == 2) {
-              start |= signature.tick == seam;
-              end |= signature.tick == seam + bar;
-          }
-
-Original expression:
-  QVERIFY(start)
+Mapping: S114
 
 A118 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:335
 Disposition: MATCHED
-Swift: S115 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S115 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(end)
+Mapping: S115
 
 A119 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:338
 Disposition: MATCHED
-Swift: S116 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S116 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const QByteArray after = document.smf().write();
-      document.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(document.smf().write(), before)
+Mapping: S116
 
 A120 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:340
 Disposition: MATCHED
-Swift: S117 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S117 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      document.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(document.smf().write(), after)
+Mapping: S117
 
 A121 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:343
 Disposition: MATCHED
-Swift: S118 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S118 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      auto orphanFixture =
-          songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-orphans"));
-
-Original expression:
-  QVERIFY(orphanFixture)
+Mapping: S118
 
 A122 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:355
 Disposition: MATCHED
-Swift: S119 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S119 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      SongDocument &orphan = orphanFixture->document;
-      const int smfTrack = orphan.smfTrackFor(0);
-      const SongDocument::TimeScope scope = trackZero();
-      orphan.addNote(0, 40, 60, 10, 90);
-      orphan.insertRawEvent(smfTrack, songdocument_test::channel(0x90, 90, 61, 11));
-      orphan.insertRawEvent(smfTrack, songdocument_test::channel(0x80, 120, 66, 13));
-      orphan.insertRawEvent(smfTrack, songdocument_test::channel(0x90, 110, 62, 22));
-      orphan.insertRawEvent(smfTrack, songdocument_test::channel(0x80, 130, 63, 12));
-      orphan.insertRawEvent(smfTrack, songdocument_test::channel(0x90, 130, 64, 33));
-      orphan.insertRawEvent(smfTrack, songdocument_test::channel(0x90, 140, 65, 44));
-      const QByteArray orphanBefore = orphan.smf().write();
-
-Original expression:
-  QVERIFY(orphan.removeTimeRange({100, 130}, scope))
+Mapping: S119
 
 A123 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:376
 Disposition: MATCHED
-Swift: S120 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S120 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      bool beforeOn = false;
-      bool removedOn = false;
-      bool removedOff = false;
-      bool pinnedOff = false;
-      bool endOn = false;
-      bool shiftedOn = false;
-      for (const SmfEvent &event : orphan.smf().tracks[size_t(smfTrack)].events) {
-          beforeOn |=
-              event.tick == 90 && event.status == 0x90 && event.data0 == 61 && event.data1 == 11;
-          removedOn |=
-              event.tick == 110 && event.status == 0x90 && event.data0 == 62 && event.data1 == 22;
-          removedOff |= event.status == 0x80 && event.data0 == 66 && event.data1 == 13;
-          pinnedOff |=
-              event.tick == 100 && event.status == 0x80 && event.data0 == 63 && event.data1 == 12;
-          endOn |=
-              event.tick == 100 && event.status == 0x90 && event.data0 == 64 && event.data1 == 33;
-          shiftedOn |=
-              event.tick == 110 && event.status == 0x90 && event.data0 == 65 && event.data1 == 44;
-      }
-      DocNote paired;
-
-Original expression:
-  QVERIFY(beforeOn)
+Mapping: S120
 
 A124 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:377
 Disposition: MATCHED
-Swift: S025 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S025 asserts !hasChannel(110, 0x9, 62) under the same cppID, covering !removedOn here (absence at tick/type/key entails absence with any velocity).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!removedOn)
+Mapping: S025
 
 A125 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:378
 Disposition: MATCHED
-Swift: S121 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S121 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!removedOff)
+Mapping: S121
 
 A126 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:379
 Disposition: MATCHED
-Swift: S122 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S122 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(pinnedOff)
+Mapping: S122
 
 A127 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:380
 Disposition: MATCHED
-Swift: S122 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S122 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(endOn)
+Mapping: S122
 
 A128 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:381
 Disposition: MATCHED
-Swift: S122 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S122 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(shiftedOn)
+Mapping: S122
 
 A129 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:382
 Disposition: MATCHED
-Swift: S123 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S123 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(songdocument_test::noteEndsBeforeOnsAt(orphan, 0, 100))
+Mapping: S123
 
 A130 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:383
 Disposition: MATCHED
-Swift: S124 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S124 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(orphan.findNote(0, 40, 60, &paired))
+Mapping: S124
 
 A131 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:384
 Disposition: MATCHED
-Swift: S125 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S125 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!paired.unterminated())
+Mapping: S125
 
 A132 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:385
 Disposition: MATCHED
-Swift: S126 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S126 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(paired.duration, uint32_t(10))
+Mapping: S126
 
 A133 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:388
 Disposition: MATCHED
-Swift: S127 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S127 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const QByteArray orphanAfter = orphan.smf().write();
-      orphan.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(orphan.smf().write(), orphanBefore)
+Mapping: S127
 
 A134 | EditCheckTest::timeRangeSignatureAndOrphans | src/checks/editcheck/tst_songdocument_timerange.cpp:390
 Disposition: MATCHED
-Swift: S128 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S128 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      orphan.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(orphan.smf().write(), orphanAfter)
+Mapping: S128
 
 A135 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:397
 Disposition: MATCHED
-Swift: S129 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S129 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-  }
-
-  void EditCheckTest::timeRangeAutomationSeamsAndDefaults()
-  {
-      auto fixture =
-          songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-automation"));
-
-Original expression:
-  QVERIFY(fixture)
+Mapping: S129
 
 A136 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:406
 Disposition: MATCHED
-Swift: S130 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S130 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      SongDocument &document = fixture->document;
-      constexpr Tick seam = 1000;
-      SongDocument::TimeScope laneScope;
-      laneScope.lanes = {{0, 7}};
-      document.addLanePoint(0, 7, seam - 20, 33);
-      document.addLanePoint(0, 7, seam + 10, 44);
-      const QByteArray seamBefore = document.smf().write();
-      const int seamUndoCount = document.undoStack()->count();
-
-Original expression:
-  QVERIFY(document.duplicateTimeRange({seam, seam + 40}, laneScope))
+Mapping: S130
 
 A137 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:408
 Disposition: MATCHED
-Swift: S131 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S131 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      DocLanePoint point;
-
-Original expression:
-  QVERIFY(document.findLanePoint(0, 7, seam + 40, &point))
+Mapping: S131
 
 A138 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:409
 Disposition: MATCHED
-Swift: S131 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S131 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(point.value, 33)
+Mapping: S131
 
 A139 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:410
 Disposition: MATCHED
-Swift: S132 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S132 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findLanePoint(0, 7, seam + 50, &point))
+Mapping: S132
 
 A140 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:411
 Disposition: MATCHED
-Swift: S132 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S132 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(point.value, 44)
+Mapping: S132
 
 A141 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:412
 Disposition: MATCHED
-Swift: S133 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S133 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.undoStack()->count(), seamUndoCount + 1)
+Mapping: S133
 
 A142 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:415
 Disposition: MATCHED
-Swift: S134 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S134 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const QByteArray seamAfter = document.smf().write();
-      document.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(document.smf().write(), seamBefore)
+Mapping: S134
 
 A143 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:417
 Disposition: MATCHED
-Swift: S135 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S135 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      document.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(document.smf().write(), seamAfter)
+Mapping: S135
 
 A144 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:421
 Disposition: MATCHED
-Swift: S136 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S136 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-      auto defaultsFixture =
-          songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-defaults"));
-
-Original expression:
-  QVERIFY(defaultsFixture)
+Mapping: S136
 
 A145 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:445
 Disposition: MATCHED
-Swift: S137 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S137 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      SongDocument &defaultsDocument = defaultsFixture->document;
-      struct DefaultCase {
-          uint8_t cc;
-          int source;
-          int expected;
-      };
-      constexpr std::array<DefaultCase, 9> defaults = {DefaultCase{0x01, 11, 0},
-                                                       {0x05, 12, 0},
-                                                       {0x07, 80, 127},
-                                                       {0x0A, 81, 64},
-                                                       {0x14, 3, 2},
-                                                       {0x15, 4, 22},
-                                                       {0x17, 5, 0},
-                                                       {0x19, 6, 0},
-                                                       {DOC_CC_BEND, 500, 0}};
-      for (size_t remaining = defaults.size(); remaining > 0; --remaining) {
-          const size_t index = remaining - 1;
-          const Tick start = 1100 + index * 40U;
-          defaultsDocument.addLanePoint(0, defaults[index].cc, start + 10, defaults[index].source);
-          const QByteArray before = defaultsDocument.smf().write();
-          const int undoCount = defaultsDocument.undoStack()->count();
-          SongDocument::TimeScope lane;
-          lane.lanes = {{0, defaults[index].cc}};
-
-Original expression:
-  QVERIFY(defaultsDocument.duplicateTimeRange({start, start + 20}, lane))
+Mapping: S137
 
 A146 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:446
 Disposition: MATCHED
-Swift: S138 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S138 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(defaultsDocument.findLanePoint(0, defaults[index].cc, start + 20, &point))
+Mapping: S138
 
 A147 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:447
 Disposition: MATCHED
-Swift: S138 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S138 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(point.value, defaults[index].expected)
+Mapping: S138
 
 A148 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:448
 Disposition: MATCHED
-Swift: S139 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S139 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(defaultsDocument.undoStack()->count(), undoCount + 1)
+Mapping: S139
 
 A149 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:451
 Disposition: MATCHED
-Swift: S140 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S140 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          const QByteArray after = defaultsDocument.smf().write();
-          defaultsDocument.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(defaultsDocument.smf().write(), before)
+Mapping: S140
 
 A150 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:453
 Disposition: MATCHED
-Swift: S141 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S141 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-          defaultsDocument.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(defaultsDocument.smf().write(), after)
+Mapping: S141
 
 A151 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:462
 Disposition: MATCHED
-Swift: S142 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S142 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      }
-      SongDocument::TimeScope tempoScope;
-      tempoScope.tempo = true;
-      defaultsDocument.applyTempoEdit(
-          {{songdocument_test::tempo(0, 120)}, {songdocument_test::tempo(1510, 150)}});
-      const QByteArray tempoBytesBefore = defaultsDocument.smf().write();
-      const auto temposBefore = defaultsDocument.tempoPoints();
-      const int tempoUndoCount = defaultsDocument.undoStack()->count();
-
-Original expression:
-  QVERIFY(defaultsDocument.duplicateTimeRange({1500, 1520}, tempoScope))
+Mapping: S142
 
 A152 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:463
 Disposition: MATCHED
-Swift: S143 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S143 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(
-          songdocument_test::containsTempo(defaultsDocument, songdocument_test::tempo(1520, 120)))
+Mapping: S143
 
 A153 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:465
 Disposition: MATCHED
-Swift: S144 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S144 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(
-          songdocument_test::containsTempo(defaultsDocument, songdocument_test::tempo(1530, 150)))
+Mapping: S144
 
 A154 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:468
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: The C++ site checked a nullable heap return from buildTimeline(44100.0); Swift PlaybackTimeline.build returns a non-optional value, so construction has no failure branch. S145/S146 assert the consumer-visible usable timeline through non-empty tempoMap and front 120 BPM. The original C++ file is uncompiled in every target and unregistered in checkcatalog.cpp (spec §7).
-Source context since previous assertion:
-  ;
-      const auto timeline = defaultsDocument.buildTimeline(44100.0);
-
-Original expression:
-  QVERIFY(timeline)
+Mapping/reason: S145, S146
 
 A155 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:469
 Disposition: MATCHED
-Swift: S145 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S145 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!timeline->tempoMap.empty())
+Mapping: S145
 
 A156 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:470
 Disposition: MATCHED
-Swift: S146 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S146 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(timeline->tempoMap.front().bpm, 120.0)
+Mapping: S146
 
 A157 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:471
 Disposition: MATCHED
-Swift: S147 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S147 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(defaultsDocument.undoStack()->count(), tempoUndoCount + 1)
+Mapping: S147
 
 A158 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:475
 Disposition: MATCHED
-Swift: S148 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S148 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const QByteArray tempoBytesAfter = defaultsDocument.smf().write();
-      const auto temposAfter = defaultsDocument.tempoPoints();
-      defaultsDocument.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(defaultsDocument.smf().write(), tempoBytesBefore)
+Mapping: S148
 
 A159 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:476
 Disposition: MATCHED
-Swift: S149 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S149 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(defaultsDocument.tempoPoints() == temposBefore)
+Mapping: S149
 
 A160 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:478
 Disposition: MATCHED
-Swift: S150 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S150 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      defaultsDocument.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(defaultsDocument.smf().write(), tempoBytesAfter)
+Mapping: S150
 
 A161 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:479
 Disposition: MATCHED
-Swift: S151 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S151 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(defaultsDocument.tempoPoints() == temposAfter)
+Mapping: S151
 
 A162 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:485
 Disposition: MATCHED
-Swift: S152 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S152 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      defaultsDocument.addLanePoint(0, DOC_CC_VOICE, 1610, 12);
-      const QByteArray voiceBefore = defaultsDocument.smf().write();
-      const int voiceUndoCount = defaultsDocument.undoStack()->count();
-      SongDocument::TimeScope voiceScope;
-      voiceScope.lanes = {{0, DOC_CC_VOICE}};
-
-Original expression:
-  QVERIFY(defaultsDocument.duplicateTimeRange({1600, 1620}, voiceScope))
+Mapping: S152
 
 A163 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:486
 Disposition: MATCHED
-Swift: S153 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S153 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(defaultsDocument.findLanePoint(0, DOC_CC_VOICE, 1620, &point))
+Mapping: S153
 
 A164 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:487
 Disposition: MATCHED
-Swift: S153 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S153 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(point.value, 1)
+Mapping: S153
 
 A165 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:488
 Disposition: MATCHED
-Swift: S154 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S154 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(defaultsDocument.findLanePoint(0, DOC_CC_VOICE, 1630, &point))
+Mapping: S154
 
 A166 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:489
 Disposition: MATCHED
-Swift: S154 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S154 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(point.value, 12)
+Mapping: S154
 
 A167 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:490
 Disposition: MATCHED
-Swift: S155 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S155 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(defaultsDocument.undoStack()->count(), voiceUndoCount + 1)
+Mapping: S155
 
 A168 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:493
 Disposition: MATCHED
-Swift: S156 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S156 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const QByteArray voiceAfter = defaultsDocument.smf().write();
-      defaultsDocument.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(defaultsDocument.smf().write(), voiceBefore)
+Mapping: S156
 
 A169 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:495
 Disposition: MATCHED
-Swift: S157 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S157 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      defaultsDocument.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(defaultsDocument.smf().write(), voiceAfter)
+Mapping: S157
 
 A170 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:501
 Disposition: MATCHED
-Swift: S158 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S158 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      constexpr uint64_t downstream = 1700;
-      defaultsDocument.addLanePoint(0, 7, downstream, 11);
-      defaultsDocument.addLanePoint(0, 7, downstream + 20, 99);
-      const QByteArray downstreamBefore = defaultsDocument.smf().write();
-      const int downstreamUndoCount = defaultsDocument.undoStack()->count();
-
-Original expression:
-  QVERIFY(defaultsDocument.duplicateTimeRange({downstream, downstream + 20}, laneScope))
+Mapping: S158
 
 A171 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:502
 Disposition: MATCHED
-Swift: S159 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S159 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(defaultsDocument.findLanePoint(0, 7, downstream + 20, &point))
+Mapping: S159
 
 A172 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:503
 Disposition: MATCHED
-Swift: S159 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S159 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(point.value, 11)
+Mapping: S159
 
 A173 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:504
 Disposition: MATCHED
-Swift: S160 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S160 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(defaultsDocument.findLanePoint(0, 7, downstream + 40, &point))
+Mapping: S160
 
 A174 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:505
 Disposition: MATCHED
-Swift: S160 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S160 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(point.value, 99)
+Mapping: S160
 
 A175 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:506
 Disposition: MATCHED
-Swift: S161 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S161 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(defaultsDocument.undoStack()->count(), downstreamUndoCount + 1)
+Mapping: S161
 
 A176 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:509
 Disposition: MATCHED
-Swift: S162 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S162 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const QByteArray downstreamAfter = defaultsDocument.smf().write();
-      defaultsDocument.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(defaultsDocument.smf().write(), downstreamBefore)
+Mapping: S162
 
 A177 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:511
 Disposition: MATCHED
-Swift: S163 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S163 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      defaultsDocument.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(defaultsDocument.smf().write(), downstreamAfter)
+Mapping: S163
 
 A178 | EditCheckTest::timeRangeWholeSong | src/checks/editcheck/tst_songdocument_timerange.cpp:518
 Disposition: MATCHED
-Swift: S164 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S164 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-  }
-
-  void EditCheckTest::timeRangeWholeSong()
-  {
-      auto fixture =
-          songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-whole-song"));
-
-Original expression:
-  QVERIFY(fixture)
+Mapping: S164
 
 A179 | EditCheckTest::timeRangeWholeSong | src/checks/editcheck/tst_songdocument_timerange.cpp:529
 Disposition: MATCHED
-Swift: S165 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S165 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      SongDocument &document = fixture->document;
-      constexpr Tick start = 1800;
-      document.addNote(0, 1900, 70, 5, 50);
-      document.setTimeSig(start + 10, 3, 2);
-      document.applyTempoEdit({{}, {songdocument_test::tempo(start + 10, 180)}});
-      document.insertRawEvent(0,
-                              songdocument_test::meta(0x01, start + 15, QByteArrayLiteral("global")));
-      SongDocument::TimeScope wholeSong;
-      wholeSong.wholeSong = true;
-      const QByteArray before = document.smf().write();
-
-Original expression:
-  QVERIFY(document.duplicateTimeRange({start, start + 20}, wholeSong))
+Mapping: S165
 
 A180 | EditCheckTest::timeRangeWholeSong | src/checks/editcheck/tst_songdocument_timerange.cpp:538
 Disposition: MATCHED
-Swift: S166 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S166 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      bool copiedMeta = false;
-      bool copiedSignature = false;
-      for (const SmfEvent &event : document.smf().tracks.front().events)
-          copiedMeta |= event.tick == start + 35 && event.isMeta() && event.metaType == 0x01 &&
-                        event.blob == QByteArrayLiteral("global");
-      for (const DocTimeSig &signature : document.timeSigs())
-          copiedSignature |= signature.tick == start + 30 && signature.numerator == 3;
-      DocNote shifted;
-
-Original expression:
-  QVERIFY(copiedMeta)
+Mapping: S166
 
 A181 | EditCheckTest::timeRangeWholeSong | src/checks/editcheck/tst_songdocument_timerange.cpp:539
 Disposition: MATCHED
-Swift: S167 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S167 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(copiedSignature)
+Mapping: S167
 
 A182 | EditCheckTest::timeRangeWholeSong | src/checks/editcheck/tst_songdocument_timerange.cpp:540
 Disposition: MATCHED
-Swift: S168 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S168 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(songdocument_test::containsTempo(document, songdocument_test::tempo(start + 20, 120)))
+Mapping: S168
 
 A183 | EditCheckTest::timeRangeWholeSong | src/checks/editcheck/tst_songdocument_timerange.cpp:541
 Disposition: MATCHED
-Swift: S169 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S169 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(songdocument_test::containsTempo(document, songdocument_test::tempo(start + 30, 180)))
+Mapping: S169
 
 A184 | EditCheckTest::timeRangeWholeSong | src/checks/editcheck/tst_songdocument_timerange.cpp:542
 Disposition: MATCHED
-Swift: S170 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S170 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(0, 1920, 70, &shifted))
+Mapping: S170
 
 A185 | EditCheckTest::timeRangeWholeSong | src/checks/editcheck/tst_songdocument_timerange.cpp:544
 Disposition: MATCHED
-Swift: S171 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S171 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      const int smfTrack = document.smfTrackFor(0);
-
-Original expression:
-  QVERIFY(smfTrack >= 0)
+Mapping: S171
 
 A186 | EditCheckTest::timeRangeWholeSong | src/checks/editcheck/tst_songdocument_timerange.cpp:545
 Disposition: MATCHED
-Swift: S172 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S172 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.smf().tracks[size_t(smfTrack)].endTick >= shifted.tick + shifted.duration)
+Mapping: S172
 
 A187 | EditCheckTest::timeRangeWholeSong | src/checks/editcheck/tst_songdocument_timerange.cpp:548
 Disposition: MATCHED
-Swift: S010 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S010 asserts one undo restores globals, events, and end-of-track state (coreTimeBytes equal) under the same cppID, covering undo-to-before here.
-Source context since previous assertion:
-  ;
-      const QByteArray after = document.smf().write();
-      document.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(document.smf().write(), before)
+Mapping: S010
 
 A188 | EditCheckTest::timeRangeWholeSong | src/checks/editcheck/tst_songdocument_timerange.cpp:550
 Disposition: MATCHED
-Swift: S173 | src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Swift S173 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      document.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(document.smf().write(), after)
+Mapping: S173
 
 A189 | EditCheckTest::timeRangeInsertBlankOverflow | src/checks/editcheck/tst_songdocument_timerange.cpp:562
 Disposition: MATCHED
-Swift: S174 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S174 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-  }
-
-  void EditCheckTest::timeRangeInsertBlankOverflow()
-  {
-      SmfFile smf;
-      smf.format = 1;
-      smf.division = 24;
-      smf.tracks.push_back(SmfTrack{{}, 48});
-      smf.tracks.push_back(SmfTrack{{songdocument_test::channel(0xC0, 0, 1, 0)}, 48});
-      auto fixture =
-          songdocument_test::makeDocument(std::move(smf), QStringLiteral("time-blank-overflow"));
-
-Original expression:
-  QVERIFY(fixture)
+Mapping: S174
 
 A190 | EditCheckTest::timeRangeInsertBlankOverflow | src/checks/editcheck/tst_songdocument_timerange.cpp:565
 Disposition: MATCHED
-Swift: S175 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S175 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-      SongDocument &document = fixture->document;
-      const int smfTrack = document.smfTrackFor(0);
-
-Original expression:
-  QVERIFY(smfTrack >= 0)
+Mapping: S175
 
 A191 | EditCheckTest::timeRangeInsertBlankOverflow | src/checks/editcheck/tst_songdocument_timerange.cpp:571
 Disposition: MATCHED
-Swift: S018 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S018 asserts !insertBlankTime({0,1}, tracks [0]) under the same cppID, covering the overflow rejection here.
-Source context since previous assertion:
-  ;
-      // SMF VLQ is 28-bit, so kMaxTick cannot round-trip as EOT through makeDocument.
-      document.insertRawEvent(smfTrack,
-                              songdocument_test::channel(0xB0, CoreTimeDefaults::kMaxTick, 7, 0));
-      const QByteArray bytes = document.smf().write();
-      const int undoCount = document.undoStack()->count();
-
-Original expression:
-  QVERIFY(!document.insertBlankTime({0, 1}, trackZero()))
+Mapping: S018
 
 A192 | EditCheckTest::timeRangeInsertBlankOverflow | src/checks/editcheck/tst_songdocument_timerange.cpp:572
 Disposition: MATCHED
-Swift: S018 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S018 asserts overflow.state == overflowBefore under the same cppID, which entails identical serialized bytes here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.smf().write(), bytes)
+Mapping: S018
 
 A193 | EditCheckTest::timeRangeInsertBlankOverflow | src/checks/editcheck/tst_songdocument_timerange.cpp:573
 Disposition: MATCHED
-Swift: S176 | src/checks/editcheck/TimeChecks.swift :: insertionAndBoundaries
-Mapping/reason: Swift S176 asserts the ported equivalent under the same cppID.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.undoStack()->count(), undoCount)
+Mapping: S176
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -2335,1013 +796,528 @@ Every report.expect/expectEqual/fail call in the mapped Swift functions:
 
 S001 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "scoped gap removal commits" #1
-  report.expect(document.removeTime(TimeRange(startTick: 20, endTick: 50),
-                                        scope: TimeScope(tracks: [0])),
-                    cppID: "editcheck/EditCheckTest::timeRangeRemoveRippleTrim",
-                    message: "scoped gap removal commits")
 
 S002 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "crossing note trims and later note ripples"
-  report.expectEqual(["0:60:80", "80:60:10"], document.notes(in: 0).map(noteShape),
-                         cppID: "editcheck/EditCheckTest::timeRangeRemove",
-                         what: "crossing note trims and later note ripples")
 
 S003 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "last in-range value survives at the seam"
-  report.expectEqual("20:44", document.lanePoints(track: 0, lane: .controller(7)).first.map(coreTimePointShape),
-                         cppID: "editcheck/EditCheckTest::timeRangeAutomationSeamsAndDefaults",
-                         what: "last in-range value survives at the seam")
 
 S004 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "unscoped track is unchanged"
-  report.expectEqual(untouched?.tick, document.note(ids[2])?.tick,
-                         cppID: "editcheck/EditCheckTest::timeRangeRemoveRippleTrim",
-                         what: "unscoped track is unchanged")
 
 S005 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "single undo restores scoped removal"
-  report.expectEqual(before, coreTimeBytes(document),
-                         cppID: "editcheck/EditCheckTest::timeRangeRemove",
-                         what: "single undo restores scoped removal")
 
 S006 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "whole-song close commits"
-  report.expect(whole.removeTime(TimeRange(startTick: 61, endTick: 65),
-                                    scope: TimeScope(wholeSong: true)),
-                    cppID: "editcheck/EditCheckTest::songWholeSongRemove",
-                    message: "whole-song close commits")
 
 S007 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "globals are rescued to the closing seam"
-  report.expect(whole.timeSignatures.contains { $0.tick == 61 && $0.numerator == 3 } &&
-          whole.state.tempo.contains { $0.tick == 61 } &&
-          whole.rawChunks[0].events.contains { $0.metaType == 0x06 && $0.tick == 61 },
-          cppID: "editcheck/EditCheckTest::timeRangeWholeSong",
-          message: "globals are rescued to the closing seam")
 
 S008 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "whole-song removal closes every stored end tick"
-  report.expect(closedEnds,
-          cppID: "editcheck/EditCheckTest::songWholeSongRemove",
-          message: "whole-song removal closes every stored end tick")
 
 S009 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores every stored end tick"
-  report.expectEqual(oldEnd, whole.rawChunks.map(\.endTick),
-                         cppID: "editcheck/EditCheckTest::songWholeSongRemove",
-                         what: "one undo restores every stored end tick")
 
 S010 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores globals, events, and end-of-track state"
-  report.expectEqual(wholeBefore, coreTimeBytes(whole),
-                         cppID: "editcheck/EditCheckTest::timeRangeWholeSong",
-                         what: "one undo restores globals, events, and end-of-track state")
 
 S011 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "blank insertion commits"
-  report.expect(document.insertBlankTime(TimeRange(startTick: 40, endTick: 45),
-                                             scope: TimeScope(tracks: [0])),
-                    cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
-                    message: "blank insertion commits")
 
 S012 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "crossing note splits around a silent interval"
-  report.expectEqual(["35:60:5", "45:60:5"], split.map(noteShape),
-                         cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
-                         what: "crossing note splits around a silent interval")
 
 S013 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "split right half receives a new identity"
-  report.expect(split.count == 2 && split[0].id == crossingID && split[1].id != crossingID,
-                    cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
-                    message: "split right half receives a new identity")
 
 S014 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "later note shifts and preserves identity"
-  report.expectEqual(Tick(65), document.note(laterID)?.tick,
-                         cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
-                         what: "later note shifts and preserves identity")
 
 S015 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the split"
-  report.expectEqual(before, coreTimeBytes(document),
-                         cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
-                         what: "one undo restores the split")
 
 S016 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "empty and reserved ranges create no state or history"
-          report.expect(!noopDoc.removeTime(TimeRange(startTick: 20, endTick: 20), scope: TimeScope()) &&
-              !noopDoc.insertBlankTime(TimeRange(startTick: 20, endTick: 10), scope: TimeScope()) &&
-              !noopDoc.duplicateTime(TimeRange(startTick: 20, endTick: TimeDefaults.noTick),
-                                      scope: TimeScope(tracks: [0])) &&
-              noopDoc.revision == emptyRevision,
-              cppID: "editcheck/EditCheckTest::timeRangeNoOps",
-              message: "empty and reserved ranges create no state or history")
 
 S017 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "tick-zero insertion is an ordinary right shift"
-  report.expect(zero.insertBlankTime(TimeRange(startTick: 0, endTick: 1),
-                                         scope: TimeScope(tracks: [0])) &&
-          zero.notes(in: 0).contains { $0.tick == 1 && $0.duration == 2 },
-          cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
-          message: "tick-zero insertion is an ordinary right shift")
 
 S018 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "maximum-tick overflow rejects before candidate installation"
-  report.expect(!overflow.insertBlankTime(TimeRange(startTick: 0, endTick: 1),
-                                              scope: TimeScope(tracks: [0])) &&
-          overflow.state == overflowBefore,
-          cppID: "editcheck/EditCheckTest::timeRangeInsertBlankOverflow",
-          message: "maximum-tick overflow rejects before candidate installation")
 
 S019 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "time duplication commits" #1
-  report.expect(document.duplicateTime(TimeRange(startTick: 600, endTick: 620),
-                                           scope: TimeScope(tracks: [0])),
-                    cppID: "editcheck/EditCheckTest::timeRangeDuplicateClippingAndOrder",
-                    message: "time duplication commits")
 
 S020 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "clipped duplicates all receive fresh identities"
-  report.expect(copies.count == 2 && copies.allSatisfy { !originalIDs.contains($0.id) },
-                    cppID: "editcheck/EditCheckTest::timeRangeDuplicateClippingAndOrder",
-                    message: "clipped duplicates all receive fresh identities")
 
 S021 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "duplicate seeds the effective value at its destination seam"
-  report.expect(document.lanePoints(track: 0, lane: .controller(7)).contains {
-          $0.tick == 620 && $0.value == 33
-      }, cppID: "editcheck/EditCheckTest::timeRangeAutomationSeamsAndDefaults",
-      message: "duplicate seeds the effective value at its destination seam")
 
 S022 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the duplicated range transaction"
-  report.expectEqual(before, coreTimeBytes(document),
-                         cppID: "editcheck/EditCheckTest::timeRangeDuplicateClippingAndOrder",
-                         what: "one undo restores the duplicated range transaction")
 
 S023 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "blank insertion closes and resumes an unterminated note"
-  report.expect(parts.count == 2 && parts[0].id == leftID && parts[0].duration == 20 &&
-          parts[1].id != leftID && parts[1].isUnterminated,
-          cppID: "editcheck/EditCheckTest::timeRangeUnterminated",
-          message: "blank insertion closes and resumes an unterminated note")
 
 S024 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "signature, opaque global and tempo duplicate with their stream rules"
-  report.expect(globals.timeSignatures.contains { $0.tick == 980 && $0.numerator == 3 } &&
-          globals.rawChunks[0].events.contains { $0.tick == 985 && $0.metaType == 0x01 } &&
-          globals.state.tempo.contains { $0.tick == 990 },
-          cppID: "editcheck/EditCheckTest::timeRangeSignatureAndOrphans",
-          message: "signature, opaque global and tempo duplicate with their stream rules")
 
 S025 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "orphan note bytes use half-open remove and pinned seam ordering"
-  report.expect(!hasChannel(orphanEvents, tick: 110, type: 0x9, key: 62) &&
-          hasChannel(orphanEvents, tick: 100, type: 0x8, key: 63) &&
-          hasChannel(orphanEvents, tick: 100, type: 0x9, key: 64) &&
-          hasChannel(orphanEvents, tick: 110, type: 0x9, key: 65),
-          cppID: "editcheck/EditCheckTest::timeRangeSignatureAndOrphans",
-          message: "orphan note bytes use half-open remove and pinned seam ordering")
 
 S026 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #1
-  report.expectEqual(2, trim.engineTracks.usedTrackCount, cppID: id,
-                               what: "timeRangeFile fixture loads two editable tracks")
 
 S027 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "track 0 on/off pairs consistent before removal"
-  report.expect(coreRangeNotePairsConsistent(trim, track: 0), cppID: id,
-                          message: "track 0 on/off pairs consistent before removal")
 
 S028 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "track 1 on/off pairs consistent before removal"
-  report.expect(coreRangeNotePairsConsistent(trim, track: 1), cppID: id,
-                          message: "track 1 on/off pairs consistent before removal")
 
 S029 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "track 0 on/off pairs consistent after removal"
-  report.expect(coreRangeNotePairsConsistent(trim, track: 0), cppID: id,
-                          message: "track 0 on/off pairs consistent after removal")
 
 S030 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "track 1 on/off pairs consistent after removal"
-  report.expect(coreRangeNotePairsConsistent(trim, track: 1), cppID: id,
-                          message: "track 1 on/off pairs consistent after removal")
 
 S031 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "two notes remain after the scoped removal"
-  report.expectEqual(2, notes.count, cppID: id,
-                               what: "two notes remain after the scoped removal")
 
 S032 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "crossing note keeps its start tick"
-  report.expectEqual(Tick(0), notes.first?.tick, cppID: id,
-                               what: "crossing note keeps its start tick")
 
 S033 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "crossing note trims to the rippled neighbor"
-  report.expectEqual(min(earlierEnd, Tick(80)), notes.first?.duration, cppID: id,
-                               what: "crossing note trims to the rippled neighbor")
 
 S034 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "later note ripples left by the span"
-  report.expectEqual(Tick(80), notes.last?.tick, cppID: id,
-                               what: "later note ripples left by the span")
 
 S035 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "later note keeps its duration"
-  report.expectEqual(Tick(10), notes.last?.duration, cppID: id,
-                               what: "later note keeps its duration")
 
 S036 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "removal preserves note identity"
-  report.expectEqual(source.id, note.id, cppID: id,
-                                   what: "removal preserves note identity")
 
 S037 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "removal preserves note velocity"
-  report.expectEqual(source.velocity, note.velocity, cppID: id,
-                                   what: "removal preserves note velocity")
 
 S038 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "unscoped track events are byte-identical"
-  report.expectEqual(other, trim.rawChunks[otherChunk].events, cppID: id,
-                                   what: "unscoped track events are byte-identical")
 
 S039 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "removal adds one history entry"
-  report.expectEqual(trimPosition + 1,
-                               try coreEditHistoryCountAtTip(trim, report: report, cppID: id),
-                               cppID: id, what: "removal adds one history entry")
 
 S040 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the removal"
-  report.expectEqual(trimBefore, coreTimeBytes(trim), cppID: id,
-                               what: "one undo restores the removal")
 
 S041 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the removal"
-  report.expectEqual(trimAfter, coreTimeBytes(trim), cppID: id,
-                               what: "one redo restores the removal")
 
 S042 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "track 0 on/off pairs consistent after redo"
-  report.expect(coreRangeNotePairsConsistent(trim, track: 0), cppID: id,
-                          message: "track 0 on/off pairs consistent after redo")
 
 S043 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "track 1 on/off pairs consistent after redo"
-  report.expect(coreRangeNotePairsConsistent(trim, track: 1), cppID: id,
-                          message: "track 1 on/off pairs consistent after redo")
 
 S044 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #2
-  report.expectEqual(2, branch.engineTracks.usedTrackCount, cppID: id,
-                               what: "timeRangeFile fixture loads two editable tracks")
 
 S045 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "on/off pairs consistent before the edit"
-  report.expect(coreRangeNotePairsConsistent(branch, track: 0), cppID: id,
-                          message: "on/off pairs consistent before the edit")
 
 S046 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "duplicate branch commits"
-  report.expect(branch.duplicateTime(TimeRange(startTick: 10, endTick: 40),
-                                                   scope: TimeScope(tracks: [0])),
-                              cppID: id, message: "duplicate branch commits")
 
 S047 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "insert branch commits"
-  report.expect(branch.insertBlankTime(TimeRange(startTick: 10, endTick: 40),
-                                                     scope: TimeScope(tracks: [0])),
-                              cppID: id, message: "insert branch commits")
 
 S048 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "on/off pairs consistent after the edit"
-  report.expect(coreRangeNotePairsConsistent(branch, track: 0), cppID: id,
-                          message: "on/off pairs consistent after the edit")
 
 S049 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the branch"
-  report.expectEqual(branchBefore, coreTimeBytes(branch), cppID: id,
-                               what: "one undo restores the branch")
 
 S050 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the branch"
-  report.expectEqual(branchAfter, coreTimeBytes(branch), cppID: id,
-                               what: "one redo restores the branch")
 
 S051 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
 Anchor: message "on/off pairs consistent after redo"
-  report.expect(coreRangeNotePairsConsistent(branch, track: 0), cppID: id,
-                          message: "on/off pairs consistent after redo")
 
 S052 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #4
-  report.expectEqual(2, noopDoc.engineTracks.usedTrackCount, cppID: noopID,
-                           what: "timeRangeFile fixture loads two editable tracks")
 
 S053 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "reversed range rejects duplicate"
-  report.expect(!noopDoc.duplicateTime(TimeRange(startTick: 20, endTick: 10),
-                                             scope: TimeScope()),
-                      cppID: noopID, message: "reversed range rejects duplicate")
 
 S054 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "invalid track rejects remove"
-  report.expect(!noopDoc.removeTime(TimeRange(startTick: 20, endTick: 30),
-                                          scope: TimeScope(tracks: [99])),
-                      cppID: noopID, message: "invalid track rejects remove")
 
 S055 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "invalid track rejects insert"
-  report.expect(!noopDoc.insertBlankTime(TimeRange(startTick: 20, endTick: 30),
-                                               scope: TimeScope(tracks: [99])),
-                      cppID: noopID, message: "invalid track rejects insert")
 
 S056 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "invalid track rejects duplicate"
-  report.expect(!noopDoc.duplicateTime(TimeRange(startTick: 20, endTick: 30),
-                                             scope: TimeScope(tracks: [99])),
-                      cppID: noopID, message: "invalid track rejects duplicate")
 
 S057 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "rejected ranges add no history"
-  report.expectEqual(noopPosition,
-                           try coreEditHistoryCountAtTip(noopDoc, report: report,
-                                                         cppID: noopID),
-                           cppID: noopID, what: "rejected ranges add no history")
 
 S058 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "reserved end tick rejects remove"
-  report.expect(!noopDoc.removeTime(TimeRange(startTick: 20,
-                                                    endTick: TimeDefaults.noTick),
-                                          scope: TimeScope(tracks: [0])),
-                      cppID: noopID, message: "reserved end tick rejects remove")
 
 S059 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "reserved end tick rejects insert"
-  report.expect(!noopDoc.insertBlankTime(TimeRange(startTick: 20,
-                                                         endTick: TimeDefaults.noTick),
-                                               scope: TimeScope(tracks: [0])),
-                      cppID: noopID, message: "reserved end tick rejects insert")
 
 S060 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "sentinel rejections leave bytes unchanged"
-  report.expectEqual(sentinelBefore, coreTimeBytes(noopDoc), cppID: noopID,
-                           what: "sentinel rejections leave bytes unchanged")
 
 S061 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "sentinel rejections leave tempo unchanged"
-  report.expectEqual(noopTempos, noopDoc.state.tempo, cppID: noopID,
-                           what: "sentinel rejections leave tempo unchanged")
 
 S062 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "sentinel rejections add no history"
-  report.expectEqual(sentinelPosition,
-                           try coreEditHistoryCountAtTip(noopDoc, report: report,
-                                                         cppID: noopID),
-                           cppID: noopID, what: "sentinel rejections add no history")
 
 S063 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #1
-  report.expectEqual(2, document.engineTracks.usedTrackCount, cppID: splitID,
-                           what: "timeRangeFile fixture loads two editable tracks")
 
 S064 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "pre-insertion note (0,60,61) exists"
-  report.expect(document.notes(in: 0).contains { $0.tick == 60 && $0.pitch == 61 },
-                      cppID: splitID, message: "pre-insertion note (0,60,61) exists")
 
 S065 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "insertion adds one history entry"
-  report.expectEqual(splitPosition + 1,
-                           try coreEditHistoryCountAtTip(document, report: report,
-                                                         cppID: splitID),
-                           cppID: splitID, what: "insertion adds one history entry")
 
 S066 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the split"
-  report.expectEqual(splitAfter, coreTimeBytes(document),
-                           cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
-                           what: "one redo restores the split")
 
 S067 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #2
-  report.expectEqual(2, lane.engineTracks.usedTrackCount, cppID: laneID,
-                           what: "timeRangeFile fixture loads two editable tracks")
 
 S068 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "lane-scoped insertion commits"
-  report.expect(lane.insertBlankTime(TimeRange(startTick: 300, endTick: 320),
-                                           scope: TimeScope(lanes: [
-                                               TimeScope.ScopedLane(track: 0,
-                                                                    lane: .controller(7)),
-                                           ])),
-                      cppID: laneID, message: "lane-scoped insertion commits")
 
 S069 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "scoped lane point shifts right"
-  report.expectEqual("320:10", lane.lanePoints(track: 0, lane: .controller(7))
-            .first(where: { $0.tick == 320 }).map(coreTimePointShape),
-            cppID: laneID, what: "scoped lane point shifts right")
 
 S070 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "unscoped lane on the same track stays"
-  report.expectEqual("300:20", lane.lanePoints(track: 0, lane: .controller(10))
-            .first(where: { $0.tick == 300 }).map(coreTimePointShape),
-            cppID: laneID, what: "unscoped lane on the same track stays")
 
 S071 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "same lane on another track stays"
-  report.expectEqual("300:30", lane.lanePoints(track: 1, lane: .controller(7))
-            .first(where: { $0.tick == 300 }).map(coreTimePointShape),
-            cppID: laneID, what: "same lane on another track stays")
 
 S072 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "selected chunk end tick grows"
-  report.expectEqual(selectedEnd + 20, lane.rawChunks[selectedChunk].endTick,
-                           cppID: laneID, what: "selected chunk end tick grows")
 
 S073 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "untouched chunk end tick stays"
-  report.expectEqual(untouchedEnd, lane.rawChunks[untouchedChunk].endTick,
-                           cppID: laneID, what: "untouched chunk end tick stays")
 
 S074 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the lane insertion"
-  report.expectEqual(laneBefore, coreTimeBytes(lane), cppID: laneID,
-                           what: "one undo restores the lane insertion")
 
 S075 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the lane insertion"
-  report.expectEqual(laneAfter, coreTimeBytes(lane), cppID: laneID,
-                           what: "one redo restores the lane insertion")
 
 S076 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #3
-  report.expectEqual(2, track.engineTracks.usedTrackCount, cppID: trackID,
-                           what: "timeRangeFile fixture loads two editable tracks")
 
 S077 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "track-scoped insertion commits"
-  report.expect(track.insertBlankTime(TimeRange(startTick: 400, endTick: 420),
-                                            scope: TimeScope(tracks: [0])),
-                      cppID: trackID, message: "track-scoped insertion commits")
 
 S078 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "scoped track note shifts right"
-  report.expect(track.notes(in: 0).contains { $0.tick == 420 && $0.pitch == 62 },
-                      cppID: trackID, message: "scoped track note shifts right")
 
 S079 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "unscoped track note stays"
-  report.expect(track.notes(in: 1).contains { $0.tick == 400 && $0.pitch == 63 },
-                      cppID: trackID, message: "unscoped track note stays")
 
 S080 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "scoped chunk end tick grows"
-  report.expectEqual(trackEnd + 20, track.rawChunks[trackChunk].endTick,
-                           cppID: trackID, what: "scoped chunk end tick grows")
 
 S081 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "unscoped chunk end tick stays"
-  report.expectEqual(otherEnd, track.rawChunks[otherChunk].endTick,
-                           cppID: trackID, what: "unscoped chunk end tick stays")
 
 S082 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the track insertion"
-  report.expectEqual(trackBefore, coreTimeBytes(track), cppID: trackID,
-                           what: "one undo restores the track insertion")
 
 S083 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the track insertion"
-  report.expectEqual(trackAfter, coreTimeBytes(track), cppID: trackID,
-                           what: "one redo restores the track insertion")
 
 S084 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #2
-  report.expectEqual(2, unterminated.engineTracks.usedTrackCount, cppID: unterminatedID,
-                           what: "timeRangeFile fixture loads two editable tracks")
 
 S085 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(unterminatedID, "engine track 0 has no MIDI chunk")
 
 S086 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(unterminatedID, "unterminated source note missing")
 
 S087 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "raw note-on without a note-off is unterminated"
-  report.expect(source.isUnterminated, cppID: unterminatedID,
-                      message: "raw note-on without a note-off is unterminated")
 
 S088 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "blank insertion commits"
-  report.expect(unterminated.insertBlankTime(TimeRange(startTick: 240, endTick: 250),
-                                                   scope: TimeScope(tracks: [0])),
-                      cppID: unterminatedID, message: "blank insertion commits")
 
 S089 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(unterminatedID, "split halves missing after insertion")
 
 S090 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "left half is terminated by the insertion"
-  report.expect(!left.isUnterminated, cppID: unterminatedID,
-                      message: "left half is terminated by the insertion")
 
 S091 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(unterminatedID, "split halves missing after insertion")
 
 S092 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "insertion emits source on, generated off, and resumed on"
-  report.expect(hasChannel(unterminatedEvents, tick: 220, type: 0x9, key: 68) &&
-                      hasChannel(unterminatedEvents, tick: 240, type: 0x8, key: 68) &&
-                      hasChannel(unterminatedEvents, tick: 250, type: 0x9, key: 68),
-                      cppID: unterminatedID,
-                      message: "insertion emits source on, generated off, and resumed on")
 
 S093 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the unterminated insertion"
-  report.expectEqual(unterminatedBefore, coreTimeBytes(unterminated),
-                           cppID: unterminatedID,
-                           what: "one undo restores the unterminated insertion")
 
 S094 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the unterminated insertion"
-  report.expectEqual(unterminatedAfter, coreTimeBytes(unterminated),
-                           cppID: unterminatedID,
-                           what: "one redo restores the unterminated insertion")
 
 S095 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #1
-  report.expectEqual(2, clipping.engineTracks.usedTrackCount, cppID: clipID,
-                           what: "timeRangeFile fixture loads two editable tracks")
 
 S096 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(clipID, "pre-duplication notes missing")
 
 S097 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(clipID, "duplicated notes missing at expected ticks")
 
 S098 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "contained copy keeps its duration"
-  report.expectEqual(Tick(10), copiedContained.duration, cppID: clipID,
-                           what: "contained copy keeps its duration")
 
 S099 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(clipID, "duplicated notes missing at expected ticks")
 
 S100 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "left-crossing copy clips to the range"
-  report.expectEqual(Tick(10), copiedLeft.duration, cppID: clipID,
-                           what: "left-crossing copy clips to the range")
 
 S101 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(clipID, "duplicated notes missing at expected ticks")
 
 S102 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "right-crossing copy clips to the range"
-  report.expectEqual(Tick(10), copiedRight.duration, cppID: clipID,
-                           what: "right-crossing copy clips to the range")
 
 S103 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(clipID, "duplicated notes missing at expected ticks")
 
 S104 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "both-crossing copy clips to the range"
-  report.expectEqual(Tick(20), copiedBoth.duration, cppID: clipID,
-                           what: "both-crossing copy clips to the range")
 
 S105 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "copy \(index) receives a fresh identity"
-  report.expect(copy != source, cppID: clipID,
-                              message: "copy \(index) receives a fresh identity")
 
 S106 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "copy \(index) is unique among copies"
-  report.expect(copy != other, cppID: clipID,
-                              message: "copy \(index) is unique among copies")
 
 S107 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the clipping duplication"
-  report.expectEqual(clipAfter, coreTimeBytes(clipping), cppID: clipID,
-                           what: "one redo restores the clipping duplication")
 
 S108 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "unterminated-source duplication commits"
-  report.expect(clipping.duplicateTime(TimeRange(startTick: 700, endTick: 720),
-                                             scope: TimeScope(tracks: [0])),
-                      cppID: clipID, message: "unterminated-source duplication commits")
 
 S109 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "duplicated unterminated note ends before later ons"
-  report.expect(coreTimeNoteEndsBeforeOnsAt(clipping, track: 0, tick: 720),
-                      cppID: clipID,
-                      message: "duplicated unterminated note ends before later ons")
 
 S110 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "insertion over unterminated source commits"
-  report.expect(clipping.insertBlankTime(TimeRange(startTick: 800, endTick: 820),
-                                               scope: TimeScope(tracks: [0])),
-                      cppID: clipID, message: "insertion over unterminated source commits")
 
 S111 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "inserted unterminated note ends before later ons"
-  report.expect(coreTimeNoteEndsBeforeOnsAt(clipping, track: 0, tick: 820),
-                      cppID: clipID,
-                      message: "inserted unterminated note ends before later ons")
 
 S112 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #3
-  report.expectEqual(2, signature.engineTracks.usedTrackCount, cppID: signatureID,
-                           what: "timeRangeFile fixture loads two editable tracks")
 
 S113 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "whole-song signature insertion commits"
-  report.expect(signature.insertBlankTime(TimeRange(startTick: seam,
-                                                          endTick: seam + bar),
-                                                scope: TimeScope(wholeSong: true)),
-                      cppID: signatureID, message: "whole-song signature insertion commits")
 
 S114 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "signature stays at the seam"
-  report.expect(signatures.contains { $0.tick == seam }, cppID: signatureID,
-                      message: "signature stays at the seam")
 
 S115 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "signature copy lands one bar later"
-  report.expect(signatures.contains { $0.tick == seam + bar }, cppID: signatureID,
-                      message: "signature copy lands one bar later")
 
 S116 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the signature insertion"
-  report.expectEqual(signatureBefore, coreTimeBytes(signature), cppID: signatureID,
-                           what: "one undo restores the signature insertion")
 
 S117 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the signature insertion"
-  report.expectEqual(signatureAfter, coreTimeBytes(signature), cppID: signatureID,
-                           what: "one redo restores the signature insertion")
 
 S118 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #4
-  report.expectEqual(2, orphans.engineTracks.usedTrackCount, cppID: orphanID,
-                           what: "timeRangeFile fixture loads two editable tracks")
 
 S119 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "orphan removal commits"
-  report.expect(orphans.removeTime(TimeRange(startTick: 100, endTick: 130),
-                                         scope: TimeScope(tracks: [0])),
-                      cppID: orphanID, message: "orphan removal commits")
 
 S120 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "note-on before the range survives"
-  report.expect(hasChannel(orphanEvents, tick: 90, type: 0x9, key: 61),
-                      cppID: orphanID, message: "note-on before the range survives")
 
 S121 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "orphaned note-off inside the range is removed"
-  report.expect(!orphanEvents.contains { event in
-            guard case let .channel(status, data0, _) = event.payload else { return false }
-            return status == 0x80 && data0 == 66
-        }, cppID: orphanID, message: "orphaned note-off inside the range is removed")
 
 S122 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "orphan note bytes use half-open remove and pinned seam ordering"
-  report.expect(!hasChannel(orphanEvents, tick: 110, type: 0x9, key: 62) &&
-            hasChannel(orphanEvents, tick: 100, type: 0x8, key: 63) &&
-            hasChannel(orphanEvents, tick: 100, type: 0x9, key: 64) &&
-            hasChannel(orphanEvents, tick: 110, type: 0x9, key: 65),
-            cppID: "editcheck/EditCheckTest::timeRangeSignatureAndOrphans",
-            message: "orphan note bytes use half-open remove and pinned seam ordering")
 
 S123 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "every note end at the seam precedes later note-ons"
-  report.expect(coreTimeNoteEndsBeforeOnsAt(orphans, track: 0, tick: 100),
-                      cppID: orphanID,
-                      message: "every note end at the seam precedes later note-ons")
 
 S124 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(orphanID, "paired note missing after removal")
 
 S125 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "paired note stays terminated"
-  report.expect(!paired.isUnterminated, cppID: orphanID,
-                      message: "paired note stays terminated")
 
 S126 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "paired note keeps its duration"
-  report.expectEqual(Tick(10), paired.duration, cppID: orphanID,
-                           what: "paired note keeps its duration")
 
 S127 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the orphan removal"
-  report.expectEqual(orphanBefore, coreTimeBytes(orphans), cppID: orphanID,
-                           what: "one undo restores the orphan removal")
 
 S128 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the orphan removal"
-  report.expectEqual(orphanAfter, coreTimeBytes(orphans), cppID: orphanID,
-                           what: "one redo restores the orphan removal")
 
 S129 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #5
-  report.expectEqual(2, automation.engineTracks.usedTrackCount, cppID: autoID,
-                           what: "timeRangeFile fixture loads two editable tracks")
 
 S130 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "lane-scoped duplication commits"
-  report.expect(automation.duplicateTime(TimeRange(startTick: seam,
-                                                         endTick: seam + 40),
-                                               scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: .controller(7))])),
-                      cppID: autoID, message: "lane-scoped duplication commits")
 
 S131 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "seam copy seeds the effective value"
-  report.expectEqual("1040:33", automation.lanePoints(track: 0, lane: .controller(7))
-            .first(where: { $0.tick == seam + 40 }).map(coreTimePointShape),
-            cppID: autoID, what: "seam copy seeds the effective value")
 
 S132 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "in-range point copies to its shifted tick"
-  report.expectEqual("1050:44", automation.lanePoints(track: 0, lane: .controller(7))
-            .first(where: { $0.tick == seam + 50 }).map(coreTimePointShape),
-            cppID: autoID, what: "in-range point copies to its shifted tick")
 
 S133 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "lane duplication adds one history entry"
-  report.expectEqual(seamPosition + 1,
-                           try coreEditHistoryCountAtTip(automation, report: report,
-                                                         cppID: autoID),
-                           cppID: autoID, what: "lane duplication adds one history entry")
 
 S134 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the seam duplication"
-  report.expectEqual(seamBefore, coreTimeBytes(automation), cppID: autoID,
-                           what: "one undo restores the seam duplication")
 
 S135 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the seam duplication"
-  report.expectEqual(seamAfter, coreTimeBytes(automation), cppID: autoID,
-                           what: "one redo restores the seam duplication")
 
 S136 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #6
-  report.expectEqual(2, defaults.engineTracks.usedTrackCount, cppID: autoID,
-                           what: "timeRangeFile fixture loads two editable tracks")
 
 S137 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "default-seeding duplication commits"
-  report.expect(defaults.duplicateTime(TimeRange(startTick: start,
-                                                           endTick: start + 20),
-                                                 scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: entry.lane)])),
-                          cppID: autoID, message: "default-seeding duplication commits")
 
 S138 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "destination seam seeds the lane default"
-  report.expectEqual("\(start + 20):\(entry.expected)",
-                               defaults.lanePoints(track: 0, lane: entry.lane)
-                .first(where: { $0.tick == start + 20 }).map(coreTimePointShape),
-                cppID: autoID, what: "destination seam seeds the lane default")
 
 S139 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "default duplication adds one history entry"
-  report.expectEqual(casePosition + 1,
-                               try coreEditHistoryCountAtTip(defaults, report: report,
-                                                             cppID: autoID),
-                               cppID: autoID,
-                               what: "default duplication adds one history entry")
 
 S140 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the default duplication"
-  report.expectEqual(caseBefore, coreTimeBytes(defaults), cppID: autoID,
-                               what: "one undo restores the default duplication")
 
 S141 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the default duplication"
-  report.expectEqual(caseAfter, coreTimeBytes(defaults), cppID: autoID,
-                               what: "one redo restores the default duplication")
 
 S142 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "tempo-scoped duplication commits"
-  report.expect(defaults.duplicateTime(TimeRange(startTick: 1500, endTick: 1520),
-                                             scope: TimeScope(tempo: true)),
-                      cppID: autoID, message: "tempo-scoped duplication commits")
 
 S143 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "boundary tempo copies to the destination seam"
-  report.expect(defaults.state.tempo.contains(
-            TempoPoint(tick: 1520, microsecondsPerQuarterNote: 500_000)),
-            cppID: autoID, message: "boundary tempo copies to the destination seam")
 
 S144 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "in-range tempo copies to its shifted tick" #1
-  report.expect(defaults.state.tempo.contains(
-            TempoPoint(tick: 1530, microsecondsPerQuarterNote: 400_000)),
-            cppID: autoID, message: "in-range tempo copies to its shifted tick")
 
 S145 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "tempo map is non-empty after duplication"
-  report.expect(!timeline.tempoMap.isEmpty, cppID: autoID,
-                      message: "tempo map is non-empty after duplication")
 
 S146 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "tempo map starts at 120 bpm"
-  report.expectEqual(120.0, timeline.tempoMap.first?.beatsPerMinute, cppID: autoID,
-                           what: "tempo map starts at 120 bpm")
 
 S147 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "tempo duplication adds one history entry"
-  report.expectEqual(tempoPosition + 1,
-                           try coreEditHistoryCountAtTip(defaults, report: report,
-                                                         cppID: autoID),
-                           cppID: autoID, what: "tempo duplication adds one history entry")
 
 S148 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the tempo duplication"
-  report.expectEqual(tempoBytesBefore, coreTimeBytes(defaults), cppID: autoID,
-                           what: "one undo restores the tempo duplication")
 
 S149 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the tempo points"
-  report.expectEqual(temposBefore, defaults.state.tempo, cppID: autoID,
-                           what: "one undo restores the tempo points")
 
 S150 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the tempo duplication"
-  report.expectEqual(tempoBytesAfter, coreTimeBytes(defaults), cppID: autoID,
-                           what: "one redo restores the tempo duplication")
 
 S151 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the tempo points"
-  report.expectEqual(temposAfter, defaults.state.tempo, cppID: autoID,
-                           what: "one redo restores the tempo points")
 
 S152 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "voice-scoped duplication commits"
-  report.expect(defaults.duplicateTime(TimeRange(startTick: 1600, endTick: 1620),
-                                             scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: .voice)])),
-                      cppID: autoID, message: "voice-scoped duplication commits")
 
 S153 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "voice seam seeds the default program"
-  report.expectEqual("1620:1", defaults.lanePoints(track: 0, lane: .voice)
-            .first(where: { $0.tick == 1620 }).map(coreTimePointShape),
-            cppID: autoID, what: "voice seam seeds the default program")
 
 S154 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "voice point copies to its shifted tick"
-  report.expectEqual("1630:12", defaults.lanePoints(track: 0, lane: .voice)
-            .first(where: { $0.tick == 1630 }).map(coreTimePointShape),
-            cppID: autoID, what: "voice point copies to its shifted tick")
 
 S155 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "voice duplication adds one history entry"
-  report.expectEqual(voicePosition + 1,
-                           try coreEditHistoryCountAtTip(defaults, report: report,
-                                                         cppID: autoID),
-                           cppID: autoID, what: "voice duplication adds one history entry")
 
 S156 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the voice duplication"
-  report.expectEqual(voiceBefore, coreTimeBytes(defaults), cppID: autoID,
-                           what: "one undo restores the voice duplication")
 
 S157 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the voice duplication"
-  report.expectEqual(voiceAfter, coreTimeBytes(defaults), cppID: autoID,
-                           what: "one redo restores the voice duplication")
 
 S158 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "downstream lane duplication commits"
-  report.expect(defaults.duplicateTime(TimeRange(startTick: downstream,
-                                                       endTick: downstream + 20),
-                                             scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: .controller(7))])),
-                      cppID: autoID, message: "downstream lane duplication commits")
 
 S159 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "downstream seam seeds the effective value"
-  report.expectEqual("1720:11", defaults.lanePoints(track: 0, lane: .controller(7))
-            .first(where: { $0.tick == downstream + 20 }).map(coreTimePointShape),
-            cppID: autoID, what: "downstream seam seeds the effective value")
 
 S160 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "downstream point copies to its shifted tick"
-  report.expectEqual("1740:99", defaults.lanePoints(track: 0, lane: .controller(7))
-            .first(where: { $0.tick == downstream + 40 }).map(coreTimePointShape),
-            cppID: autoID, what: "downstream point copies to its shifted tick")
 
 S161 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "downstream duplication adds one history entry"
-  report.expectEqual(downstreamPosition + 1,
-                           try coreEditHistoryCountAtTip(defaults, report: report,
-                                                         cppID: autoID),
-                           cppID: autoID,
-                           what: "downstream duplication adds one history entry")
 
 S162 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one undo restores the downstream duplication"
-  report.expectEqual(downstreamBefore, coreTimeBytes(defaults), cppID: autoID,
-                           what: "one undo restores the downstream duplication")
 
 S163 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the downstream duplication"
-  report.expectEqual(downstreamAfter, coreTimeBytes(defaults), cppID: autoID,
-                           what: "one redo restores the downstream duplication")
 
 S164 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #7
-  report.expectEqual(2, wholeDuplicate.engineTracks.usedTrackCount, cppID: wholeID,
-                           what: "timeRangeFile fixture loads two editable tracks")
 
 S165 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "whole-song duplication commits"
-  report.expect(wholeDuplicate.duplicateTime(TimeRange(startTick: start,
-                                                             endTick: start + 20),
-                                                   scope: TimeScope(wholeSong: true)),
-                      cppID: wholeID, message: "whole-song duplication commits")
 
 S166 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "text meta copies to the duplicated seam"
-          report.expect(wholeDuplicate.rawChunks[0].events.contains { event in
-              event.tick == start + 35 && event.metaType == 0x01 &&
-                  event.blob == Array("global".utf8)
-          }, cppID: wholeID, message: "text meta copies to the duplicated seam")
 
 S167 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "signature copies to the duplicated seam"
-  report.expect(wholeDuplicate.timeSignatures.contains {
-            $0.tick == start + 30 && $0.numerator == 3
-        }, cppID: wholeID, message: "signature copies to the duplicated seam")
 
 S168 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "default tempo copies to the seam"
-  report.expect(wholeDuplicate.state.tempo.contains(
-            TempoPoint(tick: start + 20, microsecondsPerQuarterNote: 500_000)),
-            cppID: wholeID, message: "default tempo copies to the seam")
 
 S169 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "in-range tempo copies to its shifted tick" #2
-  report.expect(wholeDuplicate.state.tempo.contains(
-            TempoPoint(tick: start + 30, microsecondsPerQuarterNote: 333_333)),
-            cppID: wholeID, message: "in-range tempo copies to its shifted tick")
 
 S170 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(wholeID, "shifted note missing after duplication")
 
 S171 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(wholeID, "engine track 0 has no MIDI chunk")
 
 S172 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "chunk end tick covers the duplicated note"
-  report.expect(wholeDuplicate.rawChunks[wholeChunk].endTick >=
-            UInt64(shifted.tick) + UInt64(shifted.duration),
-            cppID: wholeID,
-            message: "chunk end tick covers the duplicated note")
 
 S173 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one redo restores the whole-song duplication"
-  report.expectEqual(wholeDuplicateAfter, coreTimeBytes(wholeDuplicate),
-                           cppID: wholeID,
-                           what: "one redo restores the whole-song duplication")
 
 S174 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "timeRangeFile fixture loads two editable tracks" #5
-  report.expectEqual(2, overflow.engineTracks.usedTrackCount, cppID: overflowID,
-                           what: "timeRangeFile fixture loads two editable tracks")
 
 S175 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: function
-  report.fail(overflowID, "engine track 0 has no MIDI chunk")
 
 S176 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
 Anchor: message "rejected overflow adds no history"
-  report.expectEqual(overflowPosition,
-                           try coreEditHistoryCountAtTip(overflow, report: report,
-                                                         cppID: overflowID),
-                           cppID: overflowID, what: "rejected overflow adds no history")
-
-Shared helper: src/checks/editcheck/tst_songdocument_runner.swift
-Shared SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
-coreEditCorpusSongs enumerates every staged sound/songs/midi/*.mid file and
-rejects an empty corpus; coreEditHistoryCountAtTip counts public undo entries
-at the tip and asserts equal traversal counts with exact restored SongState and
-DocumentIdentity. The range/raw suites invoke these helpers (see their proofs);
-the suites paired here use synthetic fixtures and do not invoke them. Their one
-report predicate is:
-  report.expect(count == replayed && document.state == restoredState &&
-      document.history.currentIdentity == restoredIdentity, cppID: cppID,
-      message: "counting public undo entries restores the exact state and identity")

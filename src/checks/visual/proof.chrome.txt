@@ -8,34 +8,13 @@ Original SHA-256: 4d56d2d67f8f8c009ea37b7f36e0fb997930c3a110a7e1e3d06bf546a514d1
 Swift counterpart: src/checks/editorqml/tst_ShellPolyphony.qml (polyphony rows only; not yet executed)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
 This file: 24 assertion sites: 3 GAP, 4 PARTIAL, 17 RETIRED-REPRESENTATION. A020/A021/A023/A024 now have a mounted Swift/QML responsive-layout predicate and profile captures, pending orchestrator execution. A001 covers a shared screenshot helper and A018 the loaded-shell composite; both remain GAP because this polyphony suite does not cover their other captured surfaces. A019/A022 retire the nullable C++ MidiTimeline::build pointer checks, while A007 remains GAP pending song-name validation correspondence.
 
-Verification
 Command: deno task verify --filter visual --verbose
 Result: pending integrated run.
-The visual-* harnesses compare against frozen baselines under
-src/checks/fixtures/visual; the harness sources are uncompiled in all CMake
-targets, their runVisual*Check entry points have zero callsites, and they are
-unregistered in src/checks/checkcatalog.cpp and in every Swift lane.
 
-Execution ownership
-runVisualChromeCheck QTest::qExec's VisualChromeTest as "visual-chrome". initTestCase isolates QSettings; cleanup restores the vanilla theme. transportBar/songList/shell/polyphony scenarios show the real production widgets and freeze them through compareShown (compareWidget) except shellLoaded, which composites the Quick framebuffer itself and calls checks::visual::compare directly. No Swift entry point executes these original QWidget captures; shell-polyphony now captures the mounted pane separately against the pinned polyphony geometry.
 
-Fixture, sequence and row constraints
 No _data rows: each scenario runs once per theme method. Polyphony scenarios run a narrow->wide resize sequence guarded by QTRY layout predicates with clearFocus between grabs so no caret lands in the image. shellLoaded is a strict sequence: env root, async project open, song open, tab ready, select row through the production panel API, uiTick, Quick frame wait, composite, compare. showSettled re-applies the requested size after the native first-show placement.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | compareShown (helper) | src/checks/visual/chrome.cpp:108
 Disposition: GAP
@@ -153,524 +132,18 @@ Original expression:
 
 A002 | VisualChromeTest::initTestCase | src/checks/visual/chrome.cpp:487
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Isolated QSettings directory; native harness precondition so theme state never leaks.
-Source context since previous assertion:
-
-  }
-
-  // Assign a semantic object name in the test only, for production children
-  // that ship without one. widgetRegions() then picks them up automatically.
-  void nameChild(QWidget *child, const QString &name)
-  {
-      if (child && child->objectName().isEmpty())
-          child->setObjectName(name);
-  }
-
-  // The shared listPositionIndicator scrollbar name is not unique once several
-  // lists live in one capture: rescope each to its owning list so every region
-  // stays semantically distinct.
-  void scopeIndicatorNames(QWidget &root)
-  {
-      const auto scrollBars =
-          root.findChildren<QScrollBar *>(QStringLiteral("listPositionIndicator"));
-      int index = 0;
-      for (QScrollBar *bar : scrollBars) {
-          QString scope;
-          for (QWidget *ancestor = bar->parentWidget(); ancestor;
-               ancestor = ancestor->parentWidget()) {
-              if (!ancestor->objectName().isEmpty() &&
-                  !ancestor->objectName().startsWith(QLatin1String("qt_"))) {
-                  scope = ancestor->objectName();
-                  break;
-              }
-          }
-          if (scope.isEmpty())
-              scope = QStringLiteral("list.%1").arg(index);
-          bar->setObjectName(scope + QStringLiteral(".position-indicator"));
-          ++index;
-      }
-  }
-
-  // Item rects report the full content row even when the viewport clips it;
-  // freeze the actually rendered (viewport-clipped) rect instead.
-  QRect clippedItemRect(QAbstractItemView &view, const QRect &itemRect)
-  {
-      return itemRect.intersected(view.viewport()->rect());
-  }
-
-  // ---- TransportBar ----------------------------------------------------------
-
-  QList<checks::visual::Region> transportRegions(TransportBar &bar)
-  {
-      QList<checks::visual::Region> regions;
-      const struct {
-          const char *name;
-          QAction *action;
-      } buttons[] = {
-          {"transport.go-to-start", bar.goToStartAction()},
-          {"transport.play", bar.playAction()},
-          {"transport.pause", bar.pauseAction()},
-          {"transport.stop", bar.stopAction()},
-          {"transport.loop", bar.loopAction()},
-          {"transport.follow-playhead", bar.followPlayheadAction()},
-          {"transport.resonance", bar.resonanceAction()},
-      };
-      for (const auto &entry : buttons) {
-          if (QWidget *button = bar.widgetForAction(entry.action))
-              regions.append(childRegion(QString::fromLatin1(entry.name), bar, *button));
-      }
-      regions.append(namedChildRegion(QStringLiteral("transport.time"), bar,
-                                      QStringLiteral("transportTimeLabel")));
-      regions.append(namedChildRegion(QStringLiteral("transport.scale-root"), bar,
-                                      QStringLiteral("transportScaleRoot")));
-      regions.append(namedChildRegion(QStringLiteral("transport.scale-type"), bar,
-                                      QStringLiteral("transportScaleType")));
-      regions.append(namedChildRegion(QStringLiteral("transport.scale-highlight"), bar,
-                                      QStringLiteral("transportScaleHighlight")));
-      regions.append(namedChildRegion(QStringLiteral("transport.scale-fold"), bar,
-                                      QStringLiteral("transportScaleFold")));
-      regions.append(namedChildRegion(QStringLiteral("transport.master-volume-caption"), bar,
-                                      QStringLiteral("transportMasterVolumeCaption")));
-      regions.append(namedChildRegion(QStringLiteral("transport.master-volume"), bar,
-                                      QStringLiteral("transportMasterVolume")));
-      regions.append(namedChildRegion(QStringLiteral("transport.output-volume-caption"), bar,
-                                      QStringLiteral("transportOutputVolumeCaption")));
-      regions.append(namedChildRegion(QStringLiteral("transport.output-volume"), bar,
-                                      QStringLiteral("transportOutputVolume")));
-      return regions;
-  }
-
-  // ---- SongListPanel ---------------------------------------------------------
-
-  QVector<SongInfo> visualSongs()
-  {
-      const auto song = [](int id, const char *label, bool registered = true,
-                           const QStringList &gaps = {}) {
-          SongInfo info;
-          info.id = id;
-          info.label = QString::fromLatin1(label);
-          info.constant = info.label.toUpper();
-          info.player = QStringLiteral("MUSIC_PLAYER_BGM");
-          info.hasMid = true;
-          info.hasCfg = true;
-          info.registered = registered;
-          info.registrationGaps = gaps;
-          return info;
-      };
-      return {
-          song(0, "mus_route101"),
-          song(1, "mus_petalburg"),
-          song(2, "mus_gym"),
-          song(3, "mus_surf"),
-          song(4, "mus_victory_wild"),
-          song(5, "se_fanfare_1trk"),
-          song(6, "se_pc_login"),
-          song(7, "se_use_item"),
-          song(8, "mus_stray_unregistered", false),
-          song(9, "mus_partial_entry", true, {QStringLiteral("song_table.inc")}),
-      };
-  }
-
-  QList<checks::visual::Region> songListRegions(SongListPanel &panel)
-  {
-      QList<checks::visual::Region> regions;
-      // The list and count label ship unnamed; give them semantic names in the
-      // test so both widgetRegions() and the explicit lookups below find them.
-      nameChild(panel.findChild<QListWidget *>(), QStringLiteral("songList"));
-      nameChild(panel.findChild<QLabel *>(), QStringLiteral("songListCount"));
-      scopeIndicatorNames(panel);
-      regions.append(
-          namedChildRegion(QStringLiteral("songs.search"), panel, QStringLiteral("songListSearch")));
-      regions.append(namedChildRegion(QStringLiteral("songs.category"), panel,
-                                      QStringLiteral("songListCategory")));
-      regions.append(
-          namedChildRegion(QStringLiteral("songs.sort"), panel, QStringLiteral("songListSort")));
-      regions.append(
-          namedChildRegion(QStringLiteral("songs.list"), panel, QStringLiteral("songList")));
-      regions.append(
-          namedChildRegion(QStringLiteral("songs.count"), panel, QStringLiteral("songListCount")));
-      auto *list = panel.findChild<QListWidget *>(QStringLiteral("songList"));
-      if (list) {
-          const auto itemRegion = [&](const QString &name, int row) {
-              QListWidgetItem *item = list->item(row);
-              if (!item)
-                  return;
-              const QRect rect = clippedItemRect(*list, list->visualItemRect(item));
-              if (rect.isValid() && !rect.isEmpty())
-                  regions.append(
-                      {name, rect.translated(list->viewport()->mapTo(&panel, QPoint(0, 0)))});
-          };
-          itemRegion(QStringLiteral("songs.row.first"), 0);
-          itemRegion(QStringLiteral("songs.row.second"), 1);
-          itemRegion(QStringLiteral("songs.row.unregistered"), 8);
-          itemRegion(QStringLiteral("songs.row.partial"), 9);
-      }
-      return regions;
-  }
-
-  // ---- PolyphonyPanel --------------------------------------------------------
-
-  SmfEvent polyEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
-  {
-      SmfEvent result;
-      result.tick = tick;
-      result.status = status;
-      result.data0 = data0;
-      result.data1 = data1;
-      return result;
-  }
-
-  SmfEvent polyMeta(uint64_t tick, uint8_t type, const QByteArray &blob)
-  {
-      SmfEvent result;
-      result.tick = tick;
-      result.status = 0xFF;
-      result.metaType = type;
-      result.blob = blob;
-      return result;
-  }
-
-  std::unique_ptr<MidiTimeline> polyTimeline()
-  {
-      SmfFile smf;
-      smf.format = 1;
-      smf.division = kPolyDivision;
-      smf.tracks.resize(2);
-      smf.tracks[0].events = {polyMeta(0, 0x51, QByteArray("\x07\xA1\x20", 3)),
-                              polyMeta(0, 0x58, QByteArray("\x04\x02\x18\x08", 4))};
-      smf.tracks[0].endTick = 384;
-      smf.tracks[1].events = {polyEvent(0, 0xC0, 0, 0), polyEvent(0, 0x90, 60, 100),
-                              polyEvent(24, 0x80, 60, 0)};
-      smf.tracks[1].endTick = 384;
-      return MidiTimeline::build(smf, kPolySampleRate);
-  }
-
-  AudioEngine::PolySnapshot polySnapshot()
-  {
-      AudioEngine::PolySnapshot snapshot;
-      snapshot.maxPcmChannels = 5;
-      uint32_t total = 0;
-      for (const M4APolyEvent &event :
-           {M4APolyEvent{M4A_POLY_STOLEN, 2, 60, 4, 5, 96},
-            M4APolyEvent{M4A_POLY_TAIL_CUT, 2, 72, 0, 5, 216},
-            M4APolyEvent{M4A_POLY_DROPPED, 1, 67, 1, 0, M4A_POLY_TICK_NONE}})
-          snapshot.events[total++ % M4A_POLY_EVENT_CAPACITY] = event;
-      snapshot.eventTotal = total;
-      snapshot.steal[2] = 1;
-      snapshot.tailCut[2] = 1;
-      snapshot.drop[1] = 1;
-      snapshot.invert = true;
-      snapshot.pcm[0] = {true, false, 2, 60};
-      snapshot.pcm[MAX_PCM_CHANNELS] = {true, false, 4, 72};
-      return snapshot;
-  }
-
-  // PolyphonyPanel ships no object names; name the semantic children in the
-  // test so widgetRegions() covers them, then add row-level subregions.
-  QList<checks::visual::Region> polyphonyRegions(PolyphonyPanel &panel)
-  {
-      QList<checks::visual::Region> regions;
-      nameChild(panel.findChild<QCheckBox *>(), QStringLiteral("poly.invert"));
-      nameChild(panel.findChild<QTableWidget *>(), QStringLiteral("poly.overflow-table"));
-      nameChild(panel.findChild<QListWidget *>(), QStringLiteral("poly.event-log"));
-      nameChild(panel.findChild<QPushButton *>(), QStringLiteral("poly.reset"));
-      nameChild(panel.findChild<QScrollArea *>(), QStringLiteral("poly.scroll"));
-      scopeIndicatorNames(panel);
-      for (QLabel *label : panel.findChildren<QLabel *>()) {
-          const QString text = label->text();
-          if (text == QStringLiteral("Channel usage"))
-              nameChild(label, QStringLiteral("poly.usage-heading"));
-          else if (text == QStringLiteral("Overflow by track"))
-              nameChild(label, QStringLiteral("poly.overflow-heading"));
-          else if (text == QStringLiteral("Recent events"))
-              nameChild(label, QStringLiteral("poly.log-heading"));
-          else if (text == QStringLiteral("No overflow recorded"))
-              nameChild(label, QStringLiteral("poly.overflow-empty"));
-      }
-      // The custom-painted channel grid is the only non-QLabel direct child of
-      // the usage box; locate it by its private class name once, then give it a
-      // stable semantic name.
-      for (QWidget *child : panel.findChildren<QWidget *>()) {
-          if (QLatin1String(child->metaObject()->className()) == QLatin1String("PolyChannelGrid")) {
-              nameChild(child, QStringLiteral("poly.channel-grid"));
-              if (QWidget *usageBox = child->parentWidget())
-                  regions.append(childRegion(QStringLiteral("poly.usage-section"), panel, *usageBox));
-              break;
-          }
-      }
-      if (auto *table = panel.findChild<QTableWidget *>()) {
-          if (QWidget *overflowBox = table->parentWidget())
-              regions.append(
-                  childRegion(QStringLiteral("poly.overflow-section"), panel, *overflowBox));
-          for (int row = 0; row < table->rowCount(); ++row) {
-              QTableWidgetItem *item = table->item(row, 0);
-              if (!item)
-                  continue;
-              const QRect rect = clippedItemRect(*table, table->visualItemRect(item));
-              if (rect.isValid() && !rect.isEmpty()) {
-                  regions.append({QStringLiteral("poly.overflow-row.%1").arg(row),
-                                  rect.translated(table->viewport()->mapTo(&panel, QPoint(0, 0)))});
-              }
-          }
-      }
-      if (auto *log = panel.findChild<QListWidget *>()) {
-          for (int row = 0; row < log->count() && row < 3; ++row) {
-              QListWidgetItem *item = log->item(row);
-              const QRect rect = clippedItemRect(*log, log->visualItemRect(item));
-              if (rect.isValid() && !rect.isEmpty()) {
-                  regions.append({QStringLiteral("poly.log-row.%1").arg(row),
-                                  rect.translated(log->viewport()->mapTo(&panel, QPoint(0, 0)))});
-              }
-          }
-      }
-      return regions;
-  }
-
-  // ---- Shell -----------------------------------------------------------------
-
-  // The status polyphony meter is an unnamed permanent status-bar widget;
-  // identify it through its "PCM" caption label.
-  QWidget *polyMeter(QMainWindow &window)
-  {
-      for (QLabel *label : window.statusBar()->findChildren<QLabel *>()) {
-          if (label->text() == QStringLiteral("PCM"))
-              return label->parentWidget();
-      }
-      return nullptr;
-  }
-
-  void nameShellChildren(QMainWindow &window)
-  {
-      if (QMenuBar *bar = window.menuBar())
-          nameChild(bar, QStringLiteral("shell.menu-bar"));
-      if (QStatusBar *bar = window.statusBar())
-          nameChild(bar, QStringLiteral("shell.status-bar"));
-      if (QTabWidget *tabs = window.findChild<QTabWidget *>()) {
-          nameChild(tabs, QStringLiteral("shell.tabs"));
-          nameChild(tabs->tabBar(), QStringLiteral("shell.tab-bar"));
-      }
-      if (QToolBar *transport = window.findChild<QToolBar *>(QStringLiteral("transportToolbar")))
-          nameChild(transport, QStringLiteral("shell.transport"));
-      for (QDockWidget *dock : window.findChildren<QDockWidget *>()) {
-          const QString dockName = dock->objectName();
-          if (QWidget *title = dock->titleBarWidget())
-              nameChild(title, dockName + QStringLiteral(".title"));
-      }
-      if (QWidget *meter = polyMeter(window))
-          nameChild(meter, QStringLiteral("shell.poly-meter"));
-      scopeIndicatorNames(window);
-  }
-
-  QList<checks::visual::Region> shellRegions(QMainWindow &window)
-  {
-      QList<checks::visual::Region> regions;
-      if (QTabWidget *tabs = window.findChild<QTabWidget *>()) {
-          QTabBar *bar = tabs->tabBar();
-          for (int index = 0; index < bar->count(); ++index) {
-              const QRect rect = bar->tabRect(index);
-              if (rect.isValid() && !rect.isEmpty()) {
-                  regions.append({QStringLiteral("shell.tab.%1").arg(index),
-                                  rect.translated(bar->mapTo(&window, QPoint(0, 0)))});
-              }
-          }
-      }
-      if (QWidget *meter = polyMeter(window)) {
-          int valueIndex = 0;
-          for (FastLabel *label : meter->findChildren<FastLabel *>()) {
-              if (label->isVisible()) {
-                  regions.append(childRegion(
-                      QStringLiteral("shell.poly-meter.value.%1").arg(valueIndex++), window, *label));
-              }
-          }
-          for (QLabel *label : meter->findChildren<QLabel *>()) {
-              const QString text = label->text();
-              QString name;
-              if (text == QStringLiteral("PCM"))
-                  name = QStringLiteral("shell.poly-meter.pcm-caption");
-              else if (text == QStringLiteral("CGB"))
-                  name = QStringLiteral("shell.poly-meter.cgb-caption");
-              else if (text == QStringLiteral("notes lost"))
-                  name = QStringLiteral("shell.poly-meter.lost-caption");
-              if (!name.isEmpty() && label->isVisible())
-                  regions.append(childRegion(name, window, *label));
-          }
-      }
-      return regions;
-  }
-
-  } // namespace
-
-  class VisualChromeTest final : public QObject
-  {
-      Q_OBJECT
-      Q_DISABLE_COPY_MOVE(VisualChromeTest)
-
-    public:
-      VisualChromeTest() = default;
-
-    private slots:
-      void initTestCase();
-      void cleanup();
-
-      void comparatorSelfTest();
-      void transportBarVanilla();
-      void transportBarDark();
-      void songListVanilla();
-      void songListDark();
-      void shellVanilla();
-      void shellLoaded();
-      void polyphonyPanelVanilla();
-      void polyphonyPanelDark();
-
-    private:
-      QApplication *app() const;
-      QTemporaryDir m_settingsDirectory;
-  };
-
-  QApplication *VisualChromeTest::app() const
-  {
-      return qobject_cast<QApplication *>(QCoreApplication::instance());
-  }
-
-  void VisualChromeTest::initTestCase()
-  {
-Original expression:
-  QVERIFY2(m_settingsDirectory.isValid(), "could not create isolated QSettings directory");
 
 A003 | VisualChromeTest::comparatorSelfTest | src/checks/visual/chrome.cpp:504
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Comparator self-test on synthetic images; native harness precondition.
-Source context since previous assertion:
-
-      QSettings::setDefaultFormat(QSettings::IniFormat);
-      QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, m_settingsDirectory.path());
-      QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, m_settingsDirectory.path());
-  }
-
-  void VisualChromeTest::cleanup()
-  {
-      // Every scenario returns the app to the committed vanilla baseline so
-      // theme state never leaks between tests.
-      if (app())
-          themes::apply(*app(), themes::vanilla());
-  }
-
-  void VisualChromeTest::comparatorSelfTest()
-  {
-      QString error;
-Original expression:
-  QVERIFY2(checks::visual::selfTest(&error), qPrintable(error));
 
 A004 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:580
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Staged decomp project root env input; the loaded-shell baseline cannot be captured without a real project, so the native path refuses instead of faking one.
-Source context since previous assertion:
-
-  }
-
-  void VisualChromeTest::transportBarVanilla()
-  {
-      themes::apply(*app(), themes::vanilla());
-      TransportBar bar;
-      bar.setSessionAvailable(true);
-      bar.setPlaybackState(TransportBar::PlaybackState::Stopped);
-      bar.setFollowPlayhead(true);
-      bar.setTimeText(QStringLiteral("1:23.4 / 4:56.7"));
-      bar.setMasterVolume(96, true);
-      bar.setOutputVolume(80);
-      bar.setScaleState(0, porydaw_scale::ScaleId::major, true, false);
-      bar.resize(1100, qMax(24, bar.sizeHint().height()));
-      showSettled(bar);
-      compareShown(QStringLiteral("transportbar/vanilla"), bar, transportRegions(bar));
-  }
-
-  void VisualChromeTest::transportBarDark()
-  {
-      themes::apply(*app(), themes::darkNeutralHigh());
-      TransportBar bar;
-      bar.setSessionAvailable(true);
-      bar.setPlaybackState(TransportBar::PlaybackState::Playing);
-      bar.setFollowPlayhead(true);
-      bar.setTimeText(QStringLiteral("1:23.4 / 4:56.7"));
-      bar.setMasterVolume(96, true);
-      bar.setOutputVolume(80);
-      bar.setScaleState(0, porydaw_scale::ScaleId::major, true, false);
-      bar.resize(1100, qMax(24, bar.sizeHint().height()));
-      showSettled(bar);
-      compareShown(QStringLiteral("transportbar/darkneutralhigh"), bar, transportRegions(bar));
-  }
-
-  void VisualChromeTest::songListVanilla()
-  {
-      themes::apply(*app(), themes::vanilla());
-      SongListPanel panel;
-      panel.setSongs(visualSongs());
-      panel.setCurrentSong(1);
-      panel.resize(280, 480);
-      showSettled(panel);
-      compareShown(QStringLiteral("songlist/vanilla"), panel, songListRegions(panel));
-  }
-
-  void VisualChromeTest::songListDark()
-  {
-      themes::apply(*app(), themes::darkNeutralHigh());
-      SongListPanel panel;
-      panel.setSongs(visualSongs());
-      panel.setCurrentSong(1);
-      panel.resize(280, 480);
-      showSettled(panel);
-      compareShown(QStringLiteral("songlist/darkneutralhigh"), panel, songListRegions(panel));
-  }
-
-  void VisualChromeTest::shellVanilla()
-  {
-      themes::apply(*app(), themes::vanilla());
-      // The real shell: MainWindow owns WorkspaceUi, the docks, the tab strip,
-      // and the status-bar polyphony meter. The null audio backend keeps this
-      // deterministic; with no song loaded the meter stays hidden, which is
-      // itself part of the frozen baseline.
-      auto window = std::make_unique<MainWindow>();
-      window->resize(1104, 684);
-      nameShellChildren(*window);
-      showSettled(*window);
-      compareShown(QStringLiteral("shell/empty-vanilla"), *window, shellRegions(*window));
-      window->close();
-      QApplication::processEvents();
-  }
-
-  void VisualChromeTest::shellLoaded()
-  {
-      const QString projectRoot = qEnvironmentVariable("PORYDAW_VISUAL_PROJECT_ROOT");
-Original expression:
-  QVERIFY2(!projectRoot.isEmpty(),
-               "PORYDAW_VISUAL_PROJECT_ROOT must point at a staged decomp "
-               "project fixture root (the check catalog stages "
-               "decompProjectFiles + decompMidiFiles into {scratch} and exports "
-               "this variable); the loaded-shell baseline cannot be captured "
-               "without a real project");
 
 A005 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:589
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Real MainWindow must expose its WorkspaceUi; native widget-tree observation.
-Source context since previous assertion:
-
-      themes::apply(*app(), themes::vanilla());
-      auto window = std::make_unique<MainWindow>();
-      auto *workspace = window->findChild<WorkspaceUi *>();
-Original expression:
-  QVERIFY(workspace);
 
 A006 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:591
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Async project open must reach Ready within 30 s; native async readiness.
-Source context since previous assertion:
-
-      workspace->requestProjectOpenAt(projectRoot);
-Original expression:
-  QVERIFY(checks::async_wait::waitUntil(
-                  [] { return true; },
-                  [workspace] { return workspace->projectState().state == ProjectOpenState::Ready; },
-                  30000, 1) == checks::async_wait::Result::Ready);
 
 A007 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:596
 Disposition: GAP
@@ -683,118 +156,33 @@ Original expression:
 
 A008 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:599
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Workspace must expose the opened SongTab; native workspace state.
-Source context since previous assertion:
-
-      workspace->requestSongOpen(*name);
-      SongTab *tab = workspace->songTabFor(*name);
-Original expression:
-  QVERIFY(tab);
 
 A009 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:600
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Tab must reach ready within 30 s; native async readiness.
-Source context since previous assertion:
-
-Original expression:
-  QVERIFY(checks::async_wait::waitUntil([] { return true; }, [tab] { return tab->isReady(); },
-                                            30000, 1) == checks::async_wait::Result::Ready);
 
 A010 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:609
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Real Songs dock panel must exist; native widget-tree observation.
-Source context since previous assertion:
-
-      window->resize(1104, 684);
-      nameShellChildren(*window);
-      showSettled(*window);
-      // The loaded song's list row is the real selection state: the async
-      // project/tab open leaves the browser unselected, so pin it through the
-      // production panel API once the tab is ready and the layout has settled.
-      auto *songList = window->findChild<SongListPanel *>();
-Original expression:
-  QVERIFY(songList);
 
 A011 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:617
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Loaded song must be present in the project snapshot; observed through the retained native open path.
-Source context since previous assertion:
-
-      const SongInfo *loaded = nullptr;
-      for (const SongInfo &song : workspace->projectState().snapshot.songs()) {
-          if (song.label == name->value()) {
-              loaded = &song;
-              break;
-          }
-      }
-Original expression:
-  QVERIFY2(loaded, "loaded song is absent from the project snapshot");
 
 A012 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:622
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Private uiTick slot invoked so the polyphony meter reflects the loaded song; native shell state.
-Source context since previous assertion:
-
-      songList->setCurrentSong(loaded->id);
-      QApplication::processEvents();
-      // uiTick is a private slot but still a slot: invoke it through the meta
-      // object so the polyphony meter reflects the loaded song.
-Original expression:
-  QVERIFY(QMetaObject::invokeMethod(window.get(), "uiTick"));
 
 A013 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:631
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Shell grab must be non-null; native framebuffer observation.
-Source context since previous assertion:
-
-      QApplication::processEvents();
-
-      // QWidget::grab() omits the embedded native Quick window — composite the
-      // actual QQuickWindow framebuffer at its mapped container bounds so the
-      // baseline freezes the real mixed surface, not a blank center.
-      QList<checks::visual::Region> regions = checks::visual::widgetRegions(*window);
-      regions.append(shellRegions(*window));
-      QImage composite = window->grab().toImage();
-Original expression:
-  QVERIFY2(!composite.isNull(), "shell grab returned a null image");
 
 A014 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:633
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Embedded Quick host must exist; native widget-tree observation.
-Source context since previous assertion:
-
-      auto *host = tab->findChild<SongTabQuickHost *>();
-Original expression:
-  QVERIFY2(host && host->container(), "loaded tab has no embedded Quick host");
 
 A015 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:637
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Loaded tab must expose its Quick window; native window observation.
-Source context since previous assertion:
-
-      QWidget *container = host->container();
-      songview::TimelineQuickView *quick = tab->view().quickView();
-      QQuickWindow *quickWindow = quick ? quick->quickWindow() : nullptr;
-Original expression:
-  QVERIFY2(quickWindow, "loaded tab exposes no Quick window");
 
 A016 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:638
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Embedded Quick window must produce a frame; native async rendering state.
-Source context since previous assertion:
-
-Original expression:
-  QVERIFY2(checks::support::waitForQuickFrame(*quickWindow),
-               "embedded Quick window produced no frame");
 
 A017 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:641
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Quick framebuffer grab must be non-null; native pixel observation.
-Source context since previous assertion:
-
-      const QImage quickImage = quickWindow->grabWindow();
-Original expression:
-  QVERIFY2(!quickImage.isNull(), "Quick window grab returned a null image");
 
 A018 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:652
 Disposition: GAP
@@ -818,19 +206,6 @@ Original expression:
 
 A019 | VisualChromeTest::polyphonyPanelVanilla | src/checks/visual/chrome.cpp:663
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3 and section 4): nullable C++ MidiTimeline::build pointer check; Swift PlaybackTimeline.build(state:sampleRate:) at src/swift/core/PlaybackTimeline.swift returns a non-optional struct with no failure branch (spec 2.1/4/5.3 precedent); chrome.cpp uncompiled in all targets and unregistered in checkcatalog.
-Source context since previous assertion:
-
-      window->close();
-      QApplication::processEvents();
-  }
-
-  void VisualChromeTest::polyphonyPanelVanilla()
-  {
-      themes::apply(*app(), themes::vanilla());
-      const auto timeline = polyTimeline();
-Original expression:
-  QVERIFY(timeline);
 
 A020 | VisualChromeTest::polyphonyPanelVanilla | src/checks/visual/chrome.cpp:676
 Disposition: PARTIAL
@@ -866,20 +241,6 @@ Original expression:
 
 A022 | VisualChromeTest::polyphonyPanelDark | src/checks/visual/chrome.cpp:691
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3 and section 4): nullable C++ MidiTimeline::build pointer check; Swift PlaybackTimeline.build(state:sampleRate:) at src/swift/core/PlaybackTimeline.swift returns a non-optional struct with no failure branch (spec 2.1/4/5.3 precedent); chrome.cpp uncompiled in all targets and unregistered in checkcatalog.
-Source context since previous assertion:
-
-      panel.clearFocus();
-      QApplication::processEvents();
-      compareShown(QStringLiteral("polyphony/wide-vanilla"), panel, polyphonyRegions(panel));
-  }
-
-  void VisualChromeTest::polyphonyPanelDark()
-  {
-      themes::apply(*app(), themes::darkNeutralHigh());
-      const auto timeline = polyTimeline();
-Original expression:
-  QVERIFY(timeline);
 
 A023 | VisualChromeTest::polyphonyPanelDark | src/checks/visual/chrome.cpp:704
 Disposition: PARTIAL

@@ -5,36 +5,10 @@ Original: src/checks/samplecheck/dsp.cpp
 Original SHA-256: 54d949e10083ce459182fa650cae3eb9d601769ab5fa6a052286cfe0924b6b7d
 Swift counterpart: none identified
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards, refusal oracles,
-and loop bodies. Source context preserves setup, rows, loops, and guards between
-assertions verbatim. No Swift counterpart file was identified for this suite, so no
-S predicates exist and no Swift execution is claimed.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted window.
-GAP identifies an original predicate without a replacement assertion.
-Methods cover sinc-resample passband/alias/DC/impulse-symmetry/frequency/identity behavior, AGB8 quantization vectors and dither determinism, marker mapping, normalization profiles, render determinism, six wav2agb parity profiles with voicegroup resolution, loop geometry, RIFF padding, and retune vectors.
 Inventory: 67 sites across 16 test methods (dspDeterminism, markerMapping, normalization, parityCases, parityLoopGeometry, parityRiffPadding, quantizationDither, quantizationU8Roundtrip, quantizationVectors, resampleAliasRejection, resampleDcGain, resampleFrequencyAccuracy, resampleIdentity, resampleImpulseSymmetry, resamplePassband, retuneVectors). Tally: 61 GAP, 6 NATIVE, 0 MATCHED, 0 PARTIAL.
 
-Verification
 Command: deno task verify --filter samplecheck --verbose
 Result: pending integrated run.
-
-Execution and ownership
-No Swift entry points execute these checks. Retained native execution owns this suite:
-the samplecheck harness via the Verification command above. Shared fixture construction
-lives in src/checks/samplecheck/fixtures.h and src/checks/samplecheck/fixtures.cpp; those
-files carry no assertion sites (see Shared helpers).
-
-Fixture, sequence and row constraints
-resamplePassband_data expands 8 frequencies over one site; resampleAliasRejection_data 3 frequencies; quantizationVectors_data 11 input/expected pairs over one site; normalization_data 4 profiles with early-return branches plus the QFAIL default; parityCases_data 6 profiles over the full register/inspect/resolve sequence; retuneVectors_data 7 rate/key/cents/agbp rows. resampleDcGain, resampleImpulseSymmetry (500 symmetric pairs), quantizationU8Roundtrip (256 values), and parity field-by-field compares expand single sites over loops.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | SampleProcessingTest::resamplePassband | src/checks/samplecheck/dsp.cpp:120
 Disposition: GAP
@@ -820,59 +794,21 @@ Original expression:
 
 A046 | SampleProcessingTest::parityCases | src/checks/samplecheck/dsp.cpp:425
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      const WaveData *wave = voiceGroup->voices[0].wav;
-
-Original expression:
-  QVERIFY2(wave && wave->data, "parity voice resolves sample bytes")
 
 A047 | SampleProcessingTest::parityCases | src/checks/samplecheck/dsp.cpp:426
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(wave->freq, render.freq)
 
 A048 | SampleProcessingTest::parityCases | src/checks/samplecheck/dsp.cpp:427
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(wave->loopStart, render.loopStart)
 
 A049 | SampleProcessingTest::parityCases | src/checks/samplecheck/dsp.cpp:428
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(wave->size, render.size)
 
 A050 | SampleProcessingTest::parityCases | src/checks/samplecheck/dsp.cpp:429
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(wave->status, render.looped ? 0x4000 : 0)
 
 A051 | SampleProcessingTest::parityCases | src/checks/samplecheck/dsp.cpp:430
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(QByteArrayView(reinterpret_cast<const char *>(wave->data), render.size),
-               QByteArrayView(render.s8))
 
 A052 | SampleProcessingTest::parityLoopGeometry | src/checks/samplecheck/dsp.cpp:437
 Disposition: GAP

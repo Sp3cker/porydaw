@@ -11,33 +11,9 @@ QML SHA-256: ea04ce4d10a35e1713e50afa147e235c8127b1307e36173d9c0c2d31887d841b
 Probe counterpart: src/checks/editorqml/GatedVisualsProbe.swift
 Probe SHA-256: d7c3799999525ed6bfcdaeb71251bb00d01b2519f5d5a5904bcfa42e1818af4e
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards and mode gates.
-Source context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED means a corresponding Swift predicate was identified and would execute;
-PARTIAL means a related Swift predicate exists but the stated condition is unproved;
-GAP means no equivalent Swift assertion is established;
-NATIVE means the site observes native window/rendering/harness state that a
-presenter-level Swift check cannot establish. Unsure between PARTIAL and GAP
-is recorded as GAP. Bookkeeping must not overclaim.
-Failed-open scene preservation (swiftqtml) and selection-reticle raster translucency (swiftrollgated). The shell-open-failure entry ports the filesystem-failure injection, openFailed delivery, critical error dialog, empty-strip guarantees, window survival and content-restoring reopen onto the production Swift shell; the shell-reticle-visuals entry ports the selection-fill translucency, contrast preservation and dashed-edge probes. Tallies: 58 MATCHED, 3 NATIVE, 3 PARTIAL, 0 GAP. Mode-gating preconditions and signal-spy mechanics stay NATIVE; platform exposure stays PARTIAL with the unproved condition named.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
-The legacy swiftrollgated harnesses are not registered in this checkout; their C++ sources are reference inventories only, never current execution evidence.
-
-Execution and ownership
-runEditorGridCameraChecks (src/checks/rollcheck/EditorGridCameraChecks.swift) also executes checkOrderedSelection, checkViewport, checkProjection, checkIsolation, checkPresenterMetrics, checkCommandRouting, checkEdgeResize, checkDrawLatchAndCancel, and checkTrackOwnerRemap; see indexed report.expect sites below.
-
-Fixture, sequence and row constraints
-Failed-open removes the song file mid-test through the GatedVisualsProbe file move (restored in cleanup); the production MessageDialog critical path replaces QMessageBox polling. The reticle leg requires a plot reticle larger than 80x80 inside swiftRollInput, two distinct flat interior pixels, one covered note face and three untouched outside pixels; the outside-pixel check expands one site over three probes and the fill check over two interior probes.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory
 
 A001 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:304
 Disposition: GAP
@@ -56,16 +32,7 @@ Original expression:
 
 A002 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:312
 Disposition: MATCHED
-Mapping: S047 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, session serves the open and every later observation on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-
-    RewriteWindow window;
-    window.show();
-    window.openStartup(m_projectRoot, m_songLabel);
-
-    QObject *const session = window.sessionObject();
-Original expression:
-    QVERIFY(session != nullptr);
+Mapping: S047
 
 A003 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:313
 Disposition: PARTIAL
@@ -95,248 +62,78 @@ Original expression:
 
 A005 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:321
 Disposition: MATCHED
-Mapping: S047 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, songTabs serves the tabCount observation on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-                             15'000);
-    QTRY_VERIFY_WITH_TIMEOUT(window.gridView() != nullptr && window.gridView()->isExposed() &&
-                                 window.gridView()->rootObject() != nullptr,
-                             5'000);
-
-    QObject *const controller = session->property("songTabs").value<QObject *>();
-Original expression:
-    QVERIFY(controller != nullptr);
+Mapping: S047
 
 A006 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:324
 Disposition: MATCHED
-Mapping: S047 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, tab page mounts for the selected tab on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-                             5'000);
-
-    QObject *const controller = session->property("songTabs").value<QObject *>();
-    QVERIFY(controller != nullptr);
-    QQuickView *const view = window.gridView();
-    QQuickItem *const root = qobject_cast<QQuickItem *>(view->rootObject());
-Original expression:
-    QVERIFY(root != nullptr);
+Mapping: S047
 
 A007 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:326
 Disposition: MATCHED
-Mapping: S047 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, gridModel publishes renderedNoteCount and noteSummary on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QObject *const controller = session->property("songTabs").value<QObject *>();
-    QVERIFY(controller != nullptr);
-    QQuickView *const view = window.gridView();
-    QQuickItem *const root = qobject_cast<QQuickItem *>(view->rootObject());
-    QVERIFY(root != nullptr);
-    QObject *const grid = root->property("gridModel").value<QObject *>();
-Original expression:
-    QVERIFY(grid != nullptr);
+Mapping: S047
 
 A008 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:328
 Disposition: MATCHED
-Mapping: S047 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, baseline note summary recorded non-empty on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QQuickView *const view = window.gridView();
-    QQuickItem *const root = qobject_cast<QQuickItem *>(view->rootObject());
-    QVERIFY(root != nullptr);
-    QObject *const grid = root->property("gridModel").value<QObject *>();
-    QVERIFY(grid != nullptr);
-    const QString baselineSummary = grid->property("noteSummary").toString();
-Original expression:
-    QVERIFY(!baselineSummary.isEmpty());
+Mapping: S047
 
 A009 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:329
 Disposition: MATCHED
-Mapping: S050 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, window chrome survives; no QWidget container exists in the Swift app, the ApplicationWindow plus scene loader is the counterpart on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QQuickItem *const root = qobject_cast<QQuickItem *>(view->rootObject());
-    QVERIFY(root != nullptr);
-    QObject *const grid = root->property("gridModel").value<QObject *>();
-    QVERIFY(grid != nullptr);
-    const QString baselineSummary = grid->property("noteSummary").toString();
-    QVERIFY(!baselineSummary.isEmpty());
-Original expression:
-    QVERIFY(window.centralWidget() != nullptr);
+Mapping: S050
 
 A010 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:331
 Disposition: MATCHED
-Mapping: S047 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, selected tab id is non-negative on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QObject *const grid = root->property("gridModel").value<QObject *>();
-    QVERIFY(grid != nullptr);
-    const QString baselineSummary = grid->property("noteSummary").toString();
-    QVERIFY(!baselineSummary.isEmpty());
-    QVERIFY(window.centralWidget() != nullptr);
-    const int tabId = controller->property("selectedId").toInt();
-Original expression:
-    QVERIFY(tabId >= 0);
+Mapping: S047
 
 A011 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:340
 Disposition: MATCHED
-Mapping: S048 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, probe stages the same filesystem failure after verifying the song exists on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    // is externally removed after a successful open, then the user reopens the
-    // same known song through the existing public openSong operation.
-    const QString songPath =
-        m_projectRoot + QStringLiteral("/sound/songs/midi/%1.mid").arg(m_songLabel);
-    const QString backupPath = songPath + QStringLiteral(".testbak");
-    QFile::remove(backupPath);
-Original expression:
-    QVERIFY2(QFile::exists(songPath), qPrintable(songPath));
+Mapping: S048
 
 A012 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:341
 Disposition: MATCHED
-Mapping: S048 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, probe moves the song aside like the original rename on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    // same known song through the existing public openSong operation.
-    const QString songPath =
-        m_projectRoot + QStringLiteral("/sound/songs/midi/%1.mid").arg(m_songLabel);
-    const QString backupPath = songPath + QStringLiteral(".testbak");
-    QFile::remove(backupPath);
-    QVERIFY2(QFile::exists(songPath), qPrintable(songPath));
-Original expression:
-    QVERIFY2(QFile::rename(songPath, backupPath), qPrintable(songPath));
+Mapping: S048
 
 A013 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:350
 Disposition: RETIRED-REPRESENTATION
-Mapping: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollgated/tst_swiftrollgated.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-            QFile::rename(backupPath, songPath);
-        else
-            QFile::remove(backupPath);
-    });
-
-    QSignalSpy openFailedSpy(session, SIGNAL(openFailed(QString)));
-Original expression:
-    QVERIFY(openFailedSpy.isValid());
 
 A014 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:364
 Disposition: MATCHED
-Mapping: S048 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, the same label reopens through the public openSong operation on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-            ++errorDialogCount;
-            modal->close();
-        }
-    });
-    dismissTimer->start();
-Original expression:
-    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
+Mapping: S048
 
 A015 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:366
 Disposition: MATCHED
-Mapping: S048 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, openFailed delivered exactly once on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-        }
-    });
-    dismissTimer->start();
-
-    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
-Original expression:
-    QTRY_COMPARE_WITH_TIMEOUT(openFailedSpy.size(), 1, 5'000);
+Mapping: S048
 
 A016 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:367
 Disposition: MATCHED
-Mapping: S048 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, one critical error dialog surfaced with the Open Failed title, then shown and dismissed on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    });
-    dismissTimer->start();
-
-    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
-
-    QTRY_COMPARE_WITH_TIMEOUT(openFailedSpy.size(), 1, 5'000);
-Original expression:
-    QTRY_COMPARE_WITH_TIMEOUT(errorDialogCount, 1, 5'000);
+Mapping: S048
 
 A017 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:370
 Disposition: MATCHED
-Mapping: S051 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, probe restores the song like the original rename-back on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
-
-    QTRY_COMPARE_WITH_TIMEOUT(openFailedSpy.size(), 1, 5'000);
-    QTRY_COMPARE_WITH_TIMEOUT(errorDialogCount, 1, 5'000);
-
-    dismissTimer->stop();
-Original expression:
-    QVERIFY2(QFile::rename(backupPath, songPath), qPrintable(backupPath));
+Mapping: S051
 
 A018 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:378
 Disposition: MATCHED
-Mapping: S049 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, failed reload leaves an empty strip on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-
-    // Tab semantics own the reopen: re-opening the selected song is the in-place
-    // reload path, so the tab closed first — cleanly, with no gate — and the
-    // failed load then installed nothing. The strip is empty, the mounted view
-    // survives its empty strip, and the failure reached the session and the
-    // window rather than leaving a half-open tab behind.
-Original expression:
-    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 0, 5'000);
+Mapping: S049
 
 A019 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:379
 Disposition: MATCHED
-Mapping: S049 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, no close gate left up on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    // Tab semantics own the reopen: re-opening the selected song is the in-place
-    // reload path, so the tab closed first — cleanly, with no gate — and the
-    // failed load then installed nothing. The strip is empty, the mounted view
-    // survives its empty strip, and the failure reached the session and the
-    // window rather than leaving a half-open tab behind.
-    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 0, 5'000);
-Original expression:
-    QCOMPARE(controller->property("pendingCloseId").toInt(), -1);
+Mapping: S049
 
 A020 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:380
 Disposition: MATCHED
-Mapping: S049 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, no tab stays selected on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    // reload path, so the tab closed first — cleanly, with no gate — and the
-    // failed load then installed nothing. The strip is empty, the mounted view
-    // survives its empty strip, and the failure reached the session and the
-    // window rather than leaving a half-open tab behind.
-    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 0, 5'000);
-    QCOMPARE(controller->property("pendingCloseId").toInt(), -1);
-Original expression:
-    QCOMPARE(controller->property("selectedId").toInt(), -1);
+Mapping: S049
 
 A021 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:381
 Disposition: MATCHED
-Mapping: S049 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, no song stays open on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    // failed load then installed nothing. The strip is empty, the mounted view
-    // survives its empty strip, and the failure reached the session and the
-    // window rather than leaving a half-open tab behind.
-    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 0, 5'000);
-    QCOMPARE(controller->property("pendingCloseId").toInt(), -1);
-    QCOMPARE(controller->property("selectedId").toInt(), -1);
-Original expression:
-    QVERIFY(!session->property("songOpen").toBool());
+Mapping: S049
 
 A022 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:382
 Disposition: MATCHED
-Mapping: S048 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, failure recorded on the session and carried by the window status on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    // survives its empty strip, and the failure reached the session and the
-    // window rather than leaving a half-open tab behind.
-    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 0, 5'000);
-    QCOMPARE(controller->property("pendingCloseId").toInt(), -1);
-    QCOMPARE(controller->property("selectedId").toInt(), -1);
-    QVERIFY(!session->property("songOpen").toBool());
-Original expression:
-    QVERIFY(!session->property("lastSaveError").toString().isEmpty());
+Mapping: S048
 
 A023 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:383
 Disposition: MATCHED
-Mapping: S050 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, the same scene object persists across the failed reload on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    // window rather than leaving a half-open tab behind.
-    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 0, 5'000);
-    QCOMPARE(controller->property("pendingCloseId").toInt(), -1);
-    QCOMPARE(controller->property("selectedId").toInt(), -1);
-    QVERIFY(!session->property("songOpen").toBool());
-    QVERIFY(!session->property("lastSaveError").toString().isEmpty());
-Original expression:
-    QVERIFY(view == window.gridView());
+Mapping: S050
 
 A024 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:384
 Disposition: PARTIAL
@@ -353,522 +150,162 @@ Original expression:
 
 A025 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:385
 Disposition: MATCHED
-Mapping: S050 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, scene loader survives the empty strip on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QCOMPARE(controller->property("pendingCloseId").toInt(), -1);
-    QCOMPARE(controller->property("selectedId").toInt(), -1);
-    QVERIFY(!session->property("songOpen").toBool());
-    QVERIFY(!session->property("lastSaveError").toString().isEmpty());
-    QVERIFY(view == window.gridView());
-    QVERIFY(view->isExposed());
-Original expression:
-    QVERIFY(view->rootObject() != nullptr);
+Mapping: S050
 
 A026 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:386
 Disposition: MATCHED
-Mapping: S050 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, window chrome survives; no QWidget container exists in the Swift app on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QCOMPARE(controller->property("selectedId").toInt(), -1);
-    QVERIFY(!session->property("songOpen").toBool());
-    QVERIFY(!session->property("lastSaveError").toString().isEmpty());
-    QVERIFY(view == window.gridView());
-    QVERIFY(view->isExposed());
-    QVERIFY(view->rootObject() != nullptr);
-Original expression:
-    QVERIFY(window.centralWidget() != nullptr);
+Mapping: S050
 
 A027 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:387
 Disposition: MATCHED
-Mapping: S050 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, no grid is mounted once the tab page is gone on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY(!session->property("songOpen").toBool());
-    QVERIFY(!session->property("lastSaveError").toString().isEmpty());
-    QVERIFY(view == window.gridView());
-    QVERIFY(view->isExposed());
-    QVERIFY(view->rootObject() != nullptr);
-    QVERIFY(window.centralWidget() != nullptr);
-Original expression:
-    QVERIFY(root->property("gridModel").value<QObject *>() == nullptr);
+Mapping: S050
 
 A028 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:388
 Disposition: MATCHED
-Mapping: S050 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, failed tab page gone, not half-open on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY(!session->property("lastSaveError").toString().isEmpty());
-    QVERIFY(view == window.gridView());
-    QVERIFY(view->isExposed());
-    QVERIFY(view->rootObject() != nullptr);
-    QVERIFY(window.centralWidget() != nullptr);
-    QVERIFY(root->property("gridModel").value<QObject *>() == nullptr);
-Original expression:
-    QVERIFY(gridcheck::visualDescendant(root, QStringLiteral("songTab_%1").arg(tabId)) == nullptr);
+Mapping: S050
 
 A029 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:392
 Disposition: MATCHED
-Mapping: S051 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, restored song reopens through openSong on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY(window.centralWidget() != nullptr);
-    QVERIFY(root->property("gridModel").value<QObject *>() == nullptr);
-    QVERIFY(gridcheck::visualDescendant(root, QStringLiteral("songTab_%1").arg(tabId)) == nullptr);
-
-    // The failed load left no broken state behind: the restored song opens again
-    // in the same view with its original content.
-Original expression:
-    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
+Mapping: S051
 
 A030 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:393
 Disposition: MATCHED
-Mapping: S051 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, reopened song opens one tab on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY(root->property("gridModel").value<QObject *>() == nullptr);
-    QVERIFY(gridcheck::visualDescendant(root, QStringLiteral("songTab_%1").arg(tabId)) == nullptr);
-
-    // The failed load left no broken state behind: the restored song opens again
-    // in the same view with its original content.
-    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
-Original expression:
-    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 1, 15'000);
+Mapping: S051
 
 A031 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:394
 Disposition: MATCHED
-Mapping: S051 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, reopened song is open on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY(gridcheck::visualDescendant(root, QStringLiteral("songTab_%1").arg(tabId)) == nullptr);
-
-    // The failed load left no broken state behind: the restored song opens again
-    // in the same view with its original content.
-    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
-    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 1, 15'000);
-Original expression:
-    QVERIFY(session->property("songOpen").toBool());
+Mapping: S051
 
 A032 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:396
 Disposition: MATCHED
-Mapping: S051 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, reopened tab page mounted on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    // The failed load left no broken state behind: the restored song opens again
-    // in the same view with its original content.
-    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
-    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 1, 15'000);
-    QVERIFY(session->property("songOpen").toBool());
-    QQuickItem *const reopenedRoot = qobject_cast<QQuickItem *>(view->rootObject());
-Original expression:
-    QVERIFY(reopenedRoot != nullptr);
+Mapping: S051
 
 A033 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:398
 Disposition: MATCHED
-Mapping: S051 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, reopened grid publishes notes on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
-    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 1, 15'000);
-    QVERIFY(session->property("songOpen").toBool());
-    QQuickItem *const reopenedRoot = qobject_cast<QQuickItem *>(view->rootObject());
-    QVERIFY(reopenedRoot != nullptr);
-    QObject *const reopenedGrid = reopenedRoot->property("gridModel").value<QObject *>();
-Original expression:
-    QVERIFY(reopenedGrid != nullptr);
+Mapping: S051
 
 A034 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:399
 Disposition: MATCHED
-Mapping: S051 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, reopened grid publishes notes on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 1, 15'000);
-    QVERIFY(session->property("songOpen").toBool());
-    QQuickItem *const reopenedRoot = qobject_cast<QQuickItem *>(view->rootObject());
-    QVERIFY(reopenedRoot != nullptr);
-    QObject *const reopenedGrid = reopenedRoot->property("gridModel").value<QObject *>();
-    QVERIFY(reopenedGrid != nullptr);
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(reopenedGrid->property("renderedNoteCount").toInt() > 0, 5'000);
+Mapping: S051
 
 A035 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:400
 Disposition: MATCHED
-Mapping: S051 (test_failedReopenLeavesEmptyStripAndSurfacesError, src/checks/editorqml/tst_ShellOpenFailure.qml) executes the same observation, reopened note summary equals the baseline on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY(session->property("songOpen").toBool());
-    QQuickItem *const reopenedRoot = qobject_cast<QQuickItem *>(view->rootObject());
-    QVERIFY(reopenedRoot != nullptr);
-    QObject *const reopenedGrid = reopenedRoot->property("gridModel").value<QObject *>();
-    QVERIFY(reopenedGrid != nullptr);
-    QTRY_VERIFY_WITH_TIMEOUT(reopenedGrid->property("renderedNoteCount").toInt() > 0, 5'000);
-Original expression:
-    QCOMPARE(reopenedGrid->property("noteSummary").toString(), baselineSummary);
+Mapping: S051
 
 A036 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:409
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollgated/tst_swiftrollgated.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-void SwiftRollGatedTest::selectionReticleRasterTranslucency()
-{
-    using gridcheck::visiblePrimitiveCount;
-    using gridcheck::visualDescendant;
-
-    if (m_mode != QStringLiteral("swiftrollgated"))
-Original expression:
-    QSKIP("selection reticle raster belongs to the swiftrollgated surface");
 
 A037 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:413
 Disposition: MATCHED
-Mapping: S052 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, retained fixture opens with published notes through the production session on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-
-    if (m_mode != QStringLiteral("swiftrollgated"))
-        QSKIP("selection reticle raster belongs to the swiftrollgated surface");
-
-    gridcheck::NativeScene scene;
-    QString openError;
-Original expression:
-    QVERIFY2(scene.open(m_projectRoot, m_songLabel, &openError), qPrintable(openError));
+Mapping: S052
 
 A038 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:417
 Disposition: MATCHED
-Mapping: S052 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, roll publishes notes on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    gridcheck::NativeScene scene;
-    QString openError;
-    QVERIFY2(scene.open(m_projectRoot, m_songLabel, &openError), qPrintable(openError));
-    QQuickView *const view = scene.view;
-    QQuickItem *const root = scene.root;
-    QObject *const grid = scene.grid;
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000);
+Mapping: S052
 
 A039 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:418
 Disposition: MATCHED
-Mapping: S054 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, rendered frame grabbed; frame production proved by grab receipt on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QString openError;
-    QVERIFY2(scene.open(m_projectRoot, m_songLabel, &openError), qPrintable(openError));
-    QQuickView *const view = scene.view;
-    QQuickItem *const root = scene.root;
-    QObject *const grid = scene.grid;
-    QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000);
-Original expression:
-    QVERIFY(gridcheck::awaitFrame(view));
+Mapping: S054
 
 A040 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:424
 Disposition: MATCHED
-Mapping: S052 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, roll plot mounted on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY(gridcheck::awaitFrame(view));
-
-    QQuickItem *const plot = visualDescendant(root, QStringLiteral("timelineQuickRollPlot"));
-    QQuickItem *const input = visualDescendant(root, QStringLiteral("swiftRollInput"));
-    QQuickItem *const notes = visualDescendant(root, QStringLiteral("timelineQuickPianoNoteFills"));
-    QQuickItem *const overlay = visualDescendant(root, QStringLiteral("timelineQuickPianoOverlay"));
-Original expression:
-    QVERIFY(plot != nullptr);
+Mapping: S052
 
 A041 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:425
 Disposition: MATCHED
-Mapping: S052 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, roll input mounted on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-
-    QQuickItem *const plot = visualDescendant(root, QStringLiteral("timelineQuickRollPlot"));
-    QQuickItem *const input = visualDescendant(root, QStringLiteral("swiftRollInput"));
-    QQuickItem *const notes = visualDescendant(root, QStringLiteral("timelineQuickPianoNoteFills"));
-    QQuickItem *const overlay = visualDescendant(root, QStringLiteral("timelineQuickPianoOverlay"));
-    QVERIFY(plot != nullptr);
-Original expression:
-    QVERIFY(input != nullptr);
+Mapping: S052
 
 A042 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:426
 Disposition: MATCHED
-Mapping: S052 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, note fill layer mounted on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QQuickItem *const plot = visualDescendant(root, QStringLiteral("timelineQuickRollPlot"));
-    QQuickItem *const input = visualDescendant(root, QStringLiteral("swiftRollInput"));
-    QQuickItem *const notes = visualDescendant(root, QStringLiteral("timelineQuickPianoNoteFills"));
-    QQuickItem *const overlay = visualDescendant(root, QStringLiteral("timelineQuickPianoOverlay"));
-    QVERIFY(plot != nullptr);
-    QVERIFY(input != nullptr);
-Original expression:
-    QVERIFY(notes != nullptr);
+Mapping: S052
 
 A043 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:427
 Disposition: MATCHED
-Mapping: S052 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, overlay layer mounted on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QQuickItem *const input = visualDescendant(root, QStringLiteral("swiftRollInput"));
-    QQuickItem *const notes = visualDescendant(root, QStringLiteral("timelineQuickPianoNoteFills"));
-    QQuickItem *const overlay = visualDescendant(root, QStringLiteral("timelineQuickPianoOverlay"));
-    QVERIFY(plot != nullptr);
-    QVERIFY(input != nullptr);
-    QVERIFY(notes != nullptr);
-Original expression:
-    QVERIFY(overlay != nullptr);
+Mapping: S052
 
 A044 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:430
 Disposition: MATCHED
-Mapping: S052 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, fill layer draws note delegates on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY(plot != nullptr);
-    QVERIFY(input != nullptr);
-    QVERIFY(notes != nullptr);
-    QVERIFY(overlay != nullptr);
-
-    const QRectF plotScene = plot->mapRectToScene(plot->boundingRect());
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(visiblePrimitiveCount(notes, plotScene) > 0, 5'000);
+Mapping: S052
 
 A045 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:437
 Disposition: MATCHED
-Mapping: S053 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, reticle spans horizontally on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-
-    const QPoint start =
-        plot->mapToScene(QPointF(plot->width() * 0.15, plot->height() * 0.20)).toPoint();
-    const QPoint finish =
-        plot->mapToScene(QPointF(plot->width() * 0.85, plot->height() * 0.80)).toPoint();
-    const QRect reticle = QRect(start, finish).normalized();
-Original expression:
-    QVERIFY(reticle.width() > 80);
+Mapping: S053
 
 A046 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:438
 Disposition: MATCHED
-Mapping: S053 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, reticle spans vertically on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    const QPoint start =
-        plot->mapToScene(QPointF(plot->width() * 0.15, plot->height() * 0.20)).toPoint();
-    const QPoint finish =
-        plot->mapToScene(QPointF(plot->width() * 0.85, plot->height() * 0.80)).toPoint();
-    const QRect reticle = QRect(start, finish).normalized();
-    QVERIFY(reticle.width() > 80);
-Original expression:
-    QVERIFY(reticle.height() > 80);
+Mapping: S053
 
 A047 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:439
 Disposition: MATCHED
-Mapping: S053 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, reticle stays inside the roll input on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-        plot->mapToScene(QPointF(plot->width() * 0.15, plot->height() * 0.20)).toPoint();
-    const QPoint finish =
-        plot->mapToScene(QPointF(plot->width() * 0.85, plot->height() * 0.80)).toPoint();
-    const QRect reticle = QRect(start, finish).normalized();
-    QVERIFY(reticle.width() > 80);
-    QVERIFY(reticle.height() > 80);
-Original expression:
-    QVERIFY(input->mapRectToScene(input->boundingRect()).contains(reticle));
+Mapping: S053
 
 A048 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:441
 Disposition: MATCHED
-Mapping: S054 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, rendered frame grabbed; frame production proved by grab receipt on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-        plot->mapToScene(QPointF(plot->width() * 0.85, plot->height() * 0.80)).toPoint();
-    const QRect reticle = QRect(start, finish).normalized();
-    QVERIFY(reticle.width() > 80);
-    QVERIFY(reticle.height() > 80);
-    QVERIFY(input->mapRectToScene(input->boundingRect()).contains(reticle));
-Original expression:
-    QVERIFY(gridcheck::awaitFrame(view));
+Mapping: S054
 
 A049 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:443
 Disposition: MATCHED
-Mapping: S054 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, baseline frame renders on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY(reticle.width() > 80);
-    QVERIFY(reticle.height() > 80);
-    QVERIFY(input->mapRectToScene(input->boundingRect()).contains(reticle));
-
-    QVERIFY(gridcheck::awaitFrame(view));
-    const QImage baseline = view->grabWindow();
-Original expression:
-    QVERIFY(!baseline.isNull());
+Mapping: S054
 
 A050 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:445
 Disposition: MATCHED
-Mapping: S055 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, two distinct flat pixels under the reticle on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY(input->mapRectToScene(input->boundingRect()).contains(reticle));
-
-    QVERIFY(gridcheck::awaitFrame(view));
-    const QImage baseline = view->grabWindow();
-    QVERIFY(!baseline.isNull());
-    const auto probes = distinctInteriorProbes(baseline, reticle);
-Original expression:
-    QVERIFY2(probes.has_value(),
+Mapping: S055
 
 A051 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:448
 Disposition: MATCHED
-Mapping: S056 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, covered note face sampled on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    const QImage baseline = view->grabWindow();
-    QVERIFY(!baseline.isNull());
-    const auto probes = distinctInteriorProbes(baseline, reticle);
-    QVERIFY2(probes.has_value(),
-             "the visible roll did not provide two distinct flat pixels under the reticle");
-    const auto noteProbe = noteFaceProbe(notes, baseline, reticle);
-Original expression:
-    QVERIFY2(noteProbe.has_value(), "no visible note face was covered by the reticle");
+Mapping: S056
 
 A052 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:450
 Disposition: MATCHED
-Mapping: S057 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, three untouched outside pixels sampled on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    const auto probes = distinctInteriorProbes(baseline, reticle);
-    QVERIFY2(probes.has_value(),
-             "the visible roll did not provide two distinct flat pixels under the reticle");
-    const auto noteProbe = noteFaceProbe(notes, baseline, reticle);
-    QVERIFY2(noteProbe.has_value(), "no visible note face was covered by the reticle");
-    const auto outsideProbes = outsideReticleProbes(baseline, plotScene, reticle, notes);
-Original expression:
-    QVERIFY2(outsideProbes.has_value(),
+Mapping: S057
 
 A053 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:458
 Disposition: MATCHED
-Mapping: S058 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, drag publishes the selection band over the reticle on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-
-    QTest::mouseMove(view, start);
-    QTest::mousePress(view, Qt::RightButton, Qt::NoModifier, start);
-    const auto releaseMouse =
-        qScopeGuard([&] { QTest::mouseRelease(view, Qt::RightButton, Qt::NoModifier, finish); });
-    QTest::mouseMove(view, finish, 20);
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(visiblePrimitiveCount(overlay, QRectF(reticle)) >= 5, 5'000);
+Mapping: S058
 
 A054 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:460
 Disposition: MATCHED
-Mapping: S059 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, rendered frame grabbed during the drag; frame production proved by grab receipt on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QTest::mousePress(view, Qt::RightButton, Qt::NoModifier, start);
-    const auto releaseMouse =
-        qScopeGuard([&] { QTest::mouseRelease(view, Qt::RightButton, Qt::NoModifier, finish); });
-    QTest::mouseMove(view, finish, 20);
-    QTRY_VERIFY_WITH_TIMEOUT(visiblePrimitiveCount(overlay, QRectF(reticle)) >= 5, 5'000);
-Original expression:
-    QVERIFY(gridcheck::awaitFrame(view));
+Mapping: S059
 
 A055 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:462
 Disposition: MATCHED
-Mapping: S059 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, drag frame renders on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-        qScopeGuard([&] { QTest::mouseRelease(view, Qt::RightButton, Qt::NoModifier, finish); });
-    QTest::mouseMove(view, finish, 20);
-    QTRY_VERIFY_WITH_TIMEOUT(visiblePrimitiveCount(overlay, QRectF(reticle)) >= 5, 5'000);
-
-    QVERIFY(gridcheck::awaitFrame(view));
-    const QImage during = view->grabWindow();
-Original expression:
-    QVERIFY(!during.isNull());
+Mapping: S059
 
 A056 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:463
 Disposition: MATCHED
-Mapping: S059 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, drag frame keeps its size on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QTest::mouseMove(view, finish, 20);
-    QTRY_VERIFY_WITH_TIMEOUT(visiblePrimitiveCount(overlay, QRectF(reticle)) >= 5, 5'000);
-
-    QVERIFY(gridcheck::awaitFrame(view));
-    const QImage during = view->grabWindow();
-    QVERIFY(!during.isNull());
-Original expression:
-    QCOMPARE(during.size(), baseline.size());
+Mapping: S059
 
 A057 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:464
 Disposition: MATCHED
-Mapping: S059 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, drag frame keeps its pixel ratio on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QTRY_VERIFY_WITH_TIMEOUT(visiblePrimitiveCount(overlay, QRectF(reticle)) >= 5, 5'000);
-
-    QVERIFY(gridcheck::awaitFrame(view));
-    const QImage during = view->grabWindow();
-    QVERIFY(!during.isNull());
-    QCOMPARE(during.size(), baseline.size());
-Original expression:
-    QCOMPARE(during.devicePixelRatio(), baseline.devicePixelRatio());
+Mapping: S059
 
 A058 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:475
 Disposition: MATCHED
-Mapping: S060 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, fill stays inside its reticle at untouched pixels on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-            QStringLiteral("selection fill escaped its reticle at untouched pixel (%1,%2): "
-                           "before %3, during %4")
-                .arg(probe.point.x())
-                .arg(probe.point.y())
-                .arg(probe.baseline.name(QColor::HexArgb))
-                .arg(actualOutside.name(QColor::HexArgb));
-Original expression:
-    QVERIFY2(colorsNear(actualOutside, probe.baseline), qPrintable(failure));
+Mapping: S060
 
 A059 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:492
 Disposition: MATCHED
-Mapping: S061 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, interior pixels composite the translucent fill over baselines on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-            QStringLiteral("selection fill at (%1,%2): baseline %3, expected %4, actual %5")
-                .arg(probe.point.x())
-                .arg(probe.point.y())
-                .arg(probe.baseline.name(QColor::HexArgb))
-                .arg(expected.name(QColor::HexArgb))
-                .arg(actual[index].name(QColor::HexArgb));
-Original expression:
-    QVERIFY2(colorsNear(actual[index], expected), qPrintable(failure));
+Mapping: S061
 
 A060 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:494
 Disposition: MATCHED
-Mapping: S061 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, contrast survives between distinct underlying pixels on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-                .arg(probe.point.y())
-                .arg(probe.baseline.name(QColor::HexArgb))
-                .arg(expected.name(QColor::HexArgb))
-                .arg(actual[index].name(QColor::HexArgb));
-        QVERIFY2(colorsNear(actual[index], expected), qPrintable(failure));
-    }
-Original expression:
-    QVERIFY2(actual[0].rgb() != actual[1].rgb(),
+Mapping: S061
 
 A061 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:504
 Disposition: MATCHED
-Mapping: S062 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, covered note face composites the fill on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    const QColor actualNote = pixelAt(during, noteProbe->point);
-    const QString noteFailure =
-        QStringLiteral("note face under selection fill: baseline %1, expected %2, actual %3")
-            .arg(noteProbe->baseline.name(QColor::HexArgb))
-            .arg(expectedNote.name(QColor::HexArgb))
-            .arg(actualNote.name(QColor::HexArgb));
-Original expression:
-    QVERIFY2(colorsNear(actualNote, expectedNote), qPrintable(noteFailure));
+Mapping: S062
 
 A062 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:509
 Disposition: MATCHED
-Mapping: S063 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, horizontal dashed edge visible on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-            .arg(actualNote.name(QColor::HexArgb));
-    QVERIFY2(colorsNear(actualNote, expectedNote), qPrintable(noteFailure));
-
-    const QColor edge = themes::color(themes::Role::song_view_selection_edge);
-    const QRectF leftEdge(reticle.left() - 2.0, reticle.top(), 4.0, reticle.height());
-    const HorizontalEdgeScan topEdge = scanHorizontalEdge(during, reticle, edge);
-Original expression:
-    QVERIFY2(topEdge.matches >= 4, "the reticle's horizontal dashed edge was not visible");
+Mapping: S063
 
 A063 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:510
 Disposition: MATCHED
-Mapping: S063 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, horizontal edge dashed, not solid on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    QVERIFY2(colorsNear(actualNote, expectedNote), qPrintable(noteFailure));
-
-    const QColor edge = themes::color(themes::Role::song_view_selection_edge);
-    const QRectF leftEdge(reticle.left() - 2.0, reticle.top(), 4.0, reticle.height());
-    const HorizontalEdgeScan topEdge = scanHorizontalEdge(during, reticle, edge);
-    QVERIFY2(topEdge.matches >= 4, "the reticle's horizontal dashed edge was not visible");
-Original expression:
-    QVERIFY2(topEdge.matches <= topEdge.span * 3 / 4,
+Mapping: S063
 
 A064 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:512
 Disposition: MATCHED
-Mapping: S063 (test_selectionReticleRasterTranslucency, src/checks/editorqml/tst_ShellReticleVisuals.qml) executes the same observation, vertical dashed edge visible on the production Swift shell; no QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    const QColor edge = themes::color(themes::Role::song_view_selection_edge);
-    const QRectF leftEdge(reticle.left() - 2.0, reticle.top(), 4.0, reticle.height());
-    const HorizontalEdgeScan topEdge = scanHorizontalEdge(during, reticle, edge);
-    QVERIFY2(topEdge.matches >= 4, "the reticle's horizontal dashed edge was not visible");
-    QVERIFY2(topEdge.matches <= topEdge.span * 3 / 4,
-             "the reticle's horizontal edge rendered solid instead of dashed");
-Original expression:
-    QVERIFY2(matchingPixelCount(during, leftEdge, edge) >= 4,
-
+Mapping: S063
 
 Remaining original source (closing sequence and helper bodies):
 }
@@ -887,364 +324,189 @@ Swift assertion predicates
 
 S001 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "Ctrl-add of earlier A(v40) retains later B(v90) as first selection"
-    report.expect(session.selectedNoteOrder == [b, a]
-        && session.document.note(session.selectedNoteOrder[0])?.velocity == 90,
-        cppID: id, message: "Ctrl-add of earlier A(v40) retains later B(v90) as first selection")
 
 S002 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "deselecting and re-adding appends the note"
-    report.expectEqual([a, b], session.selectedNoteOrder, cppID: id,
-                       what: "deselecting and re-adding appends the note")
 
 S003 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "replacement preserves first occurrence and removes duplicates"
-    report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
-                       what: "replacement preserves first occurrence and removes duplicates")
 
 S004 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "band keeps press order before newly covered notes"
-    report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
-        && session.selectedNotes.contains(c),
-        cppID: id, message: "band keeps press order before newly covered notes")
 
 S005 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "band cancellation restores selection order"
-    report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
-                       what: "band cancellation restores selection order")
 
 S006 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "order-only replacement publishes the selection domain"
-    report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
-                       what: "order-only replacement publishes the selection domain")
 
 S007 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "order-only replacement and additive selection coalesce"
-    report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
-                       what: "order-only replacement and additive selection coalesce")
 
 S008 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "unchanged normalized selection publishes nothing"
-    report.expect(publications.isEmpty, cppID: id,
-                  message: "unchanged normalized selection publishes nothing")
 
 S009 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "selection gestures never mutate document or history"
-    report.expect(session.document.revision == revision
-        && session.document.history.currentIdentity == history
-        && session.document.isDirty == dirty,
-        cppID: id, message: "selection gestures never mutate document or history")
 
 S010 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "deletion prunes membership and preserves survivor order"
-    report.expect(session.selectedNoteOrder == [c, a] && session.selectedNotes == Set([c, a]),
-                  cppID: id, message: "deletion prunes membership and preserves survivor order")
 
 S011 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "viewport dimensions are pushed into the session camera"
-    report.expect(
-        gridCameraNear(first.viewportWidth, 640) && gridCameraNear(first.rollHeight, 320),
-        cppID: viewportID, message: "viewport dimensions are pushed into the session camera")
 
 S012 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "camera bounds derive from viewport, document extent, and projection"
-    report.expect(
-        gridCameraNear(first.minHScroll, expectedMin)
-            && gridCameraNear(first.maxHScroll,
-                    Double(session.timeline.lengthTicks) * first.pixelsPerTick)
-            && gridCameraNear(first.maxVScroll, expectedMaxV),
-        cppID: viewportID, message: "camera bounds derive from viewport, document extent, and projection")
 
 S013 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "first viewport push homes vertically within camera bounds"
-    report.expect(
-        first.scrollY >= 0 && first.scrollY <= first.maxVScroll,
-        cppID: viewportID, message: "first viewport push homes vertically within camera bounds")
 
 S014 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "published scales equal the session camera snapshot"
-    report.expect(
-        gridCameraNear(grid.beatWidth, first.pixelsPerBeat) && gridCameraNear(grid.rowHeight, first.keyHeight),
-        cppID: viewportID, message: "published scales equal the session camera snapshot")
 
 S015 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "identical viewport push preserves fractional offsets and publishes nothing"
-    report.expect(
-        session.camera.snapshot == fractional && counters.camera == 0,
-        cppID: viewportID, message: "identical viewport push preserves fractional offsets and publishes nothing")
 
 S016 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "roll-height increase reclamps vertical scroll"
-    report.expect(
-        tallViewport.maxVScroll < shortHeight.maxVScroll
-            && gridCameraNear(tallViewport.scrollY, tallViewport.maxVScroll),
-        cppID: viewportID, message: "roll-height increase reclamps vertical scroll")
 
 S017 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "double-font push applies the rounded font-relative defaults"
-    report.expect(
-        gridCameraNear(doubled.pixelsPerBeat, 69) && gridCameraNear(doubled.keyHeight, 26),
-        cppID: viewportID, message: "double-font push applies the rounded font-relative defaults")
 
 S018 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "font push back restores the exact earlier scale"
-    report.expect(
-        gridCameraNear(restored.pixelsPerBeat, 35) && gridCameraNear(restored.keyHeight, 13),
-        cppID: viewportID, message: "font push back restores the exact earlier scale")
 
 S019 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "each effective font push publishes exactly once"
-    report.expect(
-        counters.camera == 2,
-        cppID: viewportID, message: "each effective font push publishes exactly once")
 
 S020 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "pushed font defines time and key-height minimums"
-    report.expect(
-        gridCameraNear(fontMinimum.pixelsPerBeat, 9) && gridCameraNear(fontMinimum.keyHeight, 9),
-        cppID: viewportID, message: "pushed font defines time and key-height minimums")
 
 S021 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "pushed font defines time and key-height maximums"
-    report.expect(
-        gridCameraNear(fontMaximum.pixelsPerBeat, 1_387) && gridCameraNear(fontMaximum.keyHeight, 69),
-        cppID: viewportID, message: "pushed font defines time and key-height maximums")
 
 S022 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "document shrink privately reconciles extent and reclamps horizontal scroll"
-    report.expect(
-        farID != nil && expandedLength > originalLength
-            && session.timeline.lengthTicks < expandedLength
-            && gridCameraNear(shrunk.scrollX, shrunk.maxHScroll),
-        cppID: viewportID, message: "document shrink privately reconciles extent and reclamps horizontal scroll")
 
 S023 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "generated time marks stay inside the one-viewport culling window"
-    report.expect(
-        !markXs.isEmpty && markXs.allSatisfy { $0 >= -cullingWidth - 2 && $0 <= 2 * cullingWidth + 2 },
-        cppID: projectionID, message: "generated time marks stay inside the one-viewport culling window")
 
 S024 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "generated time marks cover the visible plot"
-    report.expect(
-        (markXs.min() ?? 1) <= 0 && (markXs.max() ?? -1) >= cullingWidth,
-        cppID: projectionID, message: "generated time marks cover the visible plot")
 
 S025 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "camera movement does not alter noteSummary document state"
-    report.expect(
-        grid.noteSummary == summaryBeforeCameraMove,
-        cppID: projectionID, message: "camera movement does not alter noteSummary document state")
 
 S026 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "known note rectangle equals the camera projection"
-    report.expect(
-        projected,
-        cppID: projectionID, message: "known note rectangle equals the camera projection")
 
 S027 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "pre-roll mask presence follows the projected tick-zero position"
-    report.expect(
-        maskCount == (zeroX > 0 ? 1 : 0),
-        cppID: projectionID, message: "pre-roll mask presence follows the projected tick-zero position")
 
 S028 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "beginPointer selects the note under the projected rectangle"
-    report.expect(
-        session.selectedNotes.contains(originalNote.id),
-        cppID: projectionID, message: "beginPointer selects the note under the projected rectangle")
 
 S029 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "one-cell drag publishes the snapped tick and pitch preview"
-    report.expect(
-        previewRect.map {
-            gridCameraNear($0.x, session.camera.displayX(
-                tick: Double(expectedTick), origin: 0, dpr: grid.devicePixelRatio))
-                && gridCameraNear($0.y, expectedPreviewY + 1 / grid.devicePixelRatio)
-        } ?? false,
-        cppID: projectionID, message: "one-cell drag publishes the snapped tick and pitch preview")
 
 S030 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "endPointer commits one revision at the snapped tick and pitch"
-    report.expect(
-        session.document.revision == originalRevision + 1
-            && moved.map { Int($0.tick) == expectedTick && Int($0.pitch) == expectedPitch } == true,
-        cppID: projectionID, message: "endPointer commits one revision at the snapped tick and pitch")
 
 S031 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "draw drag on an empty row adds one snapped note"
-    report.expect(
-        session.document.revision == drawRevision + 1
-            && created.map { Int($0.tick) == drawTick && Int($0.pitch) == drawPitch } == true,
-        cppID: projectionID, message: "draw drag on an empty row adds one snapped note")
 
 S032 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "right-drag band selects exactly the visible intersecting notes"
-    report.expect(
-        session.selectedNotes == visibleIDs,
-        cppID: projectionID, message: "right-drag band selects exactly the visible intersecting notes")
 
 S033 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "inputCancelled discards an active gesture without document mutation"
-    report.expect(
-        session.document.revision == cancelRevision
-            && session.document.notes(in: grid.trackIndex).count == cancelCount,
-        cppID: projectionID, message: "inputCancelled discards an active gesture without document mutation")
 
 S034 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "Escape discards an active gesture without document mutation"
-    report.expect(
-        session.document.revision == cancelRevision
-            && session.document.notes(in: grid.trackIndex).count == cancelCount,
-        cppID: projectionID, message: "Escape discards an active gesture without document mutation")
 
 S035 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "press outside projected pitch rows is rejected"
-    report.expect(
-        session.document.revision == cancelRevision,
-        cppID: projectionID, message: "press outside projected pitch rows is rejected")
 
 S036 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "ensureTickVisible uses the reveal fraction in one publication"
-    report.expect(
-        counters.camera == before + 1
-            && gridCameraNear(tickReveal.scrollX, expectedTickReveal),
-        cppID: isolationID, message: "ensureTickVisible uses the reveal fraction in one publication")
 
 S037 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "preferEnd true aligns an oversized range to the right edge"
-    report.expect(
-        counters.camera == before + 1
-            && gridCameraNear(
-                endReveal.scrollX,
-                endReveal.maxHScroll - endReveal.viewportWidth
-                    + 1 / grid.devicePixelRatio),
-        cppID: isolationID, message: "preferEnd true aligns an oversized range to the right edge")
 
 S038 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "preferEnd false aligns an oversized range to its start"
-    report.expect(
-        counters.camera == before + 1 && gridCameraNear(startReveal.scrollX, 0),
-        cppID: isolationID, message: "preferEnd false aligns an oversized range to its start")
 
 S039 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "ensureKeyVisible aligns the bottom pitch at the viewport edge"
-    report.expect(
-        counters.camera == before + 1
-            && gridCameraNear(keyReveal.scrollY, keyReveal.maxVScroll),
-        cppID: isolationID, message: "ensureKeyVisible aligns the bottom pitch at the viewport edge")
 
 S040 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "presenter scroll values track the revealed session camera"
-    report.expect(
-        gridCameraNear(grid.cameraScrollX, session.camera.snapshot.scrollX)
-            && gridCameraNear(grid.cameraScrollY, session.camera.snapshot.scrollY),
-        cppID: isolationID, message: "presenter scroll values track the revealed session camera")
 
 S041 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "redundant, non-finite, hidden, and already-visible navigation is silent"
-    report.expect(
-        counters.camera == before,
-        cppID: isolationID, message: "redundant, non-finite, hidden, and already-visible navigation is silent")
 
 S042 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "direct edit-cursor change neither moves camera nor republishes presenter cursor"
-    report.expect(
-        session.camera.snapshot == published && grid.editCursorTick == Int(cursor),
-        cppID: isolationID, message: "direct edit-cursor change neither moves camera nor republishes presenter cursor")
 
 S043 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "camera navigation is isolated from document, playback, dirty state, and history"
-    report.expect(
-        counters.document == 0 && counters.playback == 0 && counters.cursor == 1
-            && session.document.revision == revision && session.document.isDirty == dirty
-            && session.document.history.canUndo == canUndo
-            && session.document.history.canRedo == canRedo,
-        cppID: isolationID, message: "camera navigation is isolated from document, playback, dirty state, and history")
 
 S044 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "committed document edit performs no standalone camera publication"
-    report.expect(
-        inserted?.count == 1 && counters.camera == 0,
-        cppID: isolationID, message: "committed document edit performs no standalone camera publication")
 
 S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "one edit publishes one coherent playback and document refresh after reconciliation"
-    report.expect(
-        counters.playback == 1 && counters.document == 1 && counters.coherentDocumentCallback,
-        cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
 
 S046 | checkPresenterMetrics | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "noteSummary JSON carries every document note field and selection flag"
-    report.expect(
-        summaryMatches,
-        cppID: id, message: "noteSummary JSON carries every document note field and selection flag")
 
 S047 | test_failedReopenLeavesEmptyStripAndSurfacesError | src/checks/editorqml/tst_ShellOpenFailure.qml
 Anchor: function
-    verify(session.songOpen) after openProjectAndSong with one tab, non-negative selected id, mounted surface, published notes, non-empty baseline summary and hosted scene item.
 
 S048 | test_failedReopenLeavesEmptyStripAndSurfacesError | src/checks/editorqml/tst_ShellOpenFailure.qml
 Anchor: message "the error surface reports the open failure"
-    probe moves the song aside; openSong reopens the same label; openFailed arrives exactly once with one Open Failed critical request carrying the session failure in the window status.
 
 S049 | test_failedReopenLeavesEmptyStripAndSurfacesError | src/checks/editorqml/tst_ShellOpenFailure.qml
 Anchor: function
-    the failed reload leaves tabCount 0 with pendingCloseId -1, selectedId -1 and songOpen false.
 
 S050 | test_failedReopenLeavesEmptyStripAndSurfacesError | src/checks/editorqml/tst_ShellOpenFailure.qml
 Anchor: message "the restored song opens one tab"
-    the window stays active with the same scene object, the failed tab page gone, and the production critical dialog shown then dismissed.
 
 S051 | test_failedReopenLeavesEmptyStripAndSurfacesError | src/checks/editorqml/tst_ShellOpenFailure.qml
 Anchor: function
-    probe restores the song; openSong opens one tab with songOpen true, a mounted page, published notes and the baseline note summary.
 
 S052 | test_selectionReticleRasterTranslucency | src/checks/editorqml/tst_ShellReticleVisuals.qml
 Anchor: message "the roll input is mounted"
-    verify(session.songOpen) after openProjectAndSong with published notes and the plot/input/fills/overlay layers mounted plus drawn note delegates.
 
 S053 | test_selectionReticleRasterTranslucency | src/checks/editorqml/tst_ShellReticleVisuals.qml
 Anchor: function
-    the reticle spans more than 80 logical pixels each way inside the roll input.
 
 S054 | test_selectionReticleRasterTranslucency | src/checks/editorqml/tst_ShellReticleVisuals.qml
 Anchor: function
-    grabImage(shell.contentItem) renders the baseline frame with device pixels.
 
 S055 | test_selectionReticleRasterTranslucency | src/checks/editorqml/tst_ShellReticleVisuals.qml
 Anchor: function
-    two distinct flat interior pixels sit under the reticle.
 
 S056 | test_selectionReticleRasterTranslucency | src/checks/editorqml/tst_ShellReticleVisuals.qml
 Anchor: function
-    a visible note face is covered by the reticle.
 
 S057 | test_selectionReticleRasterTranslucency | src/checks/editorqml/tst_ShellReticleVisuals.qml
 Anchor: function
-    three untouched flat pixels sit outside the reticle.
 
 S058 | test_selectionReticleRasterTranslucency | src/checks/editorqml/tst_ShellReticleVisuals.qml
 Anchor: message "the roll renders a frame during the drag"
-    the right-drag publishes the selection band with fill over the reticle.
 
 S059 | test_selectionReticleRasterTranslucency | src/checks/editorqml/tst_ShellReticleVisuals.qml
 Anchor: message ", actual " #1
-    the drag frame renders with the baseline size and pixel ratio.
 
 S060 | test_selectionReticleRasterTranslucency | src/checks/editorqml/tst_ShellReticleVisuals.qml
 Anchor: function
-    untouched outside pixels keep their baselines during the drag.
 
 S061 | test_selectionReticleRasterTranslucency | src/checks/editorqml/tst_ShellReticleVisuals.qml
 Anchor: function
-    both interior pixels composite the translucent selection fill over their baselines with contrast preserved.
 
 S062 | test_selectionReticleRasterTranslucency | src/checks/editorqml/tst_ShellReticleVisuals.qml
 Anchor: function
-    the covered note face composites the selection fill over its baseline.
 
 S063 | test_selectionReticleRasterTranslucency | src/checks/editorqml/tst_ShellReticleVisuals.qml
 Anchor: function
-    the horizontal dashed edge is visible but not solid, and the vertical dashed edge is visible.
-
-Shared helper: src/checks/editorqml/GatedVisualsProbe.swift (filesystem failure injection) and src/checks/editorqml/GatedVisualsHelpers.js (test-side sampling math); lane entries in src/checks/editorqml/ShellQmlTests.swift.

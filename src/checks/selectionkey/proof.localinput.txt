@@ -6,48 +6,9 @@ Original SHA-256: 0eabe04716106ce2fb03f89a6693752467dbb4e3194aeb4075954bda14dd5e
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below. Source context preserves setup,
-helpers, and lifecycle code between assertions verbatim. S identifiers identify
-exact Swift predicates in the counterpart, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-This file holds only the SelectionLocalInputTierTest fixture: production-shell
-lifecycle, text-binding/focus seams, clipboard and settings isolation, and the
-clean-session close contract. Every site below observes native shell, window,
-or harness state. The declared Swift counterpart exercises only the
-numeric-prompt transaction (drawerOriginalNumericPromptTransaction); it has no
-predicate for this native lifecycle, so no site here is MATCHED or PARTIAL.
-The deleted localinputtier_text.cpp is covered separately by
-proof.localinputtier_text.txt, which is out of scope for this file.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
-
-Execution ownership
-runSelectionKeyLocalInputCheck assembles SelectionLocalInputTierTest and
-dispatches exactly one QTest::qExec; init() opens a fresh MainWindow session
-and scratch song tab per case, and cleanup() ends the session through the
-guarded production close path. No Swift entry point executes this native
-lifecycle. drawerOriginalNumericPromptTransaction is called by
-runProjectSessionSuite in src/checks/workspace/SessionChecks.swift; it builds a
-drawerAutomationAutomationFixture (CC10 pan rows 48=32, 96=64) and drives the
-production Swift AutomationPage prompt. That fixture struct, defined in
-src/checks/automation/AutomationPageChecks.swift, carries no report predicates
-of its own.
-
-Fixture, sequence and row constraints
-No data rows expand the sites below; init()/cleanup() run once per case across
-every SelectionLocalInputTierTest slot (rename, search, numeric, velocity,
-pitch-bend, event list). Teardown outcomes are computed first and asserted
-last, so a failed assertion can never skip the remaining teardown.
-
-Original assertion inventory and source sequence
 
 A001 | SelectionLocalInputTierTest::activateShellForCommands | src/checks/selectionkey/localinput.cpp:57
 Disposition: GAP
@@ -175,15 +136,6 @@ Original expression:
 
 A004 | SelectionLocalInputTierTest::init | src/checks/selectionkey/localinput.cpp:101
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/localinput.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-established; the song-tab open precondition is a native loader precondition a
-presenter-level Swift check cannot establish.
-Source context since previous assertion:
-  ;
-      m_workspace = m_session.workspace;
-      SongTab *const tab = selectionkey::openSongTab(m_session, m_songLabel, false, error);
-Original expression:
-  QVERIFY2(tab, qUtf8Printable(error))
 
 A005 | SelectionLocalInputTierTest::init | src/checks/selectionkey/localinput.cpp:103
 Disposition: GAP
@@ -211,15 +163,6 @@ Original expression:
 
 A007 | SelectionLocalInputTierTest::init | src/checks/selectionkey/localinput.cpp:109
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/localinput.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-established; the tab Quick-window/root precondition requires the native Quick
-surface and cannot be established by a presenter-level Swift check.
-Source context since previous assertion:
-  ;
-      m_quickWindow = quick->quickWindow();
-Original expression:
-  QVERIFY2(m_quickWindow && quick->rootObject(),
-               "the tab Quick window or root object is missing")
 
 A008 | SelectionLocalInputTierTest::cleanup | src/checks/selectionkey/localinput.cpp:149
 Disposition: GAP
@@ -298,38 +241,24 @@ Swift assertion predicates
 
 S001 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "the original selected fixture note exists"
-  report.expectEqual(1, notes.count, cppID: id, what: "the original selected fixture note exists")
 
 S002 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "the original empty-tick numeric prompt opens"
-  report.expect(page.openPrompt(tick: 144, value: 64), cppID: id,
-                    message: "the original empty-tick numeric prompt opens")
 
 S003 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "the production prompt retains the supplied numeric draft"
-  report.expectEqual("12", page.promptDraft, cppID: id,
-                         what: "the production prompt retains the supplied numeric draft")
 
 S004 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "draft editing does not mutate the song"
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                         what: "draft editing does not mutate the song")
 
 S005 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "draft editing preserves note selection"
-  report.expectEqual(selection, fixture.session.selectedNotes, cppID: id,
-                         what: "draft editing preserves note selection")
 
 S006 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "cancellation closes the prompt"
-  report.expect(!page.promptOpen, cppID: id, message: "cancellation closes the prompt")
 
 S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "cancellation leaves the original document unchanged"
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                         what: "cancellation leaves the original document unchanged")
 
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "draft and cancellation preserve the full song contents"
-  report.expect(fixture.document.state == state, cppID: id,
-                    message: "draft and cancellation preserve the full song contents")

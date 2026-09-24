@@ -6,140 +6,25 @@ Original SHA-256: 10de3d240a7022bc299278437dfbf2166e90e1cc46d82a30585361b026e238
 Swift counterpart: src/checks/trackheaders/trackheaderinput.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
 Converted-window command: deno task verify:qml-roll --verbose
 Converted-window result: PASS (lane frozen diagnostic run, 1/1 SwiftRollTrackHeaders); test_mountedBandGeometryAndRows (:109-132) exercises A001-A003, A005-A008 and A010-A017, test_scrollThumbAtBothLimits (:136-154) exercises A088-A089. This proof-only pass cites the exercised lines without re-running the suite.
 Verified QML SHA-256: 43eb0128d4e291db0844ec3b9412204bc85411ebfa7e47a259c260edd58e916d
 Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 90f4b3bbdcb88534a16c157d15f36dee7a7497ef86911ca40a93e2adcf9e0c9b
-The legacy header/camera/playhead harnesses are not registered in this checkout.
-Their C++ sources are reference inventories only, never current execution evidence.
-
-Execution ownership
-TrackHeadersChecks and TrackHeadersInputChecks call the paired functions in the
-original Swift suite order. headerfixture.swift constructs a real two-track
-DocumentSession (Lead C0/key60/v100/24 ticks and Bass C1/key48/v80/48 ticks);
-headerinputfixture.swift owns pointer probes and document/history baselines.
-Their helper expectations execute on every call and are inventoried below.
-
-Original assertion inventory and source sequence
 
 A001 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:80
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows contains the mounted band in the live surface: origin at non-negative surface coordinates [S077] with origin plus size inside the surface size [S078, S079], the converted equivalent of viewport containment.
-Source context since previous assertion:
-  #include "checks/trackheaders/tst_trackheaders.h"
-
-  #include <QtTest>
-
-  #include <QAbstractItemModel>
-  #include <QColor>
-  #include <QQuickItem>
-  #include <QQuickWindow>
-  #include <QSize>
-
-  #include <algorithm>
-  #include <cmath>
-  #include <cstring>
-  #include <optional>
-
-  #include "checks/support/eventsynth.h"
-  #include "checks/support/quickframebuffer.h"
-  #include "checks/support/support.h"
-  #include "core/miditimeline.h"
-  #include "ui/songtab.h"
-  #include "ui/songview.h"
-  #include "ui/songview/quick/timelineinputitem.h"
-  #include "ui/songview/quick/timelinequickview.h"
-  #include "ui/songview/trackheadermodel.h"
-
-  namespace {
-
-  constexpr qreal kGeometryTolerance = 0.01;
-  constexpr int kWheelNotch = 120;
-
-  QVariant rowData(const songview::TrackHeaderModel &model, int row, int role)
-  {
-      return model.data(model.index(row, 0), role);
-  }
-
-  using checks::events::pointerInput;
-
-  songview::TimelineWheelInput wheelInput(const songview::TimelineInputItem &input, QPointF position,
-                                          QPoint pixelDelta, QPoint angleDelta)
-  {
-      return {position,       input.mapToGlobal(position), pixelDelta, angleDelta,
-              Qt::NoModifier, Qt::NoScrollPhase,           false};
-  }
-
-  bool near(qreal actual, qreal expected)
-  {
-      return std::abs(actual - expected) <= kGeometryTolerance;
-  }
-
-  bool sameRect(const QRectF &actual, const QRectF &expected)
-  {
-      return near(actual.x(), expected.x()) && near(actual.y(), expected.y()) &&
-             near(actual.width(), expected.width()) && near(actual.height(), expected.height());
-  }
-
-  bool hasDistinctPixels(const QImage &image)
-  {
-      if (image.isNull() || image.size().isEmpty() || image.depth() <= 0 || image.depth() % 8 != 0)
-          return false;
-      const int stride = image.depth() / 8;
-      if (image.bytesPerLine() < image.width() * stride)
-          return false;
-      const uchar *const first = image.constScanLine(0);
-      for (int y = 0; y < image.height(); ++y) {
-          const uchar *const scanline = image.constScanLine(y);
-          for (int offset = 0; offset < image.width() * stride; offset += stride) {
-              if (std::memcmp(scanline + offset, first, stride) != 0)
-                  return true;
-          }
-      }
-      return false;
-  }
-
-  } // namespace
-
-  void TrackHeadersTest::quickSurfacePublishesAndRendersHeaders()
-  {
-      TrackHeadersFixture &fx = fixture();
-      const QRect viewport(QPoint{}, fx.window().size());
-Original expression:
-  QVERIFY(viewport.contains(fx.isolatedBandRect()))
+Mapping: S077, S078, S079
 
 A002 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:84
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows verifies the published band is visible [S076].
-Source context since previous assertion:
-  ;
-      // Band rects are published canonical viewport-local, so the QML-published
-      // rect compares directly against the isolated band rect.
-      const QRectF localRect(fx.isolatedBandRect());
-Original expression:
-  QVERIFY(fx.root().property("trackHeadersBandVisible").toBool())
+Mapping: S076
 
 A003 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:85
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves the published rect: band x/y equal the parent bandRect [S080, S081] and width/height equal the model metrics [S082, S083], with surface containment [S078, S079].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(sameRect(fx.root().property("trackHeadersBandRect").toRectF(), localRect))
+Mapping: S080, S081, S082, S083, S078, S079
 
 A004 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:86
 Disposition: GAP
@@ -151,35 +36,19 @@ Original expression:
 
 A005 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:87
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves band x equals the parent bandRect x [S080].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(near(fx.band().x(), localRect.x()))
+Mapping: S080
 
 A006 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:88
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves band y equals the parent bandRect y [S081].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(near(fx.band().y(), localRect.y()))
+Mapping: S081
 
 A007 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:89
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves band width equals the model trackHeaderWidth [S082].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(near(fx.band().width(), localRect.width()))
+Mapping: S082
 
 A008 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:90
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves band height equals the model viewportHeight [S083].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(near(fx.band().height(), localRect.height()))
+Mapping: S083
 
 A009 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:91
 Disposition: GAP
@@ -191,60 +60,31 @@ Original expression:
 
 A010 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:92
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves input width equals band width minus scrollbarWidth [S085].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(
-          near(fx.input().width(), fx.isolatedBandRect().width() - fx.headers().scrollbarWidth()))
+Mapping: S085
 
 A011 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:94
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves input height equals band height [S086].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(near(fx.input().height(), fx.isolatedBandRect().height()))
+Mapping: S086
 
 A012 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:95
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves scrollbar x equals input width [S087].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(near(fx.scrollbar().x(), fx.input().width()))
+Mapping: S087
 
 A013 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:96
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves scrollbar width equals the model scrollbarWidth [S088].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(near(fx.scrollbar().width(), fx.headers().scrollbarWidth()))
+Mapping: S088
 
 A014 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:97
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows compares model viewportHeight against band height [S089].
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fx.headers().viewportHeight(), qreal(fx.isolatedBandRect().height()))
+Mapping: S089
 
 A015 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:98
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows compares model contentHeight against rows.count times rowHeight [S091]; the rows.count-to-model-count link stays PARTIAL at A017.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fx.headers().contentHeight(), fx.headers().rowCount() * fx.rowHeight())
+Mapping: S091
 
 A016 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:99
 Disposition: MATCHED
-Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves the appearance map is non-empty [S092].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!fx.headers().appearance().isEmpty())
+Mapping: S092
 
 A017 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:100
 Disposition: PARTIAL
@@ -275,20 +115,7 @@ Original expression:
 
 A020 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:115
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(1, fx.session.selectedTrack) plus the exercised title/voice row points prove both rows exist and resolve. [S001, S002, S009]
-Source context since previous assertion:
-  ;
-  }
-
-  void TrackHeadersTest::selectionAndVoiceRouteThroughHeaders()
-  {
-      TrackHeadersFixture &fx = fixture();
-      songview::TrackHeaderModel &headers = fx.headers();
-      SongView &view = fx.view();
-      const std::optional<int> selectionRow = fx.rowForTrack(fx.selectionTrack());
-      const std::optional<int> voiceRow = fx.rowForTrack(fx.voiceTrack());
-Original expression:
-  QVERIFY(selectionRow && voiceRow)
+Mapping: S001, S002, S009
 
 A021 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:128
 Disposition: GAP
@@ -312,645 +139,261 @@ Original expression:
 
 A022 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:132
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(1, fx.session.selectedTrack): title click selects primary track. [S001]
-Source context since previous assertion:
-  ;
-
-      headers.setScrollY(0.0);
-      const std::optional<QPointF> selection = fx.titlePoint(*selectionRow);
-Original expression:
-  QVERIFY(selection)
+Mapping: S001
 
 A023 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:133
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.beginPointer(...)) inside fx.click: title press accepted. [S001, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(
-          headers.pointerPress(pointerInput(fx.input(), *selection, Qt::LeftButton, Qt::LeftButton)))
+Mapping: S001
 
 A024 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:135
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.endPointer(...)) inside fx.click: title release accepted. [S001, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(
-          headers.pointerRelease(pointerInput(fx.input(), *selection, Qt::LeftButton, Qt::NoButton)))
+Mapping: S001
 
 A025 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:137
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(1, fx.session.selectedTrack): primary track follows the click. [S001]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(view.selectionModel().primaryTrack(), fx.selectionTrack())
+Mapping: S001
 
 A026 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:141
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[1].baseColor != unselected && h.rows[1].titleBold): selection flips base color and bold. [S002]
-Source context since previous assertion:
-  ;
-      const QColor selectedBase =
-          rowData(headers, *selectionRow, songview::TrackHeaderModel::BaseColorRole).value<QColor>();
-      const QImage afterSelection = fx.captureBand(error);
-Original expression:
-  QVERIFY2(selectedBase != unselectedBase,
-               "selecting a header record did not flip its base color role")
+Mapping: S002
 
 A027 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:143
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(1, fx.session.selectedTrack) and report.expectEqual(Set([0]), session.selectedTracks): same-size scope changes membership. [S001, S038]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(afterSelection.size() == beforeSelection.size() && afterSelection != beforeSelection,
-               "track selection did not alter the retained Quick header rendering")
+Mapping: S001, S038
 
 A028 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:148
 Disposition: MATCHED
-Mapping/reason: report.expect(h.beginPointer(x: voice.x, ...)): the voice row point exists and accepts press. [S006]
-Source context since previous assertion:
-  ;
-
-      headers.setScrollY(qreal(*voiceRow * fx.rowHeight()));
-      const std::optional<QPointF> voice = fx.voicePoint(*voiceRow);
-Original expression:
-  QVERIFY(voice)
+Mapping: S006
 
 A029 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:159
 Disposition: MATCHED
-Mapping/reason: report.expect(h.beginPointer(x: voice.x, ...)): voice line accepts press. [S006]
-Source context since previous assertion:
-  ;
-      int revealCount = 0;
-      int revealedProgram = -1;
-      const QMetaObject::Connection reveal =
-          QObject::connect(&view, &SongView::revealVoiceRequested, &view,
-                           [&revealCount, &revealedProgram](int program) {
-                               ++revealCount;
-                               revealedProgram = program;
-                           });
-      // A plain click anywhere on the header — voice line included — selects
-      // the track and reveals its voice.
-Original expression:
-  QVERIFY(headers.pointerPress(pointerInput(fx.input(), *voice, Qt::LeftButton, Qt::LeftButton)))
+Mapping: S006
 
 A030 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:160
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): voice line selects at press, before release. [S007]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(view.selectionModel().primaryTrack(), fx.voiceTrack())
+Mapping: S007
 
 A031 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:161
 Disposition: MATCHED
-Mapping/reason: report.expect(h.endPointer(x: voice.x, ...)): voice line accepts release. [S008]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headers.pointerRelease(pointerInput(fx.input(), *voice, Qt::LeftButton, Qt::NoButton)))
+Mapping: S008
 
 A032 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:162
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([1, 0], revealed): the voice click adds exactly one reveal. [S009]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(revealCount, 1)
+Mapping: S009
 
 A033 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:163
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([42, 17], revealedPrograms): request resolves the clicked track's current program. [S010]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(revealedProgram, view.currentProgram(fx.voiceTrack()))
+Mapping: S010
 
 A034 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:168
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([1, 0, 0], revealed): the voice-row title point exists and reveals its own track. [S011]
-Source context since previous assertion:
-  ;
-      checks::support::pumpQuick();
-
-      // The title line behaves the same way.
-      const std::optional<QPointF> voiceTitle = fx.titlePoint(*voiceRow);
-Original expression:
-  QVERIFY(voiceTitle)
+Mapping: S011
 
 A035 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:169
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.beginPointer(...)) inside fx.click on the voice-row title. [S011, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headers.pointerPress(
-          pointerInput(fx.input(), *voiceTitle, Qt::LeftButton, Qt::LeftButton)))
+Mapping: S011
 
 A036 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:171
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.endPointer(...)) inside fx.click on the voice-row title. [S011, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headers.pointerRelease(
-          pointerInput(fx.input(), *voiceTitle, Qt::LeftButton, Qt::NoButton)))
+Mapping: S011
 
 A037 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:173
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([1, 0, 0], revealed): reveal count reaches two after the voice-row title click. [S011]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(revealCount, 2)
+Mapping: S011
 
 A038 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:174
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): voice-row title click retains its selection. [S012]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(view.selectionModel().primaryTrack(), fx.voiceTrack())
+Mapping: S012
 
 A039 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:179
 Disposition: MATCHED
-Mapping/reason: report.expect(h.reorderIndicatorVisible) after beginPointer/updatePointer proves the press and drag move were delivered. [S013]
-Source context since previous assertion:
-  ;
-
-      // A drag beginning on the voice line becomes an adjacent no-op reorder
-      // and must not reveal a voice on release.
-      const QPointF adjacentDrop{voice->x(), fx.rowHeight() * 1.2};
-Original expression:
-  QVERIFY(headers.pointerPress(pointerInput(fx.input(), *voice, Qt::LeftButton, Qt::LeftButton)))
+Mapping: S013
 
 A040 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:180
 Disposition: MATCHED
-Mapping/reason: report.expect(h.reorderIndicatorVisible): the armed drag move produces the reorder marker. [S013]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(
-          headers.pointerMove(pointerInput(fx.input(), adjacentDrop, Qt::NoButton, Qt::LeftButton)))
+Mapping: S013
 
 A041 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:182
 Disposition: MATCHED
-Mapping/reason: report.expect(h.endPointer(..., button: 2)) consumes the armed drag and the follow-up left release is rejected. [S014, S015]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headers.pointerRelease(
-          pointerInput(fx.input(), adjacentDrop, Qt::RightButton, Qt::LeftButton)))
+Mapping: S014, S015
 
 A042 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:186
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([1, 0, 0], revealed): drag release never reveals a voice. [S017]
-Source context since previous assertion:
-  ;
-      headers.pointerRelease(pointerInput(fx.input(), adjacentDrop, Qt::LeftButton, Qt::NoButton));
-      checks::support::pumpQuick();
-Original expression:
-  QCOMPARE(revealCount, 2)
+Mapping: S017
 
 A043 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:187
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.reorderIndicatorVisible): cancel removes the reorder marker. [S016]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!headers.reorderIndicatorVisible())
+Mapping: S016
 
 A044 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:192
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(beforeScope.symmetricDifference([1]), fx.session.selectedTracks): the scope title point exists and toggles exactly the clicked track. [S019]
-Source context since previous assertion:
-  ;
-
-      // A ctrl-click extends the track scope; multi-select must not reveal.
-      headers.setScrollY(0.0);
-      const std::optional<QPointF> scopeTitle = fx.titlePoint(*selectionRow);
-Original expression:
-  QVERIFY(scopeTitle)
+Mapping: S019
 
 A045 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:194
 Disposition: MATCHED
-Mapping/reason: Ctrl-modified press on the scope title toggles scope; delivery proven by the symmetric-difference assertion. [S019, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-      const uint32_t scopeBefore = view.selectionModel().storedTrackScope();
-Original expression:
-  QVERIFY(headers.pointerPress(pointerInput(fx.input(), *scopeTitle, Qt::LeftButton,
-                                                Qt::LeftButton, Qt::ControlModifier)))
+Mapping: S019
 
 A046 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:198
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([1, 0, 0], revealed): modified selection never reveals a voice. [S018]
-Source context since previous assertion:
-  ;
-      headers.pointerRelease(
-          pointerInput(fx.input(), *scopeTitle, Qt::LeftButton, Qt::NoButton, Qt::ControlModifier));
-Original expression:
-  QCOMPARE(revealCount, 2)
+Mapping: S018
 
 A047 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:200
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(beforeScope.symmetricDifference([1]), fx.session.selectedTracks): Ctrl-click toggles exactly the clicked track in scope. [S019]
-Source context since previous assertion:
-  ;
-      const uint32_t scopeAfter = view.selectionModel().storedTrackScope();
-Original expression:
-  QCOMPARE(scopeAfter ^ scopeBefore, 1u << uint32_t(fx.selectionTrack()))
+Mapping: S019
 
 A048 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:201
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): Ctrl-click of another track retains the primary. [S020]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(view.selectionModel().primaryTrack(), fx.voiceTrack())
+Mapping: S020
 
 A049 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:203
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(history, document.history.currentIdentity): history unchanged by selection. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-      QObject::disconnect(reveal);
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), undo)
 
 A050 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:204
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(state, document.state): song unchanged by selection. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.smf().write(), before)
 
 A051 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:213
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0].muteHovered): the source row exists and shows mute hover. [S039]
-Source context since previous assertion:
-  ;
-  }
-
-  void TrackHeadersTest::muteAndSoloHonorCancellationAndButtons()
-  {
-      TrackHeadersFixture &fx = fixture();
-      songview::TrackHeaderModel &headers = fx.headers();
-      SongView &view = fx.view();
-      const std::optional<int> sourceRow = fx.rowForTrack(fx.sourceTrack());
-Original expression:
-  QVERIFY(sourceRow)
+Mapping: S039
 
 A052 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:236
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0].muteHovered) and report.expect(h.rows[0].soloHovered): mute, solo, and title probe points resolve on the row. [S039, S052]
-Source context since previous assertion:
-  ;
-      // Mask-only updates publish bounded dataChanged coverage for just the
-      // toggled row; the retained record structure never resets.
-      struct RowChange {
-          int first = -1;
-          int last = -1;
-          QList<int> roles;
-      };
-      std::vector<RowChange> changes;
-      int resets = 0;
-      const QMetaObject::Connection observed = QObject::connect(
-          &headers, &QAbstractItemModel::dataChanged, &headers,
-          [&changes](const QModelIndex &first, const QModelIndex &last, const QList<int> &roles) {
-              changes.push_back({first.row(), last.row(), roles});
-          });
-      const QMetaObject::Connection resetObserved = QObject::connect(
-          &headers, &QAbstractItemModel::modelReset, &headers, [&resets] { ++resets; });
-      headers.setScrollY(0.0);
-      view.selectTrack(fx.selectionTrack());
-      view.setTrackMute(fx.sourceTrack(), false);
-      const std::optional<QPointF> mute = fx.mutePoint(*sourceRow);
-      const std::optional<QPointF> solo = fx.soloPoint(*sourceRow);
-      const std::optional<QPointF> title = fx.titlePoint(*sourceRow);
-Original expression:
-  QVERIFY(mute && solo && title)
+Mapping: S039, S052
 
 A053 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:237
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0].muteHovered): the hover move is delivered and visible. [S039]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headers.pointerMove(pointerInput(fx.input(), *mute, Qt::NoButton, Qt::NoButton)))
+Mapping: S039
 
 A054 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:238
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0].muteHovered): mute hover is visible. [S039]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(rowData(headers, *sourceRow, songview::TrackHeaderModel::MuteHoveredRole).toBool())
+Mapping: S039
 
 A055 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:240
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.rows[0].muteHovered): pointer leave clears mute hover. [S040]
-Source context since previous assertion:
-  ;
-      headers.pointerLeave();
-Original expression:
-  QVERIFY(!rowData(headers, *sourceRow, songview::TrackHeaderModel::MuteHoveredRole).toBool())
+Mapping: S040
 
 A056 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:241
 Disposition: MATCHED
-Mapping/reason: report.expect(h.beginPointer(x: mute.x, ...)): mute accepts press. [S041]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headers.pointerPress(pointerInput(fx.input(), *mute, Qt::LeftButton, Qt::LeftButton)))
+Mapping: S041
 
 A057 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:242
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0].mutePressed): left press depresses mute. [S042]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(rowData(headers, *sourceRow, songview::TrackHeaderModel::MutePressedRole).toBool())
+Mapping: S042
 
 A058 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:243
 Disposition: MATCHED
-Mapping/reason: report.expect(h.beginPointer(x: title.x, ..., button: 2)): right press during held mute is handled. [S043]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headers.pointerPress(
-          pointerInput(fx.input(), *title, Qt::RightButton, Qt::LeftButton | Qt::RightButton)))
+Mapping: S043
 
 A059 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:245
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0].mutePressed && !h.menuOpen): additional right press does not replace held mute. [S044]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(rowData(headers, *sourceRow, songview::TrackHeaderModel::MutePressedRole).toBool())
+Mapping: S044
 
 A060 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:246
 Disposition: MATCHED
-Mapping/reason: report.expect(h.endPointer(x: title.x, ..., button: 2)): right release during held mute is handled. [S045]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(
-          headers.pointerRelease(pointerInput(fx.input(), *title, Qt::RightButton, Qt::LeftButton)))
+Mapping: S045
 
 A061 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:248
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.rows[0].mutePressed && !h.rows[0].muteChecked): wrong-button release cancels mute without toggling. [S046]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!view.trackMuted(fx.sourceTrack()))
+Mapping: S046
 
 A062 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:249
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.rows[0].mutePressed): held mute press clears on the wrong-button release. [S046]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!rowData(headers, *sourceRow, songview::TrackHeaderModel::MutePressedRole).toBool())
+Mapping: S046
 
 A063 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:250
 Disposition: MATCHED
-Mapping/reason: report.expect(h.beginPointer(x: mute.x, ...)) inside the cancel-reason loop: fresh press accepted. [S047]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headers.pointerPress(pointerInput(fx.input(), *mute, Qt::LeftButton, Qt::LeftButton)))
+Mapping: S047
 
 A064 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:252
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.rows[0].mutePressed && !h.rows[0].muteChecked): cancel releases mute without toggling. [S048]
-Source context since previous assertion:
-  ;
-      headers.inputCancelled(songview::TimelineInputCancelReason::FocusLost);
-Original expression:
-  QVERIFY(!rowData(headers, *sourceRow, songview::TrackHeaderModel::MutePressedRole).toBool())
+Mapping: S048
 
 A065 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:253
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.rows[0].muteChecked): cancelled press never toggles the mask. [S048]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!view.trackMuted(fx.sourceTrack()))
+Mapping: S048
 
 A066 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:254
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.endPointer(x: mute.x, ...)): cancel reason rejects the late release. [S049]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!headers.pointerRelease(pointerInput(fx.input(), *mute, Qt::LeftButton, Qt::NoButton)))
+Mapping: S049
 
 A067 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:256
 Disposition: MATCHED
-Mapping/reason: report.expect(h.beginPointer(x: mute.x, ...)) inside fx.click: mute press accepted. [S050, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-      changes.clear();
-Original expression:
-  QVERIFY(headers.pointerPress(pointerInput(fx.input(), *mute, Qt::LeftButton, Qt::LeftButton)))
+Mapping: S050
 
 A068 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:257
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.endPointer(...)) inside fx.click: mute release accepted. [S050, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headers.pointerRelease(pointerInput(fx.input(), *mute, Qt::LeftButton, Qt::NoButton)))
+Mapping: S050
 
 A069 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:258
 Disposition: MATCHED
-Mapping/reason: report.expect(fx.session.mutedTracks.contains(0)): mute click changes the session mask. [S050]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(view.trackMuted(fx.sourceTrack()))
+Mapping: S050
 
 A070 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:259
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0].muteChecked): visible checked state follows the toggle. [S050]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(rowData(headers, *sourceRow, songview::TrackHeaderModel::MuteCheckedRole).toBool())
+Mapping: S050
 
 A071 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:260
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(1, fx.session.selectedTrack): toggles preserve the primary track. [S062]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(view.selectionModel().primaryTrack(), fx.selectionTrack())
+Mapping: S062
 
 A072 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:262
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[1] === unaffected): mask changes retain the unrelated row, bounding churn to the muted row. [S060]
-Source context since previous assertion:
-  ;
-      const int mutedRow = *sourceRow;
-Original expression:
-  QVERIFY2(!changes.empty() && std::all_of(changes.cbegin(), changes.cend(),
-                                               [mutedRow](const RowChange &change) {
-                                                   return change.first == mutedRow &&
-                                                          change.last == mutedRow;
-                                               }),
-               "the mute toggle churned records beyond the muted row")
+Mapping: S060
 
 A073 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:268
 Disposition: RETIRED-ROLE-PROTOCOL
-Mapping/reason: The old Qt checked-role publication (MuteCheckedRole in the dataChanged role set) is retired from the Swift QListModel replacement protocol, which publishes registered properties instead. Mute/solo row scope stays proven by the retained-row identity check S060; precedent: proof.trackheaderraster.txt role retirements. No old role-set equivalence is claimed.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(std::any_of(changes.cbegin(), changes.cend(),
-                           [](const RowChange &change) {
-                               return change.roles.contains(
-                                   songview::TrackHeaderModel::MuteCheckedRole);
-                           }),
-               "the mute toggle did not publish the checked role")
+Mapping/reason: S060
 
 A074 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:275
 Disposition: MATCHED
-Mapping/reason: report.expect(!fx.session.mutedTracks.contains(0) && !h.rows[0].muteChecked): keyboard mute activation clears the toggle. [S051]
-Source context since previous assertion:
-  ;
-      headers.activateMute(fx.sourceTrack());
-Original expression:
-  QVERIFY(!view.trackMuted(fx.sourceTrack()))
+Mapping: S051
 
 A075 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:278
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0].soloHovered): the solo hover move is delivered and visible. [S052]
-Source context since previous assertion:
-  ;
-
-      view.setTrackSolo(fx.sourceTrack(), false);
-Original expression:
-  QVERIFY(headers.pointerMove(pointerInput(fx.input(), *solo, Qt::NoButton, Qt::NoButton)))
+Mapping: S052
 
 A076 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:279
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0].soloHovered): solo hover is visible. [S052]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(rowData(headers, *sourceRow, songview::TrackHeaderModel::SoloHoveredRole).toBool())
+Mapping: S052
 
 A077 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:281
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.rows[0].soloHovered): pointer leave clears solo hover. [S053]
-Source context since previous assertion:
-  ;
-      headers.pointerLeave();
-Original expression:
-  QVERIFY(!rowData(headers, *sourceRow, songview::TrackHeaderModel::SoloHoveredRole).toBool())
+Mapping: S053
 
 A078 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:282
 Disposition: MATCHED
-Mapping/reason: report.expect(h.beginPointer(x: solo.x, ...)): solo accepts press. [S054]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headers.pointerPress(pointerInput(fx.input(), *solo, Qt::LeftButton, Qt::LeftButton)))
+Mapping: S054
 
 A079 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:283
 Disposition: MATCHED
-Mapping/reason: report.expect(h.endPointer(x: solo.x, ...)): solo accepts release. [S056]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headers.pointerRelease(pointerInput(fx.input(), *solo, Qt::LeftButton, Qt::NoButton)))
+Mapping: S056
 
 A080 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:284
 Disposition: MATCHED
-Mapping/reason: report.expect(fx.session.soloedTracks.contains(0)): solo click changes the session mask. [S057]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(view.trackSoloed(fx.sourceTrack()))
+Mapping: S057
 
 A081 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:285
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0].soloChecked): visible checked state follows the toggle. [S057]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(rowData(headers, *sourceRow, songview::TrackHeaderModel::SoloCheckedRole).toBool())
+Mapping: S057
 
 A082 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:287
 Disposition: MATCHED
-Mapping/reason: report.expect(!fx.session.soloedTracks.contains(0) && !h.rows[0].soloChecked): keyboard solo activation clears the toggle. [S058]
-Source context since previous assertion:
-  ;
-      headers.activateSolo(fx.sourceTrack());
-Original expression:
-  QVERIFY(!view.trackSoloed(fx.sourceTrack()))
+Mapping: S058
 
 A083 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:292
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0].muteChecked) and report.expect(h.rows[1] === unaffected): external session mute reaches only the changed row. [S059, S060]
-Source context since previous assertion:
-  ;
-      // Document-driven masks follow the same bounded row contract.
-      view.setTrackMute(fx.sourceTrack(), false);
-      changes.clear();
-      view.setTrackMute(fx.sourceTrack(), true);
-Original expression:
-  QVERIFY2(!changes.empty() &&
-                   std::all_of(changes.cbegin(), changes.cend(),
-                               [row = *sourceRow](const RowChange &change) {
-                                   return change.first == row && change.last == row;
-                               }) &&
-                   std::any_of(changes.cbegin(), changes.cend(),
-                               [](const RowChange &change) {
-                                   return change.roles.contains(
-                                       songview::TrackHeaderModel::MuteCheckedRole);
-                               }),
-               "the mask-only update was not bounded mute-role coverage")
+Mapping: S059, S060
 
 A084 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:303
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(rebuilds, h.rowRebuildCount): toggles never rebuild rows. [S061]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(resets, 0)
+Mapping: S061
 
 A085 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:313
 Disposition: MATCHED
-Mapping/reason: report.expect(maximum > 0): one-row viewport has a scroll range. [S063]
-Source context since previous assertion:
-  ;
-      QObject::disconnect(observed);
-      QObject::disconnect(resetObserved);
-  }
-
-  void TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput()
-  {
-      TrackHeadersFixture &fx = fixture();
-      songview::TrackHeaderModel &headers = fx.headers();
-      const qreal maximumScroll = headers.maximumScrollY();
-Original expression:
-  QVERIFY(maximumScroll > 0.0)
+Mapping: S063
 
 A086 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:315
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(maximum, h.scrollY): scrollbar overshoot clamps at bottom. [S064]
-Source context since previous assertion:
-  ;
-      headers.setScrollY(maximumScroll + fx.rowHeight());
-Original expression:
-  QVERIFY(near(headers.scrollY(), maximumScroll))
+Mapping: S064
 
 A087 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:316
 Disposition: GAP
@@ -962,68 +405,31 @@ Original expression:
 
 A088 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:317
 Disposition: MATCHED
-Mapping/reason: Converted-window test_scrollThumbAtBothLimits proves thumb height is positive and thumb y is non-negative at scrollY zero [S094, S095].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(fx.thumb().height() > 0.0 && fx.thumb().y() >= 0.0)
+Mapping: S094, S095
 
 A089 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:318
 Disposition: MATCHED
-Mapping/reason: Converted-window test_scrollThumbAtBothLimits proves thumb y plus height stays inside the bar at both scroll limits [S096, S099].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(fx.thumb().y() + fx.thumb().height() <= fx.scrollbar().height() + kGeometryTolerance)
+Mapping: S096, S099
 
 A090 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:326
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(afterKey, h.scrollY) with afterKey = min(rowHeight, maximum): keyboard step scrolls one row. [S066]
-Source context since previous assertion:
-  ;
-      headers.setScrollY(0.0);
-      fx.scrollbar().forceActiveFocus(Qt::TabFocusReason);
-      checks::events::sendKey(fx.scrollbar(), QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier, {},
-                              false, 1);
-      checks::events::sendKey(fx.scrollbar(), QEvent::KeyRelease, Qt::Key_Down, Qt::NoModifier, {},
-                              false, 1);
-      checks::support::pumpQuick();
-Original expression:
-  QVERIFY(near(headers.scrollY(), std::min<qreal>(fx.rowHeight(), maximumScroll)))
+Mapping: S066
 
 A091 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:328
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.handleWheel(angleDeltaX: 120, ...)): horizontal wheel is rejected. [S067]
-Source context since previous assertion:
-  ;
-      const qreal afterKey = headers.scrollY();
-Original expression:
-  QVERIFY(!headers.wheel(wheelInput(fx.input(), {1.0, 1.0}, {}, {kWheelNotch, 0})))
+Mapping: S067
 
 A092 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:329
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(afterKey, h.scrollY): horizontal wheel leaves scroll alone. [S068]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(near(headers.scrollY(), afterKey))
+Mapping: S068
 
 A093 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:331
 Disposition: MATCHED
-Mapping/reason: report.expect(h.handleWheel(angleDeltaY: -120, ...)): vertical wheel is accepted. [S069]
-Source context since previous assertion:
-  ;
-      headers.setScrollY(0.0);
-Original expression:
-  QVERIFY(headers.wheel(wheelInput(fx.input(), {1.0, 1.0}, {}, {0, -kWheelNotch})))
+Mapping: S069
 
 A094 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:332
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(afterKey, h.scrollY): one wheel notch scrolls one row. [S070]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headers.scrollY() > 0.0)
+Mapping: S070
 
 A095 | TrackHeadersTest::hoveringHeadersDoesNotCreateTooltip | src/checks/trackheaders/trackheaderinput.cpp:339
 Disposition: GAP
@@ -1067,70 +473,24 @@ Original expression:
 
 A099 | TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.cpp:354
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/trackheaderinput.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-  }
-
-  void TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation()
-  {
-      MidiTimeline timeline;
-      SongDocument document;
-      SongView emptyView(document);
-      emptyView.setSong(&timeline, nullptr);
-      checks::support::bindEditActionsForTest(emptyView);
-Original expression:
-  QVERIFY(checks::support::showQuickViewport(emptyView, QSize(320, 180)))
 
 A100 | TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.cpp:362
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/trackheaderinput.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      auto *const quick = emptyView.quickView();
-      auto *const model =
-          emptyView.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
-      QQuickItem *const root = quick ? quick->rootObject() : nullptr;
-      auto *const input = root ? root->findChild<songview::TimelineInputItem *>(
-                                     QStringLiteral("timelineTrackHeadersInput"))
-                               : nullptr;
-Original expression:
-  QVERIFY(model && quick && root && input)
 
 A101 | TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.cpp:363
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(0, fx.headers.rows.count): empty song publishes zero rows. [S073]
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_COMPARE(model->rowCount(), 0)
+Mapping: S073
 
 A102 | TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.cpp:364
 Disposition: MATCHED
-Mapping/reason: report.expect(!fx.headers.beginPointer(x: 1, y: 1, ...)): empty header rejects press. [S074]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!model->pointerPress(pointerInput(*input, {1.0, 1.0}, Qt::LeftButton, Qt::LeftButton)))
+Mapping: S074
 
 A103 | TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.cpp:367
 Disposition: MATCHED
-Mapping/reason: report.expect(!fx.headers.beginPointer(x: -1, y: -1, ...)): negative header coordinates are rejected. [S072]
-Source context since previous assertion:
-  ;
-
-      const uint64_t revision = fixture().tab().document().revision();
-Original expression:
-  QVERIFY(!fixture().headers().pointerPress(
-          pointerInput(fixture().input(), {-1.0, -1.0}, Qt::LeftButton, Qt::LeftButton)))
+Mapping: S072
 
 A104 | TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.cpp:369
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(revision, document.revision): rejected input writes nothing. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fixture().tab().document().revision(), revision)
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -1141,480 +501,297 @@ Swift assertion predicates
 
 S001 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "title selects primary track"
-  report.expectEqual(1, fx.session.selectedTrack, cppID: id, what: "title selects primary track")
 
 S002 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "selection changes the visible title and base color"
-  report.expect(h.rows[1].baseColor != unselected && h.rows[1].titleBold,
-                    cppID: id, message: "selection changes the visible title and base color")
 
 S003 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "old primary loses bold title"
-  report.expect(!h.rows[0].titleBold, cppID: id, message: "old primary loses bold title")
 
 S004 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "title click reveals its voice once"
-  report.expectEqual([1], revealed, cppID: id, what: "title click reveals its voice once")
 
 S005 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "track-addressed title request resolves to the current program, not track ID"
-  report.expectEqual([42], revealedPrograms, cppID: id,
-                         what: "track-addressed title request resolves to the current program, not track ID")
 
 S006 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "voice line accepts press"
-  report.expect(h.beginPointer(x: voice.x, y: voice.y, button: 1, modifiers: 0),
-                    cppID: id, message: "voice line accepts press")
 
 S007 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "voice line selects at press, before release"
-  report.expectEqual(0, fx.session.selectedTrack, cppID: id,
-                         what: "voice line selects at press, before release")
 
 S008 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "voice line accepts release"
-  report.expect(h.endPointer(x: voice.x, y: voice.y, button: 1, modifiers: 0),
-                    cppID: id, message: "voice line accepts release")
 
 S009 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "voice click reveals its own track"
-  report.expectEqual([1, 0], revealed, cppID: id, what: "voice click reveals its own track")
 
 S010 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "voice-line request resolves the clicked track's current program"
-  report.expectEqual([42, 17], revealedPrograms, cppID: id,
-                         what: "voice-line request resolves the clicked track's current program")
 
 S011 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "voice-row title click reveals its own track"
-  report.expectEqual([1, 0, 0], revealed, cppID: id,
-                         what: "voice-row title click reveals its own track")
 
 S012 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "voice-row title click retains its selection"
-  report.expectEqual(0, fx.session.selectedTrack, cppID: id,
-                         what: "voice-row title click retains its selection")
 
 S013 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "voice-line drag becomes a reorder gesture"
-  report.expect(h.reorderIndicatorVisible, cppID: id,
-                    message: "voice-line drag becomes a reorder gesture")
 
 S014 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "wrong-button release consumes the armed drag"
-  report.expect(h.endPointer(x: voice.x, y: 0, button: 2, modifiers: 0),
-                    cppID: id, message: "wrong-button release consumes the armed drag")
 
 S015 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "cancelled drag leaves no pending release"
-  report.expect(!h.endPointer(x: voice.x, y: 0, button: 1, modifiers: 0),
-                    cppID: id, message: "cancelled drag leaves no pending release")
 
 S016 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "cancel removes reorder marker"
-  report.expect(!h.reorderIndicatorVisible, cppID: id, message: "cancel removes reorder marker")
 
 S017 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "drag release never reveals a voice"
-  report.expectEqual([1, 0, 0], revealed, cppID: id, what: "drag release never reveals a voice")
 
 S018 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "modified selection never reveals a voice"
-  report.expectEqual([1, 0, 0], revealed, cppID: id, what: "modified selection never reveals a voice")
 
 S019 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "Ctrl-click toggles exactly the clicked track in scope"
-  report.expectEqual(beforeScope.symmetricDifference([1]), fx.session.selectedTracks,
-                         cppID: id, what: "Ctrl-click toggles exactly the clicked track in scope")
 
 S020 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "Ctrl-click of another track retains the primary"
-  report.expectEqual(0, fx.session.selectedTrack, cppID: id,
-                         what: "Ctrl-click of another track retains the primary")
 
 S021 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "secondary scope renders the original selection overlay"
-  report.expect(h.rows[1].overlayColor != "#00000000", cppID: id,
-                    message: "secondary scope renders the original selection overlay")
 
 S022 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "Ctrl adds secondary scope"
-  report.expectEqual(Set([0, 1]), session.selectedTracks, cppID: id, what: "Ctrl adds secondary scope")
 
 S023 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "removing primary chooses first surviving track"
-  report.expectEqual(1, session.selectedTrack, cppID: id, what: "removing primary chooses first surviving track")
 
 S024 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "removed primary leaves surviving scope"
-  report.expectEqual(Set([1]), session.selectedTracks, cppID: id, what: "removed primary leaves surviving scope")
 
 S025 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "last scoped track cannot be removed"
-  report.expectEqual(Set([1]), session.selectedTracks, cppID: id, what: "last scoped track cannot be removed")
 
 S026 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "Shift extends range from primary"
-  report.expectEqual(Set([0, 1]), session.selectedTracks, cppID: id, what: "Shift extends range from primary")
 
 S027 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "range keeps primary"
-  report.expectEqual(1, session.selectedTrack, cppID: id, what: "range keeps primary")
 
 S028 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "mute command uses entire track scope"
-  report.expectEqual(Set([0, 1]), session.mutedTracks, cppID: id, what: "mute command uses entire track scope")
 
 S029 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "all-muted scope toggles off together"
-  report.expect(session.mutedTracks.isEmpty, cppID: id, message: "all-muted scope toggles off together")
 
 S030 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "solo command uses entire track scope"
-  report.expectEqual(Set([0, 1]), session.soloedTracks, cppID: id, what: "solo command uses entire track scope")
 
 S031 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "all-soloed scope toggles off together"
-  report.expect(session.soloedTracks.isEmpty, cppID: id, message: "all-soloed scope toggles off together")
 
 S032 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "move scoped track"
-  report.expect(fx.document.moveTrack(1, to: 0), cppID: id, message: "move scoped track")
 
 S033 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "primary follows moved identity"
-  report.expectEqual(0, session.selectedTrack, cppID: id, what: "primary follows moved identity")
 
 S034 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "scope follows both moved identities"
-  report.expectEqual(Set([0, 1]), session.selectedTracks, cppID: id, what: "scope follows both moved identities")
 
 S035 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "undo scoped move"
-  report.expect(fx.document.history.undoDocument(), cppID: id, message: "undo scoped move")
 
 S036 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "undo restores primary identity"
-  report.expectEqual(1, session.selectedTrack, cppID: id, what: "undo restores primary identity")
 
 S037 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "undo restores scope identities"
-  report.expectEqual(Set([0, 1]), session.selectedTracks, cppID: id, what: "undo restores scope identities")
 
 S038 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "plain click collapses scope"
-  report.expectEqual(Set([0]), session.selectedTracks, cppID: id, what: "plain click collapses scope")
 
 S039 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "mute hover is visible"
-  report.expect(h.rows[0].muteHovered, cppID: id, message: "mute hover is visible")
 
 S040 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "pointer leave clears mute hover"
-  report.expect(!h.rows[0].muteHovered, cppID: id, message: "pointer leave clears mute hover")
 
 S041 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "mute accepts press"
-  report.expect(h.beginPointer(x: mute.x, y: mute.y, button: 1, modifiers: 0),
-                    cppID: id, message: "mute accepts press")
 
 S042 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "left press depresses mute"
-  report.expect(h.rows[0].mutePressed, cppID: id, message: "left press depresses mute")
 
 S043 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "right press during held mute is handled"
-  report.expect(h.beginPointer(x: title.x, y: title.y, button: 2, modifiers: 0),
-                    cppID: id, message: "right press during held mute is handled")
 
 S044 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "additional right press does not replace held mute"
-  report.expect(h.rows[0].mutePressed && !h.menuOpen, cppID: id,
-                    message: "additional right press does not replace held mute")
 
 S045 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "right release during held mute is handled"
-  report.expect(h.endPointer(x: title.x, y: title.y, button: 2, modifiers: 0),
-                    cppID: id, message: "right release during held mute is handled")
 
 S046 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "wrong-button release cancels mute without toggling"
-  report.expect(!h.rows[0].mutePressed && !h.rows[0].muteChecked, cppID: id,
-                    message: "wrong-button release cancels mute without toggling")
 
 S047 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "cancel reason \(reason) accepts a fresh press"
-  report.expect(h.beginPointer(x: mute.x, y: mute.y, button: 1, modifiers: 0),
-                        cppID: id, message: "cancel reason \(reason) accepts a fresh press")
 
 S048 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "cancel reason \(reason) releases mute without toggling"
-  report.expect(!h.rows[0].mutePressed && !h.rows[0].muteChecked,
-                        cppID: id, message: "cancel reason \(reason) releases mute without toggling")
 
 S049 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "cancel reason \(reason) rejects late release"
-  report.expect(!h.endPointer(x: mute.x, y: mute.y, button: 1, modifiers: 0),
-                        cppID: id, message: "cancel reason \(reason) rejects late release")
 
 S050 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "mute click changes session mask and visible checked state"
-  report.expect(fx.session.mutedTracks.contains(0) && h.rows[0].muteChecked,
-                    cppID: id, message: "mute click changes session mask and visible checked state")
 
 S051 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "keyboard mute activation clears the same toggle"
-  report.expect(!fx.session.mutedTracks.contains(0) && !h.rows[0].muteChecked,
-                    cppID: id, message: "keyboard mute activation clears the same toggle")
 
 S052 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "solo hover is visible"
-  report.expect(h.rows[0].soloHovered, cppID: id, message: "solo hover is visible")
 
 S053 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "pointer leave clears solo hover"
-  report.expect(!h.rows[0].soloHovered, cppID: id, message: "pointer leave clears solo hover")
 
 S054 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "solo accepts press"
-  report.expect(h.beginPointer(x: solo.x, y: solo.y, button: 1, modifiers: 0),
-                    cppID: id, message: "solo accepts press")
 
 S055 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "solo press is visible"
-  report.expect(h.rows[0].soloPressed, cppID: id, message: "solo press is visible")
 
 S056 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "solo accepts release"
-  report.expect(h.endPointer(x: solo.x, y: solo.y, button: 1, modifiers: 0),
-                    cppID: id, message: "solo accepts release")
 
 S057 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "solo click changes session mask and visible checked state"
-  report.expect(fx.session.soloedTracks.contains(0) && h.rows[0].soloChecked,
-                    cppID: id, message: "solo click changes session mask and visible checked state")
 
 S058 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "keyboard solo activation clears the same toggle"
-  report.expect(!fx.session.soloedTracks.contains(0) && !h.rows[0].soloChecked,
-                    cppID: id, message: "keyboard solo activation clears the same toggle")
 
 S059 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "external session mute reaches header"
-  report.expect(h.rows[0].muteChecked, cppID: id, message: "external session mute reaches header")
 
 S060 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "mask changes retain unrelated row"
-  report.expect(h.rows[1] === unaffected, cppID: id, message: "mask changes retain unrelated row")
 
 S061 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "toggles never rebuild rows"
-  report.expectEqual(rebuilds, h.rowRebuildCount, cppID: id, what: "toggles never rebuild rows")
 
 S062 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "toggles preserve primary track"
-  report.expectEqual(1, fx.session.selectedTrack, cppID: id, what: "toggles preserve primary track")
 
 S063 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "one-row viewport has a scroll range"
-  report.expect(maximum > 0, cppID: id, message: "one-row viewport has a scroll range")
 
 S064 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "scrollbar overshoot clamps at bottom"
-  report.expectEqual(maximum, h.scrollY, cppID: id, what: "scrollbar overshoot clamps at bottom")
 
 S065 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "scrollbar undershoot clamps at top"
-  report.expectEqual(0, h.scrollY, cppID: id, what: "scrollbar undershoot clamps at top")
 
 S066 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "keyboard step scrolls one row"
-  report.expectEqual(afterKey, h.scrollY, cppID: id, what: "keyboard step scrolls one row")
 
 S067 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "horizontal wheel is rejected"
-  report.expect(!h.handleWheel(angleDeltaX: 120, angleDeltaY: 0, pixelDeltaX: 0,
-                                  pixelDeltaY: 0, modifiers: 0, phase: 0),
-                    cppID: id, message: "horizontal wheel is rejected")
 
 S068 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "horizontal wheel leaves scroll alone"
-  report.expectEqual(afterKey, h.scrollY, cppID: id, what: "horizontal wheel leaves scroll alone")
 
 S069 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "vertical wheel is accepted"
-  report.expect(h.handleWheel(angleDeltaX: 0, angleDeltaY: -120, pixelDeltaX: 0,
-                                 pixelDeltaY: 0, modifiers: 0, phase: 0),
-                    cppID: id, message: "vertical wheel is accepted")
 
 S070 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "one wheel notch scrolls one row"
-  report.expectEqual(afterKey, h.scrollY, cppID: id, what: "one wheel notch scrolls one row")
 
 S071 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "trackpad pixel delta takes precedence over angle delta"
-  report.expectEqual(afterKey - 7, h.scrollY, cppID: id,
-                         what: "trackpad pixel delta takes precedence over angle delta")
 
 S072 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "negative header coordinates are rejected"
-  report.expect(!fx.headers.beginPointer(x: -1, y: -1, button: 1, modifiers: 0),
-                    cppID: id, message: "negative header coordinates are rejected")
 
 S073 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "empty song publishes zero rows"
-  report.expectEqual(0, fx.headers.rows.count, cppID: id, what: "empty song publishes zero rows")
 
 S074 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "empty header rejects press"
-  report.expect(!fx.headers.beginPointer(x: 1, y: 1, button: 1, modifiers: 0),
-                    cppID: id, message: "empty header rejects press")
 
 S075 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.swift
 Anchor: message "empty header rejects release"
-  report.expect(!fx.headers.endPointer(x: 1, y: 1, button: 1, modifiers: 0),
-                    cppID: id, message: "empty header rejects release")
-
-S076-S099 index the converted-window predicates of src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_mountedBandGeometryAndRows and test_scrollThumbAtBothLimits, exercised by the frozen converted-window run pinned below. QML expressions quoted verbatim.
 
 S076 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(band.visible)
 
 S077 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(origin.x >= 0 && origin.y >= 0)
 
 S078 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(origin.x + band.width <= s.width + testCase.tolerance)
 
 S079 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(origin.y + band.height <= s.height + testCase.tolerance)
 
 S080 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(near(band.x, band.parent.bandRect.x))
 
 S081 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(near(band.y, band.parent.bandRect.y))
 
 S082 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(near(band.width, h.trackHeaderWidth))
 
 S083 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(near(band.height, h.viewportHeight))
 
 S084 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(input.visible)
 
 S085 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(near(input.width, band.width - h.scrollbarWidth))
 
 S086 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(near(input.height, band.height))
 
 S087 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(near(bar.x, input.width))
 
 S088 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(near(bar.width, h.scrollbarWidth))
 
 S089 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  compare(h.viewportHeight, band.height)
 
 S090 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(rows.count > 0)
 
 S091 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  compare(h.contentHeight, rows.count * h.rowHeight)
 
 S092 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(Object.keys(h.appearance).length > 0)
 
 S093 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  tryVerify(function() { return near(thumb.y, 0) })
 
 S094 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(thumb.height > 0)
 
 S095 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(thumb.y >= 0)
 
 S096 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(thumb.y + thumb.height <= bar.height + testCase.tolerance)
 
 S097 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  tryVerify(function() { return near(thumb.y + thumb.height, bar.height) })
 
 S098 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(thumb.y >= 0)
 
 S099 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(thumb.y + thumb.height <= bar.height + testCase.tolerance)
-
-Shared helper: src/checks/trackheaders/headerfixture.swift
-SHA-256: 1d65a6a2db64757829d2635c69dcd83dae2a29ebaaad129db1ed325fe66ab491
-src/checks/trackheaders/headerfixture.swift:64
-  report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
-                        cppID: trackHeadersReorderID, message: "\(label): header accepts press")
-src/checks/trackheaders/headerfixture.swift:66
-  report.expect(headers.updatePointer(x: x, y: dropY, modifiers: 0),
-                        cppID: trackHeadersReorderID, message: "\(label): header accepts drag")
-src/checks/trackheaders/headerfixture.swift:68
-  report.expect(headers.endPointer(x: x, y: dropY, button: 1, modifiers: 0),
-                        cppID: trackHeadersReorderID, message: "\(label): header accepts release")
-src/checks/trackheaders/headerfixture.swift:73
-  report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
-                             what: "\(phase): rows follow engine track order")
-src/checks/trackheaders/headerfixture.swift:76
-  report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
-                             what: "\(phase): rows display ordered numbered track names")
-src/checks/trackheaders/headerfixture.swift:78
-  report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
-                             what: "\(phase): one row per track plus add-track row")
-src/checks/trackheaders/headerfixture.swift:81
-  report.expectEqual([names.count], addRows, cppID: cppID,
-                             what: "\(phase): add-track row remains last")
-
-Shared helper: src/checks/trackheaders/headerinputfixture.swift
-SHA-256: 3c5d2bdfd003b1564928b17990288debd27810525485463027fd19d950d7ec40
-src/checks/trackheaders/headerinputfixture.swift:28
-  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
-                        cppID: cppID, message: "\(probe) row \(row) accepts press")
-src/checks/trackheaders/headerinputfixture.swift:30
-  report.expect(headers.endPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
-                        cppID: cppID, message: "\(probe) row \(row) accepts release")
-src/checks/trackheaders/headerinputfixture.swift:36
-  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 2, modifiers: 0),
-                        cppID: cppID, message: "right press is handled")
-src/checks/trackheaders/headerinputfixture.swift:38
-  report.expect(headers.menuOpen, cppID: cppID, message: "right press opens header menu")
-src/checks/trackheaders/headerinputfixture.swift:64
-  report.expectEqual(state, document.state, cppID: cppID, what: "\(phase): song unchanged")
-src/checks/trackheaders/headerinputfixture.swift:65
-  report.expectEqual(revision, document.revision, cppID: cppID,
-                             what: "\(phase): no document write")
-src/checks/trackheaders/headerinputfixture.swift:67
-  report.expectEqual(history, document.history.currentIdentity, cppID: cppID,
-                             what: "\(phase): history unchanged")

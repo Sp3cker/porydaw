@@ -6,23 +6,8 @@ Original SHA-256: 909169cc2bebb6c06b28a98d919a9d94942d98bd35f723cf04a5b2f1f5c7fa
 Swift counterpart: src/checks/rollcheck/velocity_prompt.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; the context inventory below records its rows, loops and fixtures.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-Unresolved entries remain work.
 
-Execution and ownership
-The original swiftcore suite entrypoints invoke these paired functions in their original
-order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
-VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
-Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
-Verification evidence
 Command: deno task build:checks
 Result: PASS.
 Command: deno task verify --filter swiftcore --verbose
@@ -40,57 +25,6 @@ Command: deno task proof check --executed
 Result: PASS (223 proof files, 10423 anchors resolved; 15 unrelated anchors
 not executed in other ledgers).
 Counts: MATCHED 49, PARTIAL 7, GAP 37, RETIRED-REPRESENTATION 12.
-Executed Swift assertions prove exact SMF bytes and undo depth for the
-document transactions; mounted QML checks S059-S062 prove prompt focus,
-typing, buttons, bounds, and paired outside-dismissal input. Unproven
-latched drawing, interruption/deactivation/resize, and suite teardown
-remain GAP. Partial rows state exact missing predicates individually.
-
-Fixture, sequence, data-row and loop inventory
-Each line below is an exact original source anchor. Multiline declarations, helper
-implementations, native event delivery and the complete order remain in the pinned source.
-src/checks/rollcheck/velocity_prompt.cpp:83 | // press opens the guarded menu in the already-exposed canvas and the velocity
-src/checks/rollcheck/velocity_prompt.cpp:118 | // entry: the fixture seeds the current selection and the roll resolves it,
-src/checks/rollcheck/velocity_prompt.cpp:139 | QTest::mouseClick(
-src/checks/rollcheck/velocity_prompt.cpp:240 | while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-src/checks/rollcheck/velocity_prompt.cpp:280 | QTest::keyClick(escapee.window, Qt::Key_Escape);
-src/checks/rollcheck/velocity_prompt.cpp:322 | while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-src/checks/rollcheck/velocity_prompt.cpp:353 | // The actual canvas press closes the draft. Draining deferred deletion
-src/checks/rollcheck/velocity_prompt.cpp:354 | // before the matching release proves that the retiring underlay still
-src/checks/rollcheck/velocity_prompt.cpp:355 | // owns the pair: the timeline must not draw/select on that release.
-src/checks/rollcheck/velocity_prompt.cpp:358 | QVERIFY2(!outside.popup->isOpen(), "an outside canvas press did not cancel the draft");
-src/checks/rollcheck/velocity_prompt.cpp:364 | "the paired outside release reached the timeline after popup teardown");
-src/checks/rollcheck/velocity_prompt.cpp:367 | // An interruption can lose the dismissing release entirely. Deactivation
-src/checks/rollcheck/velocity_prompt.cpp:368 | // must retire the old paired-release marker, so a fresh same-button
-src/checks/rollcheck/velocity_prompt.cpp:374 | QVERIFY2(!interrupted.popup->isOpen(), "the interrupted outside press did not close the draft");
-src/checks/rollcheck/velocity_prompt.cpp:386 | QTest::mouseMove(interrupted.window, freshDragPoint);
-src/checks/rollcheck/velocity_prompt.cpp:391 | "fresh velocity drag did not stage a release-dependent preview");
-src/checks/rollcheck/velocity_prompt.cpp:399 | "a fresh velocity drag release stayed swallowed after interruption");
-src/checks/rollcheck/velocity_prompt.cpp:400 | while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-src/checks/rollcheck/velocity_prompt.cpp:431 | // The owning fixture shell is shorter than the larger Insert Time form.
-src/checks/rollcheck/velocity_prompt.cpp:479 | // An outside right press while the velocity prompt is open dismisses the
-src/checks/rollcheck/velocity_prompt.cpp:481 | // another owner's dismissal, no note menu may open, and the paired release
-src/checks/rollcheck/velocity_prompt.cpp:509 | QVERIFY2(!outside.popup->isOpen(), "an outside right press did not dismiss the prompt");
-src/checks/rollcheck/velocity_prompt.cpp:513 | QVERIFY2(popup && !popup->isOpen(), "the swallowed outside right release opened a popup");
-src/checks/rollcheck/velocity_prompt.cpp:548 | QTest::keyClick(cycled.window, Qt::Key_Tab);
-src/checks/rollcheck/velocity_prompt.cpp:551 | QTest::keyClick(cycled.window, Qt::Key_Tab);
-src/checks/rollcheck/velocity_prompt.cpp:554 | QTest::keyClick(cycled.window, Qt::Key_Tab);
-src/checks/rollcheck/velocity_prompt.cpp:558 | QTest::keyClick(cycled.window, Qt::Key_Backtab, Qt::ShiftModifier);
-src/checks/rollcheck/velocity_prompt.cpp:565 | QTest::keyClick(cycled.window, Qt::Key_Escape);
-src/checks/rollcheck/velocity_prompt.cpp:582 | QTest::keyClick(opened.window, Qt::Key_Return);
-src/checks/rollcheck/velocity_prompt.cpp:588 | QTest::keyClick(opened.window, Qt::Key_Escape);
-src/checks/rollcheck/velocity_prompt.cpp:595 | for (int i = 0; i < 8; ++i)
-src/checks/rollcheck/velocity_prompt.cpp:596 | QTest::keyClick(lowered.window, Qt::Key_PageDown);
-src/checks/rollcheck/velocity_prompt.cpp:602 | QTest::keyClick(lowered.window, Qt::Key_Return);
-src/checks/rollcheck/velocity_prompt.cpp:613 | for (int i = 0; i < 13; ++i)
-src/checks/rollcheck/velocity_prompt.cpp:614 | QTest::keyClick(raised.window, Qt::Key_PageUp);
-src/checks/rollcheck/velocity_prompt.cpp:620 | QTest::keyClick(raised.window, Qt::Key_Return);
-src/checks/rollcheck/velocity_prompt.cpp:639 | QTest::keyClick(capped.window, Qt::Key_Up);
-src/checks/rollcheck/velocity_prompt.cpp:640 | QTest::keyClick(capped.window, Qt::Key_Up, Qt::ControlModifier);
-src/checks/rollcheck/velocity_prompt.cpp:647 | QTest::keyClick(capped.window, Qt::Key_Escape);
-src/checks/rollcheck/velocity_prompt.cpp:651 | while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-
-Original assertion inventory
 
 A001 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:155
 Disposition: GAP
@@ -100,15 +34,11 @@ Original expression:
 
 A002 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:166
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION: separate QQuickPopup/window wrapper no longer exists in the mounted editor; S062 | src/checks/editorqml/tst_EditorDrawer.qml proves the corresponding visible prompt card and focused numeric field (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic))
+Mapping/reason: S062
 
 A003 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:169
 Disposition: MATCHED
-Mapping/reason: MATCHED: S062 | src/checks/editorqml/tst_EditorDrawer.qml finds the mounted noteVelocityInput in the production velocity prompt and observes active focus (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(input, "the velocity prompt has no text input")
+Mapping: S062
 
 A004 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:170
 Disposition: PARTIAL
@@ -124,54 +54,31 @@ Original expression:
 
 A006 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:177
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml types 95 into the mounted noteVelocityInput and observes field.text == 95 (editorqml-drawer PASS).
-Original expression:
-  QCOMPARE(input->property("text").toString(), QStringLiteral("95"))
+Mapping: S059
 
 A007 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:178
 Disposition: MATCHED
-Mapping/reason: MATCHED: S048 | src/checks/rollcheck/velocity_prompt.swift drafting 95 preserves SMF bytes, revision, and history index/count (swiftcore PASS).
-Original expression:
-  QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
-                   doc.undoStack()->count() == undoCount && doc.revision() == revision,
-               "typing into the velocity prompt mutated the song")
+Mapping: S048
 
 A008 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:184
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml clicks the mounted noteVelocityAccept button and observes the captured note commit (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(quick_popup::clickPromptButton(*opened.popup, QLatin1String("noteVelocityAccept")),
-               "the velocity prompt has no OK button")
+Mapping: S059
 
 A009 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:188
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml clicking the mounted OK button closes the prompt and restores plot focus (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(popup && !popup->isOpen(), "the OK button did not close the velocity prompt")
+Mapping: S059
 
 A010 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:190
 Disposition: MATCHED
-Mapping/reason: MATCHED: S049 | src/checks/rollcheck/velocity_prompt.swift accepting 95 sets the captured note velocity to 95, advances revision and history index/count by one (swiftcore PASS).
-Original expression:
-  QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &accepted) &&
-                   accepted.velocity == 95 && doc.revision() == revision + 1 &&
-                   doc.undoStack()->count() == undoCount + 1 && doc.undoStack()->index() == undo + 1,
-               "velocity prompt acceptance did not commit one undoable velocity edit")
+Mapping: S049
 
 A011 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:194
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml the mounted OK button returns active focus to the velocity plot (editorqml-drawer PASS).
-Original expression:
-  QTRY_VERIFY2(roll.hasFocus(), "focus did not return to the roll after acceptance")
+Mapping: S059
 
 A012 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:198
 Disposition: MATCHED
-Mapping/reason: MATCHED: S051 | src/checks/rollcheck/velocity_prompt.swift one undo restores the original velocity 73 and SMF bytes, and returns the history index to its baseline (swiftcore PASS).
-Original expression:
-  QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &undone) &&
-                   undone.velocity == 73 && doc.smf().write() == before &&
-                   doc.undoStack()->index() == undo,
-               "undoing the velocity acceptance did not restore the previous velocity")
+Mapping: S051
 
 A013 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:210
 Disposition: GAP
@@ -189,9 +96,7 @@ Original expression:
 
 A015 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:221
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION: standalone QQuickPopup/window wrapper is absent from the mounted editor; S059 | src/checks/editorqml/tst_EditorDrawer.qml proves reopening uses the same mounted card and input after an acceptance (editorqml-drawer PASS). The unchanged-value no-op remains A018 PARTIAL.
-Original expression:
-  QVERIFY2(reopened.window && reopened.popup, qUtf8Printable(reopened.diagnostic))
+Mapping/reason: S059
 
 A016 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:222
 Disposition: GAP
@@ -250,88 +155,55 @@ Original expression:
 
 A024 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:266
 Disposition: MATCHED
-Mapping/reason: MATCHED: S053 | src/checks/rollcheck/velocity_prompt.swift selectionless entry refuses and preserves SMF bytes, history index/count, and document revision (swiftcore PASS).
-Original expression:
-  QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
-                   doc.undoStack()->count() == undoCount && doc.revision() == revision,
-               "the selectionless velocity entry wrote to the song")
+Mapping: S053
 
 A025 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:273
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION: separate QQuickPopup/window wrapper is absent from the mounted editor; S060 | src/checks/editorqml/tst_EditorDrawer.qml proves its functional Escape interaction through the hosted prompt (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(escapee.window && escapee.popup, qUtf8Printable(escapee.diagnostic))
+Mapping/reason: S060
 
 A026 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:276
 Disposition: MATCHED
-Mapping/reason: MATCHED: S060 | src/checks/editorqml/tst_EditorDrawer.qml types in the mounted noteVelocityInput before Escape and verifies the visible text and plot focus (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(input, "the velocity prompt has no text input")
+Mapping: S060
 
 A027 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:279
 Disposition: MATCHED
-Mapping/reason: MATCHED: S060 | src/checks/editorqml/tst_EditorDrawer.qml types draft 20 into the mounted numeric field and observes field.text == 20 before Escape (editorqml-drawer PASS).
-Original expression:
-  QCOMPARE(input->property("text").toString(), QStringLiteral("20"))
+Mapping: S060
 
 A028 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:283
 Disposition: MATCHED
-Mapping/reason: MATCHED: S060 | src/checks/editorqml/tst_EditorDrawer.qml Escape closes the mounted prompt with an uncommitted 20 draft (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(popup && !popup->isOpen(), "Escape did not close the velocity prompt")
+Mapping: S060
 
 A029 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:284
 Disposition: MATCHED
-Mapping/reason: MATCHED: S054 | src/checks/rollcheck/velocity_prompt.swift proves cancelling draft 20 keeps bytes/history/index unchanged; S060 | src/checks/editorqml/tst_EditorDrawer.qml sends Escape with draft 20 in the mounted prompt and observes no document revision or note change (swiftcore and editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
-                   doc.undoStack()->count() == undoCount && doc.revision() == revision,
-               "Escape on the velocity prompt wrote to the song")
+Mapping: S054, S060
 
 A030 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:287
 Disposition: MATCHED
-Mapping/reason: MATCHED: S060 | src/checks/editorqml/tst_EditorDrawer.qml after Escape from the mounted prompt verifies velocityPlot.activeFocus (editorqml-drawer PASS).
-Original expression:
-  QTRY_VERIFY2(roll.hasFocus(), "focus did not return to the roll after Escape")
+Mapping: S060
 
 A031 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:291
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION: separate QQuickPopup/window wrapper is absent from the mounted editor; S059 | src/checks/editorqml/tst_EditorDrawer.qml proves the hosted prompt renders and its Cancel button operates (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(cancelled.window && cancelled.popup, qUtf8Printable(cancelled.diagnostic))
+Mapping/reason: S059
 
 A032 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:294
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml clicks mounted noteVelocityCancel after entering draft 20 and observes dismissal (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(quick_popup::clickPromptButton(*cancelled.popup, QLatin1String("noteVelocityCancel")),
-               "the velocity prompt has no Cancel button")
+Mapping: S059
 
 A033 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:297
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml mounted Cancel button click closes the prompt with draft 20 (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(popup && !popup->isOpen(), "the Cancel button did not close the velocity prompt")
+Mapping: S059
 
 A034 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:298
 Disposition: MATCHED
-Mapping/reason: MATCHED: S054 | src/checks/rollcheck/velocity_prompt.swift cancelling draft 20 preserves bytes/history/index; S059 | src/checks/editorqml/tst_EditorDrawer.qml clicks mounted Cancel with draft 20 and observes unchanged note/revision (swiftcore and editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
-                   doc.undoStack()->count() == undoCount && doc.revision() == revision,
-               "the velocity prompt Cancel button wrote to the song")
+Mapping: S054, S059
 
 A035 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:301
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml clicking mounted Cancel returns active focus to the velocity plot (editorqml-drawer PASS).
-Original expression:
-  QTRY_VERIFY2(roll.hasFocus(), "focus did not return to the roll after the Cancel button")
+Mapping: S059
 
 A036 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:307
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION: standalone QQuickPopup/window wrapper is absent from the mounted editor; S059 | src/checks/editorqml/tst_EditorDrawer.qml proves the hosted prompt opens for a captured note, while stale prompt QML delivery remains unproven (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(stale.window && stale.popup, qUtf8Printable(stale.diagnostic))
+Mapping/reason: S059
 
 A037 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:311
 Disposition: GAP
@@ -348,12 +220,7 @@ Original expression:
 
 A039 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:316
 Disposition: MATCHED
-Mapping/reason: MATCHED: S055 | src/checks/rollcheck/velocity_prompt.swift stale acceptance preserves the foreign velocity 40, revision +1, and history index/count +1, with unchanged post-foreign SMF bytes (swiftcore PASS).
-Original expression:
-  QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &staleNote) &&
-                   staleNote.velocity == 40 && doc.revision() == revision + 1 &&
-                   doc.undoStack()->count() == undoCount + 1 && doc.undoStack()->index() == undo + 1,
-               "a stale velocity acceptance wrote to the song")
+Mapping: S055
 
 A040 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:320
 Disposition: GAP
@@ -375,9 +242,7 @@ Original expression:
 
 A043 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:342
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION: standalone QQuickPopup/window wrapper is absent from the mounted editor; S062 | src/checks/editorqml/tst_EditorDrawer.qml proves the hosted prompt and its outside underlay operate (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(outside.window && outside.popup, qUtf8Printable(outside.diagnostic))
+Mapping/reason: S062
 
 A044 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:347
 Disposition: GAP
@@ -387,16 +252,11 @@ Original expression:
 
 A045 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:350
 Disposition: MATCHED
-Mapping/reason: MATCHED: S060 | src/checks/editorqml/tst_EditorDrawer.qml maps the outside point into the mounted underlay and verifies it misses the visible prompt card (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(content && !content->contains(content->mapFromScene(QPointF(outsidePoint))),
-               "the dismissal point did not reach the popup underlay")
+Mapping: S060
 
 A046 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:358
 Disposition: MATCHED
-Mapping/reason: MATCHED: S062 | src/checks/editorqml/tst_EditorDrawer.qml a left press on the mounted prompt underlay closes the prompt before its paired release (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(!outside.popup->isOpen(), "an outside canvas press did not cancel the draft")
+Mapping: S062
 
 A047 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:361
 Disposition: PARTIAL
@@ -409,9 +269,7 @@ Original expression:
 
 A048 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:365
 Disposition: MATCHED
-Mapping/reason: MATCHED: S062 | src/checks/editorqml/tst_EditorDrawer.qml outside left cancellation restores active focus to the velocity plot (editorqml-drawer PASS).
-Original expression:
-  QTRY_VERIFY2(roll.hasFocus(), "outside cancellation did not restore roll focus")
+Mapping: S062
 
 A049 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:371
 Disposition: GAP
@@ -543,9 +401,7 @@ Original expression:
 
 A066 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:498
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION: standalone QQuickPopup/window wrapper is absent from the mounted editor; S060 | src/checks/editorqml/tst_EditorDrawer.qml proves the hosted prompt receives an outside right press (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(outside.window && outside.popup, qUtf8Printable(outside.diagnostic))
+Mapping/reason: S060
 
 A067 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:501
 Disposition: GAP
@@ -555,16 +411,11 @@ Original expression:
 
 A068 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:504
 Disposition: MATCHED
-Mapping/reason: MATCHED: S060 | src/checks/editorqml/tst_EditorDrawer.qml right-dismissal point lies within the mounted underlay and outside the visible prompt card (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(content && !content->contains(content->mapFromScene(QPointF(outsidePoint))),
-               "the dismissal point did not reach the popup underlay")
+Mapping: S060
 
 A069 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:509
 Disposition: MATCHED
-Mapping/reason: MATCHED: S060 | src/checks/editorqml/tst_EditorDrawer.qml separately presses outside the mounted prompt with the right button and observes promptOpen false before release (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(!outside.popup->isOpen(), "an outside right press did not dismiss the prompt")
+Mapping: S060
 
 A070 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:513
 Disposition: PARTIAL
@@ -574,9 +425,7 @@ Original expression:
 
 A071 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:514
 Disposition: MATCHED
-Mapping/reason: MATCHED: S060 | src/checks/editorqml/tst_EditorDrawer.qml checks selected note IDs remain unchanged after the outside right press and its paired release (editorqml-drawer PASS).
-Original expression:
-  QCOMPARE(view.selectionModel().noteSelection(), selectionBefore)
+Mapping: S060
 
 A072 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:515
 Disposition: PARTIAL
@@ -588,9 +437,7 @@ Original expression:
 
 A073 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:518
 Disposition: MATCHED
-Mapping/reason: MATCHED: S060 | src/checks/editorqml/tst_EditorDrawer.qml outside right dismissal restores active focus to velocityPlot and retires the underlay after release (editorqml-drawer PASS).
-Original expression:
-  QTRY_VERIFY2(roll.hasFocus(), "outside right cancellation did not restore roll focus")
+Mapping: S060
 
 A074 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:525
 Disposition: GAP
@@ -600,56 +447,35 @@ Original expression:
 
 A075 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:537
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION: standalone QQuickPopup/window wrapper is absent from the mounted editor; S059 | src/checks/editorqml/tst_EditorDrawer.qml proves the hosted prompt and its focus cycle (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(cycled.window && cycled.popup, qUtf8Printable(cycled.diagnostic))
+Mapping/reason: S059
 
 A076 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:540
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml finds the mounted numeric field before keyboard focus traversal (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(cycleInput, "the keyboard-cycle velocity prompt has no text input")
+Mapping: S059
 
 A077 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:546
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml mounted numeric input takes active focus before forward/reverse Tab traversal (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(quick_popup::inputHasActiveFocus(*cycled.window, QLatin1String("noteVelocityInput")),
-               "velocity keyboard cycle did not start in its text input")
+Mapping: S059
 
 A078 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:550
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml Tab from the numeric field puts active focus on noteVelocityAccept (editorqml-drawer PASS).
-Original expression:
-  QCOMPARE(activeObjectName(*cycled.window), QStringLiteral("noteVelocityAccept"))
+Mapping: S059
 
 A079 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:553
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml second Tab places active focus on noteVelocityCancel (editorqml-drawer PASS).
-Original expression:
-  QCOMPARE(activeObjectName(*cycled.window), QStringLiteral("noteVelocityCancel"))
+Mapping: S059
 
 A080 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:556
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml third Tab wraps focus from Cancel to noteVelocityInput (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(quick_popup::inputHasActiveFocus(*cycled.window, QLatin1String("noteVelocityInput")),
-               "Tab did not wrap from Cancel back to the velocity input")
+Mapping: S059
 
 A081 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:560
 Disposition: MATCHED
-Mapping/reason: MATCHED: S059 | src/checks/editorqml/tst_EditorDrawer.qml Shift-Tab wraps active focus from the numeric field to Cancel (editorqml-drawer PASS).
-Original expression:
-  QCOMPARE(activeObjectName(*cycled.window), QStringLiteral("noteVelocityCancel"))
+Mapping: S059
 
 A082 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:561
 Disposition: MATCHED
-Mapping/reason: MATCHED: S048 | src/checks/rollcheck/velocity_prompt.swift draft 95 leaves bytes/history/revision untouched; S059 | src/checks/editorqml/tst_EditorDrawer.qml forward/reverse focus traversal preserves the mounted 95 text, open prompt and document revision before acceptance (swiftcore and editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(cycled.popup->isOpen() && cycleInput->property("text").toString() == cycleDraft &&
-                   doc.smf().write() == before && doc.undoStack()->index() == undo &&
-                   doc.undoStack()->count() == undoCount && doc.revision() == revision,
-               "velocity focus traversal closed or accepted its draft")
+Mapping: S048, S059
 
 A083 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:567
 Disposition: GAP
@@ -659,125 +485,79 @@ Original expression:
 
 A084 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:573
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION: standalone QQuickPopup/window wrapper is absent from the mounted editor; S060 | src/checks/editorqml/tst_EditorDrawer.qml proves the hosted input supports invalid draft correction (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic))
+Mapping/reason: S060
 
 A085 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:576
 Disposition: MATCHED
-Mapping/reason: MATCHED: S060 | src/checks/editorqml/tst_EditorDrawer.qml finds and types into the mounted numeric field for invalid-draft handling (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(input, "the velocity prompt has no text input")
+Mapping: S060
 
 A086 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:580
 Disposition: MATCHED
-Mapping/reason: MATCHED: S060 | src/checks/editorqml/tst_EditorDrawer.qml invalid draft 999 remains in an open mounted prompt prior to Return or OK (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(popup && popup->isOpen(),
-               "an out-of-range draft closed the velocity prompt before commit")
+Mapping: S060
 
 A087 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:584
 Disposition: MATCHED
-Mapping/reason: MATCHED: S056 | src/checks/rollcheck/velocity_prompt.swift rejects 999 without changing SMF bytes or history; S060 | src/checks/editorqml/tst_EditorDrawer.qml Return corrects mounted input text to the captured velocity while the prompt stays open and the document revision stays unchanged (swiftcore and editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(popup->isOpen() &&
-                   input->property("text").toString() == QString::number(seed->noteB.velocity) &&
-                   doc.smf().write() == before && doc.undoStack()->count() == undoCount,
-               "an invalid velocity draft was accepted or wrote to the song")
+Mapping: S056, S060
 
 A088 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:590
 Disposition: MATCHED
-Mapping/reason: MATCHED: S060 | src/checks/editorqml/tst_EditorDrawer.qml after invalid Return and correction to the original value, Escape closes the mounted prompt with no edit (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(!popup->isOpen(), "Escape did not close the corrected-draft prompt")
+Mapping: S060
 
 A089 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:594
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION: standalone QQuickPopup/window wrapper is absent from the mounted editor; S061 | src/checks/editorqml/tst_EditorDrawer.qml proves the hosted numeric input accepts a lower-bound draft (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(lowered.window && lowered.popup, qUtf8Printable(lowered.diagnostic))
+Mapping/reason: S061
 
 A090 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:600
 Disposition: MATCHED
-Mapping/reason: MATCHED: S061 | src/checks/editorqml/tst_EditorDrawer.qml finds and focuses mounted numeric input before PageDown lower-bound steps (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(loweredInput, "the lowered velocity prompt has no text input")
+Mapping: S061
 
 A091 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:601
 Disposition: MATCHED
-Mapping/reason: MATCHED: S061 | src/checks/editorqml/tst_EditorDrawer.qml PageDown repeatedly clamps the mounted numeric input text at 1 (editorqml-drawer PASS).
-Original expression:
-  QCOMPARE(loweredInput->property("text").toString(), QStringLiteral("1"))
+Mapping: S061
 
 A092 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:604
 Disposition: MATCHED
-Mapping/reason: MATCHED: S061 | src/checks/editorqml/tst_EditorDrawer.qml Return with mounted lower-bound draft 1 closes the prompt and commits velocity 1 (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(popup && !popup->isOpen(), "the lower-bound acceptance did not close the prompt")
+Mapping: S061
 
 A093 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:606
 Disposition: MATCHED
-Mapping/reason: MATCHED: S057 | src/checks/rollcheck/velocity_prompt.swift accepting velocity 1 updates the captured note and advances undo count by one (swiftcore PASS).
-Original expression:
-  QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &lower) &&
-                   lower.velocity == 1 && doc.undoStack()->count() == undoCount + 1,
-               "the lower bound velocity acceptance did not commit exactly velocity 1")
+Mapping: S057
 
 A094 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:612
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION: standalone QQuickPopup/window wrapper is absent from the mounted editor; S061 | src/checks/editorqml/tst_EditorDrawer.qml proves the hosted numeric input accepts an upper-bound draft (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(raised.window && raised.popup, qUtf8Printable(raised.diagnostic))
+Mapping/reason: S061
 
 A095 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:618
 Disposition: MATCHED
-Mapping/reason: MATCHED: S061 | src/checks/editorqml/tst_EditorDrawer.qml mounted numeric field receives focus before PageUp upper-bound steps (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(raisedInput, "the raised velocity prompt has no text input")
+Mapping: S061
 
 A096 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:619
 Disposition: MATCHED
-Mapping/reason: MATCHED: S061 | src/checks/editorqml/tst_EditorDrawer.qml repeated PageUp clamps the mounted numeric input text at 127 (editorqml-drawer PASS).
-Original expression:
-  QCOMPARE(raisedInput->property("text").toString(), QStringLiteral("127"))
+Mapping: S061
 
 A097 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:622
 Disposition: MATCHED
-Mapping/reason: MATCHED: S061 | src/checks/editorqml/tst_EditorDrawer.qml Return with mounted upper-bound draft 127 closes the prompt and commits velocity 127 (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(popup && !popup->isOpen(), "the upper-bound acceptance did not close the prompt")
+Mapping: S061
 
 A098 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:624
 Disposition: MATCHED
-Mapping/reason: MATCHED: S058 | src/checks/rollcheck/velocity_prompt.swift accepting velocity 127 after velocity 1 updates the captured note and advances undo count twice overall (swiftcore PASS).
-Original expression:
-  QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &upper) &&
-                   upper.velocity == 127 && doc.undoStack()->count() == undoCount + 2,
-               "the upper bound velocity acceptance did not commit exactly velocity 127")
+Mapping: S058
 
 A099 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:631
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION: standalone QQuickPopup/window wrapper is absent from the mounted editor; S061 | src/checks/editorqml/tst_EditorDrawer.qml proves the hosted prompt remains open during clamped step keys (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(capped.window && capped.popup, qUtf8Printable(capped.diagnostic))
+Mapping/reason: S061
 
 A100 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:634
 Disposition: MATCHED
-Mapping/reason: MATCHED: S061 | src/checks/editorqml/tst_EditorDrawer.qml locates the mounted numeric field before clamped Up and Control-Up keys (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(cappedInput, "the capped velocity prompt has no text input")
+Mapping: S061
 
 A101 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:642
 Disposition: MATCHED
-Mapping/reason: MATCHED: S061 | src/checks/editorqml/tst_EditorDrawer.qml Up and Control-Up at 127 leave the mounted velocity prompt open (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(popup && popup->isOpen(), "clamped step keys closed the velocity prompt")
+Mapping: S061
 
 A102 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:643
 Disposition: MATCHED
-Mapping/reason: MATCHED: S061 | src/checks/editorqml/tst_EditorDrawer.qml the mounted numeric input still displays 127 after Up and Control-Up at the bound (editorqml-drawer PASS).
-Original expression:
-  QCOMPARE(cappedInput->property("text").toString(), QStringLiteral("127"))
+Mapping: S061
 
 A103 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:644
 Disposition: PARTIAL
@@ -789,9 +569,7 @@ Original expression:
 
 A104 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:649
 Disposition: MATCHED
-Mapping/reason: MATCHED: S061 | src/checks/editorqml/tst_EditorDrawer.qml Escape closes the mounted prompt after clamped Up and Control-Up edits (editorqml-drawer PASS).
-Original expression:
-  QVERIFY2(popup && !popup->isOpen(), "Escape did not close the clamped prompt")
+Mapping: S061
 
 A105 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:653
 Disposition: GAP
@@ -805,396 +583,186 @@ does not close any A entry. Preserve their surrounding setup and order in the pa
 
 S001 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: function
-Swift expression:
-  report.fail(drawerVelocityPromptID, "the synthetic fixture published fewer than three notes")
 
 S002 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the prompt's minimum is 1"
-Swift expression:
-  report.expectEqual(1, VelocityPromptPolicy.minimum, cppID: drawerVelocityPromptID,
-                         what: "the prompt's minimum is 1")
 
 S003 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the prompt's maximum is 127"
-Swift expression:
-  report.expectEqual(127, VelocityPromptPolicy.maximum, cppID: drawerVelocityPromptID,
-                         what: "the prompt's maximum is 127")
 
 S004 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the domain endpoints are accepted"
-Swift expression:
-  report.expect(VelocityPromptPolicy.value(draft: "1") == 1
-                        && VelocityPromptPolicy.value(draft: "127") == 127, cppID: drawerVelocityPromptID,
-                    message: "the domain endpoints are accepted")
 
 S005 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "values outside the domain are refused"
-Swift expression:
-  report.expect(VelocityPromptPolicy.value(draft: "0") == nil
-                        && VelocityPromptPolicy.value(draft: "128") == nil, cppID: drawerVelocityPromptID,
-                    message: "values outside the domain are refused")
 
 S006 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "empty, non-ASCII, spaced and signed drafts are refused"
-Swift expression:
-  report.expect(VelocityPromptPolicy.value(draft: "") == nil
-                        && VelocityPromptPolicy.value(draft: "12x") == nil
-                        && VelocityPromptPolicy.value(draft: "-5") == nil && VelocityPromptPolicy.value(draft: " 95") == nil && VelocityPromptPolicy.value(draft: "95 ") == nil && VelocityPromptPolicy.value(draft: "²") == nil, cppID: drawerVelocityPromptID,
-                    message: "empty, non-ASCII, spaced and signed drafts are refused")
 
 S007 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "a valid draft publishes no error"
-Swift expression:
-  report.expect(VelocityPromptPolicy.error(draft: "64").isEmpty, cppID: drawerVelocityPromptID,
-                    message: "a valid draft publishes no error")
 
 S008 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the selectionless entry point does not open a prompt"
-Swift expression:
-  report.expect(!page.openSelectedVelocityPrompt(), cppID: drawerVelocityPromptID,
-                    message: "the selectionless entry point does not open a prompt")
 
 S009 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the selectionless entry point writes nothing"
-Swift expression:
-  report.expect(drawerVelocityDocumentSnapshot(document) == emptyBaseline, cppID: drawerVelocityPromptID,
-                    message: "the selectionless entry point writes nothing")
 
 S010 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the selected-note entry point opens the prompt"
-Swift expression:
-  report.expect(page.openSelectedVelocityPrompt(), cppID: drawerVelocityPromptID,
-                    message: "the selected-note entry point opens the prompt")
 
 S011 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the prompt opens with the first captured value as its draft"
-Swift expression:
-  report.expectEqual("\(notes[0].velocity)", page.promptDraft, cppID: drawerVelocityPromptID,
-                         what: "the prompt opens with the first captured value as its draft")
 
 S012 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the prompt publishes its initial value"
-Swift expression:
-  report.expectEqual(Int(notes[0].velocity), page.promptInitialValue, cppID: drawerVelocityPromptID,
-                         what: "the prompt publishes its initial value")
 
 S013 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the prompt captured the stable target IDs"
-Swift expression:
-  report.expect(page.promptTargets == [notes[0].id, notes[1].id], cppID: drawerVelocityPromptID,
-                    message: "the prompt captured the stable target IDs")
 
 S014 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the prompt captured every before-value"
-Swift expression:
-  report.expect(page.promptBeforeValues == [notes[0].velocity, notes[1].velocity], cppID: drawerVelocityPromptID,
-                    message: "the prompt captured every before-value")
 
 S015 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "an open prompt reports an active interaction"
-Swift expression:
-  report.expect(page.interactionActive, cppID: drawerVelocityPromptID,
-                    message: "an open prompt reports an active interaction")
 
 S016 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "typing replaces the draft without an error"
-Swift expression:
-  report.expect(page.promptDraft == "95" && page.promptError.isEmpty, cppID: drawerVelocityPromptID,
-                    message: "typing replaces the draft without an error")
 
 S017 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "typing into the prompt never mutates the document"
-Swift expression:
-  report.expect(drawerVelocityDocumentSnapshot(document) == emptyBaseline, cppID: drawerVelocityPromptID,
-                    message: "typing into the prompt never mutates the document")
 
 S018 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "cancelling closes the prompt"
-Swift expression:
-  report.expect(!page.promptOpen, cppID: drawerVelocityCancellationID, message: "cancelling closes the prompt")
 
 S019 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "cancelling writes nothing"
-Swift expression:
-  report.expect(drawerVelocityDocumentSnapshot(document) == emptyBaseline, cppID: drawerVelocityCancellationID,
-                    message: "cancelling writes nothing")
 
 S020 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "drafting and cancellation do not latch a drawing velocity"
-Swift expression:
-  report.expect(acceptedValues.isEmpty, cppID: drawerVelocityPromptID,
-                    message: "drafting and cancellation do not latch a drawing velocity")
 
 S021 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "acceptance commits"
-Swift expression:
-  report.expect(page.acceptPrompt(), cppID: drawerVelocityPromptID, message: "acceptance commits")
 
 S022 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the accepted value reached the first target"
-Swift expression:
-  report.expectEqual(95, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityPromptID,
-                         what: "the accepted value reached the first target")
 
 S023 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the accepted value reached every captured target"
-Swift expression:
-  report.expectEqual(95, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityPromptID,
-                         what: "the accepted value reached every captured target")
 
 S024 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "acceptance makes one revision"
-Swift expression:
-  report.expectEqual(acceptBaseline.revision + 1, document.revision, cppID: drawerVelocityPromptID,
-                         what: "acceptance makes one revision")
 
 S025 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "acceptance makes exactly one history entry"
-Swift expression:
-  report.expect(document.history.currentIdentity != acceptBaseline.identity, cppID: drawerVelocityPromptID,
-                    message: "acceptance makes exactly one history entry")
 
 S026 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "acceptance closes the prompt"
-Swift expression:
-  report.expect(!page.promptOpen, cppID: drawerVelocityPromptID, message: "acceptance closes the prompt")
 
 S027 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "acceptance preserves the selection"
-Swift expression:
-  report.expect(fixture.session.selectedNotes == [notes[0].id, notes[1].id], cppID: drawerVelocityPromptID,
-                    message: "acceptance preserves the selection")
 
 S028 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "valid acceptance latches the drawing velocity"
-Swift expression:
-  report.expect(acceptedValues == [95], cppID: drawerVelocityPromptID,
-                    message: "valid acceptance latches the drawing velocity")
 
 S029 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "an identical valid value is still accepted"
-Swift expression:
-  report.expect(page.acceptPrompt(), cppID: drawerVelocityPromptID,
-                    message: "an identical valid value is still accepted")
 
 S030 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "no-op acceptance relatches the drawing velocity without history"
-Swift expression:
-  report.expect(drawerVelocityDocumentSnapshot(document) == noOpBaseline && acceptedValues == [95, 95],
-                    cppID: drawerVelocityPromptID,
-                    message: "no-op acceptance relatches the drawing velocity without history")
 
 S031 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "Undo restores the prompt's before-values"
-Swift expression:
-  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0),
-                         cppID: drawerVelocityHistoryID, what: "Undo restores the prompt's before-values")
 
 S032 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "selection insertion order seeds the prompt"
-Swift expression:
-  report.expectEqual(Int(ordered.notes[1].velocity), ordered.page.promptInitialValue,
-                         cppID: drawerVelocityPromptID, what: "selection insertion order seeds the prompt")
 
 S033 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "hover cannot reseed the ordered prompt"
-Swift expression:
-  report.expectEqual(Int(ordered.notes[1].velocity), ordered.page.promptInitialValue,
-                         cppID: drawerVelocityPromptID, what: "hover cannot reseed the ordered prompt")
 
 S034 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "an out-of-domain draft publishes an error"
-Swift expression:
-  report.expect(!page.promptError.isEmpty, cppID: drawerVelocityPromptID,
-                    message: "an out-of-domain draft publishes an error")
 
 S035 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "an invalid draft does not accept"
-Swift expression:
-  report.expect(!page.acceptPrompt(), cppID: drawerVelocityPromptID,
-                    message: "an invalid draft does not accept")
 
 S036 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the invalid prompt stays open for correction"
-Swift expression:
-  report.expect(page.promptOpen, cppID: drawerVelocityPromptID,
-                    message: "the invalid prompt stays open for correction")
 
 S037 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "an invalid draft adds no history entry"
-Swift expression:
-  report.expect(drawerVelocityDocumentSnapshot(document) == invalidBaseline, cppID: drawerVelocityPromptID,
-                    message: "an invalid draft adds no history entry")
 
 S038 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "cancelling the invalid prompt writes nothing"
-Swift expression:
-  report.expect(drawerVelocityDocumentSnapshot(document) == invalidBaseline, cppID: drawerVelocityCancellationID,
-                    message: "cancelling the invalid prompt writes nothing")
 
 S039 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "a stale acceptance commits nothing"
-Swift expression:
-  report.expect(!page.acceptPrompt(), cppID: drawerVelocityCancellationID,
-                    message: "a stale acceptance commits nothing")
 
 S040 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "invalid, cancelled and stale prompts never relatch drawing velocity"
-Swift expression:
-  report.expect(acceptedValues == [95, 95], cppID: drawerVelocityCancellationID,
-                    message: "invalid, cancelled and stale prompts never relatch drawing velocity")
 
 S041 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the stale acceptance left its targets alone"
-Swift expression:
-  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0),
-                         cppID: drawerVelocityCancellationID,
-                         what: "the stale acceptance left its targets alone")
 
 S042 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the only write is the foreign document change"
-Swift expression:
-  report.expectEqual(staleBaseline.revision + 1, document.revision, cppID: drawerVelocityCancellationID,
-                         what: "the only write is the foreign document change")
 
 S043 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the capture never follows a later selection"
-Swift expression:
-  report.expect(page.promptTargets == [notes[0].id, notes[1].id], cppID: drawerVelocityPromptID,
-                    message: "the capture never follows a later selection")
 
 S044 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the captured transaction still completes after a selection change"
-Swift expression:
-  report.expect(page.acceptPrompt(), cppID: drawerVelocityPromptID,
-                    message: "the captured transaction still completes after a selection change")
 
 S045 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the acceptance wrote the captured target, not the new selection"
-Swift expression:
-  report.expectEqual(77, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityPromptID,
-                         what: "the acceptance wrote the captured target, not the new selection")
 
 S046 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "the note the prompt never captured keeps its own velocity"
-Swift expression:
-  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0),
-                         cppID: drawerVelocityPromptID,
-                         what: "the note the prompt never captured keeps its own velocity")
 
 S047 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "A004: the selected note seeds the prompt with velocity 73"
-Swift expression:
-    report.expect(fixture.page.openSelectedVelocityPrompt() &&
-                  fixture.page.promptInitialValue == 73 && fixture.page.promptDraft == "73",
-                  cppID: id, message: "A004: the selected note seeds the prompt with velocity 73")
 
 S048 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "A007: drafting 95 does not write song bytes or history"
-Swift expression:
-    report.expect(coreTimeBytes(fixture.document) == before &&
-                  fixture.document.revision == revision &&
-                  fixture.document.history.currentIdentity == identity && fixture.document.history.undoIndex == undoIndex && fixture.document.history.undoCount == undoCount,
-                  cppID: id, message: "A007: drafting 95 does not write song bytes or history")
 
 S049 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "A010: accepting 95 changes the captured note in one edit"
-Swift expression:
-    report.expect(fixture.page.acceptPrompt() &&
-                  fixture.document.note(noteID)?.velocity == 95 &&
-                  fixture.document.revision == revision + 1 &&
-                  fixture.document.history.currentIdentity != identity && fixture.document.history.undoIndex == undoIndex + 1 && fixture.document.history.undoCount == undoCount + 1,
-                  cppID: id, message: "A010: accepting 95 changes the captured note in one edit")
 
 S050 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "accepting 95 latches the velocity for subsequent drawing"
-Swift expression:
-    report.expect(acceptedValues == [95], cppID: id,
-                  message: "accepting 95 latches the velocity for subsequent drawing")
 
 S051 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "A012: one undo restores the original 73-velocity song bytes"
-Swift expression:
-    report.expect(undone &&
-                  fixture.document.note(noteID)?.velocity == 73 &&
-                  coreTimeBytes(fixture.document) == before && fixture.document.history.undoIndex == undoIndex && fixture.document.history.undoCount == undoCount + 1,
-                  cppID: id, message: "A012: one undo restores the original 73-velocity song bytes")
 
 S052 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "A018: accepting unchanged 73 relatches without a document edit"
-Swift expression:
-    report.expect(fixture.page.openSelectedVelocityPrompt() && fixture.page.acceptPrompt() &&
-                  drawerVelocityDocumentSnapshot(fixture.document) == afterUndo && coreTimeBytes(fixture.document) == before && fixture.document.history.undoIndex == undoIndex && fixture.document.history.undoCount == undoCount + 1 &&
-                  acceptedValues == [95, 73],
-                  cppID: id, message: "A018: accepting unchanged 73 relatches without a document edit")
 
 S053 | checkVelocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "A024: opening without a selected note writes nothing"
-Swift expression:
-    report.expect(!fixture.page.openSelectedVelocityPrompt() &&
-                  drawerVelocityDocumentSnapshot(fixture.document) == before && coreTimeBytes(fixture.document) == bytes && fixture.document.history.undoIndex == undoIndex && fixture.document.history.undoCount == undoCount,
-                  cppID: id, message: "A024: opening without a selected note writes nothing")
 
 S054 | checkVelocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "A029: cancelling a 20 draft leaves history and notes untouched"
-Swift expression:
-    report.expect(!fixture.page.promptOpen &&
-                  drawerVelocityDocumentSnapshot(fixture.document) == before && coreTimeBytes(fixture.document) == bytes && fixture.document.history.undoIndex == undoIndex && fixture.document.history.undoCount == undoCount,
-                  cppID: id, message: "A029: cancelling a 20 draft leaves history and notes untouched")
 
 S055 | checkVelocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "A039: a stale 30 draft never overwrites the foreign 40 edit"
-Swift expression:
-    report.expect(!fixture.page.acceptPrompt() && !fixture.page.promptOpen &&
-                  fixture.document.note(noteID)?.velocity == 40 &&
-                  fixture.document.revision == revision + 1 && drawerVelocityDocumentSnapshot(fixture.document) == afterForeignWrite && coreTimeBytes(fixture.document) == afterForeignBytes && fixture.document.history.undoIndex == undoIndex + 1 && fixture.document.history.undoCount == undoCount + 1,
-                  cppID: id, message: "A039: a stale 30 draft never overwrites the foreign 40 edit")
 
 S056 | checkVelocityPromptBounds | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "invalid 999 leaves the prompt open and the song unchanged"
-Swift expression:
-    report.expect(!fixture.page.acceptPrompt() && fixture.page.promptOpen &&
-                  drawerVelocityDocumentSnapshot(fixture.document) == before && coreTimeBytes(fixture.document) == beforeBytes && fixture.document.history.undoIndex == undoIndex && fixture.document.history.undoCount == undoCount,
-                  cppID: id, message: "invalid 999 leaves the prompt open and the song unchanged")
 
 S057 | checkVelocityPromptBounds | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "valid lower-bound velocity 1 commits"
-Swift expression:
-    report.expect(fixture.page.acceptPrompt() && fixture.document.note(noteID)?.velocity == 1 && fixture.document.history.undoIndex == undoIndex + 1 && fixture.document.history.undoCount == undoCount + 1,
-                  cppID: id, message: "valid lower-bound velocity 1 commits")
 
 S058 | checkVelocityPromptBounds | src/checks/rollcheck/velocity_prompt.swift
 Anchor: message "valid upper-bound velocity 127 commits"
-Swift expression:
-    report.expect(fixture.page.acceptPrompt() && fixture.document.note(noteID)?.velocity == 127 && fixture.document.history.undoIndex == undoIndex + 2 && fixture.document.history.undoCount == undoCount + 2,
-                  cppID: id, message: "valid upper-bound velocity 127 commits")
 
 S059 | test_productionVelocityPromptButtonsAndFocus | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: function
-QML expression:
-  Mounted prompt: initial text and selection; forward/reverse focus traversal keeps
-  draft 95 and document revision; real OK commits 95, Cancel discards 20, and
-  each button restores plot focus.
 
 S060 | test_productionVelocityPromptValidationAndDismissal | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: function
-QML expression:
-  Mounted prompt: invalid 999 remains open; Return and OK restore captured
-  text without a note/revision change; Escape cancels draft 20, and outside
-  right press/release preserves selection, note value and focus while its
-  underlay consumes the paired release.
 
 S061 | test_productionVelocityPromptBoundedKeys | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: function
-QML expression:
-  Mounted prompt: PageDown/PageUp clamp displayed text at 1/127, and Return
-  commits each bound; Up and Control-Up at 127 preserve displayed text and
-  document revision without closing the prompt.
 
 S062 | test_productionVelocityPromptTransaction | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: function
-QML expression:
-  Production Set Velocity command opens and focuses the rendered prompt;
-  typed 9 commits on Return, Escape cancels, and a left underlay press closes
-  before release. The paired release preserves note, selection and revision
-  and restores plot focus.

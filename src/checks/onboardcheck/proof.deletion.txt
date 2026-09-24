@@ -8,38 +8,14 @@ Original SHA-256: a427826289dd35840dd13b7ba45f32107ebaa1e33089811d631ad956548d19
 Swift counterpart: none identified
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-All 71 sites in this file are GAP: songDeletion and voicegroupDeletion exercise pure SongRegistry unregister/removeSongFlags and VoicegroupSource create/delete helpers against project files on a copied fixture. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them — feature not yet ported: song registry detail checks (swift-project-store); dummy slots, idempotence, voicegroup gates. The native harness is uncompiled in all CMake targets and unregistered in checkcatalog, so these sites never execute in any lane.
 Site tally: 71 sites (71 GAP).
 
-Execution and ownership
-The native harness runOnboardCheck (support.cpp) is the only owner of these checks (QTest::qExec of OnboardingTest), but the file is uncompiled in all CMake targets and unregistered in checkcatalog, so no lane executes it. No Swift entry point executes these checks either; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf), project/voicegroupsource.h, and the file-local songMid/songCfg/songTable path helpers.
 
-Fixture, sequence and row constraints
-songDeletion_data expands mid-delete-and-reuse (reuse), double-delete-six-files (double), entry-zero-refused (entry-zero), and stray-unregistered (stray) into distinct runs. The entry-zero branch asserts refusal leaves all six snapshotted files byte-identical and returns early; the stray branch unregisters an unregistered label and returns early; the double branch asserts a second unregister is a byte-identical no-op and returns early; the fall-through reuse path deletes two songs, asserts dummy-slot accounting, ordering of the replacement constant, and full restoration of the original snapshots. voicegroupDeletion_data expands sole, shared, keysplit, and c-reference gates; the shared and keysplit gates assert deletableVoicegroup is empty and return early, while the fall-through sole path deletes the voicegroup and asserts hub restoration plus idempotent re-delete. Loops over snapshot paths and song_table lines expand single sites into per-file/per-line instances. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Verification
 Command: deno task verify --filter onboardcheck --verbose
 Result: pending integrated run.
-No deno lane covers the native QTest harness; the entry point is runOnboardCheck (support.cpp) via QTest::qExec. Native harness results support only retained native obligations, not Swift parity.
 
-Swift sources inspected (SHA-256)
-No same-dir deletion.swift exists, and no Swift check references this
-file's methods or behavior. Inspected at this revision:
-src/checks/editcheck/EventChecks.swift: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
-(sole Swift file carrying onboardcheck/ cppIDs; all of them name
 OnboardingTest::import* methods, none in this file).
-
-Original assertion inventory and source sequence
 
 A001 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:40
 Disposition: GAP

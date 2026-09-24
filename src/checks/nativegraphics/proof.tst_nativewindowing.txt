@@ -6,25 +6,8 @@ Original SHA-256: 582680d75ae76272483d539b25d0716d043a765c5f324cbcc9821170036d57
 Swift counterpart: src/checks/trackheaders/headerfixture.swift; src/checks/trackheaders/trackheadermenu.swift; src/checks/trackheaders/headerinputfixture.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-TrackHeadersFixture.expectRows covers engine row order, add-row placement,
-and add-row count for A017-A020. headerMenuChangeVoiceOpensPickerAfterMenuCloses
-plus HeaderDocumentBaseline.expectUnchanged covers the canceled-picker
-state/revision/history contract at A037. swiftcore/TrackHeaders::
-headerSelectionTargetsResolve covers the selected-row/alternate-track/title-rect
-predicates at A021-A023. Three rollqml window checks cover the
-converted-window assertions: headerSelectionAndVoiceRequest (A010-A016,
-A024-A029, A038), gridContrastPreviewAndApply (A039-A042, A044-A052), and
-windowClearColorBeforeFirstFrame (A004-A007, A009). Win32 erase handling
-(A002, A003, A008), the C++ VoicePickerDialog widgets (A030-A036), the C++
-ThemeDialog widgets (A043), and the C++ geometry-chunk store (A053-A078)
-remain NATIVE with no Swift-side observation.
 Disposition tally: 78 sites: 39 NATIVE, 39 MATCHED.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: passing — the suite ran green with these checks registered.
 Command: deno task verify:qml-roll
@@ -32,35 +15,6 @@ Result: passing — tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequ
 test_gridContrastPreviewAndApply, and test_windowClearColorBeforeFirstFrame
 run green against the live Swift scene (5/5 in the suite).
 Converted-window command: deno task verify:qml --verbose
-The legacy native-windowing C++ harness remains a reference inventory; the
-registered TrackHeaders Swift predicates and rollqml window checks are
-current evidence.
-
-Execution ownership
-Registered Swift ownership is in src/checks/trackheaders/headerfixture.swift,
-trackheadermenu.swift, headerinputfixture.swift, and trackheaderinput.swift.
-TrackHeadersFixture.expectRows checks model row order and add-row
-placement/count; headerMenuChangeVoice... checks menu closure, picker request
-ordering, and cancellation baselines; headerSelectionTargetsResolve checks
-selected-row resolution, alternate-track validity, and title-rect geometry.
-Window-level ownership is in src/checks/rollqml/tst_SwiftRollWindowing.qml:
-headerSelectionAndVoiceRequest drives the live header band through QTest input,
-gridContrastPreviewAndApply drives ThemeController preview/commit/discard
-through the production palette push, and windowClearColorBeforeFirstFrame
-asserts the roll-background clear color before the first frame. Native Win32
-erase handling, the C++ picker/theme dialogs, and the C++ geometry-chunk store
-remain outside these predicates.
-
-Fixture, sequence and row constraints
-Every rig uses kWindowSize 1280x800. The Windows-only
-replacementBackgroundBeforeFirstFrame case expands two song replacements by
-two repaint colors by 64 pixels. headerSelectionAndVoicePicker expands its
-model loop once per header row with the add-track row last. The contrast case
-visits slider values 0 then 100 with captures between. The geometry-chunk case
-stages baseline, populated, shrunken, cleared, partial, and reactivated
-captures around 256-rect and 506-triangle chunk loads.
-
-Original assertion inventory and source sequence
 
 A001 | NativeWindowingTest::freshRig | src/checks/nativegraphics/tst_nativewindowing.cpp:115
 Disposition: GAP
@@ -207,67 +161,18 @@ Original expression:
 
 A003 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:141
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      const auto releaseDc = qScopeGuard([dc] { DeleteDC(dc); });
-      BITMAPINFO info{};
-      info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-      info.bmiHeader.biWidth = 8;
-      info.bmiHeader.biHeight = -8;
-      info.bmiHeader.biPlanes = 1;
-      info.bmiHeader.biBitCount = 32;
-      info.bmiHeader.biCompression = BI_RGB;
-      void *pixels = nullptr;
-      HBITMAP bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
-Original expression:
-  QVERIFY(bitmap && pixels)
 
 A004 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:152
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_windowClearColorBeforeFirstFrame: NativeScene::open creates a real ApplicationSession and opens the fixture song (openProjectAndSong), the Swift counterpart of SongName::create.
-Source context since previous assertion:
-  ;
-      const HGDIOBJ previous = SelectObject(dc, bitmap);
-      const auto releaseBitmap = qScopeGuard([=] {
-          SelectObject(dc, previous);
-          DeleteObject(bitmap);
-      });
-
-      QTabWidget tabs;
-      const QColor background = themes::color(themes::Role::window_background);
-      for (int replacement = 0; replacement < 2; ++replacement) {
-          const auto name = SongName::create(QStringLiteral("background_%1").arg(replacement));
-Original expression:
-  QVERIFY(name)
 
 A005 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:156
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_windowClearColorBeforeFirstFrame: scene.open returns a live session/view — the Swift counterpart of the rig->song guard.
-Source context since previous assertion:
-  ;
-          SongTab tab(*name);
-          tabs.addTab(&tab, name->value());
-          QQuickWindow *const quick = tab.view().quickView()->quickWindow();
-Original expression:
-  QVERIFY(quick)
 
 A006 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:158
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_windowClearColorBeforeFirstFrame: scene.open surfaces the Swift Quick composition (root object + status check), the counterpart of view.quickView().
-Source context since previous assertion:
-  ;
-          quick->resize(kWindowSize);
-Original expression:
-  QCOMPARE(quick->color(), background)
 
 A007 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:159
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_windowClearColorBeforeFirstFrame: QVERIFY(scene.view->isExposed()) after open — the counterpart of quickWindow() being live.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!quick->isExposed())
 
 A008 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:164
 Disposition: GAP
@@ -283,224 +188,66 @@ Original expression:
 
 A009 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:167
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_windowClearColorBeforeFirstFrame: the portable half — the window clear color is the roll background before show() and the first frame paints it; the Win32 erase-message half stays NATIVE at A008.
-Source context since previous assertion:
-  ;
-              GdiFlush();
-              for (int pixel = 0; pixel < 64; ++pixel)
-Original expression:
-  QCOMPARE(QColor::fromRgb(static_cast<QRgb *>(pixels)[pixel]), color)
 
 A010 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:177
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: NativeScene::open fails the check unless the Swift session and composition load — the counterpart of QVERIFY(rig).
-Source context since previous assertion:
-  ;
-          }
-          tabs.removeTab(tabs.indexOf(&tab));
-      }
-  }
-  #endif
-
-  void NativeWindowingTest::headerSelectionAndVoicePicker()
-  {
-      std::unique_ptr<checks::nativegraphics::Rig> rig = freshRig();
-Original expression:
-  QVERIFY(rig)
 
 A011 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:180
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: scene.open leaves a live session and view — the counterpart of the rig->song guard.
-Source context since previous assertion:
-  ;
-      SongView &view = rig->song->view();
-      auto *quick = view.quickView();
-Original expression:
-  QVERIFY(quick && quick->rootObject() && quick->quickWindow())
 
 A012 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:181
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: scene.open requires the QML root object and view; the check then asserts scene.view->isExposed() — the counterpart of quick/rootObject/quickWindow + isExposed.
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_VERIFY(quick->quickWindow()->isExposed())
 
 A013 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:187
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: the check invokes session trackHeadersPresenter() and reads its rows model — the Swift counterpart of the typed trackHeaderModel lookup.
-Source context since previous assertion:
-  ;
-      auto *headers = view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"),
-                                                                   Qt::FindDirectChildrenOnly);
-      auto *headerInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
-          QStringLiteral("timelineTrackHeadersInput"));
-Original expression:
-  QVERIFY(headers)
 
 A014 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:188
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: the check resolves the timelineTrackHeadersInput item in the live scene — the counterpart of the headerInput child lookup.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headerInput)
 
 A015 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:190
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: the check reads the presenter rows model as QAbstractItemModel — the counterpart of the headers model guard.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(view.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason))
 
 A016 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:191
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: the check locates the timelineTrackHeaderRename item — the counterpart of the rename editor lookup.
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_VERIFY(QGuiApplication::focusWindow() == quick->quickWindow() &&
-                  QGuiApplication::focusObject() == headerInput && headerInput->hasActiveFocus())
 
 A017 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:205
 Disposition: MATCHED
-Mapping/reason: Swift predicate src/checks/trackheaders/headerfixture.swift::TrackHeadersFixture.expectRows emits cppId swiftcore/TrackHeaders::headerMenuRowsDispatchRevealDuplicateDelete and asserts the add-track row is last.
-Source context since previous assertion:
-  ;
-      const int selectedTrack = view.selectionModel().primaryTrack();
-      int selectedRow = -1;
-      int alternateRow = -1;
-      int previousTrack = -1;
-      int addRows = 0;
-      for (int row = 0; row < headers->rowCount(); ++row) {
-          const QModelIndex index = headers->index(row, 0);
-          const bool isAdd =
-              headers->data(index, songview::TrackHeaderModel::IsAddTrackRole).toBool();
-          if (isAdd) {
-              ++addRows;
-Original expression:
-  QCOMPARE(row, headers->rowCount() - 1)
 
 A018 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:209
 Disposition: MATCHED
-Mapping/reason: Swift predicate src/checks/trackheaders/headerfixture.swift::TrackHeadersFixture.expectRows emits cppId swiftcore/TrackHeaders::headerMenuRowsDispatchRevealDuplicateDelete and asserts engine track order is increasing.
-Source context since previous assertion:
-  ;
-              continue;
-          }
-          const int track = headers->data(index, songview::TrackHeaderModel::TrackRole).toInt();
-Original expression:
-  QVERIFY(track > previousTrack)
 
 A019 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:210
 Disposition: MATCHED
-Mapping/reason: Swift predicate src/checks/trackheaders/headerfixture.swift::TrackHeadersFixture.expectRows emits cppId swiftcore/TrackHeaders::headerMenuRowsDispatchRevealDuplicateDelete and asserts no add row precedes an engine row.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(addRows == 0)
 
 A020 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:217
 Disposition: MATCHED
-Mapping/reason: Swift predicate src/checks/trackheaders/headerfixture.swift::TrackHeadersFixture.expectRows emits cppId swiftcore/TrackHeaders::headerMenuRowsDispatchRevealDuplicateDelete and asserts the add-row count matches the fixture capacity.
-Source context since previous assertion:
-  ;
-          previousTrack = track;
-          if (track == selectedTrack)
-              selectedRow = row;
-          else if (alternateRow < 0)
-              alternateRow = row;
-      }
-Original expression:
-  QCOMPARE(addRows, rig->song->document().canAddTrack() ? 1 : 0)
 
 A021 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:218
 Disposition: MATCHED
-Mapping/reason: swiftcore/TrackHeaders::headerSelectionTargetsResolve: asserts the session-selected track resolves to a bold row; rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest asserts the same against the live delegate model.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(selectedRow >= 0)
 
 A022 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:223
 Disposition: MATCHED
-Mapping/reason: swiftcore/TrackHeaders::headerSelectionTargetsResolve: asserts the alternate row resolves a non-negative engine track; rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest asserts targetTrack >= 0 from the live model.
-Source context since previous assertion:
-  ;
-      const int targetRow = alternateRow >= 0 ? alternateRow : selectedRow;
-      const QModelIndex target = headers->index(targetRow, 0);
-      const int targetTrack = headers->data(target, songview::TrackHeaderModel::TrackRole).toInt();
-Original expression:
-  QVERIFY(targetTrack >= 0)
 
 A023 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:231
 Disposition: MATCHED
-Mapping/reason: swiftcore/TrackHeaders::headerSelectionTargetsResolve: asserts titleRect stays populated before and after scroll; rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest asserts the same on the live presenter.
-Source context since previous assertion:
-  ;
-      headers->setScrollY(qreal(targetRow * headers->rowHeight()));
-      checks::support::pumpQuick();
-      const QRectF title = headers->data(target, songview::TrackHeaderModel::TitleRectRole).toRectF();
-      const QPointF body =
-          title.center() + QPointF(0.0, targetRow * headers->rowHeight() - headers->scrollY());
-      const QPointF voice = headers->voiceLineRect().center() +
-                            QPointF(0.0, targetRow * headers->rowHeight() - headers->scrollY());
-Original expression:
-  QVERIFY(!title.isEmpty())
 
 A024 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:232
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: QTest::mouseMove onto the band asserts containsMouse — the counterpart of the hover pump.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headerInput->bounds().contains(body))
 
 A025 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:233
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: QTest::mouseClick on the title rect asserts the row goes titleBold — the counterpart of the body click.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(headerInput->bounds().contains(voice))
 
 A026 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:237
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: QCOMPARE(QGuiApplication::focusWindow(), scene.view) — the counterpart of the active-window assertion.
-Source context since previous assertion:
-  ;
-      const QPoint bodyInWindow = headerInput->mapToScene(body).toPoint();
-      const QPoint voiceInWindow = headerInput->mapToScene(voice).toPoint();
-Original expression:
-  QVERIFY(checks::events::primeMouseMove(*quick->quickWindow(), *headerInput, bodyInWindow))
 
 A027 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:239
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: QCOMPARE(QGuiApplication::focusObject(), headerInput) — the counterpart of the focus-object assertion.
-Source context since previous assertion:
-  ;
-      QTest::mouseClick(quick->quickWindow(), Qt::LeftButton, Qt::NoModifier, bodyInWindow);
-Original expression:
-  QTRY_COMPARE(view.selectionModel().primaryTrack(), targetTrack)
 
 A028 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:242
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: QTest::mouseDClick on the voice line — the counterpart of the voice double-click.
-Source context since previous assertion:
-  ;
-      const int undoBefore = rig->song->document().undoStack()->index();
-Original expression:
-  QVERIFY(checks::events::primeMouseMove(*quick->quickWindow(), *headerInput, voiceInWindow))
 
 A029 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:244
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: QSignalSpy on session changeTrackVoiceRequested(int) asserts exactly one request carrying the target track — the counterpart of the picker-open observation.
-Source context since previous assertion:
-  ;
-      QTest::mouseDClick(quick->quickWindow(), Qt::LeftButton, Qt::NoModifier, voiceInWindow);
-Original expression:
-  QTRY_VERIFY(static_cast<bool>(checks::voicepicker::active(view)))
 
 A030 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:246
 Disposition: GAP
@@ -567,114 +314,33 @@ Original expression:
 
 A037 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:262
 Disposition: MATCHED
-Mapping/reason: Swift predicate src/checks/trackheaders/trackheadermenu.swift::headerMenuChangeVoiceOpensPickerAfterMenuCloses emits cppId swiftcore/TrackHeaders::headerMenuChangeVoiceOpensPickerAfterMenuCloses; HeaderDocumentBaseline.expectUnchanged asserts state, revision, and history survive picker cancellation.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(rig->song->document().undoStack()->index(), undoBefore)
 
 A038 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:265
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: after completeTrackHeaderVoiceRequest(-1) the check asserts the rename editor stays hidden — the counterpart of the editor-not-visible observation.
-Source context since previous assertion:
-  ;
-      const auto *rename =
-          quick->rootObject()->findChild<QQuickItem *>(QStringLiteral("timelineTrackHeaderRename"));
-Original expression:
-  QVERIFY(!rename || !rename->isVisible())
 
 A039 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:271
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: NativeScene::open stands up the Swift session and scene — the counterpart of QVERIFY(rig).
-Source context since previous assertion:
-  ;
-  }
-
-  void NativeWindowingTest::gridContrastPreviewAndApply()
-  {
-      auto *application = qobject_cast<QApplication *>(QCoreApplication::instance());
-Original expression:
-  QVERIFY(application)
 
 A040 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:277
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: scene.open leaves a live session/view — the counterpart of the rig->song guard.
-Source context since previous assertion:
-  ;
-      themes::Theme original;
-      for (std::size_t index = 0; index < themes::roleCount; ++index)
-          original.colors[index] = themes::color(static_cast<themes::Role>(index));
-      const auto restoreTheme = qScopeGuard([&] { themes::apply(*application, original); });
-      QTemporaryDir directory;
-Original expression:
-  QVERIFY(directory.isValid())
 
 A041 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:282
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: scene.open requires the QML root and view — the counterpart of quick/rootObject.
-Source context since previous assertion:
-  ;
-      QSettings settings(directory.filePath(QStringLiteral("theme.ini")), QSettings::IniFormat);
-      themes::ThemeController controller(*application, settings);
-      controller.restore();
-      auto rig = freshRig();
-Original expression:
-  QVERIFY(rig)
 
 A042 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:285
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: the check captures the timelineQuickRollPlot item — the counterpart of the roll band geometry guard.
-Source context since previous assertion:
-  ;
-      SongView &view = rig->song->view();
-      const auto &roll = view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
-Original expression:
-  QVERIFY(roll)
 
 A043 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:290
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      themes::ThemeDialog dialog(controller);
-      auto *slider = dialog.findChild<QSlider *>(QStringLiteral("gridLineContrastSlider"));
-      auto *apply = dialog.findChild<QPushButton *>(QStringLiteral("themeApplyButton"));
-      auto *close = dialog.findChild<QPushButton *>(QStringLiteral("themeCloseButton"));
-Original expression:
-  QVERIFY(slider && apply && close)
 
 A044 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:298
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: the check grabs the roll plot baseline frame — the counterpart of slider->setValue(0) + capture.
-Source context since previous assertion:
-  ;
-      QString error;
-      const auto capture = [&] {
-          checks::support::pumpQuick();
-          return checks::support::captureQuickBand(view, roll->plotRect, &error);
-      };
-      slider->setValue(0);
-      const QImage soft = capture();
-Original expression:
-  QVERIFY2(!soft.isNull(), qPrintable(error))
 
 A045 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:301
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: the check pushes a strong grid-line palette and grabs a non-null frame — the counterpart of the strong capture.
-Source context since previous assertion:
-  ;
-      slider->setValue(100);
-      const QImage strong = capture();
-Original expression:
-  QVERIFY2(!strong.isNull(), qPrintable(error))
 
 A046 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:302
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: verify(!framesEqual(strong, baseline)) — the counterpart of "dragging contrast must repaint the existing Quick grid".
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(strong != soft, "Dragging contrast must repaint the existing Quick grid")
 
 A047 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:304
 Disposition: GAP
@@ -687,151 +353,24 @@ Original expression:
 
 A048 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:306
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: restoring the original palette re-grabs the baseline frame — the counterpart of slider->setValue(0) + QCOMPARE(capture(), soft).
-Source context since previous assertion:
-  ;
-      slider->setValue(0);
-Original expression:
-  QCOMPARE(capture(), soft)
 
 A049 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:308
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: re-pushing the strong palette re-grabs the strong frame — the counterpart of close->click() + QCOMPARE(capture(), strong).
-Source context since previous assertion:
-  ;
-      close->click();
-Original expression:
-  QCOMPARE(capture(), strong)
 
 A050 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:314
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: NativeScene::open stands up the Swift session and scene — the counterpart of QVERIFY(rig).
-Source context since previous assertion:
-  ;
-  }
-
-  void NativeWindowingTest::geometryChunksShrinkClearAndReactivate()
-  {
-      std::unique_ptr<checks::nativegraphics::Rig> rig = freshRig();
-Original expression:
-  QVERIFY(rig)
 
 A051 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:317
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: scene.open leaves a live session/view — the counterpart of the rig->song guard.
-Source context since previous assertion:
-  ;
-      SongView &view = rig->song->view();
-      auto *quick = view.quickView();
-Original expression:
-  QVERIFY(quick && quick->rootObject())
 
 A052 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:322
 Disposition: MATCHED
-Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: the check captures timelineQuickRollPlot — the counterpart of the roll band >= 160x120 guard.
-Source context since previous assertion:
-  ;
-      const std::optional<songview::TimelineBandGeometry> &roll =
-          view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
-      const QRectF band =
-          QRectF(roll->rect).intersected(QRectF(QPointF{}, quick->rootObject()->size()));
-Original expression:
-  QVERIFY(band.width() >= 160.0 && band.height() >= 120.0)
 
 A053 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:389
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      auto *item = new songview::TimelineQuickItem(quick->rootObject());
-      auto *scene = new songview::TimelineQuickScene(item);
-      item->setWidth(quick->rootObject()->width());
-      item->setHeight(quick->rootObject()->height());
-      item->setZ(10'000.0);
-      item->setSceneLayer(songview::TimelineQuickLayer::PianoDrawPreviewFill);
-      item->setScene(scene);
-      const auto cleanup = qScopeGuard([item] {
-          item->setScene(nullptr);
-          item->deleteLater();
-          checks::support::pumpQuick();
-      });
-
-      const auto layer = songview::TimelineQuickLayer::PianoDrawPreviewFill;
-      const qreal x = band.left() + 24.0;
-      const qreal y = band.top() + 24.0;
-      const QRectF filler{x + 120.0, y + 88.0, 1.0, 1.0};
-      const QRectF oldSolid{x, y, 20.0, 20.0};
-      const QRectF oldGradient{x + 32.0, y, 48.0, 20.0};
-      const std::array<QPointF, 3> oldTriangle{QPointF{x + 96.0, y + 20.0},
-                                               QPointF{x + 116.0, y + 20.0}, QPointF{x + 106.0, y}};
-      const QRectF marker{x, y + 36.0, 20.0, 20.0};
-      const QRectF newSolid{x, y + 64.0, 20.0, 20.0};
-      const QRectF newGradient{x + 32.0, y + 64.0, 48.0, 20.0};
-      const std::array<QPointF, 3> newTriangle{
-          QPointF{x + 96.0, y + 84.0}, QPointF{x + 116.0, y + 84.0}, QPointF{x + 106.0, y + 64.0}};
-      const QColor fillerColor{8, 12, 16};
-      const QColor oldSolidColor{208, 24, 112};
-      const QColor oldBase{20, 52, 192};
-      const QColor oldLeft{232, 20, 88, 128};
-      const QColor oldRight{24, 232, 72, 128};
-      const QColor oldTriangleColor{232, 176, 24};
-      const QColor markerColor{16, 200, 72};
-      const QColor newSolidColor{40, 168, 232};
-      const QColor newBase{168, 44, 24};
-      const QColor newLeft{32, 224, 224, 128};
-      const QColor newRight{240, 48, 224, 128};
-      const QColor newTriangleColor{128, 48, 232};
-      const QRectF clip = band;
-
-      QString captureError;
-      const auto capture = [&] {
-          item->update();
-          checks::support::pumpQuick();
-          return checks::support::captureQuickBand(view, roll->rect, &captureError);
-      };
-      const auto inBand = [&band](const QPointF &point) { return point - band.topLeft(); };
-      const auto point = [](const QRectF &rect) { return rect.center(); };
-      const auto trianglePoint = [](const std::array<QPointF, 3> &triangle) {
-          return (triangle[0] + triangle[1] + triangle[2]) / 3.0;
-      };
-      const auto addRectLoad = [&] {
-          for (int index = 0; index < 256; ++index)
-              songview::timeline_quick::addRect(scene->layer(layer), filler, fillerColor, clip);
-      };
-      const auto addTriangleLoad = [&](const std::array<QPointF, 3> &triangle, const QColor &color) {
-          songview::timeline_quick::addClippedTriangle(scene->layer(layer), triangle[0], triangle[1],
-                                                       triangle[2], color, clip);
-          for (int index = 1; index < 506; ++index)
-              songview::timeline_quick::addClippedTriangle(scene->layer(layer), filler.topLeft(),
-                                                           filler.bottomRight(), filler.bottomLeft(),
-                                                           fillerColor, clip);
-      };
-
-      const QImage baseline = capture();
-Original expression:
-  QVERIFY2(!baseline.isNull(), qPrintable(captureError))
 
 A054 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:404
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      const auto matchesBaseline = [&](const QImage &image, const QPointF &rootPoint) {
-          return nearColor(averageColor(image, inBand(rootPoint)),
-                           averageColor(baseline, inBand(rootPoint)));
-      };
-
-      songview::timeline_quick::resetLayer(scene->layer(layer));
-      addRectLoad();
-      songview::timeline_quick::addRect(scene->layer(layer), marker, markerColor, clip);
-      songview::timeline_quick::addRect(scene->layer(layer), oldSolid, oldSolidColor, clip);
-      songview::timeline_quick::addRect(scene->layer(layer), oldGradient, oldBase, clip);
-      songview::timeline_quick::addHorizontalGradient(scene->layer(layer), oldGradient, oldLeft,
-                                                      oldRight, clip);
-      addTriangleLoad(oldTriangle, oldTriangleColor);
-      const QImage populated = capture();
-Original expression:
-  QVERIFY2(!populated.isNull(), qPrintable(captureError))
 
 A055 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:405
 Disposition: GAP

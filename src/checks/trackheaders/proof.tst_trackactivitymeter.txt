@@ -6,134 +6,13 @@ Original SHA-256: d673e4f7ad9e3f93080f5a4c1e04c8cda7a05948603b5b20adff2bb8050b33
 Swift counterpart: src/checks/trackheaders/tst_trackactivitymeter.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
 Converted-window command: deno task verify:qml --verbose
-The legacy header/camera/playhead harnesses are not registered in this checkout.
-Their C++ sources are reference inventories only, never current execution evidence.
-
-Execution ownership
-TrackHeadersChecks and TrackHeadersInputChecks call the paired functions in the
-original Swift suite order. headerfixture.swift constructs a real two-track
-DocumentSession (Lead C0/key60/v100/24 ticks and Bass C1/key48/v80/48 ticks);
-headerinputfixture.swift owns pointer probes and document/history baselines.
-Their helper expectations execute on every call and are inventoried below.
-
-Original assertion inventory and source sequence
 
 A001 | TrackActivityMeterTest::init | src/checks/trackheaders/tst_trackactivitymeter.cpp:96
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  #include "checks/trackheaders/tst_trackactivitymeter.h"
-
-  #include <QtTest>
-
-  #include <QAbstractItemModel>
-  #include <QImage>
-  #include <QQuickItem>
-  #include <QQuickWindow>
-  #include <QSize>
-
-  #include <algorithm>
-  #include <cmath>
-  #include <memory>
-  #include <optional>
-
-  #include "checks/support/quickframebuffer.h"
-  #include "checks/support/support.h"
-  #include "checks/trackheaders/trackheaderoracles.h"
-  #include "core/miditimeline.h"
-  #include "ui/activity/trackactivityrender.h"
-  #include "ui/songview.h"
-  #include "ui/songview/quick/timelineinputitem.h"
-  #include "ui/songview/quick/timelinequickview.h"
-  #include "ui/songview/trackheadermodel.h"
-
-  namespace {
-
-  constexpr int kTrack = 3;
-  constexpr int kSecondTrack = 7;
-  constexpr float kConvergedSeconds = 60.0F;
-
-  struct DataChange final {
-      int count = 0;
-      int first = -1;
-      int last = -1;
-      QList<int> roles;
-  };
-
-  QImage captureRow(SongView &view, const songview::TrackHeaderModel &model, int row, QString &error)
-  {
-      const auto &band = view.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
-      const int height = std::max(0, model.rowHeight() - model.separatorWidth());
-      if (!band || band->rect.isEmpty() || row < 0 || model.activityWidth() <= 0 || height <= 0) {
-          error = QStringLiteral("track-header activity geometry is unavailable");
-          return {};
-      }
-      const int y = band->rect.y() + qRound(row * model.rowHeight() - model.scrollY());
-      return checks::support::captureQuickBand(
-          view, QRect{band->rect.x(), y, model.activityWidth(), height}, &error);
-  }
-
-  int channelHeight(uint8_t level, int meterHeight, qreal dpr)
-  {
-      const track_activity_render::State state{levelToIntensity({level, level}), true};
-      return track_activity_render::physicalHeight(state, state.intensity.left, meterHeight, dpr);
-  }
-
-  uint8_t levelWithinPixel(uint8_t base, int meterHeight, qreal dpr)
-  {
-      for (int level = base; level < 255; ++level) {
-          if (channelHeight(uint8_t(level), meterHeight, dpr) ==
-              channelHeight(uint8_t(level + 1), meterHeight, dpr)) {
-              return uint8_t(level);
-          }
-      }
-      return 255;
-  }
-
-  uint8_t levelAcrossPixel(uint8_t base, int meterHeight, qreal dpr)
-  {
-      const int rows = channelHeight(base, meterHeight, dpr);
-      for (int level = base + 1; level <= 255; ++level) {
-          if (channelHeight(uint8_t(level), meterHeight, dpr) > rows)
-              return uint8_t(level);
-      }
-      return 255;
-  }
-
-  QList<int> activityRoles(const songview::TrackHeaderModel &model)
-  {
-      const QHash<int, QByteArray> roles = model.roleNames();
-      return {roles.key(QByteArrayLiteral("activityLeftHeight")),
-              roles.key(QByteArrayLiteral("activityRightHeight"))};
-  }
-
-  } // namespace
-
-  void TrackActivityMeterTest::init()
-  {
-      m_view = std::make_unique<SongView>(m_document);
-      m_timeline = std::make_shared<MidiTimeline>();
-      m_timeline->tracks[kTrack].used = true;
-      m_timeline->usedTrackCount = 1;
-      m_view->setSong(m_timeline.get(), nullptr);
-      checks::support::bindEditActionsForTest(*m_view);
-Original expression:
-  QVERIFY(checks::support::showQuickViewport(*m_view, QSize(720, 520)))
 
 A002 | TrackActivityMeterTest::init | src/checks/trackheaders/tst_trackactivitymeter.cpp:99
 Disposition: PARTIAL
@@ -208,40 +87,18 @@ Original expression:
 
 A006 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:140
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[1] === untouched) and h.rows[0] access prove the meter row exists at index 0. [S014]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(row, 0)
+Mapping: S014
 
 A007 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:142
 Disposition: MATCHED
-Mapping/reason: report.expect(height > 0 && h.activityWidth > 0): meter geometry exists. [S013]
-Source context since previous assertion:
-  ;
-      const int meterHeight = std::max(0, m_model->rowHeight() - m_model->separatorWidth());
-Original expression:
-  QVERIFY(meterHeight > 0 && m_model->activityWidth() > 0)
+Mapping: S013
 
 A008 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:146
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-
-      QString error;
-      const QImage warm = captureRow(*m_view, *m_model, row, error);
-Original expression:
-  QVERIFY2(!warm.isNull(), qPrintable(error))
 
 A009 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:148
 Disposition: MATCHED
-Mapping/reason: configureViewport(dpr:) accepts positive device pixel ratios 1.0, 1.25, 2.0. [S015]
-Source context since previous assertion:
-  ;
-      const qreal dpr = warm.devicePixelRatio();
-Original expression:
-  QVERIFY(dpr > 0.0)
+Mapping: S015
 
 A010 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:149
 Disposition: PARTIAL
@@ -318,13 +175,7 @@ Original expression:
 
 A017 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:175
 Disposition: MATCHED
-Mapping/reason: report.fail guard: fixture has no two levels within a physical pixel. [S017]
-Source context since previous assertion:
-  ;
-
-      const uint8_t shared = levelWithinPixel(128, meterHeight, dpr);
-Original expression:
-  QVERIFY(shared != 255)
+Mapping: S017
 
 A018 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:180
 Disposition: GAP
@@ -360,21 +211,11 @@ Original expression:
 
 A021 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:187
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0] === within): same physical pixel publishes no row, i.e. zero observable change. [S018]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(changes.count, 0)
+Mapping: S018
 
 A022 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:190
 Disposition: MATCHED
-Mapping/reason: report.fail guard: fixture has no next physical pixel. [S019]
-Source context since previous assertion:
-  ;
-
-      const uint8_t across = levelAcrossPixel(uint8_t(shared + 1), meterHeight, dpr);
-Original expression:
-  QVERIFY(across != 255)
+Mapping: S019
 
 A023 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:195
 Disposition: GAP
@@ -430,31 +271,10 @@ Original expression:
 
 A029 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:207
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(paused fill, h.rows[0].activityLeftHeight): the meter row exists and fills when paused. [S021]
-Source context since previous assertion:
-  ;
-      QObject::disconnect(connection);
-  }
-
-  void TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr()
-  {
-      const int row = rowForTrack(kTrack);
-Original expression:
-  QVERIFY(row >= 0)
+Mapping: S021
 
 A030 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:214
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      const int meterHeight = std::max(0, m_model->rowHeight() - m_model->separatorWidth());
-      QString error;
-      TrackActivityLevels levels{};
-      levels[kTrack] = {128, 128};
-      present(levels, true);
-      const QImage active = captureRow(*m_view, *m_model, row, error);
-Original expression:
-  QVERIFY2(!active.isNull(), qPrintable(error))
 
 A031 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:227
 Disposition: GAP
@@ -582,38 +402,15 @@ Original expression:
 
 A043 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:258
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(Int((0.15 * height * dpr).rounded()), capped): playing intensity obeys the cap. [S023]
-Source context since previous assertion:
-  ;
-      const track_activity_render::State capped{{1.0F, 1.0F}, true, 0.15F};
-      const int cappedRows =
-          track_activity_render::physicalHeight(capped, capped.intensity.left, meterHeight, dpr);
-Original expression:
-  QCOMPARE(cappedRows, qRound(0.15 * meterHeight * dpr))
+Mapping: S023
 
 A044 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:260
 Disposition: MATCHED
-Mapping/reason: report.expect(TrackActivity.physicalHeight(..., playing: false) > capped): pause ignores the playing cap. [S024]
-Source context since previous assertion:
-  ;
-      const track_activity_render::State uncapped{{1.0F, 1.0F}, false, 0.15F};
-Original expression:
-  QVERIFY(track_activity_render::physicalHeight(uncapped, uncapped.intensity.left, meterHeight,
-                                                    dpr) > cappedRows)
+Mapping: S024
 
 A045 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:268
 Disposition: MATCHED
-Mapping/reason: report.expect(h.rows[0].activityLeftHeight > h.rows[0].activityRightHeight): the stereo row exists with independent channel heights. [S025]
-Source context since previous assertion:
-  ;
-      QObject::disconnect(connection);
-  }
-
-  void TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity()
-  {
-      const int row = rowForTrack(kTrack);
-Original expression:
-  QVERIFY(row >= 0)
+Mapping: S025
 
 A046 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:274
 Disposition: GAP
@@ -650,51 +447,14 @@ Original expression:
 
 A049 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:291
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([0, 1, 2], fx.trackRows.map(\.track)): rebuilt meter rows address each engine track exactly once. [S008]
-Source context since previous assertion:
-  ;
-
-      m_view->setSong(nullptr, nullptr);
-      m_timeline = std::make_shared<MidiTimeline>();
-      m_timeline->tracks[kTrack].used = true;
-      m_timeline->tracks[kSecondTrack].used = true;
-      m_timeline->usedTrackCount = 2;
-      m_view->setSong(m_timeline.get(), nullptr);
-      checks::support::pumpQuick();
-      const int first = rowForTrack(kTrack);
-      const int second = rowForTrack(kSecondTrack);
-Original expression:
-  QCOMPARE(m_model->rowCount(), 2)
+Mapping: S008
 
 A050 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:292
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([0, 1, 2], fx.trackRows.map(\.track)) and per-track heights: both rows exist. [S008, S026]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(first >= 0 && second >= 0)
+Mapping: S008, S026
 
 A051 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:307
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      DataChange changes;
-      const QMetaObject::Connection connection = QObject::connect(
-          m_model, &QAbstractItemModel::dataChanged, m_view.get(),
-          [&changes](const QModelIndex &top, const QModelIndex &bottom, const QList<int> &roles) {
-              ++changes.count;
-              changes.first = top.row();
-              changes.last = bottom.row();
-              changes.roles = roles;
-          });
-      TrackActivityLevels levels{};
-      levels[kTrack] = {255, 255};
-      levels[kSecondTrack] = {96, 96};
-      present(levels, true);
-      const QImage firstImage = captureRow(*m_view, *m_model, first, error);
-Original expression:
-  QVERIFY2(!firstImage.isNull(), qPrintable(error))
 
 A052 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:309
 Disposition: GAP
@@ -764,14 +524,7 @@ Original expression:
 
 A060 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:321
 Disposition: MATCHED
-Mapping/reason: report.expect(zip(rows, fx.trackRows).allSatisfy { $0 === $1 }): unchanged converged levels retain all rows, i.e. zero observable change. [S027]
-Source context since previous assertion:
-  ;
-      changes = {};
-      present(levels, true);
-      checks::support::pumpQuick();
-Original expression:
-  QCOMPARE(changes.count, 0)
+Mapping: S027
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -791,177 +544,81 @@ Swift assertion predicates
 
 S001 | activityRemainsSilentAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "playing \(playing), track \(index): position-only update retains paused left fill"
-  report.expectEqual(fullHeight, row.activityLeftHeight, cppID: silenceID,
-                                 what: "playing \(playing), track \(index): position-only update retains paused left fill")
 
 S002 | activityRemainsSilentAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "playing \(playing), track \(index): position-only update retains paused right fill"
-  report.expectEqual(fullHeight, row.activityRightHeight, cppID: pauseID,
-                                 what: "playing \(playing), track \(index): position-only update retains paused right fill")
 
 S003 | activityRemainsSilentAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "playing \(playing), track \(index): unchanged silence publishes no new row"
-  report.expect(row === retained[index], cppID: scopeID,
-                            message: "playing \(playing), track \(index): unchanged silence publishes no new row")
 
 S004 | activityRemainsSilentAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "unchanged activity does not reset model"
-  report.expectEqual(rebuilds, h.rowRebuildCount, cppID: silenceID,
-                         what: "unchanged activity does not reset model")
 
 S005 | activityRemainsSilentAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "distinct engine tracks have distinct meter identities"
-  report.expect(colors[0] != colors[1], cppID: identityID,
-                    message: "distinct engine tracks have distinct meter identities")
 
 S006 | activityRemainsSilentAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "rebuild restores the same per-track meter colors"
-  report.expectEqual(colors, fx.trackRows.map(\.activityActiveColor), cppID: identityID,
-                         what: "rebuild restores the same per-track meter colors")
 
 S007 | activityRemainsSilentAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "structural edit adds another track identity"
-  report.expect(fx.document.duplicateTrack(0) != nil, cppID: identityID,
-                    message: "structural edit adds another track identity")
 
 S008 | activityRemainsSilentAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "rebuilt meter rows address each current engine track exactly once"
-  report.expectEqual([0, 1, 2], fx.trackRows.map(\.track), cppID: identityID,
-                         what: "rebuilt meter rows address each current engine track exactly once")
 
 S009 | activityRemainsSilentAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "existing track identities survive structural rebuild"
-  report.expectEqual(colors, Array(fx.trackRows.prefix(2)).map(\.activityActiveColor),
-                         cppID: identityID, what: "existing track identities survive structural rebuild")
 
 S010 | activityRemainsSilentAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "rebuilt track \(row.track) starts with settled paused fill"
-  report.expect(row.activityLeftHeight == fullHeight && row.activityRightHeight == fullHeight,
-                        cppID: identityID, message: "rebuilt track \(row.track) starts with settled paused fill")
 
 S011 | activityRemainsSilentAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "unchanged rebuilt model remains quiet"
-  report.expectEqual(afterCount, h.rowRebuildCount, cppID: identityID,
-                         what: "unchanged rebuilt model remains quiet")
 
 S012 | activityRemainsSilentAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "unchanged rebuilt rows retain their published identities"
-  report.expect(zip(afterRebuild, fx.trackRows).allSatisfy { pair in pair.0 === pair.1 }, cppID: identityID,
-                    message: "unchanged rebuilt rows retain their published identities")
 
 S013 | trackActivityPhysicalPixelPredicates | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "meter geometry exists"
-  report.expect(height > 0 && h.activityWidth > 0, cppID: id, message: "meter geometry exists")
 
 S014 | trackActivityPhysicalPixelPredicates | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: message "activity does not publish another track"
-  report.expect(h.rows[1] === untouched, cppID: id, message: "activity does not publish another track")
 
 S015 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.expectEqual(Double(physical(128)) / dpr, h.rows[0].activityLeftHeight,
-                             cppID: id, what: "left height follows physical pixel rounding")
 
 S016 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.expectEqual(Double(physical(128)) / dpr, h.rows[0].activityRightHeight,
-                             cppID: id, what: "right height follows physical pixel rounding")
 
 S017 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.fail(id, "fixture has no two levels within a physical pixel")
 
 S018 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.expect(h.rows[0] === within, cppID: id, message: "same physical pixel publishes no row")
 
 S019 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.fail(id, "fixture has no next physical pixel")
 
 S020 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.expect(h.rows[0].activityLeftHeight > within.activityLeftHeight, cppID: id,
-                        message: "crossing physical boundary changes height")
 
 S021 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.expectEqual(Double((Double(height) * dpr).rounded()) / dpr,
-                             h.rows[0].activityLeftHeight, cppID: paused, what: "paused left fills row")
 
 S022 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.expectEqual(h.rows[0].activityLeftHeight, h.rows[0].activityRightHeight,
-                             cppID: paused, what: "paused right fills row")
 
 S023 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.expectEqual(Int((0.15 * Double(height) * dpr).rounded()), capped,
-                             cppID: paused, what: "playing intensity obeys cap")
 
 S024 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.expect(TrackActivity.physicalHeight(1, meterHeight: height, dpr: dpr,
-                                                      playing: false, maximumIntensity: 0.15) > capped,
-                        cppID: paused, message: "pause ignores playing cap")
 
 S025 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.expect(h.rows[0].activityLeftHeight > h.rows[0].activityRightHeight,
-                        cppID: stereo, message: "stereo channels keep independent heights")
 
 S026 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.expect(h.rows[0].activityLeftHeight > h.rows[1].activityLeftHeight,
-                        cppID: stereo, message: "tracks keep independent heights")
 
 S027 | physical | src/checks/trackheaders/tst_trackactivitymeter.swift
 Anchor: function
-  report.expect(zip(rows, fx.trackRows).allSatisfy { $0 === $1 }, cppID: stereo,
-                        message: "unchanged converged levels retain all rows")
-
-Shared helper: src/checks/trackheaders/headerfixture.swift
-SHA-256: 97168dc6c4c652f8497a6b3f1cf1750fa010c067def9b5f39955c3dab56d48aa
-src/checks/trackheaders/headerfixture.swift:64
-  report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
-                        cppID: trackHeadersReorderID, message: "\(label): header accepts press")
-src/checks/trackheaders/headerfixture.swift:66
-  report.expect(headers.updatePointer(x: x, y: dropY, modifiers: 0),
-                        cppID: trackHeadersReorderID, message: "\(label): header accepts drag")
-src/checks/trackheaders/headerfixture.swift:68
-  report.expect(headers.endPointer(x: x, y: dropY, button: 1, modifiers: 0),
-                        cppID: trackHeadersReorderID, message: "\(label): header accepts release")
-src/checks/trackheaders/headerfixture.swift:73
-  report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
-                             what: "\(phase): rows follow engine track order")
-src/checks/trackheaders/headerfixture.swift:76
-  report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
-                             what: "\(phase): rows display ordered numbered track names")
-src/checks/trackheaders/headerfixture.swift:78
-  report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
-                             what: "\(phase): one row per track plus add-track row")
-src/checks/trackheaders/headerfixture.swift:81
-  report.expectEqual([names.count], addRows, cppID: cppID,
-                             what: "\(phase): add-track row remains last")
-
-Shared helper: src/checks/trackheaders/headerinputfixture.swift
-SHA-256: 3c5d2bdfd003b1564928b17990288debd27810525485463027fd19d950d7ec40
-src/checks/trackheaders/headerinputfixture.swift:28
-  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
-                        cppID: cppID, message: "\(probe) row \(row) accepts press")
-src/checks/trackheaders/headerinputfixture.swift:30
-  report.expect(headers.endPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
-                        cppID: cppID, message: "\(probe) row \(row) accepts release")
-src/checks/trackheaders/headerinputfixture.swift:36
-  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 2, modifiers: 0),
-                        cppID: cppID, message: "right press is handled")
-src/checks/trackheaders/headerinputfixture.swift:38
-  report.expect(headers.menuOpen, cppID: cppID, message: "right press opens header menu")
-src/checks/trackheaders/headerinputfixture.swift:64
-  report.expectEqual(state, document.state, cppID: cppID, what: "\(phase): song unchanged")
-src/checks/trackheaders/headerinputfixture.swift:65
-  report.expectEqual(revision, document.revision, cppID: cppID,
-                             what: "\(phase): no document write")
-src/checks/trackheaders/headerinputfixture.swift:67
-  report.expectEqual(history, document.history.currentIdentity, cppID: cppID,
-                             what: "\(phase): history unchanged")

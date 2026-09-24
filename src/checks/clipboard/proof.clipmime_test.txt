@@ -6,313 +6,29 @@ Original SHA-256: 0d0a02515571b1c3969d261705702d72977b45dbd8fdfaa7113405f0336a94
 Swift counterpart: src/checks/editcheck/TimeChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below (17 sites across six test methods),
-including QFETCH-driven rows. Source context preserves setup, rows, loops, and
-guards between assertions verbatim. S identifiers identify exact Swift
-predicates, listed after the inventory.
-MATCHED identifies an equivalent Swift predicate asserting the same value or
-fact under the same cppID; the lane execution result is recorded under Verification.
-PARTIAL identifies a related Swift predicate with an explicit unproved
-condition.
-NATIVE identifies retained native-clipboard observations (live QClipboard MIME
-state) a model-level Swift check cannot establish; the Swift messages
-themselves reserve native MIME transport and failure routing as host
-assertions.
-GAP identifies an original predicate without a replacement assertion.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS (full-lane rerun, 10.58 s; reported by the implementer 2026-09-24,
 not rerun by this ledger pass).
 Command: deno task verify:shell --filter shell-clipboard --verbose
 Result: PASS (1/11 ok; run_checks PASS including the invalid-MIME paste guard;
 reported by the implementer 2026-09-24, not rerun by this ledger pass).
-The A017 decodeFailed site is not routed by any Swift predicate; the shell lane
-guard at src/checks/editorqml/tst_ShellClipboard.qml asserts the
-consumer-visible consequence (invalid custom MIME cannot change notes, cursor or
-dirty state) and is recorded beside that site without converting it.
-
-Execution ownership
-runTimeEditsSuite calls runClipboardCodecSuite, which round-trips both codec
-families, replays the routed-clip MIME scenario, rejects the exact 14
-malformed baseline payloads in a loop, rejects the corrupt custom-MIME bytes,
-and pins all four rescale families with the identical input values. The
-malformedClipboardPayload helper rebuilds each baseline payload in Swift. The
-live-QClipboard observations (clipboardHasClipMime, foreign text clipboard,
-decodeFailed routing flag) have no Swift predicates; the routed model-level
-clip now asserts the exact one-track count. src/checks/automation/
-automationclipboard.swift was searched: it asserts automation-drawer lane
-clipboard under drawerAutomationRangeID, a different surface, and is not cited
-below.
-
-Fixture, sequence and row constraints
-rescaleFamilies_data expands one site into four rows (up_24_to_48,
-down_48_to_24_round_up_last_wins, saturates_without_wrap,
-same_tpb_is_exact_identity). codecRoundTrips_data expands three sites into two
-rows (plain_note_clip, time_clip_with_bend_empty_lane_and_tempo).
-malformedPayloads_data expands one site into fourteen rows (truncated_json,
-garbage_bytes, wrong_format, missing_ticks_per_beat, zero_ticks_per_beat,
-missing_tracks, wrong_typed_lanes, missing_tempo, negative_span,
-negative_note_tick, missing_note_velocity, lane_point_missing_value,
-tempo_missing_microseconds, nonfinite_tick); the Swift loop iterates the same
-fourteen kinds. init/cleanup install and remove a ClipboardStateGuard around
-every method; the Swift suite preserves no system clipboard state.
-
-Original assertion inventory and source sequence
 
 A001 | ClipMimeTest::rescaleFamilies | src/checks/clipboard/clipmime_test.cpp:207
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift), S005 (:1766), S006 (:1786) and S007 (:1806) pin the identical four family inputs and outputs (up, down-with-coalescing, identity, saturation).
-Source context since previous assertion:
-  #include "checks/clipcheck_support.h"
-
-  #include <QClipboard>
-  #include <QGuiApplication>
-  #include <QMimeData>
-  #include <QtTest>
-
-  #include <limits>
-  #include <memory>
-  #include <optional>
-
-  #include "core/timedefaults.h"
-  #include "ui/songview/clip.h"
-
-  namespace {
-
-  using songview::Clip;
-
-  constexpr uint8_t kCcModulation = 0x01;
-  constexpr uint8_t kCcVolume = 0x07;
-  constexpr uint8_t kCcPitchBend = 0xff;
-
-  enum class RescaleFamily { Up, DownWithCoalescing, Saturation, Identity };
-  enum class CodecFamily { Note, Time };
-
-  Clip rescaleInput(RescaleFamily family)
-  {
-      Clip clip;
-      switch (family) {
-      case RescaleFamily::Up:
-          clip.span = 12;
-          clip.tracks = {{3, {{6, 64, 3, 91}}}};
-          clip.lanes = {{4, kCcModulation, {{6, -12}}}};
-          clip.tempo = {{6, 400000}};
-          return clip;
-      case RescaleFamily::DownWithCoalescing:
-          clip.span = 1;
-          clip.tracks = {{2, {{1, 60, 1, 100}, {3, 61, 0, 80}}}};
-          clip.lanes = {{2, kCcVolume, {{2, 20}, {1, 10}, {3, 30}}}};
-          clip.tempo = {{2, 500000}, {1, 600000}, {3, 700000}};
-          return clip;
-      case RescaleFamily::Saturation:
-          clip.span = CoreTimeDefaults::kNoTick;
-          clip.tracks = {{0, {{CoreTimeDefaults::kNoTick, 127, UINT32_MAX, 255}}}};
-          clip.lanes = {
-              {0, kCcModulation, {{CoreTimeDefaults::kNoTick, std::numeric_limits<int>::min()}}}};
-          clip.tempo = {{CoreTimeDefaults::kNoTick, UINT32_MAX}};
-          return clip;
-      case RescaleFamily::Identity:
-          clip.tracks = {{7, {{9, 72, 5, 44}}}};
-          clip.lanes = {{7, kCcModulation, {{4, 1}, {4, 2}, {2, 3}}}};
-          clip.tempo = {{4, 500000}, {4, 600000}, {2, 700000}};
-          return clip;
-      }
-      Q_UNREACHABLE();
-  }
-
-  Clip rescaleExpected(RescaleFamily family)
-  {
-      Clip expected;
-      switch (family) {
-      case RescaleFamily::Up:
-          expected.span = 24;
-          expected.tracks = {{3, {{12, 64, 6, 91}}}};
-          expected.lanes = {{4, kCcModulation, {{12, -12}}}};
-          expected.tempo = {{12, 400000}};
-          return expected;
-      case RescaleFamily::DownWithCoalescing:
-          expected.span = 1;
-          expected.tracks = {{2, {{1, 60, 1, 100}, {2, 61, 0, 80}}}};
-          expected.lanes = {{2, kCcVolume, {{1, 10}, {2, 30}}}};
-          expected.tempo = {{1, 600000}, {2, 700000}};
-          return expected;
-      case RescaleFamily::Saturation: {
-          Clip saturated = rescaleInput(family);
-          // span and tempo ticks clamp at kMaxTick; relTick and lane ticks
-          // saturate at UINT32_MAX (== kNoTick), unchanged from the input.
-          saturated.span = CoreTimeDefaults::kMaxTick;
-          saturated.tempo = {{CoreTimeDefaults::kMaxTick, UINT32_MAX}};
-          return saturated;
-      }
-      case RescaleFamily::Identity:
-          return rescaleInput(family);
-      }
-      Q_UNREACHABLE();
-  }
-
-  Clip codecClip(CodecFamily family)
-  {
-      Clip clip;
-      if (family == CodecFamily::Note) {
-          clip.tracks = {{3, {{0, 60, 24, 100}, {12, 64, 12, 80}}}};
-          return clip;
-      }
-
-      clip.span = 96;
-      clip.tracks = {{0, {{0, 60, 24, 100}, {72, 67, 12, 90}}}};
-      clip.lanes = {{0, kCcModulation, {{24, 80}, {72, 32}}},
-                    {0, kCcPitchBend, {{48, 4096}}},
-                    {0, kCcVolume, {}}};
-      clip.tempo = {{0, 500000}, {48, 400000}};
-      return clip;
-  }
-
-  QByteArray malformedPayload(const QString &kind)
-  {
-      if (kind == QStringLiteral("truncated_json"))
-          return QByteArrayLiteral("{\"format\": 1");
-      if (kind == QStringLiteral("garbage_bytes"))
-          return QByteArrayLiteral("not json at all");
-
-      QJsonObject payload = clipcheck_support::makeValidClipPayload();
-      if (kind == QStringLiteral("wrong_format"))
-          payload.insert(QStringLiteral("format"), 2);
-      else if (kind == QStringLiteral("missing_ticks_per_beat"))
-          payload.remove(QStringLiteral("ticksPerBeat"));
-      else if (kind == QStringLiteral("zero_ticks_per_beat"))
-          payload.insert(QStringLiteral("ticksPerBeat"), 0);
-      else if (kind == QStringLiteral("missing_tracks"))
-          payload.remove(QStringLiteral("tracks"));
-      else if (kind == QStringLiteral("wrong_typed_lanes"))
-          payload.insert(QStringLiteral("lanes"), QJsonObject{});
-      else if (kind == QStringLiteral("missing_tempo"))
-          payload.remove(QStringLiteral("tempo"));
-      else if (kind == QStringLiteral("negative_span"))
-          payload.insert(QStringLiteral("span"), -1.0);
-      else if (kind == QStringLiteral("negative_note_tick")) {
-          QJsonArray tracks = payload.value(QStringLiteral("tracks")).toArray();
-          QJsonObject track = tracks.first().toObject();
-          QJsonArray notes = track.value(QStringLiteral("notes")).toArray();
-          QJsonObject note = notes.first().toObject();
-          note.insert(QStringLiteral("relTick"), -1.0);
-          notes[0] = note;
-          track.insert(QStringLiteral("notes"), notes);
-          tracks[0] = track;
-          payload.insert(QStringLiteral("tracks"), tracks);
-      } else if (kind == QStringLiteral("missing_note_velocity")) {
-          QJsonArray tracks = payload.value(QStringLiteral("tracks")).toArray();
-          QJsonObject track = tracks.first().toObject();
-          QJsonArray notes = track.value(QStringLiteral("notes")).toArray();
-          QJsonObject note = notes.first().toObject();
-          note.remove(QStringLiteral("velocity"));
-          notes[0] = note;
-          track.insert(QStringLiteral("notes"), notes);
-          tracks[0] = track;
-          payload.insert(QStringLiteral("tracks"), tracks);
-      } else if (kind == QStringLiteral("lane_point_missing_value")) {
-          payload.insert(
-              QStringLiteral("lanes"),
-              QJsonArray{QJsonObject{{QStringLiteral("track"), 0},
-                                     {QStringLiteral("cc"), int(kCcModulation)},
-                                     {QStringLiteral("points"), QJsonArray{QJsonArray{12}}}}});
-      } else if (kind == QStringLiteral("tempo_missing_microseconds")) {
-          payload.insert(QStringLiteral("tempo"),
-                         QJsonArray{QJsonObject{{QStringLiteral("relTick"), 12.0}}});
-      } else if (kind == QStringLiteral("nonfinite_tick")) {
-          return QByteArrayLiteral(
-              "{\"format\":1,\"ticksPerBeat\":24,\"span\":0,\"tracks\":[{\"track\":0,"
-              "\"notes\":[{\"relTick\":NaN,\"key\":60,\"duration\":24,\"velocity\":100}]}],"
-              "\"lanes\":[],\"tempo\":[]}");
-      }
-      return clipcheck_support::compactJson(payload);
-  }
-
-  class ClipMimeTest final : public QObject
-  {
-      Q_OBJECT
-
-    public:
-      ClipMimeTest() = default;
-      Q_DISABLE_COPY_MOVE(ClipMimeTest)
-
-    private slots:
-      void init()
-      {
-          m_clipboard = std::make_unique<clipcheck_support::ClipboardStateGuard>();
-          m_clipboard->clear();
-      }
-
-      void cleanup() { m_clipboard.reset(); }
-
-      void rescaleFamilies_data()
-      {
-          QTest::addColumn<int>("family");
-          QTest::newRow("up_24_to_48") << int(RescaleFamily::Up);
-          QTest::newRow("down_48_to_24_round_up_last_wins") << int(RescaleFamily::DownWithCoalescing);
-          QTest::newRow("saturates_without_wrap") << int(RescaleFamily::Saturation);
-          QTest::newRow("same_tpb_is_exact_identity") << int(RescaleFamily::Identity);
-      }
-
-      void rescaleFamilies()
-      {
-          QFETCH(int, family);
-          const auto selected = static_cast<RescaleFamily>(family);
-          uint32_t sourceTpb = 24;
-          uint32_t destinationTpb = 24;
-          if (selected == RescaleFamily::Up)
-              destinationTpb = 48;
-          else if (selected == RescaleFamily::DownWithCoalescing)
-              sourceTpb = 48;
-          else if (selected == RescaleFamily::Saturation) {
-              sourceTpb = 1;
-              destinationTpb = UINT32_MAX;
-          }
-          const Clip actual =
-              songview::rescaleClip(rescaleInput(selected), sourceTpb, destinationTpb);
-Original expression:
-  QVERIFY(clipcheck_support::sameClip(actual, rescaleExpected(selected)));
+Mapping: S004, S005, S006, S007
 
 A002 | ClipMimeTest::codecRoundTrips | src/checks/clipboard/clipmime_test.cpp:223
 Disposition: MATCHED
-Mapping/reason: S008 (TimeChecks.swift) asserts decoded == DecodedPorydawClip(ticksPerBeat: ticksPerBeat, clip: clip) for both codec families, which requires decode to succeed.
-Source context since previous assertion:
-  ;
-      }
-
-      void codecRoundTrips_data()
-      {
-          QTest::addColumn<int>("family");
-          QTest::newRow("plain_note_clip") << int(CodecFamily::Note);
-          QTest::newRow("time_clip_with_bend_empty_lane_and_tempo") << int(CodecFamily::Time);
-      }
-
-      void codecRoundTrips()
-      {
-          QFETCH(int, family);
-          const Clip expected = codecClip(static_cast<CodecFamily>(family));
-          const std::optional<songview::DecodedClip> decoded =
-              songview::decodeClip(songview::encodeClip(expected, 24));
-Original expression:
-  QVERIFY(decoded.has_value());
+Mapping: S008
 
 A003 | ClipMimeTest::codecRoundTrips | src/checks/clipboard/clipmime_test.cpp:224
 Disposition: MATCHED
-Mapping/reason: S008 (TimeChecks.swift) compares against DecodedPorydawClip(ticksPerBeat: 24, ...).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(decoded->ticksPerBeat, uint32_t{24});
+Mapping: S008
 
 A004 | ClipMimeTest::codecRoundTrips | src/checks/clipboard/clipmime_test.cpp:225
 Disposition: MATCHED
-Mapping/reason: S008 (TimeChecks.swift) compares the decoded clip against the identical input payload.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(clipcheck_support::sameClip(decoded->clip, expected));
+Mapping: S008
 
 A005 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:235
 Disposition: GAP
@@ -333,60 +49,31 @@ Original expression:
 
 A006 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:237
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift) asserts routedCore decodes to the exact payload, which requires a decoded value.
-Source context since previous assertion:
-  const std::optional<songview::DecodedClip> raw = clipcheck_support::checkClipboardClip();
-Original expression:
-  QVERIFY(raw.has_value());
+Mapping: S001
 
 A007 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:238
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift) asserts routedCore?.ticksPerBeat == 24.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(raw->ticksPerBeat, uint32_t{24});
+Mapping: S001
 
 A008 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:239
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift) asserts routedCore?.clip == routedClip with the identical span-24 single-note payload.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(clipcheck_support::sameClip(raw->clip, clip));
+Mapping: S001
 
 A009 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:242
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift) asserts the routedScaled conjuncts, which require the 48-TPB conversion to succeed.
-Source context since previous assertion:
-
-  const std::optional<Clip> converted = songview::readClipboard(48);
-Original expression:
-  QVERIFY(converted.has_value());
+Mapping: S001
 
 A010 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:243
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift) asserts routedScaled?.span == 48.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(converted->span, uint64_t{48});
+Mapping: S001
 
 A011 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:244
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift) asserts routedScaled?.tracks.count == 1.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(converted->tracks.size(), size_t{1});
+Mapping: S001
 
 A012 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:245
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift) asserts the rescaled first-note duration == 24 (12 at 24 TPB doubled to 48 TPB).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(converted->tracks.front().notes.front().duration, uint32_t{24});
+Mapping: S001
 
 A013 | ClipMimeTest::foreignClipboardIsNotClip | src/checks/clipboard/clipmime_test.cpp:254
 Disposition: GAP
@@ -414,52 +101,11 @@ Original expression:
 
 A015 | ClipMimeTest::malformedPayloads | src/checks/clipboard/clipmime_test.cpp:280
 Disposition: MATCHED
-Mapping/reason: S002 (TimeChecks.swift) rejects the same fourteen baseline kinds through the Swift malformedClipboardPayload helper.
-Source context since previous assertion:
-  ;
-      }
-
-      void malformedPayloads_data()
-      {
-          QTest::addColumn<QString>("kind");
-          QTest::newRow("truncated_json") << QStringLiteral("truncated_json");
-          QTest::newRow("garbage_bytes") << QStringLiteral("garbage_bytes");
-          QTest::newRow("wrong_format") << QStringLiteral("wrong_format");
-          QTest::newRow("missing_ticks_per_beat") << QStringLiteral("missing_ticks_per_beat");
-          QTest::newRow("zero_ticks_per_beat") << QStringLiteral("zero_ticks_per_beat");
-          QTest::newRow("missing_tracks") << QStringLiteral("missing_tracks");
-          QTest::newRow("wrong_typed_lanes") << QStringLiteral("wrong_typed_lanes");
-          QTest::newRow("missing_tempo") << QStringLiteral("missing_tempo");
-          QTest::newRow("negative_span") << QStringLiteral("negative_span");
-          QTest::newRow("negative_note_tick") << QStringLiteral("negative_note_tick");
-          QTest::newRow("missing_note_velocity") << QStringLiteral("missing_note_velocity");
-          QTest::newRow("lane_point_missing_value") << QStringLiteral("lane_point_missing_value");
-          QTest::newRow("tempo_missing_microseconds") << QStringLiteral("tempo_missing_microseconds");
-          QTest::newRow("nonfinite_tick") << QStringLiteral("nonfinite_tick");
-      }
-
-      void malformedPayloads()
-      {
-          QFETCH(QString, kind);
-Original expression:
-  QVERIFY(!songview::decodeClip(malformedPayload(kind)).has_value());
+Mapping: S002
 
 A016 | ClipMimeTest::malformedCustomMimeReportsDecodeFailure | src/checks/clipboard/clipmime_test.cpp:290
 Disposition: MATCHED
-Mapping/reason: S003 (TimeChecks.swift) asserts the production decoder rejects the exact "not json at all" custom-MIME bytes.
-Source context since previous assertion:
-  ;
-      }
-
-      void malformedCustomMimeReportsDecodeFailure()
-      {
-          auto corrupt = std::make_unique<QMimeData>();
-          corrupt->setData(songview::kClipMimeType, QByteArrayLiteral("not json at all"));
-          QGuiApplication::clipboard()->setMimeData(corrupt.release());
-
-          bool decodeFailed = false;
-Original expression:
-  QVERIFY(!songview::readClipboard(24, &decodeFailed).has_value());
+Mapping: S003
 
 A017 | ClipMimeTest::malformedCustomMimeReportsDecodeFailure | src/checks/clipboard/clipmime_test.cpp:291
 Disposition: GAP
@@ -492,63 +138,27 @@ Swift assertion predicates
 
 S001 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
 Anchor: message "the production codec and rescaler preserve the single routed track; native MIME transport remains a host assertion"
-  report.expect(routedCore?.ticksPerBeat == 24 && routedCore?.clip == routedClip
-          && routedScaled?.span == 48
-          && routedScaled?.tracks.count == 1
-          && routedScaled?.tracks.first?.notes.first?.duration == 24,
-          cppID: "clipmimecheck/ClipMimeTest::clipboardRoutesClipMime",
-          message: "the production codec and rescaler preserve the single routed track; native MIME transport remains a host assertion")
 
 S002 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
 Anchor: message "the exact malformed baseline payload is rejected"
-  report.expect(ClipboardCodec.decode(malformedClipboardPayload(kind)) == nil,
-                        cppID: "clipmimecheck/ClipMimeTest::malformedPayloads[\(kind)]",
-                        message: "the exact malformed baseline payload is rejected")
 
 S003 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
 Anchor: message "the production decoder rejects the exact corrupt custom-MIME payload; native failure routing remains a host assertion"
-  report.expect(ClipboardCodec.decode(Data("not json at all".utf8)) == nil,
-                    cppID: "clipmimecheck/ClipMimeTest::malformedCustomMimeReportsDecodeFailure",
-                    message: "the production decoder rejects the exact corrupt custom-MIME payload; native failure routing remains a host assertion")
 
 S004 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
 Anchor: message "exact up-scaled clip"
-  report.expectEqual(
-          upExpected,
-          ClipboardCodec.rescale(upInput, sourceTicksPerBeat: 24, destinationTicksPerBeat: 48),
-          cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[up_24_to_48]",
-          what: "exact up-scaled clip")
 
 S005 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
 Anchor: message "half-up down-scaled clip with stable last-wins collisions"
-  report.expectEqual(
-          downExpected,
-          ClipboardCodec.rescale(downInput, sourceTicksPerBeat: 48, destinationTicksPerBeat: 24),
-          cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[down_48_to_24_round_up_last_wins]",
-          what: "half-up down-scaled clip with stable last-wins collisions")
 
 S006 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
 Anchor: message "same-TPB clip including duplicate ordering"
-  report.expectEqual(
-          identityInput,
-          ClipboardCodec.rescale(identityInput, sourceTicksPerBeat: 24,
-                                 destinationTicksPerBeat: 24),
-          cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[same_tpb_is_exact_identity]",
-          what: "same-TPB clip including duplicate ordering")
 
 S007 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
 Anchor: message "saturated clip without wrapping"
-  report.expectEqual(
-          saturationExpected,
-          ClipboardCodec.rescale(saturationInput, sourceTicksPerBeat: 1,
-                                 destinationTicksPerBeat: .max),
-          cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[saturates_without_wrap]",
-          what: "saturated clip without wrapping")
 
 S008 | roundTrip | src/checks/editcheck/TimeChecks.swift
 Anchor: message "codec round-trip preserves payload"
-  report.expect(decoded == DecodedPorydawClip(ticksPerBeat: ticksPerBeat, clip: clip),
-                    cppID: cppID, message: "codec round-trip preserves payload")
 
 Shared helpers
 The malformedClipboardPayload helper (src/checks/editcheck/TimeChecks.swift:

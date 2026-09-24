@@ -9,35 +9,11 @@ Additional Swift counterpart: src/checks/automation/presentation/painting.swift
 Additional Swift counterpart: src/checks/automation/domain/gestures.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-Of the 127 sites in this file, 76 are MATCHED, 21 PARTIAL, 2 GAP, 13 NATIVE, 9 NATIVE-SETUP, and 6 RETIRED-REPRESENTATION. The group drag, outside-selection clear, detail-threshold precedence and parameter-switch cancellation are executed under the original cppIDs by drawerAutomationRestoredInteractionContracts, drawerAutomationBandIsolatesTempoAndCc, drawerAutomationMultiCcDragExcludesOthers, drawerAutomationPencilOwnershipAndShift and drawerAutomationDetailThresholdPrecedence in src/checks/automation/automationselection.swift plus drawerAutomationInflightDragInvalidation in src/checks/automation/automationcanvasediting.swift. NATIVE sites are the Quick scene-graph ring/transient probes and native pointer-grab/cursor feedback; NATIVE-SETUP sites are the retired AutomationCanvas lane-row geometry; RETIRED-REPRESENTATION sites are the QAction/QShortcut pencil-mode representation (the Swift page exposes isPencilMode alone); the shortcut key identity and its delivery stay GAP, owned by the keybindings lane (docs/plans/swift-keybindings), because no predicate in this counterpart observes that key. Each PARTIAL line names the exact unproved condition.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including drawerAutomationPencilOwnershipAndShift, drawerAutomationDetailThresholdPrecedence and drawerAutomationInflightDragInvalidation). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
 Delta snapshot: the counterpart hashes and the drawerAutomationDetailThresholdPrecedence anchors were re-pinned because the double-click block moved that function in automationselection.swift, and A045/A055 became GAP for the keybindings-lane shortcut delivery. No execution result for that delta was supplied to this ledger task, so none is claimed.
 Converted-window command: deno task verify:qml --verbose
-The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
-Their sources are reference inventories only, never current execution evidence.
-
-Execution ownership
-The legacy AutomationEditingTest ownership suite verified interaction ownership between selection rings, pencil modes, and node drag gestures. In the converted Swift suite, drawerAutomationRestoredInteractionContracts, drawerAutomationBandIsolatesTempoAndCc and drawerAutomationMultiCcDragExcludesOthers in src/checks/automation/automationselection.swift exercise the restored selection/drag contracts, drawerAutomationPencilOwnershipAndShift exercises the outside-selection clear and Shift axis locks, drawerAutomationDetailThresholdPrecedence exercises the detail-threshold node precedence, and drawerAutomationInflightDragInvalidation in src/checks/automation/automationcanvasediting.swift exercises the parameter-switch cancellation and recovery. The pencil-mode toggle's QAction shortcut rows (A045, A055) stay GAP: the keybindings lane (docs/plans/swift-keybindings) owns that key delivery and no predicate in this counterpart observes it. Registered run path: src/checks/automation/AutomationPageChecks.swift,379-384 :: runAutomationPageChecks → projectSession (swiftcore suite 10).
-
-Fixture, sequence and row constraints
-Tests verify selection ring rendering, multi-node group drag undo, gesture retention across tool mode switches, and zoom/detail threshold node filtering. Loops verify selection ring states across multiple track rows and nodes.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:64
 Disposition: GAP
@@ -112,16 +88,6 @@ Original expression:
 
 A002 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:69
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      tab().document().writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick,
-                                       {{48, 32}, {96, 64}, {144, 96}, {192, 80}});
-
-      songview::TimelineQuickScene *const scene = quickScene();
-
-Original expression:
-  QVERIFY(scene);
 
 A003 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:78
 Disposition: GAP
@@ -205,183 +171,67 @@ Original expression:
 
 A009 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:128
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002]
-Source context since previous assertion:
-
-      tab().document().writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick,
-                                       {{48, 32}, {96, 64}, {144, 96}, {192, 80}});
-      songview::EditorSelectionModel::TimeSelection selection;
-      selection.startTick = 24;
-      selection.endTick = 192;
-      selection.scope = songview::EditorSelectionModel::TimeSelection::Tracks;
-      tab().view().selectionModel().setTimeSelection(selection);
-
-      const uint64_t revisionBefore = tab().document().revision();
-      const int undoCountBefore = tab().document().undoStack()->count();
-      const int undoIndexBefore = tab().document().undoStack()->index();
-      const QPointF source = inputPoint(pan, 96, 64);
-      const QPointF target = inputPoint(pan, 120, 64);
-      const int activationDistance = AutomationGeometry::resolve().nodeDragActivationDistance + 2;
-      const QPointF activation = source + QPointF(activationDistance, 0.0);
-      const QPoint sourceWindow =
-          automation_test::windowFromContent(page(), automationInput(), source);
-      const QPoint targetWindow =
-          automation_test::windowFromContent(page(), automationInput(), target);
-      const QPoint activationWindow =
-          automation_test::windowFromContent(page(), automationInput(), activation);
-      const QPoint endWindow = activationWindow + (targetWindow - sourceWindow);
-      const QPointF effectiveTarget = automation_test::effectiveDragContent(
-          page(), automationInput(), sourceWindow, activationWindow, endWindow);
-      const AutomationProjection::PointerMapping effectiveTargetMapping =
-          pointerMapping(pan, effectiveTarget);
-
-Original expression:
-  QCOMPARE(effectiveTargetMapping.point.tick, uint64_t{120});
+Mapping: S001, S002
 
 A010 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:129
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(effectiveTargetMapping.point.value, 64);
+Mapping: S001, S002
 
 A011 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:136
 Disposition: MATCHED
-Mapping/reason: asserts the heterogeneous selected drag is exactly one revision, the observable the original's single revision advance records. [S004]
-Source context since previous assertion:
-
-
-      mousePress(Qt::LeftButton, sourceWindow);
-      mouseMove(activationWindow);
-      mouseMove(endWindow, Qt::AltModifier);
-      mouseRelease(Qt::LeftButton, endWindow, Qt::AltModifier);
-
-
-Original expression:
-  QTRY_COMPARE(tab().document().revision(), revisionBefore + 1);
+Mapping: S004
 
 A012 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:137
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores all selected lanes and that no further undo is available, which is exactly one recorded history entry (count-free; no C++ undo index correspondence is claimed). [S008]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(tab().document().undoStack()->count(), undoCountBefore + 1);
+Mapping: S008
 
 A013 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:138
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores all selected lanes and that no further undo is available, which is exactly one recorded history entry (count-free; no C++ undo index correspondence is claimed). [S008]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(tab().document().undoStack()->index(), undoIndexBefore + 1);
+Mapping: S008
 
 A014 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:143
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002]
-Source context since previous assertion:
-
-      const std::optional<DocLanePoint> moved72 = pointAt(tab().document(), 72);
-      const std::optional<DocLanePoint> moved120 = pointAt(tab().document(), 120);
-      const std::optional<DocLanePoint> moved168 = pointAt(tab().document(), 168);
-      const std::optional<DocLanePoint> untouched192 = pointAt(tab().document(), 192);
-
-Original expression:
-  QVERIFY(moved72.has_value());
+Mapping: S001, S002
 
 A015 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:144
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(moved120.has_value());
+Mapping: S001, S002
 
 A016 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:145
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(moved168.has_value());
+Mapping: S001, S002
 
 A017 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:146
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S002]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(untouched192.has_value());
+Mapping: S002
 
 A018 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:147
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002,S003]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(moved72->value, 32);
+Mapping: S001, S002, S003
 
 A019 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:148
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002,S003]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(moved120->value, 64);
+Mapping: S001, S002, S003
 
 A020 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:149
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002,S003]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(moved168->value, 96);
+Mapping: S001, S002, S003
 
 A021 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:150
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002,S003]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(untouched192->value, 80);
+Mapping: S001, S002, S003
 
 A022 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:151
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!pointAt(tab().document(), 48).has_value());
+Mapping: S001
 
 A023 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:152
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!pointAt(tab().document(), 96).has_value());
+Mapping: S001
 
 A024 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:153
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!pointAt(tab().document(), 144).has_value());
+Mapping: S001
 
 A025 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:155
 Disposition: PARTIAL
@@ -404,175 +254,74 @@ Original expression:
 
 A027 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:157
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift asserts the production AutomationTimeSelection track scope: a track-scoped selection covers the selected track's lanes and Tempo only when the whole used set is selected. [S066,S067]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(movedSelection.scope, songview::EditorSelectionModel::TimeSelection::Tracks);
+Mapping: S066, S067
 
 A028 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:158
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift asserts the production AutomationTimeSelection track scope: a track-scoped selection covers the selected track's lanes and Tempo only when the whole used set is selected. [S066]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(movedSelection.lanes.empty());
+Mapping: S066
 
 A029 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:159
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift asserts the production AutomationTimeSelection track scope: a track-scoped selection covers the selected track's lanes and Tempo only when the whole used set is selected. [S067]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!movedSelection.tempo);
+Mapping: S067
 
 A030 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:161
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S005]
-Source context since previous assertion:
-
-
-
-Original expression:
-  QVERIFY(tab().history().canUndo());
+Mapping: S005
 
 A031 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:162
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S005]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));
+Mapping: S005
 
 A032 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:163
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006,S007]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(pointAt(tab().document(), 48).has_value());
+Mapping: S006, S007
 
 A033 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:164
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006,S007]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(pointAt(tab().document(), 96).has_value());
+Mapping: S006, S007
 
 A034 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:165
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006,S007]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(pointAt(tab().document(), 144).has_value());
+Mapping: S006, S007
 
 A035 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:166
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006,S007]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(pointAt(tab().document(), 192).has_value());
+Mapping: S006, S007
 
 A036 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:167
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!pointAt(tab().document(), 72).has_value());
+Mapping: S006
 
 A037 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:168
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!pointAt(tab().document(), 120).has_value());
+Mapping: S006
 
 A038 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:169
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!pointAt(tab().document(), 168).has_value());
+Mapping: S006
 
 A039 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:171
 Disposition: MATCHED
-Mapping/reason: coreAutomationPanUndoRegression asserts awaited undo and redo return and that redo restores the moved state. [S068,S069]
-Source context since previous assertion:
-
-
-
-Original expression:
-  QVERIFY(tab().history().canRedo());
+Mapping: S068, S069
 
 A040 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:172
 Disposition: MATCHED
-Mapping/reason: coreAutomationPanUndoRegression asserts awaited undo and redo return and that redo restores the moved state. [S068,S069]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestRedo()));
+Mapping: S068, S069
 
 A041 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:173
 Disposition: MATCHED
-Mapping/reason: coreAutomationPanUndoRegression asserts awaited undo and redo return and that redo restores the moved state. [S068,S069]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(pointAt(tab().document(), 120).has_value());
+Mapping: S068, S069
 
 A042 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:180
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::pencilModeChangeRetainsPencilGesture()
-  {
-      const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
-      const LaneHandle pan = findRow(panRow);
-
-Original expression:
-  QVERIFY(pan.valid());
 
 A043 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:183
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: The QAction/QShortcut pencil-mode toggle was a QWidget menu representation; the Swift page exposes a plain isPencilMode flag with no QAction or shortcut object, so no object-identity or checked-state assertion can be restated. The mode's consumer-visible effect is asserted elsewhere in this file (pencil-mode strokes and hover deletion). [S053]
-Source context since previous assertion:
-
-      setPencilMode(true);
-      QAction *const action = pencilModeAction();
-
-Original expression:
-  QVERIFY(action);
+Mapping/reason: S053
 
 A044 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:184
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: The QAction/QShortcut pencil-mode toggle was a QWidget menu representation; the Swift page exposes a plain isPencilMode flag with no QAction or shortcut object, so no object-identity or checked-state assertion can be restated. The mode's consumer-visible effect is asserted elsewhere in this file (pencil-mode strokes and hover deletion). [S053]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(action->shortcut().count() == 1);
+Mapping/reason: S053
 
 A045 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:186
 Disposition: GAP
@@ -586,20 +335,7 @@ Original expression:
 
 A046 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:195
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: The QAction/QShortcut pencil-mode toggle was a QWidget menu representation; the Swift page exposes a plain isPencilMode flag with no QAction or shortcut object, so no object-identity or checked-state assertion can be restated. The mode's consumer-visible effect is asserted elsewhere in this file (pencil-mode strokes and hover deletion). [S053]
-Source context since previous assertion:
-
-      const QPointF start = inputPoint(pan, 24, 36);
-      const QPointF end = inputPoint(pan, 120, 92);
-      const AutomationProjection projection(AutomationGeometry::resolve(), &page());
-      const AutomationGridCell endCell = projection.snapCellAt(projection.rawTickAt(end.x()));
-
-      mousePress(Qt::LeftButton,
-                 automation_test::windowFromContent(page(), automationInput(), start));
-      keyClick(shortcut.key(), shortcut.keyboardModifiers());
-
-Original expression:
-  QVERIFY(!action->isChecked());
+Mapping/reason: S053
 
 A047 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:200
 Disposition: PARTIAL
@@ -635,18 +371,6 @@ Original expression:
 
 A050 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:210
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::pencilModeChangeRetainsNodeGesture()
-  {
-      const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
-      const LaneHandle pan = findRow(panRow);
-
-Original expression:
-  QVERIFY(pan.valid());
 
 A051 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:235
 Disposition: PARTIAL
@@ -692,23 +416,11 @@ Original expression:
 
 A053 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:239
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: The QAction/QShortcut pencil-mode toggle was a QWidget menu representation; the Swift page exposes a plain isPencilMode flag with no QAction or shortcut object, so no object-identity or checked-state assertion can be restated. The mode's consumer-visible effect is asserted elsewhere in this file (pencil-mode strokes and hover deletion). [S053]
-Source context since previous assertion:
-
-
-      QAction *const action = pencilModeAction();
-
-Original expression:
-  QVERIFY(action);
+Mapping/reason: S053
 
 A054 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:240
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: The QAction/QShortcut pencil-mode toggle was a QWidget menu representation; the Swift page exposes a plain isPencilMode flag with no QAction or shortcut object, so no object-identity or checked-state assertion can be restated. The mode's consumer-visible effect is asserted elsewhere in this file (pencil-mode strokes and hover deletion). [S053]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(action->shortcut().count() == 1);
+Mapping/reason: S053
 
 A055 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:242
 Disposition: GAP
@@ -722,15 +434,7 @@ Original expression:
 
 A056 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:246
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: The QAction/QShortcut pencil-mode toggle was a QWidget menu representation; the Swift page exposes a plain isPencilMode flag with no QAction or shortcut object, so no object-identity or checked-state assertion can be restated. The mode's consumer-visible effect is asserted elsewhere in this file (pencil-mode strokes and hover deletion). [S053]
-Source context since previous assertion:
-
-
-      mousePress(Qt::LeftButton, sourceWindow);
-      keyClick(shortcut.key(), shortcut.keyboardModifiers());
-
-Original expression:
-  QVERIFY(action->isChecked());
+Mapping/reason: S053
 
 A057 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:251
 Disposition: PARTIAL
@@ -794,118 +498,29 @@ Original expression:
 
 A063 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:259
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift asserts the production AutomationTimeSelection track scope: a track-scoped selection covers the selected track's lanes and Tempo only when the whole used set is selected. [S066,S067]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(movedSelection.scope, songview::EditorSelectionModel::TimeSelection::Lanes);
+Mapping: S066, S067
 
 A064 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:261
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift asserts the production AutomationTimeSelection track scope: a track-scoped selection covers the selected track's lanes and Tempo only when the whole used set is selected. [S066]
-Source context since previous assertion:
-
-      const std::vector<std::pair<int, uint8_t>> expectedLanes{{0, kPanController}};
-
-Original expression:
-  QCOMPARE(movedSelection.lanes, expectedLanes);
+Mapping: S066
 
 A065 | AutomationEditingTest::pencilStrokeOutsideSelectionClearsSelection | src/checks/automation/automationownership.cpp:268
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::pencilStrokeOutsideSelectionClearsSelection()
-  {
-      const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
-      const LaneHandle pan = findRow(panRow);
-
-Original expression:
-  QVERIFY(pan.valid());
 
 A066 | AutomationEditingTest::pencilStrokeOutsideSelectionClearsSelection | src/checks/automation/automationownership.cpp:285
 Disposition: MATCHED
-Mapping/reason: drawerAutomationPencilOwnershipAndShift presses outside the existing selection with pencil mode on and asserts the page clears its selection. [S046]
-Source context since previous assertion:
-
-      setPencilMode(true);
-      songview::EditorSelectionModel::TimeSelection selection;
-      selection.startTick = 24;
-      selection.endTick = 72;
-      selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
-      selection.lanes = {{0, kPanController}};
-      tab().view().selectionModel().setTimeSelection(selection);
-
-      const QPointF start = inputPoint(pan, 144, 32);
-      const QPointF end = inputPoint(pan, 216, 96);
-      mousePress(Qt::LeftButton,
-                 automation_test::windowFromContent(page(), automationInput(), start));
-      mouseMove(automation_test::windowFromContent(page(), automationInput(), end));
-      mouseRelease(Qt::LeftButton,
-                   automation_test::windowFromContent(page(), automationInput(), end));
-
-
-Original expression:
-  QTRY_VERIFY(!tab().view().selectionModel().timeSelection().active());
+Mapping: S046
 
 A067 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:292
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence()
-  {
-      const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
-      const LaneHandle pan = findRow(panRow);
-
-Original expression:
-  QVERIFY(pan.valid());
 
 A068 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:294
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts the projection's markers are visible at default zoom and hidden below the detail threshold, which is the threshold's consumer-visible existence. [S049,S050]
-Source context since previous assertion:
-
-      const AutomationGeometry geometry = AutomationGeometry::resolve();
-
-Original expression:
-  QVERIFY(geometry.pointDetailThreshold > 1);
+Mapping: S049, S050
 
 A069 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:317
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts markers hide below the detail threshold. [S050]
-Source context since previous assertion:
-
-      using DeliveredPoint = std::pair<QPoint, AutomationProjection::PointerMapping>;
-      const auto deliveredPoint = [this, pan](double tick, int value, Tick expectedTick) {
-          const QPoint seed = automation_test::windowFromContent(page(), automationInput(),
-                                                                 inputPoint(pan, tick, value));
-          const auto mapWindow = [this, pan](const QPoint &window) {
-              const QPointF content =
-                  automation_test::contentFromWindow(page(), automationInput(), window);
-              return DeliveredPoint{window, pointerMapping(pan, content)};
-          };
-          DeliveredPoint delivered = mapWindow(seed);
-          for (const int offset : {0, 1, -1, 2, -2}) {
-              const DeliveredPoint candidate = mapWindow(seed + QPoint(offset, 0));
-              if (automationInput().bounds().contains(
-                      automationInput().mapFromScene(QPointF(candidate.first))) &&
-                  candidate.second.point.tick == expectedTick) {
-                  return candidate;
-              }
-          }
-          return delivered;
-      };
-
-      tab().view().setEditorTimeZoom(double(geometry.pointDetailThreshold - 1));
-
-Original expression:
-  QTRY_VERIFY(!AutomationProjection(geometry, &page()).nodeMarkersVisible());
+Mapping: S050
 
 A070 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:321
 Disposition: PARTIAL
@@ -945,69 +560,27 @@ Original expression:
 
 A073 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:335
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts the stroke through hidden markers inserts a new point instead of grabbing the node, and that markers return above the threshold. [S053]
-Source context since previous assertion:
-
-
-      mousePress(Qt::LeftButton, hiddenSource.first);
-      mouseMove(hiddenEnd.first);
-      mouseRelease(Qt::LeftButton, hiddenEnd.first);
-
-
-Original expression:
-  QTRY_VERIFY(pointAt(tab().document(), 72).has_value());
+Mapping: S053
 
 A074 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:337
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts the stroke through hidden markers inserts a new point instead of grabbing the node, and that markers return above the threshold. [S053]
-Source context since previous assertion:
-
-      const std::optional<DocLanePoint> hiddenPoint = pointAt(tab().document(), 72);
-
-Original expression:
-  QVERIFY(hiddenPoint.has_value());
+Mapping: S053
 
 A075 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:338
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts the stroke through hidden markers inserts a new point instead of grabbing the node, and that markers return above the threshold. [S053]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(hiddenPoint->value, hiddenSource.second.point.value);
+Mapping: S053
 
 A076 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:340
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts the inserted point's tick and value, the observable of the original held-value comparison. [S053]
-Source context since previous assertion:
-
-      int hiddenValue = -1;
-
-Original expression:
-  QVERIFY(heldValueAt(tab().document().lanePoints(0, kPanController),
-                          hiddenEnd.second.cell.tickBegin +
-                              (hiddenEnd.second.cell.tickEnd - hiddenEnd.second.cell.tickBegin) / 2,
-                          &hiddenValue));
+Mapping: S053
 
 A077 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:344
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts the inserted point's tick and value, the observable of the original held-value comparison. [S053]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(std::abs(hiddenValue - hiddenEnd.second.point.value) <= 1);
+Mapping: S053
 
 A078 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:347
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts markers hide below the detail threshold. [S054]
-Source context since previous assertion:
-
-
-      tab().view().setEditorTimeZoom(double(geometry.pointDetailThreshold));
-
-Original expression:
-  QTRY_VERIFY(AutomationProjection(geometry, &page()).nodeMarkersVisible());
+Mapping: S054
 
 A079 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:351
 Disposition: PARTIAL
@@ -1072,109 +645,38 @@ Original expression:
 
 A084 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:375
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts a pencil press on a visible node grabs it and a stationary release deletes exactly that node. [S056]
-Source context since previous assertion:
-
-
-      mousePress(Qt::LeftButton, visibleSource.first);
-      mouseMove(activationWindow);
-      mouseMove(endWindow);
-      mouseRelease(Qt::LeftButton, endWindow);
-
-
-Original expression:
-  QTRY_VERIFY(pointAt(tab().document(), visibleTargetCell.tickBegin).has_value());
+Mapping: S056
 
 A085 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:378
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts a pencil press on a visible node grabs it and a stationary release deletes exactly that node. [S056]
-Source context since previous assertion:
-
-      const std::optional<DocLanePoint> visiblePoint =
-          pointAt(tab().document(), visibleTargetCell.tickBegin);
-
-Original expression:
-  QVERIFY(visiblePoint.has_value());
+Mapping: S056
 
 A086 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:379
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts a pencil press on a visible node grabs it and a stationary release deletes exactly that node. [S056]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(visiblePoint->value, visibleTarget.second.point.value);
+Mapping: S056
 
 A087 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:380
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts a pencil press on a visible node grabs it and a stationary release deletes exactly that node. [S056]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!pointAt(tab().document(), 72).has_value());
+Mapping: S056
 
 A088 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:384
 Disposition: MATCHED
-Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts a pencil press on a visible node grabs it and a stationary release deletes exactly that node. [S056]
-Source context since previous assertion:
-
-
-      mousePress(Qt::LeftButton, visibleTarget.first);
-      mouseRelease(Qt::LeftButton, visibleTarget.first);
-
-Original expression:
-  QTRY_VERIFY(!pointAt(tab().document(), visibleTargetCell.tickBegin).has_value());
+Mapping: S056
 
 A089 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:394
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-  }
-
-  // A parameter switch during a live provisional drag cancels the owned
-  // gesture: the old pointer's release commits nothing, no grab or
-  // follow-scroll pause survives, and the reactivated parameter's next
-  // ordinary drag commits exactly once.
-  void AutomationEditingTest::parameterSwitchCancelsNodeDrag()
-  {
-      songview::TimelineQuickScene *const scene = quickScene();
-
-Original expression:
-  QVERIFY(scene);
 
 A090 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:397
 Disposition: MATCHED
-Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the cancelled/recovered gesture's snapshot and revision behaviour, asserted by the same-scenario predicate. [S058]
-Source context since previous assertion:
-
-      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
-      QSignalSpy edited(&tab(), &SongTab::edited);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
+Mapping: S058
 
 A091 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:398
 Disposition: MATCHED
-Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the cancelled/recovered gesture's snapshot and revision behaviour, asserted by the same-scenario predicate. [S058]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(edited.isValid());
+Mapping: S058
 
 A092 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:402
 Disposition: MATCHED
-Mapping/reason: asserts the press owns a live gesture past the activation distance. [S061]
-Source context since previous assertion:
-
-      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
-
-      const std::optional<ArmedCcDrag> arm = armCcDrag(scene);
-
-Original expression:
-  QVERIFY(arm.has_value());
+Mapping: S061
 
 A093 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:406
 Disposition: GAP
@@ -1191,21 +693,11 @@ Original expression:
 
 A094 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:408
 Disposition: MATCHED
-Mapping/reason: drawerAutomationInflightDragInvalidation drives a real press/move on the Pan lane, switches parameters, and asserts the live drag is cancelled, that no publication occurred, and that releasing commits nothing. [S058]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
+Mapping: S058
 
 A095 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:409
 Disposition: MATCHED
-Mapping/reason: asserts the press owns a live gesture past the activation distance. [S061]
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(tab().view().userGestureActive());
+Mapping: S061
 
 A096 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:410
 Disposition: GAP
@@ -1218,29 +710,11 @@ Original expression:
 
 A097 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:418
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators asserts the page publishes the active parameter independently of the selected lanes, and drawerAutomationInflightDragInvalidation activates the switched parameter on the production page. [S063]
-Source context since previous assertion:
-
-
-      // Switching to Tempo mid-gesture ends the owned provisional gesture: the
-      // pointer grab and the follow-scroll pause release, and the old
-      // transient preview clears.
-      const int pilotIndex = page().canvas()->activeParameter();
-      const int tempoIndex = checks::support::automationParameterIndex(
-          *page().canvas(), {EditorAutomationRowKind::Tempo, 0, 0});
-
-Original expression:
-  QVERIFY(tempoIndex >= 0);
+Mapping: S063
 
 A098 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:420
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators asserts the page publishes the active parameter independently of the selected lanes, and drawerAutomationInflightDragInvalidation activates the switched parameter on the production page. [S063]
-Source context since previous assertion:
-
-      page().canvas()->activateParameter(tempoIndex);
-
-Original expression:
-  QCOMPARE(page().canvas()->activeParameter(), tempoIndex);
+Mapping: S063
 
 A099 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:421
 Disposition: GAP
@@ -1253,30 +727,15 @@ Original expression:
 
 A100 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:422
 Disposition: MATCHED
-Mapping/reason: drawerAutomationInflightDragInvalidation drives a real press/move on the Pan lane, switches parameters, and asserts the live drag is cancelled, that no publication occurred, and that releasing commits nothing. [S057,S058]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!tab().view().userGestureActive());
+Mapping: S057, S058
 
 A101 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:423
 Disposition: MATCHED
-Mapping/reason: drawerAutomationInflightDragInvalidation drives a real press/move on the Pan lane, switches parameters, and asserts the live drag is cancelled, that no publication occurred, and that releasing commits nothing. [S057,S058]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->gestureActive());
+Mapping: S057, S058
 
 A102 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:424
 Disposition: MATCHED
-Mapping/reason: drawerAutomationInflightDragInvalidation drives a real press/move on the Pan lane, switches parameters, and asserts the live drag is cancelled, that no publication occurred, and that releasing commits nothing. [S057,S058]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!page().canvas()->isPanning());
+Mapping: S057, S058
 
 A103 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:425
 Disposition: GAP
@@ -1298,81 +757,35 @@ Original expression:
 
 A105 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:427
 Disposition: MATCHED
-Mapping/reason: drawerAutomationInflightDragInvalidation drives a real press/move on the Pan lane, switches parameters, and asserts the live drag is cancelled, that no publication occurred, and that releasing commits nothing. [S058]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
+Mapping: S058
 
 A106 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:432
 Disposition: MATCHED
-Mapping/reason: asserts the cancelled drag produced no document change, the observable of the original's zero publication count. [S058]
-Source context since previous assertion:
-
-
-      // The old pointer's release lands on the cancelled gesture: no
-      // transaction, and both pilot points keep their original values.
-      mouseRelease(Qt::LeftButton, arm->dragEndWindow, Qt::NoModifier);
-
-Original expression:
-  QCOMPARE(documentChanged.count(), 0);
+Mapping: S058
 
 A107 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:433
 Disposition: MATCHED
-Mapping/reason: asserts the cancelled drag produced no document change, the observable of the original's zero publication count. [S058]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(edited.count(), 0);
+Mapping: S058
 
 A108 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:434
 Disposition: MATCHED
-Mapping/reason: drawerAutomationInflightDragInvalidation drives a real press/move on the Pan lane, switches parameters, and asserts the live drag is cancelled, that no publication occurred, and that releasing commits nothing. [S058]
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
+Mapping: S058
 
 A109 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:436
 Disposition: MATCHED
-Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
-Source context since previous assertion:
-
-      const std::optional<DocLanePoint> heldNode = pointAt(tab().document(), kPilotNodeTick);
-
-Original expression:
-  QVERIFY(heldNode.has_value());
+Mapping: S060
 
 A110 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:437
 Disposition: MATCHED
-Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(heldNode->value, kPilotNodeValue);
+Mapping: S060
 
 A111 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:439
 Disposition: MATCHED
-Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
-Source context since previous assertion:
-
-      const std::optional<DocLanePoint> sibling = pointAt(tab().document(), kPilotSiblingTick);
-
-Original expression:
-  QVERIFY(sibling.has_value());
+Mapping: S060
 
 A112 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:440
 Disposition: MATCHED
-Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(sibling->value, kPilotSiblingValue);
+Mapping: S060
 
 A113 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:445
 Disposition: GAP
@@ -1389,41 +802,17 @@ Original expression:
 
 A114 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:446
 Disposition: MATCHED
-Mapping/reason: drawerAutomationRowStackAndSelectionIndicators asserts the page publishes the active parameter independently of the selected lanes, and drawerAutomationInflightDragInvalidation activates the switched parameter on the production page. [S063]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(page().canvas()->activeParameter(), pilotIndex);
+Mapping: S063
 
 A115 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:448
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      const LaneHandle pilot = findRow(pilotRow);
-
-Original expression:
-  QVERIFY(pilot.valid());
 
 A116 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:449
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(!laneBody(pilot).isEmpty());
 
 A117 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:451
 Disposition: MATCHED
-Mapping/reason: asserts a fresh press after the switch grabs the node and the recovery drag commits its destination normally. [S062]
-Source context since previous assertion:
-
-      const std::optional<ArmedCcDrag> rearmed = armCcDrag(scene);
-
-Original expression:
-  QVERIFY(rearmed.has_value());
+Mapping: S062
 
 A118 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:452
 Disposition: GAP
@@ -1437,89 +826,39 @@ Original expression:
 
 A119 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:456
 Disposition: MATCHED
-Mapping/reason: asserts the recovery drag commits one revision with its written points, the observable of the original's one publication and one revision. [S060]
-Source context since previous assertion:
-
-      mouseRelease(Qt::LeftButton, rearmed->dragEndWindow, Qt::NoModifier);
-
-
-Original expression:
-  QCOMPARE(documentChanged.count(), 1);
+Mapping: S060
 
 A120 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:457
 Disposition: MATCHED
-Mapping/reason: asserts the recovery drag commits one revision with its written points, the observable of the original's one publication and one revision. [S060]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(edited.count(), 1);
+Mapping: S060
 
 A121 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:458
 Disposition: MATCHED
-Mapping/reason: asserts the recovery drag commits one revision with its written points, the observable of the original's one publication and one revision. [S060]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(tab().document().revision(), frozen.revision + 1);
+Mapping: S060
 
 A122 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:459
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores all selected lanes and that no further undo is available, which is exactly one recorded history entry (count-free; no C++ undo index correspondence is claimed). [S060]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
+Mapping: S060
 
 A123 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:460
 Disposition: MATCHED
-Mapping/reason: asserts one undo restores all selected lanes and that no further undo is available, which is exactly one recorded history entry (count-free; no C++ undo index correspondence is claimed). [S060]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
+Mapping: S060
 
 A124 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:462
 Disposition: MATCHED
-Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
-Source context since previous assertion:
-
-      const std::optional<DocLanePoint> committed = pointAt(tab().document(), kPilotNodeTick);
-
-Original expression:
-  QVERIFY(committed.has_value());
+Mapping: S060
 
 A125 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:463
 Disposition: MATCHED
-Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(committed->value, kPilotCommittedValue);
+Mapping: S060
 
 A126 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:466
 Disposition: MATCHED
-Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
-Source context since previous assertion:
-
-      const std::optional<DocLanePoint> survivingSibling =
-          pointAt(tab().document(), kPilotSiblingTick);
-
-Original expression:
-  QVERIFY(survivingSibling.has_value());
+Mapping: S060
 
 A127 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:467
 Disposition: MATCHED
-Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(survivingSibling->value, kPilotSiblingValue);
+Mapping: S060
 
 Remaining original source (closing sequence and helper bodies):
 
@@ -1532,357 +871,207 @@ does not close any A entry. Preserve their surrounding setup and order in the pa
 
 S001 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "selected drag moves the grabbed lane"
-  report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id,
-                         what: "selected drag moves the grabbed lane")
 
 S002 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "selected drag resolves a disjoint CC snapshot"
-  report.expectEqual(["48:80"], fixture.values(fixture.volumeLane), cppID: id,
-                         what: "selected drag resolves a disjoint CC snapshot")
 
 S003 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "selected drag resolves Tempo through its own stream"
-  report.expectEqual(["0:120", "36:160"], fixture.tempoValues, cppID: id,
-                         what: "selected drag resolves Tempo through its own stream")
 
 S004 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "heterogeneous selected drag is one revision"
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                         what: "heterogeneous selected drag is one revision")
 
 S005 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "one undo restores all selected lanes"
-  report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
 
 S006 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "undo restores secondary CC lane"
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                         what: "undo restores secondary CC lane")
 
 S007 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "undo restores secondary Tempo lane"
-  report.expectEqual(["0:120", "36:150"], fixture.tempoValues, cppID: id,
-                         what: "undo restores secondary Tempo lane")
 
 S008 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "the drag records exactly one history entry"
-  report.expect(!fixture.document.history.canUndo, cppID: id,
-                    message: "the drag records exactly one history entry")
 
 S009 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "stationary selection click deletes grabbed node only"
-  report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
-                         what: "stationary selection click deletes grabbed node only")
 
 S010 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "stationary selection click preserves other lanes"
-  report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                         what: "stationary selection click preserves other lanes")
 
 S011 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "outside right press clears selection before opening a menu"
-  report.expect(page.selection == nil, cppID: id,
-                    message: "outside right press clears selection before opening a menu")
 
 S012 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "a pending band preserves selection below the Manhattan threshold"
-  report.expect(!page.bandVisible && page.selection?.range == TimeRange(
-          startTick: 0, endTick: fixture.songEndTick), cppID: id,
-                    message: "a pending band preserves selection below the Manhattan threshold")
 
 S013 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "diagonal travel activates at Manhattan ten before Euclidean ten"
-  report.expect(page.bandVisible, cppID: id,
-                    message: "diagonal travel activates at Manhattan ten before Euclidean ten")
 
 S014 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "activated zero-width band clears selection"
-  report.expect(page.selection == nil, cppID: id,
-                    message: "activated zero-width band clears selection")
 
 S015 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "zoomable lane consumes range choice"
-  report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
-                    cppID: id, message: "zoomable lane consumes range choice")
 
 S016 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "range choice changes displayed maximum"
-  report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
-                         what: "range choice changes displayed maximum")
 
 S017 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "range choice changes neither document nor history"
-  report.expectEqual(rangeBefore, fixture.snapshot, cppID: id,
-                         what: "range choice changes neither document nor history")
 
 S018 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "centered lane has no value range submenu"
-  report.expect(!page.menuRowActions.contains(AutomationMenuAction.valueRange.rawValue),
-                    cppID: id, message: "centered lane has no value range submenu")
 
 S019 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "range persists independently across parameter switches"
-  report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
-                         what: "range persists independently across parameter switches")
 
 S020 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "synthetic engine default cannot be deleted"
-  report.expect(synthetic.page.publishedMenuRows.first {
-              $0.actionId == AutomationMenuAction.deleteNode.rawValue
-          }?.enabled == false, cppID: id, message: "synthetic engine default cannot be deleted")
 
 S021 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "Set Value promotes the synthetic default"
-  report.expect(synthetic.page.acceptPrompt(displayedValue: 80), cppID: id,
-                        message: "Set Value promotes the synthetic default")
 
 S022 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "promoted value is a written tick-zero event"
-  report.expectEqual(["0:80"], synthetic.values(synthetic.volumeLane), cppID: id,
-                             what: "promoted value is a written tick-zero event")
 
 S023 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "a prompt cannot follow a primary-track change"
-  report.expect(!synthetic.page.acceptPrompt(displayedValue: 70), cppID: id,
-                        message: "a prompt cannot follow a primary-track change")
 
 S024 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "stale prompt leaves document and history untouched"
-  report.expectEqual(stale, synthetic.snapshot, cppID: id,
-                             what: "stale prompt leaves document and history untouched")
 
 S025 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: function
-  report.fail(id, "synthetic default projection missing")
 
 S026 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "pencil blank hover consumes deletion without falling through"
-  report.expect(hover.page.consumeHoverDelete(), cppID: id,
-                    message: "pencil blank hover consumes deletion without falling through")
 
 S027 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "blank hover deletion changes nothing"
-  report.expectEqual(hoverBefore, hover.snapshot, cppID: id,
-                         what: "blank hover deletion changes nothing")
 
 S028 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "time selection retains semantic delete priority"
-  report.expect(!hover.page.consumeHoverDelete(), cppID: id,
-                    message: "time selection retains semantic delete priority")
 
 S029 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "arrow hover cannot claim pencil deletion"
-  report.expect(!hover.page.consumeHoverDelete(), cppID: id,
-                    message: "arrow hover cannot claim pencil deletion")
 
 S030 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "pencil hover deletion consumes the written point"
-  report.expect(hover.page.consumeHoverDelete(), cppID: id,
-                    message: "pencil hover deletion consumes the written point")
 
 S031 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "hover deletion removes the actual written point"
-  report.expectEqual([String](), hover.values(hover.volumeLane), cppID: id,
-                         what: "hover deletion removes the actual written point")
 
 S032 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "hover deletion publishes one revision"
-  report.expectEqual(hoverBefore.revision + 1, hover.document.revision, cppID: id,
-                         what: "hover deletion publishes one revision")
 
 S033 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "hover deletion is exactly one undo entry"
-  report.expect(hover.undo() && !hover.document.history.canUndo, cppID: id,
-                    message: "hover deletion is exactly one undo entry")
 
 S034 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "undo restores the hover-deleted point"
-  report.expectEqual(["48:70"], hover.values(hover.volumeLane), cppID: id,
-                         what: "undo restores the hover-deleted point")
 
 S035 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "the written point owns its captured menu target"
-  report.expect(hover.page.menuTargetIsPoint, cppID: id,
-                    message: "the written point owns its captured menu target")
 
 S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "a replacement lane menu invalidates the old point action"
-  report.expect(!hover.page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
-                    cppID: id, message: "a replacement lane menu invalidates the old point action")
 
 S037 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "a superseded point command cannot edit the lane"
-  report.expectEqual(superseded, hover.snapshot, cppID: id,
-                         what: "a superseded point command cannot edit the lane")
 
 S038 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "an empty range owns its nudge command"
-  report.expect(emptyRange.page.consumeSelectionCommand(command: .nudgeRight), cppID: id,
-                    message: "an empty range owns its nudge command")
 
 S039 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "an empty range advances on the camera grid without changing its span"
-  report.expect((emptyRange.page.selection?.range.startTick ?? 0) > 48
-                        && emptyRange.page.selection?.range.span == 48, cppID: id,
-                    message: "an empty range advances on the camera grid without changing its span")
 
 S040 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "empty-band movement creates no document edit or history"
-  report.expectEqual(emptyBefore, emptyRange.snapshot, cppID: id,
-                         what: "empty-band movement creates no document edit or history")
 
 S041 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "range duplicate is consumed through the canonical command seam"
-  report.expect(duplicate.page.consumeSelectionCommand(command: .duplicate), cppID: id,
-                    message: "range duplicate is consumed through the canonical command seam")
 
 S042 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "duplicate moves the band onto the inserted span"
-  report.expectEqual(TimeRange(startTick: 48, endTick: 96), duplicate.page.selection?.range,
-                         cppID: id, what: "duplicate moves the band onto the inserted span")
 
 S043 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "duplicate advances the edit cursor to the new span end"
-  report.expectEqual(Tick(96), duplicate.session.editCursor, cppID: id,
-                         what: "duplicate advances the edit cursor to the new span end")
 
 S044 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "duplicate remains one undo entry"
-  report.expect(duplicate.undo() && !duplicate.document.history.canUndo, cppID: id,
-                    message: "duplicate remains one undo entry")
 
 S045 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "undo restores the original range contents"
-  report.expectEqual(["24:30"], duplicate.values(duplicate.panLane), cppID: id,
-                         what: "undo restores the original range contents")
 
 S046 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
 Anchor: message "starting a pencil stroke outside clears the selection"
-Swift expression:
-  report.expect(fixture.page.selection == nil, cppID: id, message: "starting a pencil stroke outside clears the selection")
 
 S047 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
 Anchor: message "a horizontal Shift drag locks the value and moves the tick"
-Swift expression:
-  report.expect(moved.count == 2 && moved[0].value == 64 && moved[0].tick > 24, cppID: lockID, message: "a horizontal Shift drag locks the value and moves the tick")
 
 S048 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
 Anchor: message "a vertical Shift drag locks the tick and moves the value"
-Swift expression:
-  report.expect(shifted.count == 2 && shifted[0].tick == 24 && shifted[0].value != 64, cppID: lockID, message: "a vertical Shift drag locks the tick and moves the value")
 
 S049 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
 Anchor: message "markers are visible at default zoom"
-Swift expression:
-  report.expect(markersVisible(), cppID: id, message: "markers are visible at default zoom")
 
 S050 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
 Anchor: message "markers hide below the detail threshold"
-Swift expression:
-  report.expect(!markersVisible(), cppID: id,
-                message: "markers hide below the detail threshold")
 
 S051 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
 Anchor: message "the pencil press through hidden markers starts a stroke"
-Swift expression:
-  report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 70), surface: 1, button: 1), cppID: id, message: "the pencil press through hidden markers starts a stroke")
 
 S052 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
 Anchor: message "the stroke through hidden markers commits"
-Swift expression:
-  report.expect(fixture.page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 70), button: 1), cppID: id, message: "the stroke through hidden markers commits")
 
 S053 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
 Anchor: message "the hidden-marker stroke inserts instead of grabbing the node"
-Swift expression:
-  report.expect(hidden.count == 3 && hidden.contains(where: { $0.tick == 24 && $0.value == 70 }), cppID: id, message: "the hidden-marker stroke inserts instead of grabbing the node")
 
 S054 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
 Anchor: message "markers return above the threshold"
-Swift expression:
-  report.expect(markersVisible(), cppID: id, message: "markers return above the threshold")
 
 S055 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
 Anchor: message "the pencil press on a visible node grabs it"
-Swift expression:
-  report.expect(shownFixture.page.pointerPress(
-      x: shownFixture.x(24), y: shownFixture.y(shownFixture.panLane, 64),
-      surface: 1, button: 1),
-                cppID: id, message: "the pencil press on a visible node grabs it")
 
 S056 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift
 Anchor: message "a stationary release on the grabbed node deletes exactly it"
-Swift expression:
-  report.expectEqual(["120:40"], shownFixture.values(shownFixture.panLane), cppID: id, what: "a stationary release on the grabbed node deletes exactly it")
 
 S057 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "switching parameters cancels the drag"
-Swift expression:
-  report.expect(!switched.page.hasGesture, cppID: switchID, message: "switching parameters cancels the drag")
 
 S058 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the cancelled drag writes nothing"
-Swift expression:
-  report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID, what: "the cancelled drag writes nothing")
 
 S059 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "releasing after the switch commits nothing"
-Swift expression:
-  report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID, what: "releasing after the switch commits nothing")
 
 S060 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the recovery drag commits normally" #2
-Swift expression:
-  report.expectEqual(["24:90", "120:40"], switched.values(switched.panLane), cppID: switchID, what: "the recovery drag commits normally")
 
 S061 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the drag is live"
-Swift expression:
-  report.expect(switched.page.hasGesture, cppID: switchID, message: "the drag is live")
 
 S062 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a fresh press grabs the node after the switch"
-Swift expression:
-  report.expect(switched.page.pointerPress(
-      x: switched.x(24), y: switched.y(switched.panLane, 64), surface: 1, button: 1),
-                cppID: switchID, message: "a fresh press grabs the node after the switch")
 
 S063 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the active parameter is not the selected one"
-Swift expression:
-  report.expectEqual(fixture.volumeLane, fixture.page.activeParameter, cppID: drawerAutomationRowsID, what: "the active parameter is not the selected one")
 
 S064 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the page publishes the selected inactive parameters"
-Swift expression:
-  report.expectEqual([fixture.panLane, .tempo], fixture.page.selectedParameters, cppID: drawerAutomationRowsID, what: "the page publishes the selected inactive parameters")
 
 S065 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the selected parameters are the covered lanes with events"
-Swift expression:
-  report.expectEqual([fixture.panLane, .tempo], stack.selectedParameters(track: 0), cppID: drawerAutomationRowsID, what: "the selected parameters are the covered lanes with events")
 
 S066 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a track-scoped selection covers the selected track's lanes"
-Swift expression:
-  report.expect(trackScoped.covers(fixture.panLane, usedTracks: [0]), cppID: drawerAutomationRowsID, message: "a track-scoped selection covers the selected track's lanes")
 
 S067 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "Tempo is uncovered when part of the used set is selected"
-Swift expression:
-  report.expect(!trackScoped.coversTempo(usedTracks: [0, 1]), cppID: drawerAutomationRowsID, message: "Tempo is uncovered when part of the used set is selected")
 
 S068 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
 Anchor: message "awaited undo completes"
-Swift expression:
-  report.expect(undone, cppID: id, message: "awaited undo completes")
 
 S069 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
 Anchor: message "redo restores the node value move"
-Swift expression:
-  report.expectEqual(moved, fx.document.state, cppID: id, what: "redo restores the node value move")
-
-Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
-src/checks/automation/AutomationPageChecks.swift:402
-  report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

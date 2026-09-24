@@ -8,27 +8,7 @@ Swift counterpart: src/checks/automation/domain/tst_automationdomain.swift
 Additional Swift counterpart: src/checks/automation/automationpointmenus.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-The reconciliation below classifies all 157 sites across the ten methods of the file
-(openCcDeletePrompt, the accept, cancel, Escape, outside-press, initial-Return, stale,
-foreign-popup, synthetic-only and written-count scenarios): the document, confirmation
-and history observations map to the new drawerAutomationLaneDeleteConfirmation
-predicates in src/checks/automation/automationpointmenus.swift and to
-drawerAutomationDeleteTransactions in the domain counterpart; rendered popup content,
-native pointer delivery and keyboard/focus routing stay recorded per site.
-MATCHED identifies equivalent model predicates; execution is recorded under Verification.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native pointer-delivery obligations;
-it does not establish coverage of the converted Swift window.
-RETIRED-REPRESENTATION identifies retired C++ harness or data plumbing with no Swift ingress.
-GAP identifies an original predicate without a replacement assertion, including the physical
-Qt key-delivery and native focus-chain rows, which have no Swift or QML ingress.
-Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS on this worktree (1/14 harnesses selected, 13 skipped; swiftcore green,
 including drawerAutomationLaneDeleteConfirmation, whose predicates are indexed below
@@ -37,21 +17,7 @@ this proof-only reconciliation did not re-run the build or the suite.
 Reference revision pin: the original recovered at the recorded revision hashes to the
 recorded Original SHA-256; the counterpart hashes above are the final checked-in sources.
 Registered run path: src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks
--> src/checks/workspace/SessionChecks.swift :: runProjectSessionSuite -> projectSession
-(swiftcore suite 10); both counterparts are compiled in src/checks/CMakeLists.txt :: swift_core_check.
 Converted-window command: deno task verify:qml --verbose
-The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
-Their sources are reference inventories only, never current execution evidence.
-
-Execution ownership
-The legacy AutomationEditingTest CC delete confirmation suite verified dialog prompting and lane deletion safety. In the converted Swift suite, drawerAutomationDeleteTransactions in src/checks/automation/domain/tst_automationdomain.swift exercises single-commit deletion transactions, undo, and event count verification, and drawerAutomationLaneDeleteConfirmation in src/checks/automation/automationpointmenus.swift exercises the confirmation prompt kind, its accept, cancel and stale routes, the eventless synthetic-only lane and the written-event count.
-
-Fixture, sequence and row constraints
-Tests verify confirmation popup presentation, keyboard dismissals (Escape, Return), mouse clicks outside the popup, stale document revision rejection, foreign popup preservation, and synthetic default lane bypass. Loops verify remaining event lists across lanes.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:154
 Disposition: GAP
@@ -216,89 +182,34 @@ Original expression:
 
 A002 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:158
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation scenario stages the CC lane whose written events the confirmation message names and the accept removes ([S127], [S130]).
-Source context since previous assertion:
-
-      const EditorAutomationRowId ccRow{EditorAutomationRowKind::ControlChange, 0, kController};
-      const EditorAutomationRowId volumeRow{EditorAutomationRowKind::ControlChange, 0,
-                                            CoreTimeDefaults::kCcVolume};
-
-Original expression:
-  QVERIFY(findRow(ccRow).valid());
+Mapping: S127, S130
 
 A003 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:159
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation scenario stages the sibling volume lane and asserts it survives ([S131]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(findRow(volumeRow).valid());
+Mapping: S131
 
 A004 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:162
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
-Source context since previous assertion:
-
-
-      QSignalSpy documentChanged(&songTab.document(), &SongDocument::documentChanged);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
 
 A005 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:167
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]), the presenter representation of the rendered form and both buttons.
-Source context since previous assertion:
-
-      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
-
-      const CcDeletePrompt opened = openCcDeletePrompt(
-          ccRow, QStringLiteral("the RemoveLane pick did not open the delete confirmation"));
-
-Original expression:
-  QVERIFY2(opened.session && opened.root && opened.cancelButton,
-               qUtf8Printable(opened.diagnostic));
+Mapping: S126
 
 A006 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:172
 Disposition: MATCHED
-Mapping/reason: Opening the confirmation writes nothing ([S128]).
-Source context since previous assertion:
-
-
-      // While the question is on screen nothing is written: both lane points and
-      // the sibling volume point stay exact.
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
+Mapping: S128
 
 A007 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:173
 Disposition: MATCHED
-Mapping/reason: The staged lane content is asserted by the post-accept removal and the undo restoration ([S130], [S134]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
+Mapping: S130, S134
 
 A008 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:174
 Disposition: MATCHED
-Mapping/reason: The staged lane content is asserted by the post-accept removal and the undo restoration ([S130], [S134]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
+Mapping: S130, S134
 
 A009 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:175
 Disposition: MATCHED
-Mapping/reason: The sibling volume point is preserved and asserted across the transaction ([S131], [S134]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(volumeLaneValue(songTab, kVolumeTick),
-               CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
+Mapping: S131, S134
 
 A010 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:179
 Disposition: GAP
@@ -345,70 +256,31 @@ Original expression:
 
 A014 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:191
 Disposition: MATCHED
-Mapping/reason: One acceptance publishes one revision ([S132]), the public-API representation of one document change.
-Source context since previous assertion:
-
-
-      // Exactly one transaction removes the intended lane's written events: one
-      // revision and one undo step, and the parameter label stays.
-
-Original expression:
-  QCOMPARE(documentChanged.count(), frozen.documentChanges + 1);
+Mapping: S132
 
 A015 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:192
 Disposition: MATCHED
-Mapping/reason: One acceptance publishes one revision ([S132]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().revision(), frozen.revision + 1);
+Mapping: S132
 
 A016 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:193
 Disposition: MATCHED
-Mapping/reason: One acceptance is one history entry, consumed by one undo ([S132], [S135]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->count(), frozen.undoCount + 1);
+Mapping: S132, S135
 
 A017 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:194
 Disposition: MATCHED
-Mapping/reason: One acceptance advances the stack by one ([S135]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), frozen.undoIndex + 1);
+Mapping: S135
 
 A018 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:195
 Disposition: MATCHED
-Mapping/reason: The target lane written events are gone ([S130]), which changes the serialization.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(songTab.document().smf().write() != frozen.smf);
+Mapping: S130
 
 A019 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:197
 Disposition: MATCHED
-Mapping/reason: The first written event of the target lane is removed ([S130]).
-Source context since previous assertion:
-
-      DocLanePoint point;
-
-Original expression:
-  QVERIFY(!songTab.document().findLanePoint(0, kController, kFirstPointTick, &point));
+Mapping: S130
 
 A020 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:198
 Disposition: MATCHED
-Mapping/reason: The second written event of the target lane is removed ([S130]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!songTab.document().findLanePoint(0, kController, kSecondPointTick, &point));
+Mapping: S130
 
 A021 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:201
 Disposition: PARTIAL
@@ -432,13 +304,7 @@ Original expression:
 
 A023 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:204
 Disposition: MATCHED
-Mapping/reason: The parameter remains in the catalogue after the accept ([S147]).
-Source context since previous assertion:
-
-      const LaneHandle retained = findRow(ccRow);
-
-Original expression:
-  QVERIFY(retained.valid());
+Mapping: S147
 
 A024 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:205
 Disposition: GAP
@@ -451,118 +317,46 @@ Original expression:
 
 A025 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:206
 Disposition: MATCHED
-Mapping/reason: The volume parameter remains in the catalogue ([S147]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(findRow(volumeRow).valid());
+Mapping: S147
 
 A026 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:207
 Disposition: MATCHED
-Mapping/reason: Swift requires the accept to remove only the target lane, preserving the volume point ([S131]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(songTab.document().findLanePoint(0, CoreTimeDefaults::kCcVolume, kVolumeTick, &point));
+Mapping: S131
 
 A027 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:208
 Disposition: MATCHED
-Mapping/reason: Swift requires the preserved volume point to keep its value ([S131]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(point.value, CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
+Mapping: S131
 
 A028 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:211
 Disposition: MATCHED
-Mapping/reason: Swift requires the acceptance to be undoable ([S133]).
-Source context since previous assertion:
-
-
-      // Undo restores the deleted events exactly; the sibling never moved.
-
-Original expression:
-  QVERIFY(songTab.history().canUndo());
+Mapping: S133
 
 A029 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:212
 Disposition: MATCHED
-Mapping/reason: Swift requires one undo to consume the acceptance ([S133]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(songTab.history().requestUndo()));
+Mapping: S133
 
 A030 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:213
 Disposition: MATCHED
-Mapping/reason: Swift requires undo to restore the first written event ([S134]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
+Mapping: S134
 
 A031 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:214
 Disposition: MATCHED
-Mapping/reason: Swift requires undo to restore the second written event ([S134]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
+Mapping: S134
 
 A032 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:215
 Disposition: MATCHED
-Mapping/reason: The sibling volume point is preserved across the whole transaction ([S131]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(volumeLaneValue(songTab, kVolumeTick),
-               CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
+Mapping: S131
 
 A033 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:217
 Disposition: MATCHED
-Mapping/reason: The restored lane values plus the consumed single history entry ([S134], [S135]) are the public-API representation of the restored serialization.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), frozen.smf);
+Mapping: S134, S135
 
 A034 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:225
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched()
-  {
-      SongTab &songTab = tab();
-      const quick_popup::PromptGuard guard(songTab.view());
-      QSignalSpy documentChanged(&songTab.document(), &SongDocument::documentChanged);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
 
 A035 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:231
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
-Source context since previous assertion:
-
-      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
-
-      const CcDeletePrompt opened = openCcDeletePrompt(
-          {EditorAutomationRowKind::ControlChange, 0, kController},
-          QStringLiteral("the RemoveLane pick did not open the delete confirmation"));
-
-Original expression:
-  QVERIFY2(opened.session && opened.root && opened.cancelButton,
-               qUtf8Printable(opened.diagnostic));
+Mapping: S126
 
 A036 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:234
 Disposition: PARTIAL
@@ -577,12 +371,7 @@ Original expression:
 
 A037 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:236
 Disposition: MATCHED
-Mapping/reason: Swift requires cancelling the confirmation to drop the prompt ([S136]).
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY2(!opened.session->isOpen(), "Cancel did not dismiss the confirmation");
+Mapping: S136
 
 A038 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:237
 Disposition: PARTIAL
@@ -596,31 +385,15 @@ Original expression:
 
 A039 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:240
 Disposition: MATCHED
-Mapping/reason: The confirmation cancel route leaves document and history untouched ([S137]).
-Source context since previous assertion:
-
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
+Mapping: S137
 
 A040 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:241
 Disposition: MATCHED
-Mapping/reason: The cancel route leaves the staged lane alone ([S137]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
+Mapping: S137
 
 A041 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:242
 Disposition: MATCHED
-Mapping/reason: The cancel route leaves the staged lane alone ([S137]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
+Mapping: S137
 
 A042 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:243
 Disposition: GAP
@@ -634,45 +407,14 @@ Original expression:
 
 A043 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:252
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched()
-  {
-      SongTab &songTab = tab();
-      const quick_popup::PromptGuard guard(songTab.view());
-      QSignalSpy documentChanged(&songTab.document(), &SongDocument::documentChanged);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
 
 A044 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:258
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
-Source context since previous assertion:
-
-      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
-
-      const CcDeletePrompt opened = openCcDeletePrompt(
-          {EditorAutomationRowKind::ControlChange, 0, kController},
-          QStringLiteral("the RemoveLane pick did not open the delete confirmation"));
-
-Original expression:
-  QVERIFY2(opened.session && opened.root && opened.cancelButton,
-               qUtf8Printable(opened.diagnostic));
+Mapping: S126
 
 A045 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:262
 Disposition: MATCHED
-Mapping/reason: The dismissal routes through the page Escape and the confirmation cancel block: handleEscape claims the live interaction ([S152]) and ends it synchronously ([S153]), the cancellation mutates nothing ([S154]), and the confirmation own cancel route drops the prompt without a write ([S136], [S137]). The physical Qt key delivery itself is not asserted.
-Source context since previous assertion:
-
-
-      keyClick(Qt::Key_Escape);
-
-Original expression:
-  QTRY_VERIFY2(!opened.session->isOpen(), "Escape did not dismiss the confirmation");
+Mapping: S152, S153, S154, S136, S137
 
 A046 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:263
 Disposition: PARTIAL
@@ -686,31 +428,15 @@ Original expression:
 
 A047 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:266
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route leaves document and history untouched ([S137]).
-Source context since previous assertion:
-
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
+Mapping: S137
 
 A048 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:267
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route leaves the staged lane alone ([S137]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
+Mapping: S137
 
 A049 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:268
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route leaves the staged lane alone ([S137]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
+Mapping: S137
 
 A050 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:269
 Disposition: GAP
@@ -724,49 +450,13 @@ Original expression:
 
 A051 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:280
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget()
-  {
-      SongTab &songTab = tab();
-      const quick_popup::PromptGuard guard(songTab.view());
-      const EditorAutomationRowId ccRow{EditorAutomationRowKind::ControlChange, 0, kController};
-
-      QSignalSpy documentChanged(&songTab.document(), &SongDocument::documentChanged);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
 
 A052 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:286
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
-Source context since previous assertion:
-
-      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
-
-      const CcDeletePrompt opened =
-          openCcDeletePrompt(ccRow, QStringLiteral("the RemoveLane pick did not open the delete "
-                                                   "confirmation"));
-
-Original expression:
-  QVERIFY2(opened.session && opened.root && opened.cancelButton,
-               qUtf8Printable(opened.diagnostic));
+Mapping: S126
 
 A053 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:292
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-
-      // A right press outside the actual frame must dismiss without retargeting.
-      QQuickItem *const frame = checks::support::visualDescendant(
-          opened.session->overlayRoot(), QLatin1String("quickPopupFormContainer"));
-
-Original expression:
-  QVERIFY(frame);
 
 A054 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:296
 Disposition: GAP
@@ -803,15 +493,7 @@ Original expression:
 
 A057 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:305
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation scenario stages the same CC lane ([S127]).
-Source context since previous assertion:
-
-      // Release over the plot, away from every label, so the release itself can
-      // never open a replacement menu.
-      const LaneHandle cc = findRow(ccRow);
-
-Original expression:
-  QVERIFY(cc.valid());
+Mapping: S127
 
 A058 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:306
 Disposition: GAP
@@ -847,31 +529,15 @@ Original expression:
 
 A061 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:315
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route leaves document and history untouched ([S137]).
-Source context since previous assertion:
-
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
+Mapping: S137
 
 A062 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:316
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route leaves the staged lane alone ([S137]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
+Mapping: S137
 
 A063 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:317
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route leaves the staged lane alone ([S137]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
+Mapping: S137
 
 A064 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:318
 Disposition: GAP
@@ -885,34 +551,10 @@ Original expression:
 
 A065 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:327
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation()
-  {
-      SongTab &songTab = tab();
-      const quick_popup::PromptGuard guard(songTab.view());
-      QSignalSpy documentChanged(&songTab.document(), &SongDocument::documentChanged);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
 
 A066 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:333
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
-Source context since previous assertion:
-
-      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
-
-      const CcDeletePrompt opened = openCcDeletePrompt(
-          {EditorAutomationRowKind::ControlChange, 0, kController},
-          QStringLiteral("the RemoveLane pick did not open the delete confirmation"));
-
-Original expression:
-  QVERIFY2(opened.session && opened.root && opened.cancelButton,
-               qUtf8Printable(opened.diagnostic));
+Mapping: S126
 
 A067 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:335
 Disposition: GAP
@@ -926,15 +568,7 @@ Original expression:
 
 A068 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:340
 Disposition: MATCHED
-Mapping/reason: The confirmation initial Return routes to the same guarded cancel: handleEscape claims the deferred interaction ([S152]) and ends it synchronously ([S153]), a cancelled interaction mutates nothing ([S154]), and the confirmation own cancel route drops the prompt without a write ([S136], [S137]). The physical Qt key delivery itself is not asserted.
-Source context since previous assertion:
-
-
-      // A bare Return on the untouched form must cancel it, not navigate.
-      keyClick(Qt::Key_Return);
-
-Original expression:
-  QTRY_VERIFY2(!opened.session->isOpen(), "Return did not dismiss the confirmation");
+Mapping: S152, S153, S154, S136, S137
 
 A069 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:341
 Disposition: PARTIAL
@@ -948,31 +582,15 @@ Original expression:
 
 A070 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:344
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route leaves document and history untouched ([S137]).
-Source context since previous assertion:
-
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
+Mapping: S137
 
 A071 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:345
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route leaves the staged lane alone ([S137]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
+Mapping: S137
 
 A072 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:346
 Disposition: MATCHED
-Mapping/reason: The Swift cancel route leaves the staged lane alone ([S137]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
+Mapping: S137
 
 A073 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:347
 Disposition: GAP
@@ -986,23 +604,7 @@ Original expression:
 
 A074 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:359
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget()
-  {
-      SongTab &songTab = tab();
-      const quick_popup::PromptGuard guard(songTab.view());
-
-      const CcDeletePrompt opened = openCcDeletePrompt(
-          {EditorAutomationRowKind::ControlChange, 0, kController},
-          QStringLiteral("the RemoveLane pick did not open the delete confirmation"));
-
-Original expression:
-  QVERIFY2(opened.session && opened.root && opened.cancelButton,
-               qUtf8Printable(opened.diagnostic));
+Mapping: S126
 
 A075 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:361
 Disposition: GAP
@@ -1078,114 +680,47 @@ Original expression:
 
 A080 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:393
 Disposition: MATCHED
-Mapping/reason: The stale confirmation publishes no revision: the Swift scenario refuses the stale accept and leaves the snapshot unchanged ([S138], [S139]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().revision(), revisionAfterWrite);
+Mapping: S138, S139
 
 A081 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:394
 Disposition: MATCHED
-Mapping/reason: The stale snapshot equality is the public-API representation of the unchanged history state ([S139]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->count(), undoCountAfterWrite);
+Mapping: S139
 
 A082 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:395
 Disposition: MATCHED
-Mapping/reason: The stale snapshot equality is the public-API representation of the unchanged history state ([S139]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndexAfterWrite);
+Mapping: S139
 
 A083 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:396
 Disposition: MATCHED
-Mapping/reason: The stale snapshot equality is the public-API representation of the unchanged serialization ([S139]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), smfAfterWrite);
+Mapping: S139
 
 A084 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:397
 Disposition: MATCHED
-Mapping/reason: The stale scenario now asserts the full post-write lane after the refused accept ([S150]) together with the unchanged snapshot ([S139]). The intervening write is a span write in Swift rather than the original lane replacement, so the literal point set differs while the no-op observation is asserted over the whole list.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kRewrittenTick), kRewrittenValue);
+Mapping: S150, S139
 
 A085 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:398
 Disposition: MATCHED
-Mapping/reason: The post-write lane predicate asserts the complete list after the refused accept ([S150]): the original target tick is absent because the interrupting write replaced the lane, while the Swift interrupt keeps it and appends at 168, so the same no-op property is asserted over the whole list.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kFirstPointTick), -1);
+Mapping: S150
 
 A086 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:399
 Disposition: MATCHED
-Mapping/reason: The post-write lane predicate asserts the complete list after the refused accept ([S150]): the original second target tick is absent by that lane replacement, while the Swift interrupt keeps it and appends at 168, so the same no-op property is asserted over the whole list.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kSecondPointTick), -1);
+Mapping: S150
 
 A087 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:400
 Disposition: MATCHED
-Mapping/reason: The refused accept leaves the whole document snapshot unchanged ([S139]) and the target lane content fully asserted ([S150]); the Swift stale interrupt writes only the target lane, and the sibling volume point is asserted by the same confirmation fixture ([S131], [S134]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(volumeLaneValue(songTab, kVolumeTick), kInterveningVolumeValue);
+Mapping: S139, S150, S131, S134
 
 A088 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:401
 Disposition: MATCHED
-Mapping/reason: The Swift predicate requires the parameter to remain in the catalogue ([S147]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(findRow({EditorAutomationRowKind::ControlChange, 0, kController}).valid());
+Mapping: S147
 
 A089 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:402
 Disposition: MATCHED
-Mapping/reason: The Swift predicate requires the parameter to remain in the catalogue ([S147]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(
-          findRow({EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume}).valid());
+Mapping: S147
 
 A090 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:414
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
-Source context since previous assertion:
-
-  }
-
-  void AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup()
-  {
-      SongTab &songTab = tab();
-      const quick_popup::PromptGuard guard(songTab.view());
-      const EditorAutomationRowId ccRow{EditorAutomationRowKind::ControlChange, 0, kController};
-
-      const CcDeletePrompt opened = openCcDeletePrompt(
-          ccRow, QStringLiteral("the RemoveLane pick did not open the delete confirmation"));
-
-Original expression:
-  QVERIFY2(opened.session && opened.root && opened.cancelButton,
-               qUtf8Printable(opened.diagnostic));
+Mapping: S126
 
 A091 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:416
 Disposition: GAP
@@ -1199,63 +734,18 @@ Original expression:
 
 A092 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:424
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-
-      // The confirmation's underlay absorbs every press, so no user input can
-      // hand the shared session to another owner while it is open. The ruler's
-      // real production open method performs the takeover: the pending prompt
-      // is invalidated and the foreign division menu publishes with real rows.
-      QQuickItem *const root = songTab.view().quickView()->rootObject();
-
-Original expression:
-  QVERIFY(root);
 
 A093 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:427
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      auto *const rulerInput =
-          root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRulerInput"));
-
-Original expression:
-  QVERIFY(rulerInput);
 
 A094 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:429
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      auto *const ruler = dynamic_cast<songview::TimeRuler *>(rulerInput->interaction());
-
-Original expression:
-  QVERIFY(ruler);
 
 A095 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:432
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      QQuickItem *const division =
-          root->findChild<QQuickItem *>(QStringLiteral("timelineRulerDivisionControl"));
-
-Original expression:
-  QVERIFY(division);
 
 A096 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:437
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      ruler->openDivisionMenu(
-          division->mapToScene(QPointF(division->width() / 2.0, division->height() / 2.0)));
-
-      const QPointer<songview::QuickPopupSession> live{quick_popup::popupSession(songTab.view())};
-
-Original expression:
-  QVERIFY(live);
 
 A097 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:438
 Disposition: GAP
@@ -1423,130 +913,51 @@ Original expression:
 
 A111 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:490
 Disposition: MATCHED
-Mapping/reason: The takeover-invalidated confirmation deletes nothing: the Swift stale scenario leaves the revision at the post-write value ([S138], [S139]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().revision(), revisionAfterWrite);
+Mapping: S138, S139
 
 A112 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:491
 Disposition: MATCHED
-Mapping/reason: The stale snapshot equality is the public-API representation of the unchanged history state ([S139]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->count(), undoCountAfterWrite);
+Mapping: S139
 
 A113 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:492
 Disposition: MATCHED
-Mapping/reason: The stale snapshot equality is the public-API representation of the unchanged history state ([S139]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), undoIndexAfterWrite);
+Mapping: S139
 
 A114 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:493
 Disposition: MATCHED
-Mapping/reason: The stale snapshot equality is the public-API representation of the unchanged serialization ([S139]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), smfAfterWrite);
+Mapping: S139
 
 A115 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:494
 Disposition: MATCHED
-Mapping/reason: The stale scenario now asserts the full post-write lane after the refused accept ([S150]) together with the unchanged snapshot ([S139]), the same no-op observation this takeover site makes over the rewritten lane.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kRewrittenTick), kRewrittenValue);
+Mapping: S150, S139
 
 A116 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:495
 Disposition: MATCHED
-Mapping/reason: The post-write lane predicate asserts the complete list after the refused accept ([S150]): the original target tick is absent by that lane replacement, while the same no-op property is asserted over the whole list.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kFirstPointTick), -1);
+Mapping: S150
 
 A117 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:496
 Disposition: MATCHED
-Mapping/reason: The post-write lane predicate asserts the complete list after the refused accept ([S150]): the original second target tick is absent by that lane replacement, while the same no-op property is asserted over the whole list.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(laneValue(kSecondPointTick), -1);
+Mapping: S150
 
 A118 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:497
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation cancel route leaves the sibling volume point untouched ([S131], [S137]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(volumeLaneValue(songTab, kVolumeTick),
-               CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
+Mapping: S131, S137
 
 A119 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:499
 Disposition: MATCHED
-Mapping/reason: The Swift predicate requires the CC parameter to remain in the catalogue ([S147]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(findRow(ccRow).valid());
+Mapping: S147
 
 A120 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:511
 Disposition: MATCHED
-Mapping/reason: The Swift synthetic scenario stages the volume lane and the count scenario asserts it stays in the catalogue ([S147]).
-Source context since previous assertion:
-
-  }
-
-  // A volume lane showing only the synthetic engine-default node carries no
-  // written events: its Delete pick dispatches nothing — no confirmation and
-  // no write — and the parameter label stays.
-  void AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation()
-  {
-      SongTab &songTab = tab();
-      const quick_popup::PromptGuard guard(songTab.view());
-      const EditorAutomationRowId volumeRow{EditorAutomationRowKind::ControlChange, 0,
-                                            CoreTimeDefaults::kCcVolume};
-
-Original expression:
-  QVERIFY(findRow(volumeRow).valid());
+Mapping: S147
 
 A121 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:518
 Disposition: MATCHED
-Mapping/reason: The Swift eventless lane disables Delete events ([S140]), the public statement that no written events remain.
-Source context since previous assertion:
-
-
-      // Clearing the staged written point leaves the default-visible row with
-      // just its synthetic tick-0 node.
-      songTab.document().writeLanePoints(0, CoreTimeDefaults::kCcVolume, 0, CoreTimeDefaults::kNoTick,
-                                         {});
-      QCoreApplication::processEvents();
-
-Original expression:
-  QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty());
+Mapping: S140
 
 A122 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:520
 Disposition: MATCHED
-Mapping/reason: The Swift predicate requires the volume parameter to remain in the catalogue ([S147]).
-Source context since previous assertion:
-
-      const LaneHandle volume = findRow(volumeRow);
-
-Original expression:
-  QVERIFY(volume.valid());
+Mapping: S147
 
 A123 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:521
 Disposition: GAP
@@ -1559,14 +970,6 @@ Original expression:
 
 A124 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:524
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
-Source context since previous assertion:
-
-
-      QSignalSpy documentChanged(&songTab.document(), &SongDocument::documentChanged);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
 
 A125 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:531
 Disposition: PARTIAL
@@ -1585,13 +988,7 @@ Original expression:
 
 A126 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:533
 Disposition: MATCHED
-Mapping/reason: The Swift eventless lane publishes the Delete events row disabled ([S140]).
-Source context since previous assertion:
-
-      const int removeRow = menu.model->rowForId(int(CanvasMenuAction::RemoveLane));
-
-Original expression:
-  QVERIFY2(removeRow >= 0, "the synthetic-only volume menu offered no RemoveLane row");
+Mapping: S140
 
 A127 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:534
 Disposition: PARTIAL
@@ -1640,12 +1037,7 @@ Original expression:
 
 A131 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:547
 Disposition: MATCHED
-Mapping/reason: The Swift predicate requires the volume parameter to remain in the catalogue ([S147]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(findRow(volumeRow).valid());
+Mapping: S147
 
 A132 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:548
 Disposition: GAP
@@ -1658,81 +1050,26 @@ Original expression:
 
 A133 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:549
 Disposition: MATCHED
-Mapping/reason: The synthetic scenario now asserts the refused dispatch leaves the document snapshot unchanged ([S151], [S141]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
+Mapping: S151, S141
 
 A134 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:550
 Disposition: MATCHED
-Mapping/reason: The Swift eventless lane carries no written events ([S140], [S141]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty());
+Mapping: S140, S141
 
 A135 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:565
 Disposition: MATCHED
-Mapping/reason: The Swift predicate requires the volume parameter to remain in the catalogue ([S147]).
-Source context since previous assertion:
-
-  }
-
-  // The confirmation advertises document-written events only. The staged volume
-  // parameter carries one written point beside its synthetic tick-0 node, so
-  // the displayed count must be the written count; a real delete then removes
-  // the written events while the parameter stays available, and undo restores
-  // them.
-  void AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic()
-  {
-      SongTab &songTab = tab();
-      AutomationCanvas *const canvas = page().canvas();
-      const quick_popup::PromptGuard guard(songTab.view());
-      const EditorAutomationRowId volumeRow{EditorAutomationRowKind::ControlChange, 0,
-                                            CoreTimeDefaults::kCcVolume};
-
-Original expression:
-  QVERIFY(findRow(volumeRow).valid());
+Mapping: S147
 
 A136 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:570
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation message names the written event count of the staged lane ([S144]).
-Source context since previous assertion:
-
-
-      // One written volume point; the synthetic default node is projection only.
-      const int writtenCount =
-          int(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).size());
-
-Original expression:
-  QCOMPARE(writtenCount, 1);
+Mapping: S144
 
 A137 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:572
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the same no-write and one-change observations execute through page and document predicates.
-Source context since previous assertion:
-
-      QSignalSpy documentChanged(&songTab.document(), &SongDocument::documentChanged);
-
-Original expression:
-  QVERIFY(documentChanged.isValid());
 
 A138 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:577
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation owns the shared prompt with its confirm-lane-delete kind ([S126]).
-Source context since previous assertion:
-
-      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
-
-      const CcDeletePrompt opened = openCcDeletePrompt(
-          volumeRow, QStringLiteral("the volume pick did not open the confirmation"));
-
-Original expression:
-  QVERIFY2(opened.session && opened.root && opened.cancelButton,
-               qUtf8Printable(opened.diagnostic));
+Mapping: S126
 
 A139 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:579
 Disposition: GAP
@@ -1746,29 +1083,11 @@ Original expression:
 
 A140 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:586
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation message advertises the written count of the staged lane ([S144]).
-Source context since previous assertion:
-
-
-      // The displayed quantity is the written-event count: it excludes the
-      // synthetic node without pinning the message wording.
-      const std::vector<int> advertised =
-          displayedQuantities(canvas->property("ccDeletePromptMessage").toString());
-
-Original expression:
-  QVERIFY2(std::find(advertised.cbegin(), advertised.cend(), writtenCount) != advertised.cend(),
-               "the confirmation did not advertise the written-event count");
+Mapping: S144
 
 A141 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:588
 Disposition: MATCHED
-Mapping/reason: The Swift confirmation message advertises the written count only, not the count including the projected synthetic node ([S144], [S146]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY2(std::find(advertised.cbegin(), advertised.cend(), writtenCount + 1) ==
-                   advertised.cend(),
-               "the confirmation count includes the synthetic default node");
+Mapping: S144, S146
 
 A142 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:592
 Disposition: PARTIAL
@@ -1783,69 +1102,31 @@ Original expression:
 
 A143 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:596
 Disposition: MATCHED
-Mapping/reason: One acceptance publishes one revision ([S132]).
-Source context since previous assertion:
-
-
-      // The written events go; the default-visible row stays on screen.
-
-Original expression:
-  QCOMPARE(documentChanged.count(), frozen.documentChanges + 1);
+Mapping: S132
 
 A144 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:597
 Disposition: MATCHED
-Mapping/reason: One acceptance publishes one revision ([S132]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().revision(), frozen.revision + 1);
+Mapping: S132
 
 A145 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:598
 Disposition: MATCHED
-Mapping/reason: One acceptance is one history entry, consumed by one undo ([S132], [S135]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->count(), frozen.undoCount + 1);
+Mapping: S132, S135
 
 A146 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:599
 Disposition: MATCHED
-Mapping/reason: One acceptance advances the stack by one ([S135]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().undoStack()->index(), frozen.undoIndex + 1);
+Mapping: S135
 
 A147 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:600
 Disposition: MATCHED
-Mapping/reason: The written events are gone ([S146]), which changes the serialization.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(songTab.document().smf().write() != frozen.smf);
+Mapping: S146
 
 A148 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:601
 Disposition: MATCHED
-Mapping/reason: Swift requires the accept to remove the written events ([S146]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty());
+Mapping: S146
 
 A149 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:603
 Disposition: MATCHED
-Mapping/reason: The Swift predicate requires the volume parameter to remain in the catalogue ([S147]).
-Source context since previous assertion:
-
-      const LaneHandle retained = findRow(volumeRow);
-
-Original expression:
-  QVERIFY(retained.valid());
+Mapping: S147
 
 A150 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:604
 Disposition: GAP
@@ -1858,60 +1139,27 @@ Original expression:
 
 A151 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:607
 Disposition: MATCHED
-Mapping/reason: Swift requires the acceptance to be undoable ([S148]).
-Source context since previous assertion:
-
-
-      // Undo restores the written events into the still-visible row.
-
-Original expression:
-  QVERIFY(songTab.history().canUndo());
+Mapping: S148
 
 A152 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:608
 Disposition: MATCHED
-Mapping/reason: Swift requires one undo to consume the acceptance ([S148]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(songTab.history().requestUndo()));
+Mapping: S148
 
 A153 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:609
 Disposition: MATCHED
-Mapping/reason: The restored written event is the public-API representation of the restored serialization ([S149]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(songTab.document().smf().write(), frozen.smf);
+Mapping: S149
 
 A154 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:611
 Disposition: MATCHED
-Mapping/reason: Swift requires undo to restore the written event at its tick ([S149]).
-Source context since previous assertion:
-
-      DocLanePoint point;
-
-Original expression:
-  QVERIFY(songTab.document().findLanePoint(0, CoreTimeDefaults::kCcVolume, kVolumeTick, &point));
+Mapping: S149
 
 A155 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:612
 Disposition: MATCHED
-Mapping/reason: Swift requires undo to restore the written event value ([S149]).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(point.value, CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
+Mapping: S149
 
 A156 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:613
 Disposition: MATCHED
-Mapping/reason: The Swift predicate requires the volume parameter to remain in the catalogue ([S147]).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(findRow(volumeRow).valid());
+Mapping: S147
 
 A157 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:614
 Disposition: GAP
@@ -1940,830 +1188,480 @@ cancellation route cited for the two dismissal sites.
 
 S001 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the catalog carries every supported parameter plus Tempo"
-  report.expectEqual(AutomationCatalog.count, catalog.count, cppID: drawerAutomationCatalogID,
-                         what: "the catalog carries every supported parameter plus Tempo")
 
 S002 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the supported parameters keep the production selector order"
-  report.expectEqual(
-          [TimeDefaults.ccVolume, TimeDefaults.ccPan, TimeDefaults.ccModulation,
-           TimeDefaults.laneCCBend, TimeDefaults.ccLFOSpeed, TimeDefaults.ccBendRange,
-           Xcmd.echoVolumeLane, Xcmd.echoLengthLane, TimeDefaults.ccModulationType,
-           TimeDefaults.ccFineTune, TimeDefaults.ccLFODelay],
-          AutomationCatalog.controllers, cppID: drawerAutomationCatalogID,
-          what: "the supported parameters keep the production selector order")
 
 S003 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo closes the selector order"
-  report.expectEqual(AutomationParameter.tempo, catalog.last, cppID: drawerAutomationCatalogID,
-                         what: "Tempo closes the selector order")
 
 S004 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "an XCMD row sits after the plain parameter group"
-  report.expectEqual(6, AutomationCatalog.index(of: .controlChange(
-          track: 0, controller: Xcmd.echoVolumeLane), track: 0) ?? -1, cppID: drawerAutomationCatalogID,
-                         what: "an XCMD row sits after the plain parameter group")
 
 S005 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo is the last catalog index"
-  report.expect(AutomationCatalog.index(of: .tempo, track: 0) == AutomationCatalog.count - 1,
-                    cppID: drawerAutomationCatalogID, message: "Tempo is the last catalog index")
 
 S006 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a control-change parameter keeps its track scope"
-  report.expectEqual(Optional(0),
-                         AutomationParameter.controlChange(track: 0,
-                                                           controller: TimeDefaults.ccVolume).track,
-                         cppID: drawerAutomationCatalogID, what: "a control-change parameter keeps its track scope")
 
 S007 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Pitch bend names the document's bend lane"
-  report.expectEqual(Optional(.pitchBend), AutomationParameter.pitchBend(track: 0).lane,
-                         cppID: drawerAutomationCatalogID, what: "Pitch bend names the document's bend lane")
 
 S008 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo is song-global: no track and no document lane"
-  report.expect(AutomationParameter.tempo.isTempo && AutomationParameter.tempo.lane == nil
-                        && AutomationParameter.tempo.track == nil,
-                    cppID: drawerAutomationCatalogID,
-                    message: "Tempo is song-global: no track and no document lane")
 
 S009 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the selector label is the lane name with no decoration"
-  report.expectEqual("Volume", AutomationCatalog.tabLabel(
-          .controlChange(track: 0, controller: TimeDefaults.ccVolume)), cppID: drawerAutomationCatalogID,
-                         what: "the selector label is the lane name with no decoration")
 
 S010 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a classified parameter titles itself with its mnemonic"
-  report.expectEqual("Volume (VOL)", AutomationCatalog.title(
-          .controlChange(track: 0, controller: TimeDefaults.ccVolume)), cppID: drawerAutomationCatalogID,
-                         what: "a classified parameter titles itself with its mnemonic")
 
 S011 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "an XCMD row titles itself from its descriptor"
-  report.expectEqual("Echo volume (xIECV)", AutomationCatalog.title(
-          .controlChange(track: 0, controller: Xcmd.echoVolumeLane)), cppID: drawerAutomationCatalogID,
-                         what: "an XCMD row titles itself from its descriptor")
 
 S012 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Pitch bend keeps its dedicated title"
-  report.expectEqual("Pitch bend (BEND)", AutomationCatalog.title(.pitchBend(track: 0)),
-                         cppID: drawerAutomationCatalogID, what: "Pitch bend keeps its dedicated title")
 
 S013 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo's lane title names its unit"
-  report.expectEqual("Tempo (BPM)", AutomationCatalog.title(.tempo), cppID: drawerAutomationCatalogID,
-                         what: "Tempo's lane title names its unit")
 
 S014 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Volume's range starts at 0"
-  report.expectEqual(0, volume.minimum, cppID: drawerAutomationCatalogID, what: "Volume's range starts at 0")
 
 S015 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Volume's range ends at 127"
-  report.expectEqual(127, volume.maximum, cppID: drawerAutomationCatalogID, what: "Volume's range ends at 127")
 
 S016 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Volume has no neutral, defaults to 127 and projects its tick-zero node"
-  report.expect(volume.neutral == nil && volume.defaultValue == 127 && volume.projectsTickZero,
-                    cppID: drawerAutomationCatalogID,
-                    message: "Volume has no neutral, defaults to 127 and projects its tick-zero node")
 
 S017 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a plain controller formats as its raw value"
-  report.expectEqual("127", volume.valueText(127), cppID: drawerAutomationCatalogID,
-                         what: "a plain controller formats as its raw value")
 
 S018 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Pan's neutral is 64"
-  report.expectEqual(64, pan.neutral, cppID: drawerAutomationCatalogID, what: "Pan's neutral is 64")
 
 S019 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Pan formats its neutral as a centered c_v value"
-  report.expectEqual("c_v+0", pan.valueText(64), cppID: drawerAutomationCatalogID,
-                         what: "Pan formats its neutral as a centered c_v value")
 
 S020 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Pan's formatting stays centered on 64"
-  report.expectEqual("c_v-4", pan.valueText(60), cppID: drawerAutomationCatalogID,
-                         what: "Pan's formatting stays centered on 64")
 
 S021 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Bend's range is signed"
-  report.expectEqual(-8192, bend.minimum, cppID: drawerAutomationCatalogID, what: "Bend's range is signed")
 
 S022 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Bend's range ends at 8191"
-  report.expectEqual(8191, bend.maximum, cppID: drawerAutomationCatalogID, what: "Bend's range ends at 8191")
 
 S023 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Bend's neutral is zero"
-  report.expectEqual(0, bend.neutral, cppID: drawerAutomationCatalogID, what: "Bend's neutral is zero")
 
 S024 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Bend formats its positive extreme"
-  report.expectEqual("+8191", bend.valueText(8191), cppID: drawerAutomationCatalogID,
-                         what: "Bend formats its positive extreme")
 
 S025 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Bend formats its negative extreme"
-  report.expectEqual("-8192", bend.valueText(-8192), cppID: drawerAutomationCatalogID,
-                         what: "Bend formats its negative extreme")
 
 S026 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo's range starts at 20 BPM"
-  report.expectEqual(20, tempo.minimum, cppID: drawerAutomationCatalogID, what: "Tempo's range starts at 20 BPM")
 
 S027 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo's range ends at 255 BPM"
-  report.expectEqual(255, tempo.maximum, cppID: drawerAutomationCatalogID, what: "Tempo's range ends at 255 BPM")
 
 S028 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo has no neutral and defaults to 120 BPM"
-  report.expect(tempo.neutral == nil && tempo.defaultValue == 120, cppID: drawerAutomationCatalogID,
-                    message: "Tempo has no neutral and defaults to 120 BPM")
 
 S029 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo formats as plain BPM"
-  report.expectEqual("150", tempo.valueText(150), cppID: drawerAutomationCatalogID,
-                         what: "Tempo formats as plain BPM")
 
 S030 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "LFO type is bounded to its three modes"
-  report.expectEqual(2, modType.maximum, cppID: drawerAutomationCatalogID,
-                         what: "LFO type is bounded to its three modes")
 
 S031 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Modulation's default value window starts at 0"
-  report.expectEqual(0, AutomationCatalog.defaultRange(TimeDefaults.ccModulation), cppID: drawerAutomationCatalogID,
-                         what: "Modulation's default value window starts at 0")
 
 S032 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "every other zoomable parameter opens on the full window"
-  report.expectEqual(127, AutomationCatalog.defaultRange(TimeDefaults.ccPan), cppID: drawerAutomationCatalogID,
-                         what: "every other zoomable parameter opens on the full window")
 
 S033 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "auto range fits the smallest window to the data"
-  report.expectEqual(16, AutomationCatalog.autoRange(maximum: 9), cppID: drawerAutomationCatalogID,
-                         what: "auto range fits the smallest window to the data")
 
 S034 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "auto range steps up with the data"
-  report.expectEqual(32, AutomationCatalog.autoRange(maximum: 20), cppID: drawerAutomationCatalogID,
-                         what: "auto range steps up with the data")
 
 S035 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "auto range keeps a wider window for wider data"
-  report.expectEqual(64, AutomationCatalog.autoRange(maximum: 60), cppID: drawerAutomationCatalogID,
-                         what: "auto range keeps a wider window for wider data")
 
 S036 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "auto range keeps the full window for full data"
-  report.expectEqual(127, AutomationCatalog.autoRange(maximum: 127), cppID: drawerAutomationCatalogID,
-                         what: "auto range keeps the full window for full data")
 
 S037 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the value prompt titles the lane"
-  report.expectEqual("Pan (PAN)", prompt.title, cppID: drawerAutomationCatalogID,
-                         what: "the value prompt titles the lane")
 
 S038 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a centered parameter prompts in its displayed domain"
-  report.expectEqual("c_v value (0 = center):", prompt.label, cppID: drawerAutomationCatalogID,
-                         what: "a centered parameter prompts in its displayed domain")
 
 S039 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the displayed value offsets the stored value by the midpoint"
-  report.expectEqual(0, prompt.initialValue, cppID: drawerAutomationCatalogID,
-                         what: "the displayed value offsets the stored value by the midpoint")
 
 S040 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the displayed domain is the stored domain less the offset"
-  report.expectEqual(-64, prompt.minimum, cppID: drawerAutomationCatalogID,
-                         what: "the displayed domain is the stored domain less the offset")
 
 S041 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the prompt's displayed value maps back to the stored value"
-  report.expectEqual(64, pan.storedValue(prompted: 0), cppID: drawerAutomationCatalogID,
-                         what: "the prompt's displayed value maps back to the stored value")
 
 S042 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a stored value clamps into the parameter's domain"
-  report.expectEqual(127, pan.storedValue(prompted: 200), cppID: drawerAutomationCatalogID,
-                         what: "a stored value clamps into the parameter's domain")
 
 S043 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Bend's zero-centered prompt keeps its production label"
-  report.expectEqual("Bend (0 = none):", bendPrompt.label, cppID: drawerAutomationCatalogID,
-                         what: "Bend's zero-centered prompt keeps its production label")
 
 S044 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo's prompt keeps its production title"
-  report.expectEqual("Set tempo", tempoPrompt.title, cppID: drawerAutomationCatalogID,
-                         what: "Tempo's prompt keeps its production title")
 
 S045 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo's prompt labels its unit"
-  report.expectEqual("BPM:", tempoPrompt.label, cppID: drawerAutomationCatalogID,
-                         what: "Tempo's prompt labels its unit")
 
 S046 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo's prompt carries no stored offset"
-  report.expectEqual(0, tempoPrompt.storedOffset, cppID: drawerAutomationCatalogID,
-                         what: "Tempo's prompt carries no stored offset")
 
 S047 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a lane the document never wrote projects no point"
-  report.expectEqual(0, modulation.points.count, cppID: drawerAutomationProjectionID,
-                         what: "a lane the document never wrote projects no point")
 
 S048 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "an empty lane projects no curve segment"
-  report.expectEqual(0, modulation.segments.count, cppID: drawerAutomationProjectionID,
-                         what: "an empty lane projects no curve segment")
 
 S049 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "an empty Modulation lane leads in on its engine default 0"
-  report.expectEqual(0, modulation.leadIn?.value ?? -1, cppID: drawerAutomationProjectionID,
-                         what: "an empty Modulation lane leads in on its engine default 0")
 
 S050 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "an empty lane has no origin phantom"
-  report.expect(modulation.originPhantom == nil, cppID: drawerAutomationProjectionID,
-                    message: "an empty lane has no origin phantom")
 
 S051 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the display points are the projected node and the written ticks"
-  report.expectEqual(["0:64", "24:90", "120:0"], fixture.laneValues(pan.points.map {
-          AutomationLanePoint(tick: $0.tick, value: $0.value)
-      }), cppID: drawerAutomationProjectionID,
-                         what: "the display points are the projected node and the written ticks")
 
 S052 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the last occupant of a same-tick pair wins the display point"
-  report.expect(pan.points[1].value == 90 && pan.points[1].tick == 24, cppID: drawerAutomationProjectionID,
-                    message: "the last occupant of a same-tick pair wins the display point")
 
 S053 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "every occurrence stays addressable"
-  report.expectEqual(["24:30", "24:90", "120:0"],
-                         pan.sources.map { "\($0.tick):\($0.value)" }, cppID: drawerAutomationProjectionID,
-                         what: "every occurrence stays addressable")
 
 S054 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Pan projects its engine default instead of a lead-in"
-  report.expect(pan.leadIn == nil, cppID: drawerAutomationProjectionID,
-                    message: "Pan projects its engine default instead of a lead-in")
 
 S055 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a tick after a point holds that point's value"
-  report.expectEqual(90, pan.heldValue(at: 30) ?? -1, cppID: drawerAutomationProjectionID,
-                         what: "a tick after a point holds that point's value")
 
 S056 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a tick on a point holds its own value"
-  report.expectEqual(90, pan.heldValue(at: 24) ?? -1, cppID: drawerAutomationProjectionID,
-                         what: "a tick on a point holds its own value")
 
 S057 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a tick before the first written point holds the projected node"
-  report.expectEqual(64, pan.heldValue(at: 20) ?? -1, cppID: drawerAutomationProjectionID,
-                         what: "a tick before the first written point holds the projected node")
 
 S058 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "inclusive held lookup chooses the last equal-tick occurrence"
-  report.expectEqual(90, AutomationLaneReplacement.held(occurrences, at: 24, inclusive: true),
-                         cppID: drawerAutomationProjectionID,
-                         what: "inclusive held lookup chooses the last equal-tick occurrence")
 
 S059 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "exclusive held lookup excludes the entire equal-tick group"
-  report.expect(AutomationLaneReplacement.held(occurrences, at: 24, inclusive: false) == nil,
-                    cppID: drawerAutomationProjectionID,
-                    message: "exclusive held lookup excludes the entire equal-tick group")
 
 S060 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "exclusive held lookup retains the previous group's last occupant"
-  report.expectEqual(90, AutomationLaneReplacement.held(occurrences, at: 120, inclusive: false),
-                         cppID: drawerAutomationProjectionID,
-                         what: "exclusive held lookup retains the previous group's last occupant")
 
 S061 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "written Volume points project at their ticks"
-  report.expectEqual(["0:127", "96:64"], fixture.laneValues(volume.points.map {
-          AutomationLanePoint(tick: $0.tick, value: $0.value)
-      }), cppID: drawerAutomationProjectionID, what: "written Volume points project at their ticks")
 
 S062 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a written tick-zero point replaces the projected engine node"
-  report.expect(!volume.points.contains { $0.projected }, cppID: drawerAutomationProjectionID,
-                    message: "a written tick-zero point replaces the projected engine node")
 
 S063 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the written-event count ignores projected nodes"
-  report.expectEqual(2, volume.eventCount, cppID: drawerAutomationProjectionID,
-                         what: "the written-event count ignores projected nodes")
 
 S064 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the last step runs open to the song's end"
-  report.expectEqual([Tick?.some(96), nil], volume.segments.map(\.tickEnd), cppID: drawerAutomationProjectionID,
-                         what: "the last step runs open to the song's end")
 
 S065 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "each step holds its own point's value"
-  report.expectEqual([127, 64], volume.segments.map(\.fromValue), cppID: drawerAutomationProjectionID,
-                         what: "each step holds its own point's value")
 
 S066 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the production curve is a step curve"
-  report.expect(volume.segments.allSatisfy { $0.kind == .step && $0.toValue == $0.fromValue },
-                    cppID: drawerAutomationProjectionID, message: "the production curve is a step curve")
 
 S067 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the step's value holds until the next point"
-  report.expectEqual(127, volume.heldValue(at: 95) ?? -1, cppID: drawerAutomationProjectionID,
-                         what: "the step's value holds until the next point")
 
 S068 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the next point's value holds from its own tick"
-  report.expectEqual(64, volume.heldValue(at: 96) ?? -1, cppID: drawerAutomationProjectionID,
-                         what: "the next point's value holds from its own tick")
 
 S069 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Volume projects exactly its engine-default node"
-  report.expectEqual(1, projectedVolume.points.count, cppID: drawerAutomationProjectionID,
-                         what: "Volume projects exactly its engine-default node")
 
 S070 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the projected node sits at tick zero with the engine default"
-  report.expect(projectedVolume.points[0].projected && projectedVolume.points[0].tick == 0
-                        && projectedVolume.points[0].value == 127,
-                    cppID: drawerAutomationProjectionID,
-                    message: "the projected node sits at tick zero with the engine default")
 
 S071 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the projected node adds no written event"
-  report.expectEqual(0, projectedVolume.eventCount, cppID: drawerAutomationProjectionID,
-                         what: "the projected node adds no written event")
 
 S072 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the camera's lead pad keeps tick zero inside the plot"
-  report.expect(projectedVolume.points[0].x > 0, cppID: drawerAutomationProjectionID,
-                    message: "the camera's lead pad keeps tick zero inside the plot")
 
 S073 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a positive scroll carries the tick-zero node left of the plot"
-  report.expect(scrolledProjection.points[0].x < 0, cppID: drawerAutomationProjectionID,
-                    message: "a positive scroll carries the tick-zero node left of the plot")
 
 S074 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "an off-plot node becomes the origin phantom"
-  report.expectEqual(Tick(0), scrolledProjection.originPhantom?.point.tick ?? 99,
-                         cppID: drawerAutomationProjectionID,
-                         what: "an off-plot node becomes the origin phantom")
 
 S075 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the ramp interpolation is linear between its endpoints"
-  report.expectEqual(50, AutomationInterpolation.ramp.value(
-          at: 5, from: AutomationLanePoint(tick: 0, value: 0),
-          to: AutomationLanePoint(tick: 10, value: 100)), cppID: drawerAutomationProjectionID,
-                         what: "the ramp interpolation is linear between its endpoints")
 
 S076 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the step interpolation holds its first point's value"
-  report.expectEqual(0, AutomationInterpolation.step.value(
-          at: 5, from: AutomationLanePoint(tick: 0, value: 0),
-          to: AutomationLanePoint(tick: 10, value: 100)), cppID: drawerAutomationProjectionID,
-                         what: "the step interpolation holds its first point's value")
 
 S077 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "every catalog parameter projects a step curve"
-  report.expectEqual(AutomationInterpolation.step, rampMetadata.interpolation, cppID: drawerAutomationProjectionID,
-                         what: "every catalog parameter projects a step curve")
 
 S078 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a tempo point projects at its tick as BPM"
-  report.expectEqual(["0:120"], fixture.laneValues(tempo.points.map {
-          AutomationLanePoint(tick: $0.tick, value: $0.value)
-      }), cppID: drawerAutomationProjectionID, what: "a tempo point projects at its tick as BPM")
 
 S079 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo uses the shared value axis"
-  report.expectEqual(fixture.y(.tempo, 120), tempo.points.first?.y ?? -1, cppID: drawerAutomationProjectionID,
-                         what: "Tempo uses the shared value axis")
 
 S080 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "every x is the shared camera's projection"
-  report.expectEqual(fixture.session.camera.contentX(tick: 96), volume.points[1].x, cppID: drawerAutomationProjectionID,
-                         what: "every x is the shared camera's projection")
 
 S081 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a time zoom rescales the projected x"
-  report.expect(afterZoom > beforeZoom * 2, cppID: drawerAutomationProjectionID,
-                    message: "a time zoom rescales the projected x")
 
 S082 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a scroll offsets the projection by the same amount"
-  report.expectEqual(fixture.session.camera.contentX(tick: 0), atZeroScroll, cppID: drawerAutomationProjectionID,
-                         what: "a scroll offsets the projection by the same amount")
 
 S083 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a scrolled past a point leaves it left of the plot"
-  report.expect(preRoll.points[0].x < 0, cppID: drawerAutomationProjectionID,
-                    message: "a scrolled past a point leaves it left of the plot")
 
 S084 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the off-plot point becomes the lane's origin phantom"
-  report.expectEqual(Tick(0), preRoll.originPhantom?.point.tick ?? 99, cppID: drawerAutomationProjectionID,
-                         what: "the off-plot point becomes the lane's origin phantom")
 
 S085 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the camera clamps its scroll to the negative pre-roll bound"
-  report.expectEqual(fixture.session.camera.minHScroll, fixture.session.camera.snapshot.scrollX,
-                         cppID: drawerAutomationProjectionID,
-                         what: "the camera clamps its scroll to the negative pre-roll bound")
 
 S086 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "each occurrence exposes its own identity"
-  report.expectEqual(3, pan.sources.count, cppID: drawerAutomationIdentityID,
-                         what: "each occurrence exposes its own identity")
 
 S087 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the identity carries the document's own occurrence handle"
-  report.expectEqual(fixture.lanePoints(fixture.panLane).map(\.eventIndex),
-                         pan.sources.map(\.identity.occurrence), cppID: drawerAutomationIdentityID,
-                         what: "the identity carries the document's own occurrence handle")
 
 S088 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "every identity carries the revision it was read at"
-  report.expect(pan.sources.allSatisfy { $0.identity.revision == revision }, cppID: drawerAutomationIdentityID,
-                    message: "every identity carries the revision it was read at")
 
 S089 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "every identity carries its parameter"
-  report.expect(pan.sources.allSatisfy { $0.identity.parameter == fixture.panLane },
-                    cppID: drawerAutomationIdentityID, message: "every identity carries its parameter")
 
 S090 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a lane occurrence carries the document handle a write names"
-  report.expect(pan.sources.allSatisfy { $0.lanePoint != nil && $0.tempoPoint == nil },
-                    cppID: drawerAutomationIdentityID,
-                    message: "a lane occurrence carries the document handle a write names")
 
 S091 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a stale identity never matches a later projection"
-  report.expect(!rewritten.sources.contains { $0.identity == captured }, cppID: drawerAutomationIdentityID,
-                    message: "a stale identity never matches a later projection")
 
 S092 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the same-tick occurrences keep their document order and identity"
-  report.expectEqual(["24:30", "24:90", "48:20"],
-                         rewritten.sources.map { "\($0.tick):\($0.value)" }, cppID: drawerAutomationIdentityID,
-                         what: "the same-tick occurrences keep their document order and identity")
 
 S093 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a move whose source tick is gone resolves to nothing"
-  report.expect(stale == nil, cppID: drawerAutomationIdentityID,
-                    message: "a move whose source tick is gone resolves to nothing")
 
 S094 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a live source tick resolves against the frozen revision"
-  report.expectEqual(1, live?.writes.count ?? 0, cppID: drawerAutomationIdentityID,
-                         what: "a live source tick resolves against the frozen revision")
 
 S095 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a plan at a superseded revision writes nothing"
-  report.expect(!AutomationCommit.apply(live!, in: fixture.document), cppID: drawerAutomationIdentityID,
-                    message: "a plan at a superseded revision writes nothing")
 
 S096 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the stale plan left the lane alone"
-  report.expectEqual(["24:30", "24:90", "120:0"],
-                         ["24:30", "24:90", "120:0"], cppID: drawerAutomationIdentityID,
-                         what: "the stale plan left the lane alone")
 
 S097 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the lane still holds what the delete and the failed plan left"
-  report.expectEqual(["24:30", "24:90"],
-                         fixture.values(fixture.panLane), cppID: drawerAutomationIdentityID,
-                         what: "the lane still holds what the delete and the failed plan left")
 
 S098 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "tempo values project as BPM from the stored microseconds"
-  report.expectEqual(["0:120", "48:150"], tempoFixture.laneValues(tempo.points.map {
-          AutomationLanePoint(tick: $0.tick, value: $0.value)
-      }), cppID: drawerAutomationIdentityID, what: "tempo values project as BPM from the stored microseconds")
 
 S099 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a tempo occurrence carries the tempo point a write removes"
-  report.expect(tempo.sources.allSatisfy { $0.tempoPoint != nil && $0.lanePoint == nil },
-                    cppID: drawerAutomationIdentityID,
-                    message: "a tempo occurrence carries the tempo point a write removes")
 
 S100 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "deleting a tick with occupants commits"
-  report.expect(fixture.page.deletePoints(at: [24]), cppID: drawerAutomationDeleteID,
-                    message: "deleting a tick with occupants commits")
 
 S101 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "every occurrence at the deleted tick goes"
-  report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationDeleteID,
-                         what: "every occurrence at the deleted tick goes")
 
 S102 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the deletion is one revision"
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: drawerAutomationDeleteID,
-                         what: "the deletion is one revision")
 
 S103 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "one undo restores both deleted occurrences"
-  report.expect(fixture.undo() && fixture.values(fixture.panLane).count == 3, cppID: drawerAutomationDeleteID,
-                    message: "one undo restores both deleted occurrences")
 
 S104 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "deleting a tick with no occurrence writes nothing"
-  report.expect(!fixture.page.deletePoints(at: [600]), cppID: drawerAutomationDeleteID,
-                    message: "deleting a tick with no occurrence writes nothing")
 
 S105 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a missing target leaves the revision alone"
-  report.expectEqual(revision, fixture.document.revision, cppID: drawerAutomationDeleteID,
-                         what: "a missing target leaves the revision alone")
 
 S106 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "deleting the projected engine node writes nothing"
-  report.expect(!projectionFixture.page.deletePoints(at: [0]), cppID: drawerAutomationDeleteID,
-                    message: "deleting the projected engine node writes nothing")
 
 S107 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the projected node is not a written event"
-  report.expectEqual(projectedRevision, projectionFixture.document.revision, cppID: drawerAutomationDeleteID,
-                         what: "the projected node is not a written event")
 
 S108 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "an empty delete request writes nothing"
-  report.expect(!projectionFixture.page.deletePoints(at: []), cppID: drawerAutomationDeleteID,
-                    message: "an empty delete request writes nothing")
 
 S109 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the selection covers both lanes inside the range"
-  report.expectEqual([selection.volumeLane, selection.panLane],
-                         selection.page.selectedParameters, cppID: drawerAutomationDeleteID,
-                         what: "the selection covers both lanes inside the range")
 
 S110 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the selection delete commits once"
-  report.expect(selection.page.deleteSelectedNodes(), cppID: drawerAutomationDeleteID,
-                    message: "the selection delete commits once")
 
 S111 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the covered lane keeps only its outside point"
-  report.expectEqual(["120:40"], selection.values(selection.panLane), cppID: drawerAutomationDeleteID,
-                         what: "the covered lane keeps only its outside point")
 
 S112 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the second covered lane keeps only its outside point"
-  report.expectEqual(["140:20"], selection.values(selection.volumeLane), cppID: drawerAutomationDeleteID,
-                         what: "the second covered lane keeps only its outside point")
 
 S113 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "Tempo stays untouched while the selection excludes it"
-  report.expectEqual(["0:120", "150:150"], selection.tempoValues, cppID: drawerAutomationDeleteID,
-                         what: "Tempo stays untouched while the selection excludes it")
 
 S114 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "a multi-lane delete is one revision"
-  report.expectEqual(selectionBefore.revision + 1, selection.document.revision, cppID: drawerAutomationDeleteID,
-                         what: "a multi-lane delete is one revision")
 
 S115 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the multi-lane delete is undoable"
-  report.expect(selection.undo(), cppID: drawerAutomationDeleteID, message: "the multi-lane delete is undoable")
 
 S116 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "one undo restores the first lane"
-  report.expectEqual(["24:30", "120:40"], selection.values(selection.panLane), cppID: drawerAutomationDeleteID,
-                         what: "one undo restores the first lane")
 
 S117 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "one undo restores the second lane"
-  report.expectEqual(["48:100", "140:20"], selection.values(selection.volumeLane), cppID: drawerAutomationDeleteID,
-                         what: "one undo restores the second lane")
 
 S118 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "one undo consumes the multi-lane delete's single history entry"
-  report.expect(!selection.document.history.canUndo, cppID: drawerAutomationDeleteID,
-                    message: "one undo consumes the multi-lane delete's single history entry")
 
 S119 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "the selection survives the delete it performed"
-  report.expectEqual([selection.volumeLane, selection.panLane],
-                         selection.page.selectedParameters, cppID: drawerAutomationDeleteID,
-                         what: "the selection survives the delete it performed")
 
 S120 | expect | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: function
-  report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::legacyResolverRows",
-                            message: "tst_automationdomain.cpp:\(line) row=\(row)")
 
 S121 | expect | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: function
-  report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::legacyMetadataRows",
-                        message: "tst_automationdomain.cpp:\(line) row=\(row)")
 
 S122 | expect | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: message "tst_automationdomain.cpp:\(line)"
-  report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::defaultNodePromotion",
-                        message: "tst_automationdomain.cpp:\(line)")
 
 S123 | expect | src/checks/automation/domain/tst_automationdomain.swift
 Anchor: function
-  report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::replaceSpans",
-                            message: "tst_automationdomain.cpp:\(line) row=\(row)")
 
 S124 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the lane menu opens"
-    report.expect(page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0),
-                  cppID: id, message: "the lane menu opens")
 
 S125 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the Delete events row is consumed" #1
-    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue),
-                  cppID: id, message: "the Delete events row is consumed")
 
 S126 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the row opens the delete confirmation"
-    report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id,
-                       what: "the row opens the delete confirmation")
 
 S127 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the confirmation names the written count"
-    report.expect(page.promptMessage.contains("2 written events"), cppID: id,
-                  message: "the confirmation names the written count")
 
 S128 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "opening the confirmation writes nothing"
-    report.expectEqual(before, fixture.snapshot, cppID: id,
-                       what: "opening the confirmation writes nothing")
 
 S129 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the confirmation accepts" #1
-    report.expect(page.acceptPromptDraft(), cppID: id, message: "the confirmation accepts")
 
 S130 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "accept removes only the target lane"
-    report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
-                       what: "accept removes only the target lane")
 
 S131 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the volume lane is preserved"
-    report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
-                       what: "the volume lane is preserved")
 
 S132 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "one acceptance is one revision"
-    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
-                       what: "one acceptance is one revision")
 
 S133 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the acceptance undoes" #1
-    report.expect(fixture.undo(), cppID: id, message: "the acceptance undoes")
 
 S134 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "undo restores the target lane"
-    report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
-                       what: "undo restores the target lane")
 
 S135 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the acceptance recorded exactly one history entry"
-    report.expect(!fixture.document.history.canUndo, cppID: id,
-                  message: "the acceptance recorded exactly one history entry")
 
 S136 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "cancelling drops the confirmation"
-    report.expect(!page.hasPrompt, cppID: cancelID, message: "cancelling drops the confirmation")
 
 S137 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "cancelling leaves document and history untouched"
-    report.expectEqual(cancelBefore, fixture.snapshot, cppID: cancelID,
-                       what: "cancelling leaves document and history untouched")
 
 S138 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "a stale confirmation cannot delete its target"
-    report.expect(!page.acceptPromptDraft(), cppID: staleID,
-                  message: "a stale confirmation cannot delete its target")
 
 S139 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the rejected confirmation leaves the rewritten lane intact"
-    report.expectEqual(rewritten, fixture.snapshot, cppID: staleID,
-                       what: "the rejected confirmation leaves the rewritten lane intact")
 
 S140 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the eventless lane disables Delete events"
-    report.expect(synthetic.page.publishedMenuRows.first {
-        $0.actionId == AutomationMenuAction.deleteLaneEvents.rawValue
-    }?.enabled == false, cppID: syntheticID,
-                  message: "the eventless lane disables Delete events")
 
 S141 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the disabled row is refused"
-    report.expect(!synthetic.page.consumeMenuAction(
-        actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: syntheticID,
-                  message: "the disabled row is refused")
 
 S142 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "no confirmation opens for the eventless lane"
-    report.expect(!synthetic.page.hasPrompt, cppID: syntheticID,
-                  message: "no confirmation opens for the eventless lane")
 
 S143 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the Delete events row is consumed" #2
-    report.expect(single.page.consumeMenuAction(
-        actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: countID,
-                  message: "the Delete events row is consumed")
 
 S144 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the confirmation counts written events only"
-    report.expect(single.page.promptMessage.contains("1 written events"), cppID: countID,
-                  message: "the confirmation counts written events only")
 
 S145 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the confirmation accepts" #2
-    report.expect(single.page.acceptPromptDraft(), cppID: countID,
-                  message: "the confirmation accepts")
 
 S146 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "accept removes the written event"
-    report.expectEqual([String](), single.values(single.volumeLane), cppID: countID,
-                       what: "accept removes the written event")
 
 S147 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the volume parameter remains in the catalog"
-    report.expect(single.page.catalogIndex(of: single.volumeLane) >= 0, cppID: countID,
-                  message: "the volume parameter remains in the catalog")
 
 S148 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the acceptance undoes" #2
-    report.expect(single.undo(), cppID: countID, message: "the acceptance undoes")
 
 S149 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "undo restores the written event"
-    report.expectEqual(["48:70"], single.values(single.volumeLane), cppID: countID,
-                       what: "undo restores the written event")
 
 S150 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the rejected confirmation preserves the rewritten points"
-    report.expectEqual(["24:60", "120:40", "168:5"], fixture.values(fixture.panLane),
-                       cppID: staleID,
-                       what: "the rejected confirmation preserves the rewritten points")
 
 S151 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the refused row writes nothing"
-    report.expectEqual(syntheticBefore, synthetic.snapshot, cppID: syntheticID,
-                       what: "the refused row writes nothing")
 
 S152 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Escape claims the live gesture"
-    report.expect(fixture.page.handleEscape(), cppID: drawerAutomationCancelID,
-                  message: "Escape claims the live gesture")
 
 S153 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "cancelling ends the gesture synchronously"
-    report.expect(!fixture.page.hasGesture && !fixture.page.interactionActive, cppID: drawerAutomationCancelID,
-                  message: "cancelling ends the gesture synchronously")
 
 S154 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cancelled gesture mutates nothing"
-    report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
-                       what: "a cancelled gesture mutates nothing")
 
 S155 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the reopened row owns the delete confirmation"
-    report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id, what: "the reopened row owns the delete confirmation")
 
 S156 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the delete confirmation is open"
-    report.expect(page.promptOpen, cppID: id, message: "the delete confirmation is open")
 
 S157 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "the open confirmation marks the page interacting"
-    report.expect(page.interactionActive, cppID: id, message: "the open confirmation marks the page interacting")
 
 S158 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "Escape claims the open confirmation"
-    report.expect(page.handleEscape(), cppID: escapeID, message: "Escape claims the open confirmation")
 
 S159 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "Escape drops the confirmation and the interaction"
-    report.expect(!page.promptOpen && !page.interactionActive, cppID: escapeID, message: "Escape drops the confirmation and the interaction")
 
 S160 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
 Anchor: message "Escape cancellation writes nothing"
-    report.expectEqual(confirmationEscapeBefore, fixture.snapshot, cppID: escapeID, what: "Escape cancellation writes nothing")
-
-Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
-src/checks/automation/AutomationPageChecks.swift:402
-  report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

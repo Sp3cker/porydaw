@@ -8,568 +8,193 @@ Original SHA-256: b0831014eeca2f2069d1bbf87af241322c7c51b605133d45381b76c72800ac
 Swift counterpart: src/checks/editcheck/EventChecks.swift (importAnalysis/importTransforms, the onboardcheck import predicates executed by runMidiImportSuite)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-importAnalysis and importTransforms are ported: runMidiImportSuite executes both against test_midis/external_import.mid and test_midis/duplicate_setters.mid, so A001-A045 and A080/A081/A086/A088/A090/A091 are MATCHED (51 sites) and PARTIAL is zero. The new-song/MIDI-import wizard methods (importWizardOverflow, importWizard) have no Swift counterpart and no executing native harness, so their 33 sites (A046-A078) are GAP with the canonical reason "feature not yet ported: new-song/MIDI-import wizard". compilesThroughMid2agb (A097-A102) is GAP: no executing harness asserts mid2agb compilation of these fixtures. importRoundtrip keeps 6 MATCHED model sites and 12 GAP sites (A079, A082-A085, A087, A089, A092-A096) for native fixture-copy, midi.cfg, disk write/read and DecompProject/SongDocument-load behavior outside MidiImport/MidiFile model scope. The former NATIVE dispositions were stale: runOnboardCheck is absent from every CMake target and unregistered in checkcatalog.cpp, so no lane executes it.
 Site tally: 102 sites (51 MATCHED, 51 GAP).
 
-Execution and ownership
-One executing owner. The native runOnboardCheck (support.cpp) QTest::qExecs OnboardingTest, but that harness is absent from every CMake target and from checkcatalog.cpp (which registers only production-startup, audiocheck-backend, swiftcore, vgbankcheck, exportcheck-loop and exportcheck-tail), so nothing executes the native methods below. In Swift, runMidiImportSuite (src/checks/editcheck/EventChecks.swift, reached through CoreCheckSupport suite 8 and the QtTest slot midiImport in tst_swiftcore.cpp:61) executes importAnalysis() and importTransforms(), whose report.expect*/report.fail calls carry the onboardcheck cppIDs catalogued below as S001-S053. No Swift entry point executes importWizardOverflow, importWizard, importRoundtrip, or compilesThroughMid2agb. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf) and onboardingtest.h helpers (midiFixture, copyProject, rescaleDivision via core/midiimport.h, NewSongWizard via ui/newsongwizard.h).
 
-Fixture, sequence and row constraints
-importAnalysis_data expands budget rows 16 (default), 1 (tight), and -1 (unknown); warning-category loops fold analysis.warnings into three booleans per row, and CC loops fold analysis.ccs into mod/reverb booleans. importRescale's per-track/per-event loop expands the monotonicity site over every event. importDedup's tick-0 loop folds lead events into program/cc7/bend/label/firstNote accumulators. compilesThroughMid2agb_data expands blank and imported kinds; the imported kind rescales before compiling. importWizardOverflow and importWizard drive wizard checkboxes (rescale, 48-clocks extended), name sanitization, analysis/identity combo-box pairing, and the mute-track warning label. importRoundtrip writes, re-reads, and re-writes the SMF asserting byte stability, then opens the project and loads the document. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS (all harnesses in 10.26s) -- controller-run integrated lane against the frozen EventChecks.swift revision pinned above.
 Focused run: deno task verify --filter=swiftcore --verbose --qt midiImport -v2 -> "Totals: 3 passed, 0 failed" with 99 Swift predicate callbacks (implementer-run); deno task lsp:swift clean. Not re-run by this ledger pass.
-The swiftcore lane executes runMidiImportSuite, the only Swift entry point for this file, so the S predicates below execute under the onboardcheck cppIDs. The native methods inventoried here are executed by no lane, so no native result is claimed and their sites are recorded as GAP rather than NATIVE.
-
-Swift sources inspected (SHA-256)
-No same-dir import.swift exists. Related predicates live in
-src/checks/editcheck/EventChecks.swift: c03861d87d2573623c795dfb0f589b1f4bc3a1d1b8c840eedc92091d794fb492
-Only that file references onboardcheck/ cppIDs in Swift; the S
-entries below are its report.expect*/report.fail calls carrying
-onboardcheck cppIDs. Predicates in the same Swift functions with
-smfcheck cppIDs are execution context, not coverage of this file.
-
-Original assertion inventory and source sequence
 
 A001 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:28
 Disposition: MATCHED
-Mapping/reason: Matched by S010 (missing --swiftcore fixture root fails the suite) and S011 (throwing MidiFile.decode of test_midis/external_import.mid at EventChecks.swift, whose do/catch branch at :340-341 fails the suite); the same fixture the original reads.
-Source context since previous assertion:
-  #include "checks/onboardcheck/onboardingtest.h"
-
-  #include <QCheckBox>
-  #include <QComboBox>
-  #include <QLabel>
-  #include <QLineEdit>
-
-  #include "checks/support/songfixture.h"
-  #include "core/midiimport.h"
-  #include "core/songdocument.h"
-  #include "core/timedefaults.h"
-  #include "ui/newsongwizard.h"
-  #include "ui/songsettingsdialog.h"
-
-  void OnboardingTest::importAnalysis_data()
-  {
-      QTest::addColumn<int>("budget");
-      QTest::newRow("default") << 16;
-      QTest::newRow("tight") << 1;
-      QTest::newRow("unknown") << -1;
-  }
-
-  void OnboardingTest::importAnalysis()
-  {
-      QFETCH(int, budget);
-      QString error;
-      SmfFile external;
-
-Original expression:
-  QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), external, error),
-               qPrintable(error));
+Mapping: S010, S011
 
 A002 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:32
 Disposition: MATCHED
-Mapping/reason: Matched by S012 (result.mappedTracks == 2 for each budget row 16/1/-1 on test_midis/external_import.mid under the same analyzeForImport contract).
-Source context since previous assertion:
-
-      const ImportAnalysis analysis =
-          analyzeForImport(external, budget, QStringLiteral("MUSIC_PLAYER_BGM"));
-
-Original expression:
-  QCOMPARE(analysis.mappedTracks, 2);
+Mapping: S012
 
 A003 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:33
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (result.peakConcurrentNotes == 7 per budget row on the same fixture).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(analysis.peakConcurrentNotes, 7);
+Mapping: S013
 
 A004 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:34
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (result.sampleNoteLimit == 5 per budget row on the same fixture).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(analysis.sampleNoteLimit, 5);
+Mapping: S014
 
 A005 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:44
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (analysis warnings contain note timing per budget row; the divisionCategory fold over analysis.warnings).
-Source context since previous assertion:
-
-      bool divisionCategory = false;
-      bool polyphonyCategory = false;
-      bool budgetCategory = false;
-      for (const QString &warning : analysis.warnings) {
-          divisionCategory = divisionCategory || warning.contains(QStringLiteral("note timing"));
-          polyphonyCategory = polyphonyCategory || warning.contains(QStringLiteral("same time"));
-          budgetCategory = budgetCategory || (warning.contains(QStringLiteral("MUSIC_PLAYER_BGM")) &&
-                                              warning.contains(QStringLiteral("will not play")));
-      }
-
-Original expression:
-  QVERIFY(divisionCategory);
+Mapping: S015
 
 A006 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:45
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (analysis warnings contain same time per budget row; the polyphonyCategory fold over analysis.warnings).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(polyphonyCategory);
+Mapping: S016
 
 A007 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:46
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (result.silentTracks is compared against budget == 1 ? 1 : 0 over the three budget rows 16/1/-1 on external_import.mid, the original conditional); supersedes the earlier PARTIAL, which cited only the budget-0 synthetic predicate S002.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(analysis.silentTracks, budget == 1 ? 1 : 0);
+Mapping: S017, S002
 
 A008 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:47
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (warnings pair MUSIC_PLAYER_BGM with will not play exactly when budget == 1; the budgetCategory fold).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(budgetCategory, budget == 1);
+Mapping: S018
 
 A009 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:48
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (result.tracks.count == 2 per budget row; the tracks.size() site).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(analysis.tracks.size(), qsizetype{2});
+Mapping: S019
 
 A010 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:49
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (result.tracks.dropFirst().first?.programs.count == 2 per budget row; the tracks[1].programs.size() site).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(analysis.tracks[1].programs.size(), qsizetype{2});
+Mapping: S020
 
 A011 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:58
 Disposition: MATCHED
-Mapping/reason: Matched by S021 (controllers.first { $0.controller == 1 }?.support == .supported per budget row; the modExported fold).
-Source context since previous assertion:
-
-      bool modExported = false;
-      bool reverbDropped = false;
-      for (const ImportCcUsage &usage : analysis.ccs) {
-          if (usage.cc == 1)
-              modExported = usage.support == ImportSupport::Supported;
-          if (usage.cc == 91)
-              reverbDropped = usage.support == ImportSupport::NotExported;
-      }
-
-Original expression:
-  QVERIFY(modExported);
+Mapping: S021
 
 A012 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:59
 Disposition: MATCHED
-Mapping/reason: Matched by S022 (controllers.first { $0.controller == 91 }?.support == .notExported per budget row; the reverbDropped fold).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(reverbDropped);
+Mapping: S022
 
 A013 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:66
 Disposition: MATCHED
-Mapping/reason: Matched by S034 (do/catch at EventChecks.swift fails the suite when the external_import.mid read/decode/rescale fails) over the same fixture decode at :385.
-Source context since previous assertion:
-
-  }
-
-  void OnboardingTest::importRescale()
-  {
-      QString error;
-      SmfFile imported;
-
-Original expression:
-  QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), imported, error),
-               qPrintable(error));
+Mapping: S034
 
 A014 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:68
 Disposition: MATCHED
-Mapping/reason: Matched by S034 (MidiImport.rescaleDivision(to: 24) at EventChecks.swift, whose failure branch :422-424 fails the suite) plus S006/S007 for the floor rescale arithmetic; the exact ticks and monotonicity continue in S025-S029. Supersedes the earlier PARTIAL.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY2(rescaleDivision(&imported, 24, &error), qPrintable(error));
+Mapping: S025, S026, S027, S028, S029, S034, S006, S007
 
 A015 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:69
 Disposition: MATCHED
-Mapping/reason: Matched by S023 (imported.division == 24 after the rescale).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(imported.division, 24);
+Mapping: S023
 
 A016 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:70
 Disposition: MATCHED
-Mapping/reason: Matched by S025 (imported.chunks[1].events[4].tick == 28).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(imported.tracks[1].events[4].tick, uint64_t(28));
+Mapping: S025
 
 A017 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:71
 Disposition: MATCHED
-Mapping/reason: Matched by S026 (imported.chunks[1].events[11].tick == 57).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(imported.tracks[1].events[11].tick, uint64_t(57));
+Mapping: S026
 
 A018 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:72
 Disposition: MATCHED
-Mapping/reason: Matched by S027 (imported.chunks[1].endTick == 230).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(imported.tracks[1].endTick, uint64_t(230));
+Mapping: S027
 
 A019 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:73
 Disposition: MATCHED
-Mapping/reason: Matched by S028 (imported.chunks[2].events[0].tick == 0).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(imported.tracks[2].events[0].tick, uint64_t(0));
+Mapping: S028
 
 A020 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:77
 Disposition: MATCHED
-Mapping/reason: Matched by S029 (every event stays >= its predecessor with previous reset per chunk; the same per-track monotonicity loop).
-Source context since previous assertion:
-
-      for (const SmfTrack &track : imported.tracks) {
-          uint64_t previous = 0;
-          for (const SmfEvent &event : track.events) {
-
-Original expression:
-  QVERIFY(event.tick >= previous);
+Mapping: S029
 
 A021 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:87
 Disposition: MATCHED
-Mapping/reason: Matched by S048 (do/catch at EventChecks.swift fails the suite when duplicate_setters.mid read/decode fails) and S035 (missing fixture root).
-Source context since previous assertion:
-
-              previous = event.tick;
-          }
-      }
-  }
-
-  void OnboardingTest::importDedup()
-  {
-      QString error;
-      SmfFile midi;
-
-Original expression:
-  QVERIFY2(midiFixture(QStringLiteral("duplicate_setters.mid"), midi, error), qPrintable(error));
+Mapping: S048, S035
 
 A022 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:88
 Disposition: MATCHED
-Mapping/reason: Matched by S036 (removeRedundantSetters returns 8 on duplicate_setters.mid); the per-type counts, tempo blob and label ordering follow in S037-S047. Supersedes the earlier PARTIAL, which cited only the synthetic one-removal predicate S004.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(removeRedundantSetterEvents(&midi), 8);
+Mapping: S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S036, S004
 
 A023 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:89
 Disposition: MATCHED
-Mapping/reason: Matched by S037 (a second pass returns 0 on the same fixture; the idempotence site).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(removeRedundantSetterEvents(&midi), 0);
+Mapping: S037
 
 A024 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:98
 Disposition: MATCHED
-Mapping/reason: Matched by S039 row (0xC, nil, 2, program); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
-Source context since previous assertion:
-
-      const SmfTrack &lead = midi.tracks[1];
-      const auto count = [&lead](uint8_t type, int data0) {
-          int total = 0;
-          for (const SmfEvent &event : lead.events)
-              total += event.isChannel() && event.typeNibble() == type &&
-                       (data0 < 0 || event.data0 == data0);
-          return total;
-      };
-
-Original expression:
-  QCOMPARE(count(0xc, -1), 2);
+Mapping: S039
 
 A025 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:99
 Disposition: MATCHED
-Mapping/reason: Matched by S039 row (0xB, 7, 3, cc7); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(count(0xb, 7), 3);
+Mapping: S039
 
 A026 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:100
 Disposition: MATCHED
-Mapping/reason: Matched by S039 row (0xE, nil, 1, pitch bend); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(count(0xe, -1), 1);
+Mapping: S039
 
 A027 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:101
 Disposition: MATCHED
-Mapping/reason: Matched by S039 row (0xB, 101, 1, cc101); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(count(0xb, 101), 1);
+Mapping: S039
 
 A028 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:102
 Disposition: MATCHED
-Mapping/reason: Matched by S039 row (0xB, 0x0D, 2, cc13); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(count(0xb, 0x0d), 2);
+Mapping: S039
 
 A029 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:103
 Disposition: MATCHED
-Mapping/reason: Matched by S039 row (0xB, 0x11, 2, labels); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(count(0xb, 0x11), 2);
+Mapping: S039
 
 A030 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:104
 Disposition: MATCHED
-Mapping/reason: Matched by S039 row (0xA, 60, 1, key 60 pressure); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(count(0xa, 60), 1);
+Mapping: S039
 
 A031 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:105
 Disposition: MATCHED
-Mapping/reason: Matched by S039 row (0xA, 61, 1, key 61 pressure); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(count(0xa, 61), 1);
+Mapping: S039
 
 A032 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:106
 Disposition: MATCHED
-Mapping/reason: Matched by S039 row (0x9, nil, 2, note on); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(count(0x9, -1), 2);
+Mapping: S039
 
 A033 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:107
 Disposition: MATCHED
-Mapping/reason: Matched by S039 row (0x8, nil, 2, note off); the same count(type, data0) fold over duplicate_setters.mid chunks[1].
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(count(0x8, -1), 2);
+Mapping: S039
 
 A034 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:113
 Disposition: MATCHED
-Mapping/reason: Matched by S040 (the 0x51 meta payload equals [0x07, 0xA1, 0x20] on the conductor chunk).
-Source context since previous assertion:
-
-      int tempo = 0;
-      int text = 0;
-      for (const SmfEvent &event : midi.tracks[0].events) {
-          if (event.isMeta() && event.metaType == 0x51) {
-              ++tempo;
-
-Original expression:
-  QCOMPARE(event.blob, QByteArray("\x07\xA1\x20", 3));
+Mapping: S040
 
 A035 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:117
 Disposition: MATCHED
-Mapping/reason: Matched by S041 (tempo event count == 1).
-Source context since previous assertion:
-
-          }
-          text += event.isMeta() && event.metaType == 0x01;
-      }
-
-Original expression:
-  QCOMPARE(tempo, 1);
+Mapping: S041
 
 A036 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:118
 Disposition: MATCHED
-Mapping/reason: Matched by S042 (text (0x01 meta) event count == 2).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(text, 2);
+Mapping: S042
 
 A037 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:133
 Disposition: MATCHED
-Mapping/reason: Matched by S043 (each tick-zero 0xB/0x11 label data1 exceeds previousLabel, accumulated in the same loop).
-Source context since previous assertion:
-
-      int labelCount = 0;
-      int previousLabel = 0;
-      int programIndex = -1;
-      int firstNote = -1;
-      bool program = false;
-      bool cc7 = false;
-      bool bend = false;
-      for (int i = 0; i < int(lead.events.size()) && lead.events[i].tick == 0; ++i) {
-          const SmfEvent &event = lead.events[i];
-          program =
-              program || (event.typeNibble() == 0xc && event.data0 == 12 && (programIndex = i, true));
-          cc7 = cc7 || (event.typeNibble() == 0xb && event.data0 == 7 && event.data1 == 80);
-          bend = bend || (event.typeNibble() == 0xe && event.data1 == 0x40);
-          if (event.typeNibble() == 0xb && event.data0 == 0x11) {
-
-Original expression:
-  QVERIFY(event.data1 > previousLabel);
+Mapping: S043
 
 A038 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:140
 Disposition: MATCHED
-Mapping/reason: Matched by S044 (tick-zero program 12, CC7 = 80 and bend data1 = 0x40 all survive).
-Source context since previous assertion:
-
-              previousLabel = event.data1;
-              ++labelCount;
-          }
-          if (event.typeNibble() == 0x9 && firstNote < 0)
-              firstNote = i;
-      }
-
-Original expression:
-  QVERIFY(program && cc7 && bend);
+Mapping: S044
 
 A039 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:141
 Disposition: MATCHED
-Mapping/reason: Matched by S045 (labelCount == 2).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(labelCount, 2);
+Mapping: S045
 
 A040 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:142
 Disposition: MATCHED
-Mapping/reason: Matched by S046 (last tick-zero label value == 3).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(previousLabel, 3);
+Mapping: S046
 
 A041 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:143
 Disposition: MATCHED
-Mapping/reason: Matched by S047 (programIndex is recorded and the first note index is greater; both from the same tick-zero prefix loop).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(programIndex >= 0 && firstNote > programIndex);
+Mapping: S047
 
 A042 | OnboardingTest::importRescaleOverflow | src/checks/onboardcheck/import.cpp:164
 Disposition: MATCHED
-Mapping/reason: Matched by S050 (do/catch rejection of rescaleDivision(to: 48) on the division-24 kMaxTick boundary fixture built at EventChecks.swift). Supersedes the earlier PARTIAL, which cited only the division-1/.max predicate S008.
-Source context since previous assertion:
-
-  }
-
-  // In-memory SMF at the 32-bit tick boundary: rescaling to 48 clocks would
-  // roughly double every tick past kMaxTick, so the preflight rejects the whole
-  // operation and the file is left untouched (division included).
-  void OnboardingTest::importRescaleOverflow()
-  {
-      QString error;
-      SmfFile smf;
-      smf.format = 1;
-      smf.division = 24;
-      smf.tracks.resize(1);
-      SmfEvent ev;
-      ev.tick = CoreTimeDefaults::kMaxTick;
-      ev.status = 0x90;
-      ev.data0 = 60;
-      ev.data1 = 100;
-      smf.tracks[0].events.push_back(ev);
-      smf.tracks[0].endTick = smf.tracks[0].events.back().tick;
-
-
-Original expression:
-  QVERIFY(!rescaleDivision(&smf, 48, &error));
+Mapping: S050, S008
 
 A043 | OnboardingTest::importRescaleOverflow | src/checks/onboardcheck/import.cpp:165
 Disposition: MATCHED
-Mapping/reason: Matched by S051 (boundary.division stays 24 after the rejection).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(smf.division, 24);
+Mapping: S051
 
 A044 | OnboardingTest::importRescaleOverflow | src/checks/onboardcheck/import.cpp:166
 Disposition: MATCHED
-Mapping/reason: Matched by S052 (boundary.chunks[0].events[0].tick stays TimeDefaults.maxTick, the CoreTimeDefaults::kMaxTick site).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(smf.tracks[0].events[0].tick, CoreTimeDefaults::kMaxTick);
+Mapping: S052
 
 A045 | OnboardingTest::importRescaleOverflow | src/checks/onboardcheck/import.cpp:167
 Disposition: MATCHED
-Mapping/reason: Matched by S053 (the error description equals Tick rescale to division 48 exceeds 32-bit tick range).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY2(
-          error.contains(QStringLiteral("Tick rescale to division 48 exceeds 32-bit tick range")),
-          qPrintable(error));
+Mapping: S053
 
 A046 | OnboardingTest::importWizardOverflow | src/checks/onboardcheck/import.cpp:181
 Disposition: GAP
@@ -970,24 +595,11 @@ Original expression:
 
 A080 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:297
 Disposition: MATCHED
-Mapping/reason: Matched by S034 (do/catch at EventChecks.swift fails the suite by the roundtrip cppID when the fixture read/decode/rescale fails) over the decode at :385 of test_midis/external_import.mid, the same fixture; the native disk hop stays GAP with A083/A085/A087/A089.
-Source context since previous assertion:
-
-      const QString root = fixture->root();
-      SmfFile imported;
-
-Original expression:
-  QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), imported, error),
-               qPrintable(error));
+Mapping: S034
 
 A081 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:299
 Disposition: MATCHED
-Mapping/reason: Matched by S034 (rescaleDivision(to: 24) at EventChecks.swift, whose failure branch :423-424 reports the roundtrip cppID).
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY2(rescaleDivision(&imported, 24, &error), qPrintable(error));
+Mapping: S034
 
 A082 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:301
 Disposition: GAP
@@ -1032,13 +644,7 @@ Original expression:
 
 A086 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:310
 Disposition: MATCHED
-Mapping/reason: Matched by S033 (MidiFile.decode of the serialized bytes at EventChecks.swift inside the roundtrip do-block, whose catch at :419-420 fails the suite by the roundtrip cppID over the same rescaled fixture); the native disk hop stays GAP with A083/A085/A087/A089.
-Source context since previous assertion:
-
-      SmfFile reread;
-
-Original expression:
-  QVERIFY2(SmfFile::readFile(mid, &reread, &error), qPrintable(error));
+Mapping: S033
 
 A087 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:313
 Disposition: GAP
@@ -1053,12 +659,7 @@ Original expression:
 
 A088 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:314
 Disposition: MATCHED
-Mapping/reason: Matched by S030 (the re-encoded reread bytes equal the serialized bytes - the byte-stability observable of readFile(repeatPath) == serialized, without the native disk hop).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(readFile(repeatPath, error), serialized);
+Mapping: S030
 
 A089 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:315
 Disposition: GAP
@@ -1071,21 +672,11 @@ Original expression:
 
 A090 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:316
 Disposition: MATCHED
-Mapping/reason: Matched by S031 (reread.division == 24).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(reread.division, 24);
+Mapping: S031
 
 A091 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:317
 Disposition: MATCHED
-Mapping/reason: Matched by S032 (reread.chunks.count equals imported.chunks.count, the tracks.size() site).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(reread.tracks.size(), imported.tracks.size());
+Mapping: S032
 
 A092 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:319
 Disposition: GAP
@@ -1232,336 +823,159 @@ asserted in importAnalysis.
 
 S001 | trackNameRoles | src/checks/editcheck/EventChecks.swift
 Anchor: message "import and document queries select the same bare name"
-Verbatim call:
-    report.expectEqual("Bare", imported.tracks.first?.name,
-                       cppID: "onboardcheck/OnboardingTest::importAnalysis[default]",
-                       what: "import and document queries select the same bare name")
 
 S002 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "import counts logical XCMD points"
-Verbatim call:
-    report.expectEqual(1, analysis.silentTracks,
-                       cppID: "onboardcheck/OnboardingTest::importAnalysis",
-                       what: "player track budget identifies silent tracks")
 
 S003 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "unknown controller is not exported"
-Verbatim call:
-    report.expect(analysis.tracks[0].notesBeforeProgram,
-                  cppID: "onboardcheck/OnboardingTest::importAnalysis",
-                  message: "notes before instrument are reported")
 
 S004 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "only eligible same-tick setter is removed"
-Verbatim call:
-    report.expectEqual(1, MidiImport.removeRedundantSetters(&file),
-                       cppID: "onboardcheck/OnboardingTest::importDedup",
-                       what: "only eligible same-tick setter is removed")
 
 S005 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "action-like XCMD selectors are preserved"
-Verbatim call:
-    report.expectEqual([UInt8(2), 8, 9], file.chunks[0].events.map {
-        if case let .channel(status, data0, data1) = $0.payload {
-            return status >> 4 == 0xC ? data0 : data1
-        }
-        return 0
-    }, cppID: "onboardcheck/OnboardingTest::importDedup",
-    what: "action-like XCMD selectors are preserved")
 
 S006 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "rescale uses floor arithmetic"
-Verbatim call:
-    report.expectEqual([Tick(0), 0, 0], file.chunks[0].events.map(\.tick),
-                       cppID: "onboardcheck/OnboardingTest::importRescale",
-                       what: "rescale uses floor arithmetic")
 
 S007 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "end tick uses the same floor arithmetic"
-Verbatim call:
-    report.expectEqual(Tick(1), file.chunks[0].endTick,
-                       cppID: "onboardcheck/OnboardingTest::importRescale",
-                       what: "end tick uses the same floor arithmetic")
 
 S008 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-        report.fail("onboardcheck/OnboardingTest::importRescaleOverflow",
-                    "overflowing rescale unexpectedly succeeded")
 
 S009 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "overflow rejection leaves file untouched"
-Verbatim call:
-        report.expectEqual(baseline, overflow,
-                           cppID: "onboardcheck/OnboardingTest::importRescaleOverflow",
-                           what: "overflow rejection leaves file untouched")
 
 S010 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-        report.fail(importID, "missing --swiftcore fixture root")
 
 S011 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-        report.fail(importID, "external_import.mid read/decode failed: \(error)")
 
 S012 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "\(row) maps two tracks"
-Verbatim call:
-            report.expectEqual(2, result.mappedTracks, cppID: importID,
-                               what: "\(row) maps two tracks")
 
 S013 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "\(row) peak concurrent notes"
-Verbatim call:
-            report.expectEqual(7, result.peakConcurrentNotes, cppID: importID,
-                               what: "\(row) peak concurrent notes")
 
 S014 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "\(row) maps two tracks"
-Verbatim call:
-            report.expectEqual(5, result.sampleNoteLimit, cppID: importID,
-                               what: "\(row) sample note limit")
 
 S015 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "\(row) peak concurrent notes"
-Verbatim call:
-            report.expect(result.warnings.contains { $0.contains("note timing") },
-                          cppID: importID, message: "\(row) warns of timing adjustment")
 
 S016 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "\(row) sample note limit"
-Verbatim call:
-            report.expect(result.warnings.contains { $0.contains("same time") },
-                          cppID: importID, message: "\(row) warns of polyphony")
 
 S017 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "\(row) warns of timing adjustment"
-Verbatim call:
-            report.expectEqual(budget == 1 ? 1 : 0, result.silentTracks, cppID: importID,
-                               what: "\(row) silent tracks")
 
 S018 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "\(row) warns of polyphony"
-Verbatim call:
-            report.expectEqual(budget == 1, result.warnings.contains {
-                $0.contains("MUSIC_PLAYER_BGM") && $0.contains("will not play")
-            }, cppID: importID, what: "\(row) budget warning")
 
 S019 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "\(row) silent tracks"
-Verbatim call:
-            report.expectEqual(2, result.tracks.count, cppID: importID,
-                               what: "\(row) analyzed tracks")
 
 S020 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "\(row) second track programs"
-Verbatim call:
-            report.expectEqual(2, result.tracks.dropFirst().first?.programs.count,
-                               cppID: importID, what: "\(row) second track programs")
 
 S021 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "\(row) analyzed tracks"
-Verbatim call:
-            report.expectEqual(.supported, result.controllers.first {
-                $0.controller == 1
-            }?.support, cppID: importID, what: "\(row) modulation exports")
 
 S022 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "\(row) second track programs"
-Verbatim call:
-            report.expectEqual(.notExported, result.controllers.first {
-                $0.controller == 91
-            }?.support, cppID: importID, what: "\(row) reverb is not exported")
 
 S023 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "external import division after rescale"
-Verbatim call:
-            report.expectEqual(UInt16(24), imported.division, cppID: rescaleID,
-                               what: "external import division after rescale")
 
 S024 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-                report.fail(rescaleID, "external import has missing chunks or events")
 
 S025 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "external import event 4 tick"
-Verbatim call:
-            report.expectEqual(Tick(28), imported.chunks[1].events[4].tick,
-                               cppID: rescaleID, what: "external import event 4 tick")
 
 S026 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-            report.expectEqual(Tick(57), imported.chunks[1].events[11].tick,
-                               cppID: rescaleID, what: "external import event 11 tick")
 
 S027 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-            report.expectEqual(Tick(230), imported.chunks[1].endTick,
-                               cppID: rescaleID, what: "external import second chunk end")
 
 S028 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "external import third chunk first tick"
-Verbatim call:
-            report.expectEqual(Tick(0), imported.chunks[2].events[0].tick,
-                               cppID: rescaleID, what: "external import third chunk first tick")
 
 S029 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-                    report.expect(event.tick >= previous, cppID: rescaleID,
-                                  message: "chunk \(chunkIndex) event \(eventIndex) remains monotonic")
 
 S030 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-                report.expectEqual(serialized, try reread.encoded(), cppID: roundtripID,
-                                   what: "rescaled fixture re-encodes byte-identically")
 
 S031 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-                report.expectEqual(UInt16(24), reread.division, cppID: roundtripID,
-                                   what: "rescaled fixture reload division")
 
 S032 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-                report.expectEqual(imported.chunks.count, reread.chunks.count,
-                                   cppID: roundtripID, what: "rescaled fixture reload chunk count")
 
 S033 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-                report.fail(roundtripID, "rescaled fixture roundtrip failed: \(error)")
 
 S034 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-            report.fail(rescaleID, "external_import.mid read/decode/rescale failed: \(error)")
-            report.fail(roundtripID, "roundtrip source read/decode/rescale failed: \(error)")
 
 S035 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-        report.fail(rescaleID, "missing --swiftcore fixture root")
 
 S036 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "only eligible same-tick setter is removed"
-Verbatim call:
-            report.expectEqual(8, MidiImport.removeRedundantSetters(&duplicate),
-                               cppID: dedupID, what: "duplicate fixture removes eight setters")
 
 S037 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "duplicate fixture second pass is idempotent"
-Verbatim call:
-            report.expectEqual(0, MidiImport.removeRedundantSetters(&duplicate),
-                               cppID: dedupID, what: "duplicate fixture second pass is idempotent")
 
 S038 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-                report.fail(dedupID, "duplicate fixture has no lead chunk")
 
 S039 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "deduplicated \(name) event count"
-Verbatim call:
-            let expectedCounts: [(UInt8, UInt8?, Int, String)] = [
-                (0xC, nil, 2, "program"), (0xB, 7, 3, "cc7"),
-                (0xE, nil, 1, "pitch bend"), (0xB, 101, 1, "cc101"),
-                (0xB, 0x0D, 2, "cc13"), (0xB, 0x11, 2, "labels"),
-                (0xA, 60, 1, "key 60 pressure"), (0xA, 61, 1, "key 61 pressure"),
-                (0x9, nil, 2, "note on"), (0x8, nil, 2, "note off"),
-            ]
-            for (type, controller, expected, name) in expectedCounts {
-                report.expectEqual(expected, count(type, controller), cppID: dedupID,
-                                   what: "deduplicated \(name) event count")
-            }
 
 S040 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "tempo meta payload remains intact"
-Verbatim call:
-                report.expectEqual([UInt8(0x07), 0xA1, 0x20], data, cppID: dedupID,
-                                   what: "tempo meta payload remains intact")
 
 S041 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "external import division after rescale"
-Verbatim call:
-            report.expectEqual(1, tempos.count, cppID: dedupID, what: "tempo event count")
 
 S042 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "external import division after rescale"
-Verbatim call:
-            report.expectEqual(2, conductor.filter { $0.metaType == 0x01 }.count,
-                               cppID: dedupID, what: "text event count")
 
 S043 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "tick-zero label \(labelCount) increases"
-Verbatim call:
-                    report.expect(data1 > previousLabel, cppID: dedupID,
-                                  message: "tick-zero label \(labelCount) increases")
 
 S044 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "tick-zero program, volume and bend survive"
-Verbatim call:
-            report.expect(programIndex != nil && hasCC7 && hasBend, cppID: dedupID,
-                          message: "tick-zero program, volume and bend survive")
 
 S045 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "tick-zero label count"
-Verbatim call:
-            report.expectEqual(2, labelCount, cppID: dedupID, what: "tick-zero label count")
 
 S046 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "rescaled fixture re-encodes byte-identically"
-Verbatim call:
-            report.expectEqual(UInt8(3), previousLabel, cppID: dedupID,
-                               what: "last tick-zero label value")
 
 S047 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "rescaled fixture reload division"
-Verbatim call:
-            report.expect(programIndex.flatMap { program in
-                firstNote.map { program < $0 }
-            } == true, cppID: dedupID, message: "tick-zero program precedes first note")
 
 S048 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-            report.fail(dedupID, "duplicate_setters.mid read/decode failed: \(error)")
 
 S049 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-        report.fail(dedupID, "missing --swiftcore fixture root")
 
 S050 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-Verbatim call:
-            report.fail(overflowID, "boundary rescale unexpectedly succeeded")
 
 S051 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "duplicate fixture removes eight setters"
-Verbatim call:
-        report.expectEqual(UInt16(24), boundary.division, cppID: overflowID,
-                           what: "overflow keeps original division")
 
 S052 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "duplicate fixture second pass is idempotent"
-Verbatim call:
-        report.expectEqual(TimeDefaults.maxTick, boundary.chunks[0].events[0].tick,
-                           cppID: overflowID, what: "overflow keeps boundary event tick")
 
 S053 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "overflow describes the division and tick limit"
-Verbatim call:
-        report.expectEqual("Tick rescale to division 48 exceeds 32-bit tick range",
-                           String(describing: error), cppID: overflowID,
-                           what: "overflow describes the division and tick limit")
-
-Shared helper:
-None. No Swift fixture file carries expects for this suite; MidiImport, MidiFile, and SongDocument are production types, not expectation-bearing fixtures.

@@ -10,40 +10,9 @@ Additional Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.s
 Additional Swift counterpart: src/checks/drawerpresentation/velocity.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; source context preserves setup, rows, loops, and guards between
-assertions verbatim, and the tail preserves the closing sequence verbatim.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-Unresolved entries remain work.
 
-Execution and ownership
-drawerVelocityGestureTransactions (velocity/tst_velocityediting.swift),
-drawerVelocityFrozenGesturePolicy (velocity/velocitydetentdragging.swift), and
-drawerVelocityCommandAvailability (swiftcore/VelocityPageChecks.swift) execute the
-paired checks. This file's own methods are executed by the click-selection cases in
-velocity/VelocityClickSelectionChecks.swift — drawerVelocityBandExpandContract,
-drawerVelocityPressCancelRestores, drawerVelocityBandCancelRestores and
-drawerVelocityPrimaryTrackSwitchCancels — called from runVelocityPageChecks
-(velocity/VelocityPageChecks.swift) and reported under
-swiftcore/VelocityClickSelection::clickSelection with the shared
-swiftcore/VelocityPage::gestureTransactions and ::cancellationPaths ids. Shared setup
-lives in swiftcore/VelocityPageChecks.swift (drawerVelocityVelocityPageFixture,
-drawerVelocityVelocityFixture); per-case document and gesture state live in the paired
-Swift sources. Their helper expectations execute on every call and are inventoried below.
 
-Native check status
-src/checks/velocity/velocityselection.cpp is uncompiled in every target
-(src/checks/CMakeLists.txt lists only the velocity Swift sources) and unregistered in
-src/checks/checkcatalog.cpp; the live counterpart is the swiftcore lane. The
-RETIRED-REPRESENTATION entries below rest on that no-ingress proof together with the
-named replacement predicates.
 
-Verification
 Command: deno task verify --filter swiftcore (swiftcore lane) and deno task verify:qml
 (drawer QML surface)
 Result: provided by the controller for this settled tree, not re-run by this
@@ -52,26 +21,8 @@ the filter), and verify:qml editorqml-drawer PASS (1/1 ok). Structure only below
 deno task proof check validates metadata, entries and the Tally line, never source
 freshness, execution or parity.
 
-below; deno task proof:edit keeps this line reconciled as entries change)
 
-Fixture, sequence and row constraints
 Data rows: primaryTrackSwitchCancelsDrag_data: production-route.
-Cases run on the shared VelocityEditingTest in-memory fixture: three notes resolved
-in SMF event order (quiet stacked duplicate, loud stacked duplicate, tick-60 later
-note); assertions read the documentVelocity/timelineVelocity/noteSelectionIs helpers.
-See proof.tst_velocityediting.txt for the init-site inventory.
-The click-selection case functions of this file run on a second synthetic fixture
-(drawerVelocityVelocityFixture): one track whose three notes are tick 0 pitch 60
-velocity 100, tick 24 pitch 67 velocity 64 and tick 96 pitch 72 velocity 32, attached
-to a DocumentSession over the suite's real bank lease with selectedTrack 0. Those
-fixtures carry different velocities (100/64/32, not 20/70/70) and no stacked
-duplicates, so velocity sites below match on the per-note captured-equality loops
-rather than the legacy constants; the primary-track switch is driven by adding a second track (voice 2), adjusting the track scope to track 1 via adjustTrackScope and calling page.refreshFromDocument(), whose captured-track mismatch cancels the live gesture (VelocityPage.swift).
-primaryTrackSwitchCancelsDrag (data row production-route: a mid-gesture track switch
-cancels the drag without mutation, previews cleared, axis back to Intrinsic),
-pointerUngrabCancelsProvisionalSelection, bandSelectionExpandsAndContracts, and
-bandUngrabRestoresSelection. Guards cover gesture-active state, staged previews,
-revision/undo freeze, fixture velocities, and selection.
 Methods in file order: primaryTrackSwitchCancelsDrag_data, primaryTrackSwitchCancelsDrag, pointerUngrabCancelsProvisionalSelection, bandSelectionExpandsAndContracts, bandUngrabRestoresSelection.
 Exact original source anchors:
 src/checks/velocity/velocityselection.cpp:14 | QTest::addColumn<bool>("directSelectionTransition");
@@ -96,121 +47,39 @@ src/checks/velocity/velocityselection.cpp:167 | mouseMove(windowPoint(expandedEn
 src/checks/velocity/velocityselection.cpp:177 | mouseMove(windowPoint(expandedEnd));
 src/checks/velocity/velocityselection.cpp:178 | mouseRelease(Qt::RightButton, windowPoint(expandedEnd));
 
-Original assertion inventory
-
 A001 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:21
 Disposition: MATCHED
-Mapping: drawerVelocityPrimaryTrackSwitchCancels guards fixture.document.addTrack(voice: 2) == 1 at src/checks/velocity/VelocityClickSelectionChecks.swift (report.fail under cppID swiftcore/VelocityPage::cancellationPaths otherwise): the same add-track-with-voice-2 call with the same expected index 1 as the original QCOMPARE, on the same single-track precondition, aborting the case on mismatch exactly as QCOMPARE aborts the test.
-Source context since previous assertion:
-#include "checks/velocity/tst_velocityediting.h"
-
-#include <algorithm>
-#include <cmath>
-
-#include <QApplication>
-#include <QQuickItem>
-#include <QtTest>
-
-#include "ui/songview.h"
-
-void VelocityEditingTest::primaryTrackSwitchCancelsDrag_data()
-{
-    QTest::addColumn<bool>("directSelectionTransition");
-    QTest::newRow("production-route") << false;
-}
-
-void VelocityEditingTest::primaryTrackSwitchCancelsDrag()
-{
-    SongView &view = m_tab->view();
-
-Original expression:
-  QCOMPARE(m_tab->document().addTrack(2), 1)
 
 A002 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:22
 Disposition: MATCHED
-Mapping: drawerVelocityPrimaryTrackSwitchCancels asserts report.expectEqual(2, page.contextSlot) at src/checks/velocity/VelocityClickSelectionChecks.swift ("the new primary track presents its program", cppID swiftcore/VelocityPage::cancellationPaths) after adjustTrackScope(track: 1) and refreshFromDocument: contextSlot carries the presented first program of the current primary track (VelocityContextPolicy.slot starts from firstProgram), so 2 is the same track-1 program the original QTRY_COMPARE read; the retry loop is event-loop timing with no Swift ingress because the Swift refresh is synchronous.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(view.currentProgram(1), 2)
 
 A003 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:31
 Disposition: MATCHED
-Mapping: S105 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts page.frozenPreview[notes[0].id] != nil after the press and move, so a live drag publishes a preview for the pressed note under cppID swiftcore/VelocityClickSelection::clickSelection.
-Source context since previous assertion:
-;
-    selectDragPair();
-
-    const uint64_t revisionBefore = m_tab->document().revision();
-    const int undoDepthBefore = m_tab->document().undoStack()->count();
-    const QPoint press = windowPoint(nodePoint(20, m_quietStacked.tick));
-    const QPoint moved = windowPoint(nodePoint(48, m_quietStacked.tick));
-    mousePress(Qt::LeftButton, press);
-    mouseMove(moved);
-
-Original expression:
-  QVERIFY(view.previewVelocity(m_quietStacked.noteId).has_value())
+Mapping: S105
 
 A004 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:32
 Disposition: MATCHED
-Mapping: S106 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts page.frozenPreview[notes[2].id] != nil after the press and move, so the live drag previews its second selected target as well.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(view.previewVelocity(m_later.noteId).has_value())
+Mapping: S106
 
 A005 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:33
 Disposition: MATCHED
-Mapping: S107 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts page.hasGesture && page.interactionActive, the page report the legacy gestureActive() made.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(m_area->gestureActive())
+Mapping: S107
 
 A006 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:40
 Disposition: MATCHED
-Mapping: S110 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts drawerVelocityDocumentSnapshot(document) == baseline after the primary-track switch, comparing document.revision as well as the history identity under cppID swiftcore/VelocityPage::cancellationPaths.
-Source context since previous assertion:
-;
-
-    // Direct applyPrimaryTrackTransition mid-gesture trips the selection model's
-    // reentrancy assert (editorselectionmodel.cpp:72), so the arm-contract path
-    // is untestable by design. The arm track check remains unverified
-    // defense-in-depth behind pre-cancelling selectTrack/trackHeaderClicked routes.
-    view.selectTrack(1);
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revisionBefore)
+Mapping: S110
 
 A007 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:41
 Disposition: MATCHED
-Mapping: S108 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts !page.hasGesture after session.selectedTrack changes and refreshFromDocument runs, the Swift cancel-on-track-change path (VelocityPage.swift).
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_VERIFY(!m_area->gestureActive())
+Mapping: S108
 
 A008 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:42
 Disposition: MATCHED
-Mapping: S109 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts page.frozenPreview.isEmpty after the switch, so the pressed note preview is cleared.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(!view.previewVelocity(m_quietStacked.noteId).has_value())
+Mapping: S109
 
 A009 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:43
 Disposition: MATCHED
-Mapping: S109 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts page.frozenPreview.isEmpty after the switch, so every selected target preview is cleared.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(!view.previewVelocity(m_later.noteId).has_value())
+Mapping: S109
 
 A010 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:44
 Disposition: PARTIAL
@@ -232,14 +101,7 @@ Original expression:
 
 A012 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:48
 Disposition: MATCHED
-Mapping: S112 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts the post-release snapshot still equals baseline (revision, history identity, undo/redo reachability) after the inert release that follows the switch.
-Source context since previous assertion:
-;
-
-    mouseRelease(Qt::LeftButton, moved);
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revisionBefore)
+Mapping: S112
 
 A013 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:49
 Disposition: PARTIAL
@@ -252,127 +114,51 @@ Original expression:
 
 A014 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:50
 Disposition: MATCHED
-Mapping: S113 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts captured[i] == document.note(i)?.velocity for every note, so the cancelled drag left each note at its pre-press velocity; the Swift fixture publishes 100/64/32 where the legacy fixture published 20/70/70.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
+Mapping: S113
 
 A015 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:51
 Disposition: MATCHED
-Mapping: S113 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every note still equals the velocity captured before the press; the Swift fixture second note publishes 64 where the legacy fixture published 70.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
+Mapping: S113
 
 A016 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:52
 Disposition: MATCHED
-Mapping: S113 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every note still equals its captured velocity after the cancelled drag; the Swift fixture later note publishes 32 where the legacy fixture published 70.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), 70)
+Mapping: S113
 
 A017 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:53
 Disposition: MATCHED
-Mapping: S114 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts page.frozenPreview.isEmpty after the release that follows the switch, clearing the pressed note preview.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(!view.previewVelocity(m_quietStacked.noteId).has_value())
+Mapping: S114
 
 A018 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:54
 Disposition: MATCHED
-Mapping: S114 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts page.frozenPreview.isEmpty after that release, clearing the later note preview as well.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(!view.previewVelocity(m_later.noteId).has_value())
+Mapping: S114
 
 A019 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:60
 Disposition: MATCHED
-Mapping: S087 (src/checks/velocity/VelocityClickSelectionChecks.swift) is the press-time latch guard (report.fail unless selectedNoteOrder == [notes[2].id, notes[0].id]), the same pre-press selection-latch observable with the Swift fixture ordered pair.
-Source context since previous assertion:
-;
-}
-
-void VelocityEditingTest::pointerUngrabCancelsProvisionalSelection()
-{
-    m_tab->view().selectionModel().setNoteSelection({m_quietStacked.noteId});
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
+Mapping: S087
 
 A020 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:67
 Disposition: MATCHED
-Mapping: S088 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts selectedNoteOrder == [notes[1].id] straight after the press, so the press provisionally selects only the pressed note.
-Source context since previous assertion:
-;
-
-    const uint64_t revisionBefore = m_tab->document().revision();
-    const int undoDepthBefore = m_tab->document().undoStack()->count();
-    const QPointF loudNode = nodePoint(70, 12);
-
-    mousePress(Qt::LeftButton, windowPoint(loudNode));
-
-Original expression:
-  QTRY_VERIFY(noteSelectionIs({m_loudStacked.noteId}))
+Mapping: S088
 
 A021 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:68
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: The legacy check is uncompiled in every target and unregistered in src/checks/checkcatalog.cpp, so this site executes nowhere; the QQuickWindow grabber identity is Qt item bookkeeping the Swift lane cannot observe, because it drives VelocityPage.pointerPress/Move/Release directly and production forwards the QML MouseArea onCanceled ungrab to page.pageModel.cancelSectionInteraction() (src/ui/songview/quick/drawer/VelocityPage.qml,420). The consumer-visible effect is asserted by S089 (src/checks/velocity/VelocityClickSelectionChecks.swift page.hasGesture).
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(m_quickWindow->mouseGrabberItem(),
-               static_cast<QQuickItem *>(m_velocityInput.data()))
+Mapping/reason: S089
 
 A022 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:72
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Same Qt grabber-identity representation as A021 (uncompiled and unregistered legacy file, no Swift-domain grabber object). The grab precondition has no Swift observation: the lane calls cancelSectionInteraction directly, and the held-gesture effect is asserted by S089 (src/checks/velocity/VelocityClickSelectionChecks.swift).
-Source context since previous assertion:
-;
-
-    QQuickItem *const grabber = m_quickWindow->mouseGrabberItem();
-
-Original expression:
-  QVERIFY(grabber)
+Mapping/reason: S089
 
 A023 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:74
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Same representation retirement: the grab ending is Qt item bookkeeping. The production ungrab path is the QML onCanceled handler calling page.pageModel.cancelSectionInteraction() (src/ui/songview/quick/drawer/VelocityPage.qml,420); the consumer-visible effect is asserted by S090 (src/checks/velocity/VelocityClickSelectionChecks.swift !page.hasGesture && frozenPreview.isEmpty).
-Source context since previous assertion:
-;
-    grabber->ungrabMouse();
-
-Original expression:
-  QTRY_VERIFY(!m_quickWindow->mouseGrabberItem())
+Mapping/reason: S090
 
 A024 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:76
 Disposition: MATCHED
-Mapping: S091 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts selectedNoteOrder == [notes[2].id, notes[0].id] after cancelSectionInteraction, so the cancellation restores the press-time selection membership and insertion order.
-Source context since previous assertion:
-;
-
-
-Original expression:
-  QTRY_VERIFY(noteSelectionIs({m_quietStacked.noteId}))
+Mapping: S091
 
 A025 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:77
 Disposition: MATCHED
-Mapping: S092 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts drawerVelocityDocumentSnapshot(document) == baseline after the cancellation, which includes document.revision, under cppID swiftcore/VelocityPage::cancellationPaths.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revisionBefore)
+Mapping: S092
 
 A026 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:78
 Disposition: PARTIAL
@@ -385,43 +171,19 @@ Original expression:
 
 A027 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:79
 Disposition: MATCHED
-Mapping: S095 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts captured[i] == document.note(i)?.velocity for every note after the cancellation; the Swift fixture low note publishes 100 where the legacy fixture published 20.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
+Mapping: S095
 
 A028 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:80
 Disposition: MATCHED
-Mapping: S095 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every note still equals its captured velocity after the cancellation; the Swift fixture second note publishes 64 where the legacy fixture published 70.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
+Mapping: S095
 
 A029 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:81
 Disposition: MATCHED
-Mapping: S095 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every note still equals its captured velocity after the cancellation; the Swift fixture later note publishes 32 where the legacy fixture published 70.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), 70)
+Mapping: S095
 
 A030 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:86
 Disposition: MATCHED
-Mapping: S094 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts the ordered press-time selection survives the release synthesized after the cancellation, so the late release cannot revive the discarded provisional selection.
-Source context since previous assertion:
-;
-
-    // A release synthesized after the public grab cancellation must not
-    // revive the discarded provisional gesture or create an edit.
-    mouseRelease(Qt::LeftButton, windowPoint(loudNode));
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
+Mapping: S094
 
 A031 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:87
 Disposition: PARTIAL
@@ -443,44 +205,19 @@ Original expression:
 
 A033 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:89
 Disposition: MATCHED
-Mapping: S095 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every note still equals its captured velocity after the late release; the Swift fixture low note publishes 100 where the legacy fixture published 20.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
+Mapping: S095
 
 A034 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:90
 Disposition: MATCHED
-Mapping: S095 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every note still equals its captured velocity after the late release; the Swift fixture second note publishes 64 where the legacy fixture published 70.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
+Mapping: S095
 
 A035 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:91
 Disposition: MATCHED
-Mapping: S095 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every note still equals its captured velocity after the late release; the Swift fixture later note publishes 32 where the legacy fixture published 70.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), 70)
+Mapping: S095
 
 A036 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:97
 Disposition: MATCHED
-Mapping: S079 (src/checks/velocity/VelocityClickSelectionChecks.swift) is the latch guard (report.fail unless selectedNoteOrder == [notes[2].id]), the same single-note press-time selection observable.
-Source context since previous assertion:
-;
-}
-
-void VelocityEditingTest::bandSelectionExpandsAndContracts()
-{
-    m_tab->view().selectionModel().setNoteSelection({m_later.noteId});
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_later.noteId}))
+Mapping: S079
 
 A037 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:106
 Disposition: PARTIAL
@@ -510,18 +247,7 @@ Original expression:
 
 A039 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:114
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: m_velocityInput->bounds() is legacy QQuickItem geometry; the file is uncompiled and unregistered and the Swift lane has no QQuickItem, because production forwards the plot MouseArea (src/ui/songview/quick/drawer/VelocityPage.qml) to the page pointer seam. The consumer-visible effect (the band press lands on the surface) is asserted by S081 (src/checks/velocity/VelocityClickSelectionChecks.swift, a band press is consumed) and S082 (src/checks/velocity/VelocityClickSelectionChecks.swift, hasGesture).
-Source context since previous assertion:
-;
-
-    const QPointF bandStart{quietNode.x() - horizontalMargin,
-                            std::min(quietNode.y(), loudNode.y()) - verticalMargin};
-    const QPointF expandedEnd{laterNode.x() + horizontalMargin,
-                              std::max(quietNode.y(), loudNode.y()) + verticalMargin};
-    const QPointF contractedEnd{(quietNode.x() + laterNode.x()) / 2.0, expandedEnd.y()};
-
-Original expression:
-  QVERIFY(m_velocityInput->bounds().contains(bandStart))
+Mapping/reason: S081, S082
 
 A040 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:115
 Disposition: GAP
@@ -543,49 +269,19 @@ Original expression:
 
 A042 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:117
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: QApplication::startDragDistance() is the Qt application-global drag threshold, which the Swift lane never consults: the lane seeds the page dragDistance through configureBody(dragDistance: 10) (src/checks/velocity/VelocityPageChecks.swift) and the moves far exceed it. The threshold behavior (arming only beyond the activation distance) is asserted by S049 and S050 (src/checks/velocity/velocitydetentdragging.swift,55) for the Swift policy; the legacy global itself is representation-only.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(std::abs(expandedEnd.x() - bandStart.x()) + std::abs(expandedEnd.y() - bandStart.y()) >=
-          QApplication::startDragDistance())
+Mapping/reason: S049, S050
 
 A043 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:121
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Qt grabber-identity bookkeeping as in A021 (uncompiled and unregistered legacy file, no Swift-domain grabber); the consumer-visible effect (the band press holds a live gesture) is asserted by S082 (src/checks/velocity/VelocityClickSelectionChecks.swift).
-Source context since previous assertion:
-;
-
-    mousePress(Qt::RightButton, windowPoint(bandStart));
-
-Original expression:
-  QTRY_COMPARE(m_quickWindow->mouseGrabberItem(),
-               static_cast<QQuickItem *>(m_velocityInput.data()))
+Mapping/reason: S082
 
 A044 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:129
 Disposition: MATCHED
-Mapping: S083 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts fixture.session.selectedNotes == Set([notes[0].id, notes[1].id]) after the expand-then-contract drag: the contracted band keeps the covered pair and excludes the note covered only by the abandoned extent.
-Source context since previous assertion:
-;
-    mouseMove(windowPoint(expandedEnd));
-    mouseMove(windowPoint(contractedEnd));
-    mouseRelease(Qt::RightButton, windowPoint(contractedEnd));
-
-    // The final rectangle retains the stacked pair and excludes the later
-    // note that was covered only by the abandoned extent.
-
-Original expression:
-  QTRY_VERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
+Mapping: S083
 
 A045 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:130
 Disposition: MATCHED
-Mapping: S085 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts drawerVelocityDocumentSnapshot(document) == baseline after the band release, including revision and history identity, under cppID swiftcore/VelocityPage::gestureTransactions.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revisionBefore)
+Mapping: S085
 
 A046 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:131
 Disposition: PARTIAL
@@ -598,30 +294,15 @@ Original expression:
 
 A047 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:132
 Disposition: MATCHED
-Mapping: S086 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts captured[i] == document.note(i)?.velocity for every note after the band release; the Swift fixture low note publishes 100 where the legacy fixture published 20.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
+Mapping: S086
 
 A048 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:133
 Disposition: MATCHED
-Mapping: S086 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every note still equals its captured velocity after the band release; the Swift fixture second note publishes 64 where the legacy fixture published 70.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
+Mapping: S086
 
 A049 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:134
 Disposition: MATCHED
-Mapping: S086 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every note still equals its captured velocity after the band release; the Swift fixture later note publishes 32 where the legacy fixture published 70.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), 70)
+Mapping: S086
 
 A050 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:135
 Disposition: PARTIAL
@@ -652,17 +333,7 @@ Original expression:
 
 A053 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:143
 Disposition: MATCHED
-Mapping: S096 (src/checks/velocity/VelocityClickSelectionChecks.swift) is the latch guard (report.fail unless selectedNoteOrder == [notes[2].id, notes[0].id]), the same press-time selection-latch observable with the Swift fixture ordered pair.
-Source context since previous assertion:
-;
-}
-
-void VelocityEditingTest::bandUngrabRestoresSelection()
-{
-    m_tab->view().selectionModel().setNoteSelection({m_quietStacked.noteId});
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
+Mapping: S096
 
 A054 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:152
 Disposition: PARTIAL
@@ -692,93 +363,34 @@ Original expression:
 
 A056 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:159
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: m_velocityInput->bounds() is legacy QQuickItem geometry (the file is uncompiled and unregistered, and the Swift lane drives the page pointer seam directly, src/ui/songview/quick/drawer/VelocityPage.qml). The consumer-visible effect (the band press lands and holds a gesture) is asserted by S097 (src/checks/velocity/VelocityClickSelectionChecks.swift).
-Source context since previous assertion:
-;
-
-    const QPointF bandStart{quietNode.x() - horizontalMargin,
-                            std::min(quietNode.y(), loudNode.y()) - verticalMargin};
-    const QPointF expandedEnd{laterNode.x() + horizontalMargin,
-                              std::max(quietNode.y(), loudNode.y()) + verticalMargin};
-
-Original expression:
-  QVERIFY(m_velocityInput->bounds().contains(bandStart))
+Mapping/reason: S097
 
 A057 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:160
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Same QQuickItem-geometry retirement as A056; this case cancels the band, so the expanded extent has no asserted effect and no replacing predicate is claimed for the containment itself.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(m_velocityInput->bounds().contains(expandedEnd))
 
 A058 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:161
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: QApplication::startDragDistance() is the Qt application-global drag threshold the Swift lane never consults; the lane seeds the page dragDistance through configureBody(dragDistance: 10) (src/checks/velocity/VelocityPageChecks.swift). The threshold behavior (arming only beyond the activation distance) is asserted by S049 and S050 (src/checks/velocity/velocitydetentdragging.swift,55); the legacy global itself is representation-only.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(std::abs(expandedEnd.x() - bandStart.x()) + std::abs(expandedEnd.y() - bandStart.y()) >=
-          QApplication::startDragDistance())
+Mapping/reason: S049, S050
 
 A059 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:165
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Qt grabber-identity bookkeeping as in A021 (uncompiled and unregistered legacy file, no Swift-domain grabber); the consumer-visible effect (the band press holds a live gesture) is asserted by S097 (src/checks/velocity/VelocityClickSelectionChecks.swift).
-Source context since previous assertion:
-;
-
-    mousePress(Qt::RightButton, windowPoint(bandStart));
-
-Original expression:
-  QTRY_COMPARE(m_quickWindow->mouseGrabberItem(),
-               static_cast<QQuickItem *>(m_velocityInput.data()))
+Mapping/reason: S097
 
 A060 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:170
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Same Qt grabber-identity representation as A059; the grab precondition has no Swift observation because the ungrab is forwarded to page.pageModel.cancelSectionInteraction() (src/ui/songview/quick/drawer/VelocityPage.qml), and the held-gesture effect is asserted by S097 (src/checks/velocity/VelocityClickSelectionChecks.swift).
-Source context since previous assertion:
-;
-    mouseMove(windowPoint(expandedEnd));
-
-    QQuickItem *const grabber = m_quickWindow->mouseGrabberItem();
-
-Original expression:
-  QVERIFY(grabber)
+Mapping/reason: S097
 
 A061 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:172
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Same representation retirement as A059: the grab ending is Qt item bookkeeping, forwarded in production from the QML onCanceled handler to page.pageModel.cancelSectionInteraction() (src/ui/songview/quick/drawer/VelocityPage.qml); the consumer-visible effect is asserted by S098 (src/checks/velocity/VelocityClickSelectionChecks.swift !page.hasGesture).
-Source context since previous assertion:
-;
-    grabber->ungrabMouse();
-
-Original expression:
-  QTRY_VERIFY(!m_quickWindow->mouseGrabberItem())
+Mapping/reason: S098
 
 A062 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:173
 Disposition: MATCHED
-Mapping: S099 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts selectedNoteOrder == [notes[2].id, notes[0].id] after the cancelled band, restoring the press-time selection membership and insertion order.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_VERIFY(noteSelectionIs({m_quietStacked.noteId}))
+Mapping: S099
 
 A063 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:179
 Disposition: MATCHED
-Mapping: S102 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts the restored ordered selection survives the post-cancellation move and release, so later window-level input cannot replace it.
-Source context since previous assertion:
-;
-
-    // A cancelled band must restore its pre-press selection, and subsequent
-    // window-level input cannot replace it or commit a velocity change.
-    mouseMove(windowPoint(expandedEnd));
-    mouseRelease(Qt::RightButton, windowPoint(expandedEnd));
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
+Mapping: S102
 
 A064 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:180
 Disposition: PARTIAL
@@ -800,30 +412,15 @@ Original expression:
 
 A066 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:182
 Disposition: MATCHED
-Mapping: S103 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts captured[i] == document.note(i)?.velocity for every note after the cancelled band; the Swift fixture low note publishes 100 where the legacy fixture published 20.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
+Mapping: S103
 
 A067 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:183
 Disposition: MATCHED
-Mapping: S103 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every note still equals its captured velocity after the cancelled band; the Swift fixture second note publishes 64 where the legacy fixture published 70.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
+Mapping: S103
 
 A068 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:184
 Disposition: MATCHED
-Mapping: S103 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every note still equals its captured velocity after the cancelled band; the Swift fixture later note publishes 32 where the legacy fixture published 70.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), 70)
+Mapping: S103
 
 Remaining original source (closing sequence and helper bodies):
 ;
@@ -835,558 +432,348 @@ does not close any A entry. Preserve their surrounding setup and order in the pa
 
 S001 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: function
-  report.fail(drawerVelocityTransactionID, "the synthetic fixture published fewer than three notes")
 
 S002 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "one released drag advances the document revision once"
-  report.expectEqual(baseline.revision + 1, committed.revision, cppID: drawerVelocityTransactionID,
-                     what: "one released drag advances the document revision once")
 
 S003 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "one released drag makes exactly one history entry"
-  report.expect(committed.identity != baseline.identity, cppID: drawerVelocityTransactionID,
-                message: "one released drag makes exactly one history entry")
 
 S004 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the drag's entry becomes undoable"
-  report.expect(committed.canUndo && !baseline.canUndo, cppID: drawerVelocityTransactionID,
-                message: "the drag's entry becomes undoable")
 
 S005 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the drag's commit reached the document"
-  report.expect(document.note(notes[0].id)?.velocity != notes[0].velocity, cppID: drawerVelocityTransactionID,
-                message: "the drag's commit reached the document")
 
 S006 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "every selected target moved with the gesture"
-  report.expect(document.note(notes[1].id)?.velocity != notes[1].velocity, cppID: drawerVelocityTransactionID,
-                message: "every selected target moved with the gesture")
 
 S007 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a released gesture clears its preview"
-  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityTransactionID,
-                message: "a released gesture clears its preview")
 
 S008 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the published handle follows the committed value (before \(before) "
-  report.expect(fixture.handle(notes[0])?.y != before, cppID: drawerVelocityProjectionID,
-                message: "the published handle follows the committed value (before \(before) "
-                    + "after \(fixture.handle(notes[0])?.y ?? -1) velocity "
-                    + "\(document.note(notes[0].id)?.velocity ?? 0) level "
-                    + "\(fixture.handle(notes[0])?.level ?? -99)")
 
 S009 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Undo restores the captured velocity"
-  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0),
-                     cppID: drawerVelocityHistoryID, what: "Undo restores the captured velocity")
 
 S010 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Undo restores every target of the transaction"
-  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0),
-                     cppID: drawerVelocityHistoryID, what: "Undo restores every target of the transaction")
 
 S011 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Undo rebuilds the page without losing its handles"
-  report.expectEqual(3, fixture.handles.count, cppID: drawerVelocityHistoryID,
-                     what: "Undo rebuilds the page without losing its handles")
 
 S012 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Redo restores the committed history identity"
-  report.expectEqual(committed.identity, drawerVelocityDocumentSnapshot(document).identity, cppID: drawerVelocityHistoryID,
-                     what: "Redo restores the committed history identity")
 
 S013 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a stationary click records no history"
-  report.expectEqual(pointerBaseline.revision, drawerVelocityDocumentSnapshot(document).revision,
-                     cppID: drawerVelocityTransactionID, what: "a stationary click records no history")
 
 S014 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a stationary click selects only its own note"
-  report.expect(fixture.session.selectedNotes == [notes[0].id], cppID: drawerVelocityTransactionID,
-                message: "a stationary click selects only its own note")
 
 S015 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a live drag previews before release"
-  report.expect(!page.frozenPreview.isEmpty, cppID: drawerVelocityTransactionID,
-                    message: "a live drag previews before release")
 
 S016 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a live drag reports an active interaction"
-  report.expect(page.interactionActive, cppID: drawerVelocityTransactionID,
-                    message: "a live drag reports an active interaction")
 
 S017 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Escape is claimed while a gesture is live"
-  report.expect(page.handleEscape(), cppID: drawerVelocityCancellationID,
-                    message: "Escape is claimed while a gesture is live")
 
 S018 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Escape clears the frozen preview"
-  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityCancellationID,
-                message: "Escape clears the frozen preview")
 
 S019 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Escape writes nothing at all"
-  report.expect(drawerVelocityDocumentSnapshot(document) == cancelBaseline, cppID: drawerVelocityCancellationID,
-                message: "Escape writes nothing at all")
 
 S020 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Escape restores selection membership and insertion order"
-  report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID,
-                message: "Escape restores selection membership and insertion order")
 
 S021 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a release after a foreign change writes nothing"
-  report.expectEqual(foreignRevision + 1, document.revision, cppID: drawerVelocityCancellationID,
-                         what: "a release after a foreign change writes nothing")
 
 S022 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a stale release ends the gesture"
-  report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID,
-                    message: "a stale release ends the gesture")
 
 S023 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the ruler consumes its own press"
-  report.expect(page.pointerPress(x: 10, y: rulerY, surface: 0, button: 1, modifiers: 0),
-                cppID: drawerVelocityTransactionID, message: "the ruler consumes its own press")
 
 S024 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "one ruler click makes one revision"
-  report.expectEqual(rulerBaseline.revision + 1, document.revision, cppID: drawerVelocityTransactionID,
-                     what: "one ruler click makes one revision")
 
 S025 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "one ruler click makes one history entry"
-  report.expect(document.history.currentIdentity != rulerBaseline.identity, cppID: drawerVelocityTransactionID,
-                message: "one ruler click makes one history entry")
 
 S026 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a press inside the plot is not the ruler's"
-  report.expect(!page.pointerPress(x: 200, y: rulerY, surface: 0, button: 1, modifiers: 0),
-                cppID: drawerVelocityTransactionID, message: "a press inside the plot is not the ruler's")
 
 S027 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a middle drag pans the shared camera"
-  report.expect(fixture.session.camera.snapshot.scrollX > panScroll, cppID: drawerVelocityTransactionID,
-                message: "a middle drag pans the shared camera")
 
 S028 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a live pan suspends follow through the page's own interaction"
-  report.expect(page.interactionActive, cppID: drawerVelocityTransactionID,
-                message: "a live pan suspends follow through the page's own interaction")
 
 S029 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the pan ends on release"
-  report.expect(!page.hasGesture, cppID: drawerVelocityTransactionID, message: "the pan ends on release")
 
 S030 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "panning writes no document state"
-  report.expect(drawerVelocityDocumentSnapshot(document) == panBaseline, cppID: drawerVelocityTransactionID,
-                message: "panning writes no document state")
 
 S031 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a PSG context offers the detent control, enabled by default"
-  report.expect(page.detentsAvailable && page.detentsEnabled, cppID: drawerVelocityTransactionID,
-                message: "a PSG context offers the detent control, enabled by default")
 
 S032 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the PSG context presents the intrinsic ruler"
-  report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode,
-                     cppID: drawerVelocityTransactionID,
-                     what: "the PSG context presents the intrinsic ruler")
 
 S033 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "an enabled detent set draws the level graduations"
-  report.expect(page.axisGraduationsVisible, cppID: drawerVelocityTransactionID,
-                message: "an enabled detent set draws the level graduations")
 
 S034 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the detent case starts from a live preview"
-  report.expect(!page.frozenPreview.isEmpty, cppID: drawerVelocityTransactionID,
-                    message: "the detent case starts from a live preview")
 
 S035 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "toggling detents cancels the live interaction"
-  report.expect(!page.detentsEnabled && page.frozenPreview.isEmpty, cppID: drawerVelocityTransactionID,
-                    message: "toggling detents cancels the live interaction")
 
 S036 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "disabled detents put the ruler on the continuous rendering"
-  report.expect(page.axisGraduationsVisible == false, cppID: drawerVelocityTransactionID,
-                message: "disabled detents put the ruler on the continuous rendering")
 
 S037 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the voice's own map stays intrinsic under the ruler switch"
-  report.expect(page.axisModel.mode == .intrinsic, cppID: drawerVelocityTransactionID,
-                message: "the voice's own map stays intrinsic under the ruler switch")
 
 S038 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a disabled detent set places nodes at their exact velocity"
-  report.expect(abs(handle.y - exactY) < 0.001, cppID: drawerVelocityTransactionID,
-                    message: "a disabled detent set places nodes at their exact velocity")
 
 S039 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the detent toggle writes no document state"
-  report.expect(drawerVelocityDocumentSnapshot(document) == panBaseline, cppID: drawerVelocityTransactionID,
-                message: "the detent toggle writes no document state")
 
 S040 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a band selection writes nothing"
-  report.expectEqual(bandBaseline.revision, document.revision, cppID: drawerVelocityTransactionID,
-                     what: "a band selection writes nothing")
 
 S041 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the band selected every note it covered"
-  report.expectEqual(3, fixture.session.selectedNotes.count, cppID: drawerVelocityTransactionID,
-                     what: "the band selected every note it covered")
 
 S042 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: function
-  report.fail(drawerVelocityGestureID, "the synthetic fixture published fewer than three notes")
 
 S043 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "every note of the primary track publishes one handle"
-  report.expectEqual(3, fixture.handles.count, cppID: drawerVelocityProjectionID,
-                     what: "every note of the primary track publishes one handle")
 
 S044 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: function
-  report.fail(drawerVelocityProjectionID, "the fixture's notes have no published handles")
 
 S045 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a fresh selection publishes no selected handle"
-  report.expect(!firstHandle.selected, cppID: drawerVelocityProjectionID,
-                message: "a fresh selection publishes no selected handle")
 
 S046 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "an intrinsic handle publishes the level of its displayed value"
-  report.expectEqual(openingMap.level(of: Int(notes[0].velocity)) ?? -1, firstHandle.level,
-                     cppID: drawerVelocityProjectionID,
-                     what: "an intrinsic handle publishes the level of its displayed value")
 
 S047 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the handle's x is a plot-local camera projection"
-  report.expect(abs(firstHandle.x - page.axisModel.geometry.labelWidth - 56) < 1.0
-                    || firstHandle.x <= 400, cppID: drawerVelocityProjectionID,
-                message: "the handle's x is a plot-local camera projection")
 
 S048 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the handle publishes a drawn y inside the body"
-  report.expect(fixture.handle(notes[0])!.y < firstHandle.hitRadius * 2
-                    || firstHandle.y > 0, cppID: drawerVelocityProjectionID,
-                message: "the handle publishes a drawn y inside the body")
 
 S049 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a drag inside the activation distance previews nothing"
-  report.expect(!gesture.relativeActivated && gesture.preview.isEmpty, cppID: drawerVelocityGestureID,
-                message: "a drag inside the activation distance previews nothing")
 
 S050 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "leaving the activation distance arms the relative drag"
-  report.expect(gesture.relativeActivated, cppID: drawerVelocityGestureID,
-                message: "leaving the activation distance arms the relative drag")
 
 S051 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the low note takes the whole delta"
-  report.expectEqual(30, Int(gesture.preview[NoteID(1)] ?? 0), cppID: drawerVelocityGestureID,
-                     what: "the low note takes the whole delta")
 
 S052 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the high note clamps to the maximum instead of wrapping"
-  report.expectEqual(127, Int(gesture.preview[NoteID(2)] ?? 0), cppID: drawerVelocityGestureID,
-                     what: "the high note clamps to the maximum instead of wrapping")
 
 S053 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the commit payload carries one update per frozen note"
-  report.expectEqual(2, VelocityGesturePolicy.updates(gesture).count, cppID: drawerVelocityGestureID,
-                     what: "the commit payload carries one update per frozen note")
 
 S054 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the first level follows the level delta"
-  report.expectEqual(Int(psgMap.representative(9)), Int(psgGesture.preview[NoteID(3)] ?? 0),
-                     cppID: drawerVelocityGestureID, what: "the first level follows the level delta")
 
 S055 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the second level keeps its own offset"
-  report.expectEqual(Int(psgMap.representative(11)), Int(psgGesture.preview[NoteID(4)] ?? 0),
-                     cppID: drawerVelocityGestureID, what: "the second level keeps its own offset")
 
 S056 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the detent unlock takes exact MIDI velocity"
-  report.expectEqual(127,
-                     Int(VelocityGesturePolicy.resolvedVelocity(axis: psgAxis, noteMap: psgMap,
-                                                                detentUnlock: true, y: 0)),
-                     cppID: drawerVelocityGestureID,
-                     what: "the detent unlock takes exact MIDI velocity")
 
 S057 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a locked intrinsic drag canonicalizes onto the note's own map"
-  report.expectEqual(Int(psgMap.canonicalize(76)),
-                     Int(VelocityGesturePolicy.resolvedVelocity(axis: psgAxis, noteMap: psgMap,
-                                                                detentUnlock: false,
-                                                                y: psgAxis.levelToY(9))),
-                     cppID: drawerVelocityGestureID,
-                     what: "a locked intrinsic drag canonicalizes onto the note's own map")
 
 S058 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the sweep covers every node the column reaches"
-  report.expectEqual(2, painted.count, cppID: drawerVelocityGestureID,
-                     what: "the sweep covers every node the column reaches")
 
 S059 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the painted ramp follows the swept line's own direction"
-  report.expect(painted[0].velocity < painted[1].velocity, cppID: drawerVelocityGestureID,
-                message: "the painted ramp follows the swept line's own direction")
 
 S060 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a sweep that stops short leaves the far node alone"
-  report.expectEqual(1, partial.count, cppID: drawerVelocityGestureID,
-                     what: "a sweep that stops short leaves the far node alone")
 
 S061 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a stationary paint only takes the nodes in its own column"
-  report.expectEqual(1, singleColumn.count, cppID: drawerVelocityGestureID,
-                     what: "a stationary paint only takes the nodes in its own column")
 
 S062 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the note at the press position keeps the press velocity"
-  report.expectEqual(100, Int(ramp.preview[NoteID(5)] ?? 0), cppID: drawerVelocityGestureID,
-                     what: "the note at the press position keeps the press velocity")
 
 S063 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a note inside the ramp span takes the swept line's value"
-  report.expectEqual(75, Int(ramp.preview[NoteID(7)] ?? 0), cppID: drawerVelocityGestureID,
-                     what: "a note inside the ramp span takes the swept line's value")
 
 S064 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a note outside the ramp span keeps its captured velocity"
-  report.expectEqual(40, Int(ramp.preview[NoteID(6)] ?? 0), cppID: drawerVelocityGestureID,
-                     what: "a note outside the ramp span keeps its captured velocity")
 
 S065 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a preview that matches the captured values commits nothing"
-  report.expect(VelocityGesturePolicy.updates(flatState).isEmpty, cppID: drawerVelocityGestureID,
-                message: "a preview that matches the captured values commits nothing")
 
 S066 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "only the values that differ from the captured ones are committed"
-  report.expect(moved.count == 1 && moved[0].noteID == movedNote.noteID
-                && moved[0].velocity == Int(movedNote.velocity) + 7,
-                cppID: drawerVelocityGestureID,
-                message: "only the values that differ from the captured ones are committed")
 
 S067 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the ramp interpolates linearly"
-  report.expect(abs(velocityRampValue(at: 20, x0: 0, y0: 0, x1: 40, y1: 40) - 20) < 1e-9,
-                cppID: drawerVelocityGestureID, message: "the ramp interpolates linearly")
 
 S068 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a vertical span resolves to the near endpoint"
-  report.expect(abs(velocityRampValue(at: 5, x0: 10, y0: 3, x1: 10, y1: 9) - 9) < 1e-9,
-                cppID: drawerVelocityGestureID, message: "a vertical span resolves to the near endpoint")
 
 S069 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the published hit radius is font-relative and positive"
-  report.expect(thirdHandle.hitRadius > 0, cppID: drawerVelocityGestureID,
-                message: "the published hit radius is font-relative and positive")
 
 S070 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "Set Velocity is unavailable with no selection"
-  report.expect(!grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
-                message: "Set Velocity is unavailable with no selection")
 
 S071 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "Set Velocity becomes available with a selection"
-  report.expect(grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
-                message: "Set Velocity becomes available with a selection")
 
 S072 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the existing command row asks its owner for the prompt"
-  report.expectEqual(1, requested, cppID: drawerVelocityCommandID,
-                     what: "the existing command row asks its owner for the prompt")
 
 S073 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the command commits no value before prompt acceptance"
-  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
-                message: "the command commits no value before prompt acceptance")
 
 S074 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the command routes every execution through the same owner"
-  report.expectEqual(2, requested, cppID: drawerVelocityCommandID,
-                     what: "the command routes every execution through the same owner")
 
 S075 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the routed command opened the page's captured prompt"
-  report.expect(fixture.page.promptOpen, cppID: drawerVelocityCommandID,
-                message: "the routed command opened the page's captured prompt")
 
 S076 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "cancelling the routed prompt still commits nothing"
-  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
-                message: "cancelling the routed prompt still commits nothing")
 
 S077 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the command table keeps Set Velocity on the notes arm"
-  report.expectEqual(EditNotesOperation.setVelocity.rawValue,
-                     row?.notesOperation.rawValue ?? -1, cppID: drawerVelocityCommandID,
-                     what: "the command table keeps Set Velocity on the notes arm")
 
 S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the command table keeps Set Velocity's consume route"
-  report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
-                     cppID: drawerVelocityCommandID,
-                     what: "the command table keeps Set Velocity's consume route")
 
 S079 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  guard fixture.session.selectedNoteOrder == [notes[2].id] else {
 
 S080 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  guard contractedX > second.x, contractedX < third.x, first.x < contractedX else {
 
 S081 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a band press is consumed"
-  report.expect(pressed, cppID: drawerVelocityClickSelectionID, message: "a band press is consumed")
 
 S082 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a band press holds a live gesture"
-  report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a band press holds a live gesture")
 
 S083 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "the contracted band keeps the covered pair and drops the later note"
-  report.expect(fixture.session.selectedNotes == Set([notes[0].id, notes[1].id]), cppID: drawerVelocityClickSelectionID, message: "the contracted band keeps the covered pair and drops the later note")
 
 S084 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a band release ends the gesture"
-  report.expect(!page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a band release ends the gesture")
 
 S085 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a band selection writes nothing"
-  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityTransactionID, message: "a band selection writes nothing")
 
 S086 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a band selection leaves every velocity captured"
-  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a band selection leaves every velocity captured")
 
 S087 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  guard fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id] else {
 
 S088 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "pressing another node provisionally selects it"
-  report.expect(fixture.session.selectedNoteOrder == [notes[1].id], cppID: drawerVelocityClickSelectionID, message: "pressing another node provisionally selects it")
 
 S089 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a provisional press holds a live gesture"
-  report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a provisional press holds a live gesture")
 
 S090 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "cancelling clears the provisional gesture"
-  report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "cancelling clears the provisional gesture")
 
 S091 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "cancelling restores selection membership and insertion order"
-  report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "cancelling restores selection membership and insertion order")
 
 S092 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "cancelling writes nothing at all"
-  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "cancelling writes nothing at all")
 
 S093 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a release after cancellation is inert"
-  report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "a release after cancellation is inert")
 
 S094 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a late release cannot revive the discarded selection"
-  report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "a late release cannot revive the discarded selection")
 
 S095 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a cancelled press leaves every velocity captured"
-  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a cancelled press leaves every velocity captured")
 
 S096 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  guard fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id] else {
 
 S097 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a band press holds a live gesture"
-  report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a band press holds a live gesture")
 
 S098 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "cancelling clears the live band"
-  report.expect(!page.hasGesture, cppID: drawerVelocityCancellationID, message: "cancelling clears the live band")
 
 S099 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a cancelled band restores selection membership and insertion order"
-  report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "a cancelled band restores selection membership and insertion order")
 
 S100 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "cancelling writes nothing at all"
-  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "cancelling writes nothing at all")
 
 S101 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "input after cancellation starts no band"
-  report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "input after cancellation starts no band")
 
 S102 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "input after cancellation cannot replace the restored selection"
-  report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "input after cancellation cannot replace the restored selection")
 
 S103 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a cancelled band leaves every velocity captured"
-  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a cancelled band leaves every velocity captured")
 
 S104 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  guard fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id] else {
 
 S105 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a live drag previews the pressed note"
-  report.expect(page.frozenPreview[notes[0].id] != nil, cppID: drawerVelocityClickSelectionID, message: "a live drag previews the pressed note")
 
 S106 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a live drag previews every selected target"
-  report.expect(page.frozenPreview[notes[2].id] != nil, cppID: drawerVelocityClickSelectionID, message: "a live drag previews every selected target")
 
 S107 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a live drag reports an active gesture"
-  report.expect(page.hasGesture && page.interactionActive, cppID: drawerVelocityClickSelectionID, message: "a live drag reports an active gesture")
 
 S108 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a primary-track switch ends the live gesture"
-  report.expect(!page.hasGesture, cppID: drawerVelocityCancellationID, message: "a primary-track switch ends the live gesture")
 
 S109 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a primary-track switch clears every preview"
-  report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "a primary-track switch clears every preview")
 
 S110 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a primary-track switch writes nothing at all"
-  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "a primary-track switch writes nothing at all")
 
 S111 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a release after the switch is inert"
-  report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "a release after the switch is inert")
 
 S112 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a late release still writes nothing"
-  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "a late release still writes nothing")
 
 S113 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a cancelled drag leaves every velocity captured"
-  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a cancelled drag leaves every velocity captured")
 
 S114 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a late release previews nothing"
-  report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "a late release previews nothing")
 
 S115 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "a PSG voice uses the intrinsic level ruler"
-  report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, square.mode.rawValue, cppID: drawerVelocityPsgID,
-                     what: "a PSG voice uses the intrinsic level ruler")
 
 S116 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "Programmable Wave publishes five volume levels"
-  report.expectEqual(5, wave.graduations.count, cppID: drawerVelocityPsgID,
-                     what: "Programmable Wave publishes five volume levels")

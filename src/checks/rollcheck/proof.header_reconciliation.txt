@@ -9,25 +9,8 @@ Additional Swift counterpart: src/checks/trackheaders/trackheadermutations.swift
 Additional Swift counterpart: src/checks/trackheaders/trackheadermenu.swift
 Additional Swift counterpart: src/checks/trackheaders/headerfixture.swift
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact counterpart predicates, listed after the inventory.
-checkHeaderReconciliation in presentation.swift drives both header-reconciliation
-slots at presenter level: it seeds a two-track fixture, asserts its ordered records
-with the trailing add-track row, asserts an unchanged refresh rebuilds nothing,
-deletes the last used track, asserts the rebuilt records, undoes, then opens and
-cancels a rename across a structural replacement. The paired trackheaders checks
-supply the rename open/cancel/commit and ordered-row predicates.
 Disposition tally: 13 sites: 7 MATCHED, 2 PARTIAL, 0 GAP, 4 NATIVE.
-MATCHED identifies equivalent model predicates executed by the swiftcore suite.
-PARTIAL identifies related counterpart predicates with an explicit unproved condition.
-NATIVE identifies retained native fixture/viewport preconditions; it does not
-establish coverage of the converted Swift surface.
-GAP identifies an original predicate without a replacement assertion.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run); the registered
 swiftcore projectSession suite executed runPresentationChecks and runTrackHeadersChecks
@@ -39,125 +22,16 @@ Command: deno task verify:shell --verbose
 Result: PASS — 11/11 ok (controller-recorded post-change run); no header-reconciliation
 site depends on the shell lane. The shell and roll QML runs predate only a
 swiftcore-checks-only commit; no production or QML source changed after them.
-The legacy rollcheck header C++ slot was deleted in 91cab247; its source is a
-reference inventory only, never current execution evidence.
-
-Execution and ownership
-runPresentationChecks executes checkHeaderReconciliation from the projectSession
-Swift suite (swiftcore); runTrackHeadersChecks executes the paired
-rename/ordered-row predicates in trackheadermutations.swift, trackheadermenu.swift
-and headerfixture.swift. The original slots' native HeaderFixture (SongDocument,
-MidiTimeline, SongView, TrackHeaderModel, modelReset observation) and the
-headerchecksupport.h record oracles have no Swift equivalent; the Swift check drives
-TrackHeadersPresenter directly.
-
-Fixture, sequence and row constraints
-The original slots each loaded the same song label through checks::LoadedSong and
-prepared one HeaderFixture; modelReset observations connect per slot and clear
-between replacements. The Swift check seeds a one-track song, adds a second track,
-builds a TrackHeadersPresenter (rows 0 and 1 plus the trailing add row), snapshots
-row identities, refreshes without a rebuild, deletes the last used track, undoes,
-and opens/cancels a rename around a second structural deletion. No _data rows
-expand sites in this file.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | headerReconciliationUnchanged | src/checks/rollcheck/header_reconciliation.cpp:69
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/header_reconciliation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  #include "checks/rollcheck/tst_pianoroll.h"
-
-  #include <QtTest>
-
-  #include <QAbstractItemModel>
-  #include <QCoreApplication>
-  #include <memory>
-  #include <optional>
-
-  #include "checks/rollcheck/headerchecksupport.h"
-  #include "checks/support/quickframebuffer.h"
-  #include "checks/support/songfixture.h"
-  #include "core/songdocument.h"
-  #include "ui/songview.h"
-
-  namespace {
-  using checks::rollcheck::headercheck::addTrackRow;
-  using checks::rollcheck::headercheck::model;
-  using checks::rollcheck::headercheck::ModelChanges;
-  using checks::rollcheck::headercheck::recordsMatchTimeline;
-  using checks::rollcheck::headercheck::rowForTrack;
-
-  struct HeaderFixture {
-      SongDocument document;
-      std::unique_ptr<MidiTimeline> timeline;
-      SongView view;
-      songview::TrackHeaderModel *headers = nullptr;
-      int firstUsed = -1;
-      bool documentLoaded = false;
-      int lastUsed = -1;
-
-      bool prepare(const SongInfo &song, QString *error)
-      {
-          if (!document.load(song, error))
-              return false;
-          documentLoaded = true;
-          timeline = document.buildTimeline(48000.0);
-          if (!checks::support::showQuickViewport(view, QSize(800, 480)))
-              return false;
-          view.setSong(timeline.get(), nullptr);
-          view.setDocument(&document);
-          headers = model(view);
-          if (!headers)
-              return false;
-          for (int track = 0; track < 16; ++track) {
-              if (!timeline->tracks[track].used)
-                  continue;
-              if (firstUsed < 0)
-                  firstUsed = track;
-              lastUsed = track;
-          }
-          return true;
-      }
-
-      bool hasOrderedRecords() const
-      {
-          const std::optional<int> add = addTrackRow(*headers);
-          return firstUsed >= 0 && firstUsed != lastUsed && rowForTrack(*headers, firstUsed) &&
-                 rowForTrack(*headers, lastUsed) && add && *add == headers->rowCount() - 1;
-      }
-  };
-  } // namespace
-
-  void PianoRollTest::headerReconciliationUnchanged()
-  {
-      QString error;
-      const std::unique_ptr<checks::LoadedSong> source =
-          checks::LoadedSong::load(m_project->root(), m_songLabel, error);
-Original expression:
-      QVERIFY2(source, qPrintable(error));
 
 A002 | headerReconciliationUnchanged | src/checks/rollcheck/header_reconciliation.cpp:73
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/header_reconciliation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      HeaderFixture fixture;
-      if (!fixture.prepare(source->songInfo(), &error)) {
-Original expression:
-          QFAIL(fixture.documentLoaded ? "header reconciliation fixture lacks TrackHeaderModel"
-                                       : "could not load header reconciliation fixture");
 
 A003 | headerReconciliationUnchanged | src/checks/rollcheck/header_reconciliation.cpp:77
 Disposition: MATCHED
-Mapping: S001 (src/checks/rollcheck/presentation.swift) asserts the shared fixture's presenter rows are exactly [0, 1, add] with the trailing add-track row last, the ordered-records and last-add-row precondition this guard checks; S012 (src/checks/trackheaders/headerfixture.swift) corroborates the add-track row staying last in the ordered row oracle.
-Source context since previous assertion:
-      }
-      if (!fixture.hasOrderedRecords())
-Original expression:
-          QFAIL("header reconciliation fixture lacks ordered records and a last add record");
+Mapping: S001, S012
 
 A004 | headerReconciliationUnchanged | src/checks/rollcheck/header_reconciliation.cpp:88
 Disposition: PARTIAL
@@ -178,29 +52,9 @@ Original expression:
 
 A005 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:97
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/header_reconciliation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-      }
-  }
-
-  void PianoRollTest::headerReconciliationStructural()
-  {
-      QString error;
-      const std::unique_ptr<checks::LoadedSong> source =
-          checks::LoadedSong::load(m_project->root(), m_songLabel, error);
-Original expression:
-      QVERIFY2(source, qPrintable(error));
 
 A006 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:101
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/header_reconciliation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-      HeaderFixture fixture;
-      if (!fixture.prepare(source->songInfo(), &error)) {
-Original expression:
-          QFAIL(fixture.documentLoaded ? "header reconciliation fixture lacks TrackHeaderModel"
-                                       : "could not load header reconciliation fixture");
 
 A007 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:105
 Disposition: PARTIAL
@@ -213,84 +67,27 @@ Original expression:
 
 A008 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:114
 Disposition: MATCHED
-Mapping: S003 (src/checks/rollcheck/presentation.swift) asserts deleting the last used track leaves exactly one used engine track whose first slot carries a MIDI chunk.
-Source context since previous assertion:
-
-      ModelChanges changes;
-      QObject::connect(fixture.headers, &QAbstractItemModel::modelReset, &fixture.view,
-                       [&changes] { ++changes.resets; });
-      fixture.document.deleteTrack(fixture.lastUsed);
-      std::unique_ptr<MidiTimeline> replacement = fixture.document.buildTimeline(48000.0);
-      if (replacement->tracks[fixture.lastUsed].used ||
-          !replacement->tracks[fixture.firstUsed].used) {
-Original expression:
-          QFAIL("replacement fixture did not drop exactly the last used slot");
+Mapping: S003
 
 A009 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:122
 Disposition: MATCHED
-Mapping: S004 (src/checks/rollcheck/presentation.swift) asserts the structural deletion rebuilds ordered records exactly once (rowRebuildCount == resets + 1, rows [0, add], deleted last-track row absent); it does not claim native setSong/modelReset delivery.
-Source context since previous assertion:
-      }
-
-      changes.clear();
-      fixture.view.setSong(replacement.get(), nullptr);
-      if (changes.resets != 1 ||
-          !recordsMatchTimeline(*fixture.headers, *replacement, fixture.document.canAddTrack()) ||
-          rowForTrack(*fixture.headers, fixture.lastUsed)) {
-Original expression:
-          QFAIL("structural header replacement did not reset to the replacement records");
+Mapping: S004
 
 A010 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:135
 Disposition: MATCHED
-Mapping: S005 (src/checks/rollcheck/presentation.swift) asserts one further presenter rebuild restores the last used track and the trailing add row in order after the undo; it does not claim native setSong/modelReset delivery.
-Source context since previous assertion:
-      }
-
-      fixture.document.undoStack()->undo();
-      fixture.timeline = fixture.document.buildTimeline(48000.0);
-      changes.clear();
-      fixture.view.setSong(fixture.timeline.get(), nullptr);
-      const std::optional<int> restoredAdd = addTrackRow(*fixture.headers);
-      if (changes.resets != 1 ||
-          !recordsMatchTimeline(*fixture.headers, *fixture.timeline,
-                                fixture.document.canAddTrack()) ||
-          !rowForTrack(*fixture.headers, fixture.lastUsed) || !restoredAdd ||
-          *restoredAdd != fixture.headers->rowCount() - 1) {
-Original expression:
-          QFAIL("re-added track did not restore ordered model records and last add row");
+Mapping: S005
 
 A011 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:141
 Disposition: MATCHED
-Mapping: S006 (src/checks/rollcheck/presentation.swift) asserts the rename editor opens with renamingTrack == 0 on the retained first record; S009 (src/checks/trackheaders/trackheadermutations.swift) corroborates that rename targets the clicked track.
-Source context since previous assertion:
-      }
-      // An open rename state does not survive a structural song replacement:
-      // the reset cancels it without committing the draft.
-      fixture.view.renameTrack(fixture.firstUsed);
-      if (fixture.headers->renamingTrack() != fixture.firstUsed)
-Original expression:
-          QFAIL("rename state did not open on a live TrackHeaderModel record");
+Mapping: S006, S009
 
 A012 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:148
 Disposition: MATCHED
-Mapping: S007 (src/checks/rollcheck/presentation.swift) asserts the structural replacement cancels the open rename (renamingTrack == -1) and advances the row rebuild count exactly once; S010 (src/checks/trackheaders/trackheadermutations.swift) corroborates that a cancel closes the editor.
-Source context since previous assertion:
-
-      fixture.headers->setRenameDraft(QStringLiteral("zzz"));
-      changes.clear();
-      fixture.view.setSong(replacement.get(), nullptr);
-      QCoreApplication::processEvents();
-      if (changes.resets != 1 || fixture.headers->renamingTrack() != -1)
-Original expression:
-          QFAIL("song replacement did not cancel the open header rename state");
+Mapping: S007, S010
 
 A013 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:150
 Disposition: MATCHED
-Mapping: S008 (src/checks/rollcheck/presentation.swift) asserts the cancelled draft cannot commit across the replacement (the first track name is not "zzz"); S011 (src/checks/trackheaders/trackheadermenu.swift) corroborates that a cancelled editor cannot reopen or commit.
-Source context since previous assertion:
-      if (fixture.document.trackName(fixture.firstUsed) == QStringLiteral("zzz"))
-Original expression:
-          QFAIL("cancelled rename committed across song replacement");
+Mapping: S008, S011
 
 Remaining original source (closing sequence and helper bodies):
   }
@@ -302,77 +99,36 @@ Their presence alone does not close any A entry.
 
 S001 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
 Anchor: message "ordered tracks have one trailing add-track record"
-Counterpart expression:
-report.expect(initialRows.map(\.track) == [0, 1, -1]
-              && initialRows.last?.isAddTrack == true, cppID: unchangedID,
-              message: "ordered tracks have one trailing add-track record")
 
 S002 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
 Anchor: message "unchanged refresh preserves ordered header records and identities"
-Counterpart expression:
-report.expect(headers.rowRebuildCount == resets && headers.rows.count == initialRows.count
-              && (0..<headers.rows.count).allSatisfy { headers.rows[$0] === initialRows[$0] },
-              cppID: unchangedID,
-              message: "unchanged refresh preserves ordered header records and identities")
 
 S003 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
 Anchor: message "replacement drops the last used track, keeping the first"
-Counterpart expression:
-report.expect(document.engineTracks.usedTrackCount == 1
-              && document.engineTracks.tracks[0].midiChunk != nil, cppID: structuralID,
-              message: "replacement drops the last used track, keeping the first")
 
 S004 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
 Anchor: message "structural deletion rebuilds ordered records exactly once"
-Counterpart expression:
-report.expect(headers.rowRebuildCount == resets + 1 && headers.rows.count == 2
-              && headers.rows[0].track == 0 && headers.rows[1].isAddTrack,
-              cppID: structuralID,
-              message: "structural deletion rebuilds ordered records exactly once")
 
 S005 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
 Anchor: message "undo restores the last record and trailing add row in one reset"
-Counterpart expression:
-report.expect(headers.rowRebuildCount == resets + 2 && headers.rows.count == 3
-              && headers.rows[1].track == lastUsed && headers.rows[2].isAddTrack,
-              cppID: structuralID,
-              message: "undo restores the last record and trailing add row in one reset")
 
 S006 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
 Anchor: message "rename opens on the retained first record"
-Counterpart expression:
-report.expectEqual(0, headers.renamingTrack, cppID: structuralID,
-                   what: "rename opens on the retained first record")
 
 S007 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
 Anchor: message "replacement cancels the open header rename"
-Counterpart expression:
-report.expect(headers.renamingTrack == -1 && headers.rowRebuildCount == resets + 3,
-              cppID: structuralID, message: "replacement cancels the open header rename")
 
 S008 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
 Anchor: message "cancelled draft cannot commit across the replacement"
-Counterpart expression:
-report.expect(document.trackName(0) != "zzz", cppID: structuralID,
-              message: "cancelled draft cannot commit across the replacement")
 
 S009 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift
 Anchor: message "rename targets clicked track"
-Counterpart expression:
-      report.expectEqual(0, h.renamingTrack, cppID: id, what: "rename targets clicked track")
 
 S010 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift
 Anchor: message "cancel closes editor"
-Counterpart expression:
-      report.expectEqual(-1, h.renamingTrack, cppID: id, what: "cancel closes editor")
 
 S011 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "cancelled editor cannot reopen or commit"
-Counterpart expression:
-      report.expectEqual(-1, h.renamingTrack, cppID: id, what: "cancelled editor cannot reopen or commit")
 
 S012 | expectRows | src/checks/trackheaders/headerfixture.swift
 Anchor: message "\(phase): add-track row remains last"
-Counterpart expression:
-          report.expectEqual([names.count], addRows, cppID: cppID,
-                             what: "\(phase): add-track row remains last")

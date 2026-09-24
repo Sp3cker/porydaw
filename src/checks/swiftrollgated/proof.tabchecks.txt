@@ -7,23 +7,7 @@ Swift counterpart: src/checks/editorqml/tst_ShellTabs.qml
 Additional Swift counterpart: src/checks/editorqml/TabsDrawerProbe.swift
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro site appears below, including mode gates. Source context preserves
-setup, rows, loops and guards between assertions verbatim. S identifiers identify
-exact shell-lane predicates, listed after the inventory.
-MATCHED means the named shell-lane predicate executes the same observation on the
-production Swift shell; PARTIAL means a related predicate exists but the stated
-condition is unproved; GAP means no equivalent shell-lane predicate is established.
-Unsure between PARTIAL and GAP is recorded as GAP. Bookkeeping must not overclaim.
-Song tab strip for the swiftrollgated surface: geometry and selection, scroll
-controls and grid input, independent workspaces, page-state switching, pointer
-reorder, background and final close, reopen focus, and the dirty close gate. The
-Swift shell canvas-paints notes, so per-note item identity sites are PARTIAL with
-pixel and interaction coverage; C++ harness mechanics without a shell-lane layer
-are PARTIAL or GAP with the observable behavior cited.
 
-Verification
 Command: deno task verify:shell --filter shell-tabs --verbose
 Result: PASS, entry green with every TestCase slot passing.
 Command: deno task verify:shell --filter shellwindow --verbose
@@ -31,403 +15,177 @@ Result: PASS, the existing lane is unaffected.
 Command: deno task proof check
 Result: PASS.
 
-Execution and ownership
-ShellQmlLane (src/checks/editorqml/ShellQmlTests.swift) stages the four-song
-fixture and runs tst_ShellTabs.qml through shell_qml_tests; TabsDrawerProbe
-supplies staged song-file fingerprints. The S predicates below name the exact QML
-observations.
-
-Fixture, sequence and row constraints
-One shell per TestCase function over the staged decomp project: mus_route101
-first, then mus_littleroot_test, mus_route102 and mus_gym as each scenario needs.
-Every open awaits tabCount and a rendered grid per tab; every close walks the
-dirty gate, answering Discard at teardown. No data rows expand sites in this file.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory
-
 A001 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:48
 Disposition: MATCHED
-Mapping/reason: Matched by S001 (shell-tabs entry runs this surface by construction; no mode switch exists).
-Source context since previous assertion:
-void SwiftRollGatedTest::songTabsGeometryAndSelection()
-{
-    if (m_mode != QStringLiteral("swiftrollgated"))
-Original expression:
-QSKIP("song tab geometry and selection belong to the swiftrollgated surface")
+Mapping: S001
 
 A002 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:52
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (staged project opens with a rendered grid per tab).
-Source context since previous assertion:
-
-    TabScene scene;
-    QString error;
-Original expression:
-QVERIFY2(scene.open(m_projectRoot, m_songLabel, &error), qPrintable(error))
+Mapping: S002
 
 A003 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:54
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-    const int firstId = scene.selectedId();
-Original expression:
-QVERIFY(firstId >= 0)
+Mapping: S011
 
 A004 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:57
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (each label appends a tab with a rendered grid).
-Source context since previous assertion:
-    int secondId = -1;
-    int thirdId = -1;
-Original expression:
-QVERIFY2(scene.openSong(kSecondSong, &secondId, &error), qPrintable(error))
+Mapping: S002
 
 A005 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:58
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (each label appends a tab with a rendered grid).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.openSong(kThirdSong, &thirdId, &error), qPrintable(error))
+Mapping: S002
 
 A006 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:59
 Disposition: MATCHED
-Mapping/reason: Matched by S006 (strip order and count read from the drawn buttons).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.tabCount(), 3)
+Mapping: S006
 
 A007 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:60
 Disposition: MATCHED
-Mapping/reason: Matched by S006 (strip order read from the drawn buttons).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.idAt(0), firstId)
+Mapping: S006
 
 A008 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:61
 Disposition: MATCHED
-Mapping/reason: Matched by S006 (strip order read from the drawn buttons).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.idAt(1), secondId)
+Mapping: S006
 
 A009 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:62
 Disposition: MATCHED
-Mapping/reason: Matched by S006 (strip order read from the drawn buttons).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.idAt(2), thirdId)
+Mapping: S006
 
 A010 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:66
 Disposition: MATCHED
-Mapping/reason: Matched by S004 (real strip click with selectedId and page visibility awaited).
-Source context since previous assertion:
-
-    // Selecting reveals its tab, so the measured tab is inside the strip, and
-    // three tabs fit, so no selection can scroll the measured geometry.
-Original expression:
-QVERIFY2(scene.select(firstId, &error), qPrintable(error))
+Mapping: S004
 
 A011 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:67
 Disposition: MATCHED
-Mapping/reason: Matched by S007 (viewport membership read against the scroll controls).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.tabButtonVisible(thirdId),
-
-             "the three tabs do not fit the window, so the strip geometry is scrolled")
+Mapping: S007
 
 A012 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:74
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-
-    QQuickItem *const strip = scene.strip();
-    QQuickItem *const pages = scene.pages();
-    QQuickItem *const button = scene.selectButton(firstId);
-    QQuickItem *const close = scene.closeButton(firstId);
-Original expression:
-QVERIFY(strip != nullptr)
+Mapping: S011
 
 A013 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:75
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(pages != nullptr)
+Mapping: S011
 
 A014 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:76
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(button != nullptr)
+Mapping: S011
 
 A015 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:77
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(close != nullptr)
+Mapping: S011
 
 A016 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:78
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(strip->isVisible())
+Mapping: S011
 
 A017 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:79
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(pages->isVisible())
+Mapping: S011
 
 A018 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:83
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-
-    const QFont tabFont = button->property("font").value<QFont>();
-    const TabMetrics *const metrics = tabMetricsFor(tabFont.pixelSize());
-Original expression:
-QVERIFY2(metrics != nullptr,
-             qPrintable(QStringLiteral("the tab label font resolved to %1px, which is not a "
-                                       "captured production font scale")
-                            .arg(tabFont.pixelSize())))
+Mapping: S011
 
 A019 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:96
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-
-    const QRectF rootRect = sceneRectOf(scene.m_root);
-    const QRectF stripRect = sceneRectOf(strip);
-    const QRectF pagesRect = sceneRectOf(pages);
-    const QRectF buttonRect = sceneRectOf(button);
-    const QRectF closeRect = sceneRectOf(close);
-
-    // The strip is the whole top band of the mounted surface, and the page stack
-    // begins exactly at its bottom edge.
-Original expression:
-QCOMPARE(qRound(stripRect.left()), qRound(rootRect.left()))
+Mapping: S011
 
 A020 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:97
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(qRound(stripRect.width()), qRound(rootRect.width()))
+Mapping: S011
 
 A021 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:98
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(qRound(stripRect.top()), qRound(rootRect.top()))
+Mapping: S011
 
 A022 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:99
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(qRound(stripRect.height()), metrics->stripHeight)
+Mapping: S011
 
 A023 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:100
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(qRound(pagesRect.top()), qRound(stripRect.bottom()))
+Mapping: S011
 
 A024 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:101
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(qRound(pagesRect.width()), qRound(rootRect.width()))
+Mapping: S011
 
 A025 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:104
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-
-    // The tab body and the inset close control are the production boxes.
-Original expression:
-QCOMPARE(qRound(buttonRect.height()), metrics->tabHeight)
+Mapping: S011
 
 A026 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:105
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(qRound(closeRect.width()), kCloseExtent)
+Mapping: S011
 
 A027 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:106
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(qRound(closeRect.height()), kCloseExtent)
+Mapping: S011
 
 A028 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:107
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(qRound(closeRect.left() - buttonRect.left()), qRound(buttonRect.width()) - 21)
+Mapping: S011
 
 A029 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:108
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(qRound(closeRect.top() - buttonRect.top()), 4)
+Mapping: S011
 
 A030 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:112
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-
-    // The caption is the production typography and never reaches the close
-    // control or the tab edge.
-Original expression:
-QCOMPARE(tabFont.pixelSize(), metrics->labelFontPx)
+Mapping: S011
 
 A031 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:113
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(tabFont.weight() == QFont::DemiBold)
+Mapping: S011
 
 A032 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:115
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-    QQuickItem *const caption = captionOf(button);
-Original expression:
-QVERIFY2(caption != nullptr, "the tab button presents no caption")
+Mapping: S011
 
 A033 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:119
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-    const qreal captionWidth = caption->property("contentWidth").toDouble();
-    const qreal captionLeft =
-        caption->mapToScene(QPointF((caption->width() - captionWidth) / 2.0, 0.0)).x();
-Original expression:
-QVERIFY(captionWidth > 0.0)
+Mapping: S011
 
 A034 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:120
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(captionLeft >= buttonRect.left(), "the tab caption starts outside its tab body")
+Mapping: S011
 
 A035 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:121
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(captionLeft + captionWidth <= closeRect.left(),
-
-             "the tab caption overlaps the close control")
+Mapping: S011
 
 A036 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:126
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-
-    // Strip controls never take focus from the grid.
-    for (QQuickItem *const control : {button, close, scene.scrollLeft(), scene.scrollRight()}) {
-Original expression:
-QVERIFY(control != nullptr)
+Mapping: S011
 
 A037 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:127
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(control->property("focusPolicy").toInt(), int(Qt::NoFocus))
+Mapping: S011
 
 A038 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:132
 Disposition: MATCHED
-Mapping/reason: Matched by S010 (settled grabImage frames replace the framebuffer wait).
-Source context since previous assertion:
-    }
-
-    // The selection mark follows selectedId: the selected tab's body changes, an
-    // untouched neighbour's does not.
-Original expression:
-QVERIFY2(scene.awaitFrame(&error), qPrintable(error))
+Mapping: S010
 
 A039 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:134
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-    const QImage selectedFrame = scene.m_view->grabWindow();
-Original expression:
-QVERIFY(!selectedFrame.isNull())
+Mapping: S011
 
 A040 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:135
 Disposition: MATCHED
-Mapping/reason: Matched by S004 (real strip click with selectedId and page visibility awaited).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.select(secondId, &error), qPrintable(error))
+Mapping: S004
 
 A041 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:136
 Disposition: MATCHED
-Mapping/reason: Matched by S010 (settled grabImage frames replace the framebuffer wait).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.awaitFrame(&error), qPrintable(error))
+Mapping: S010
 
 A042 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:138
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-    const QImage otherFrame = scene.m_view->grabWindow();
-Original expression:
-QVERIFY(!otherFrame.isNull())
+Mapping: S011
 
 A043 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:139
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(otherFrame.size(), selectedFrame.size())
+Mapping: S011
 
 A044 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:140
 Disposition: PARTIAL
@@ -439,32 +197,11 @@ QCOMPARE(otherFrame.devicePixelRatio(), selectedFrame.devicePixelRatio())
 
 A045 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:151
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-
-    const qreal dpr = selectedFrame.devicePixelRatio();
-    const QRectF firstBody = sceneRectOf(button);
-    const QRectF secondBody = sceneRectOf(scene.selectButton(secondId));
-    // The tab is taller than the strip: its bottom margin is clipped by the
-    // viewport, so the button's scene rect reaches into the page stack. The
-    // untouched neighbour is measured only over the strip's visible band —
-    // below it the page stack repaints on every selection.
-    const QRectF thirdBody =
-        sceneRectOf(scene.selectButton(thirdId)).intersected(sceneRectOf(strip));
-Original expression:
-QVERIFY2(changedPixels(selectedFrame, otherFrame, firstBody) > qMax(16, int(dpr * dpr * 16)),
-
-             "the deselected tab body did not repaint")
+Mapping: S011
 
 A046 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:153
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(changedPixels(selectedFrame, otherFrame, secondBody) > qMax(16, int(dpr * dpr * 16)),
-
-             "the selected state does not cover the complete tab body")
+Mapping: S011
 
 A047 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:157
 Disposition: PARTIAL
@@ -479,65 +216,23 @@ QVERIFY2(changedPixels(selectedFrame, otherFrame, closeSurrounding) >
 
 A048 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:160
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(changedPixels(selectedFrame, otherFrame, thirdBody), 0)
+Mapping: S011
 
 A049 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:167
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-
-    // The supplied close SVG must paint a contrasting glyph inside its control.
-    const QRect closePixels =
-        QRectF(closeRect.topLeft() * dpr, closeRect.size() * dpr).toAlignedRect();
-    const QPoint samplePoint{closePixels.left() + qRound(2 * dpr),
-                             closePixels.top() + qRound(2 * dpr)};
-Original expression:
-QVERIFY(selectedFrame.rect().contains(closePixels))
+Mapping: S011
 
 A050 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:168
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(selectedFrame.rect().contains(samplePoint))
+Mapping: S011
 
 A051 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:182
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-    const QRgb closeBackground = selectedFrame.pixel(samplePoint);
-    int glyphPixels = 0;
-    const int inset = qMax(1, qRound(4 * dpr));
-    for (int y = closePixels.top() + inset; y < closePixels.bottom() - inset; ++y) {
-        for (int x = closePixels.left() + inset; x < closePixels.right() - inset; ++x) {
-            const QRgb pixel = selectedFrame.pixel(x, y);
-            if (qAbs(qRed(pixel) - qRed(closeBackground)) +
-                    qAbs(qGreen(pixel) - qGreen(closeBackground)) +
-                    qAbs(qBlue(pixel) - qBlue(closeBackground)) >
-                24)
-                ++glyphPixels;
-        }
-    }
-Original expression:
-QVERIFY2(glyphPixels > qMax(4, qRound(dpr * dpr * 4)),
-
-             "close SVG did not render a visible glyph inside its control")
+Mapping: S011
 
 A052 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:188
 Disposition: MATCHED
-Mapping/reason: Matched by S011 (real strip click, property geometry, captured production boxes and settled grabImage repaint).
-Source context since previous assertion:
-
-    // The grid renders inside the clipped page stack: the selected page's note
-    // faces are painted below the strip.
-    const auto rendered = scene.firstVisibleNote(secondId);
-Original expression:
-QVERIFY2(rendered.has_value(), "the selected tab has no fully visible note")
+Mapping: S011
 
 A053 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:190
 Disposition: PARTIAL
@@ -585,498 +280,231 @@ QVERIFY2(matchingColorCount(otherFrame, pagesRect, noteFace) > 0,
 
 A058 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:203
 Disposition: MATCHED
-Mapping/reason: Matched by S001 (shell-tabs entry runs this surface by construction; no mode switch exists).
-Source context since previous assertion:
-void SwiftRollGatedTest::songTabsScrollControlsAndGridInput()
-{
-    if (m_mode != QStringLiteral("swiftrollgated"))
-Original expression:
-QSKIP("song tab scroll controls belong to the swiftrollgated surface")
+Mapping: S001
 
 A059 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:207
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (staged project opens with a rendered grid per tab).
-Source context since previous assertion:
-
-    TabScene scene;
-    QString error;
-Original expression:
-QVERIFY2(scene.open(m_projectRoot, m_songLabel, &error), qPrintable(error))
+Mapping: S002
 
 A060 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:213
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (each label appends a tab with a rendered grid).
-Source context since previous assertion:
-    const int firstId = scene.selectedId();
-
-    // Four song tabs must overflow the strip for its native scroll controls to
-    // appear; the scenario keeps the widest window that still overflows.
-    int lastId = firstId;
-Original expression:
-QVERIFY2(scene.openSong(kSecondSong, &lastId, &error), qPrintable(error))
+Mapping: S002
 
 A061 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:214
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (each label appends a tab with a rendered grid).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.openSong(kThirdSong, &lastId, &error), qPrintable(error))
+Mapping: S002
 
 A062 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:215
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (each label appends a tab with a rendered grid).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.openSong(kFourthSong, &lastId, &error), qPrintable(error))
+Mapping: S002
 
 A063 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:216
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (window narrowing, scroll-control reveal, real grid click, Escape and pointer-drawn note).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.tabCount(), 4)
+Mapping: S013
 
 A064 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:217
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (window narrowing, scroll-control reveal, real grid click, Escape and pointer-drawn note).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.narrowUntilStripOverflows(&error), qPrintable(error))
+Mapping: S013
 
 A065 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:221
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (window narrowing, scroll-control reveal, real grid click, Escape and pointer-drawn note).
-Source context since previous assertion:
-
-    QQuickItem *const scrollLeft = scene.scrollLeft();
-    QQuickItem *const scrollRight = scene.scrollRight();
-Original expression:
-QVERIFY(scrollLeft != nullptr)
+Mapping: S013
 
 A066 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:222
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (window narrowing, scroll-control reveal, real grid click, Escape and pointer-drawn note).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(scrollRight != nullptr)
+Mapping: S013
 
 A067 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:223
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (window narrowing, scroll-control reveal, real grid click, Escape and pointer-drawn note).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(scrollLeft->isVisible() && scrollRight->isVisible())
+Mapping: S013
 
 A068 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:227
 Disposition: MATCHED
-Mapping/reason: Matched by S007 (viewport membership read against the scroll controls).
-Source context since previous assertion:
-
-    // The selected tab is revealed at the end of the row, so the first tab is
-    // clipped and the strip can only scroll towards it.
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(scene.tabButtonVisible(lastId), kSettleTimeoutMs)
+Mapping: S007
 
 A069 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:228
 Disposition: MATCHED
-Mapping/reason: Matched by S007 (viewport membership read against the scroll controls).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(!scene.tabButtonVisible(firstId), "the overflowing strip did not clip its first tab")
+Mapping: S007
 
 A070 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:229
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (window narrowing, scroll-control reveal, real grid click, Escape and pointer-drawn note).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(scrollLeft->isEnabled())
+Mapping: S013
 
 A071 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:231
 Disposition: MATCHED
-Mapping/reason: Matched by S005 (production scroll-control clicks reveal the tab).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.revealTab(firstId, &error), qPrintable(error))
+Mapping: S005
 
 A072 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:232
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (window narrowing, scroll-control reveal, real grid click, Escape and pointer-drawn note).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(!scrollLeft->isEnabled(), "the left scroll control stays enabled at the row start")
+Mapping: S013
 
 A073 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:233
 Disposition: MATCHED
-Mapping/reason: Matched by S007 (viewport membership read against the scroll controls).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(!scene.tabButtonVisible(lastId),
-
-             "scrolling to the row start did not clip the last tab")
+Mapping: S007
 
 A074 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:235
 Disposition: MATCHED
-Mapping/reason: Matched by S004 (real strip click with selectedId and page visibility awaited).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.select(firstId, &error), qPrintable(error))
+Mapping: S004
 
 A075 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:240
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (window narrowing, scroll-control reveal, real grid click, Escape and pointer-drawn note).
-Source context since previous assertion:
-
-    // The strip takes no input after a scroll-control click: pointer and keyboard
-    // input still reach the active page's grid.
-    const auto target = scene.firstClickableNote(firstId);
-Original expression:
-QVERIFY2(target.has_value(), "the active tab has no note a click can reach")
+Mapping: S013
 
 A076 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:243
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (selection counted from the published summary).
-Source context since previous assertion:
-    QTest::mouseClick(scene.m_view, Qt::LeftButton, Qt::NoModifier,
-                      scene.noteCenter(firstId, target->id));
-Original expression:
-QTRY_COMPARE_WITH_TIMEOUT(scene.selectedNoteCount(firstId), 1, kSettleTimeoutMs)
+Mapping: S013
 
 A077 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:245
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (selection counted from the published summary).
-Source context since previous assertion:
-    QTest::keyClick(scene.m_view, Qt::Key_Escape);
-Original expression:
-QTRY_COMPARE_WITH_TIMEOUT(scene.selectedNoteCount(firstId), 0, kSettleTimeoutMs)
+Mapping: S013
 
 A078 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:247
 Disposition: MATCHED
-Mapping/reason: Matched by S009 (real pointer drag draws with a new identity awaited).
-Source context since previous assertion:
-    TabNote drawn;
-Original expression:
-QVERIFY2(scene.drawNote(firstId, &drawn, &error), qPrintable(error))
+Mapping: S009
 
 A079 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:250
 Disposition: MATCHED
-Mapping/reason: Matched by S005 (production scroll-control clicks reveal the tab).
-Source context since previous assertion:
-
-    // The right control reaches the clipped end of the row the same way.
-Original expression:
-QVERIFY2(scene.revealTab(lastId, &error), qPrintable(error))
+Mapping: S005
 
 A080 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:251
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (window narrowing, scroll-control reveal, real grid click, Escape and pointer-drawn note).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(!scrollRight->isEnabled(), "the right scroll control stays enabled at the row end")
+Mapping: S013
 
 A081 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:252
 Disposition: MATCHED
-Mapping/reason: Matched by S004 (real strip click with selectedId and page visibility awaited).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.select(lastId, &error), qPrintable(error))
+Mapping: S004
 
 A082 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:253
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (window narrowing, scroll-control reveal, real grid click, Escape and pointer-drawn note).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.selectedId(), lastId)
+Mapping: S013
 
 A083 | SwiftRollGatedTest::songTabsScrollControlsAndGridInput | src/checks/swiftrollgated/tabchecks.cpp:254
 Disposition: MATCHED
-Mapping/reason: Matched by S013 (window narrowing, scroll-control reveal, real grid click, Escape and pointer-drawn note).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(scene.page(lastId)->isVisible())
+Mapping: S013
 
 A084 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:260
 Disposition: MATCHED
-Mapping/reason: Matched by S001 (shell-tabs entry runs this surface by construction; no mode switch exists).
-Source context since previous assertion:
-void SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace()
-{
-    if (m_mode != QStringLiteral("swiftrollgated"))
-Original expression:
-QSKIP("song tab opening belongs to the swiftrollgated surface")
+Mapping: S001
 
 A085 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:264
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (staged project opens with a rendered grid).
-Source context since previous assertion:
-
-    TabScene scene;
-    QString error;
-Original expression:
-QVERIFY2(scene.open(m_projectRoot, m_songLabel, &error), qPrintable(error))
+Mapping: S002
 
 A086 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:267
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-    const int firstId = scene.selectedId();
-    QObject *const firstGrid = scene.grid(firstId);
-Original expression:
-QVERIFY(firstGrid != nullptr)
+Mapping: S014
 
 A087 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:269
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-    const QString firstSummary = firstGrid->property("noteSummary").toString();
-Original expression:
-QVERIFY(!firstSummary.isEmpty())
+Mapping: S014
 
 A088 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:272
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (the label appends a tab with a rendered grid).
-Source context since previous assertion:
-
-    int secondId = -1;
-Original expression:
-QVERIFY2(scene.openSong(kSecondSong, &secondId, &error), qPrintable(error))
+Mapping: S002
 
 A089 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:273
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.tabCount(), 2)
+Mapping: S014
 
 A090 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:274
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.selectedId(), secondId)
+Mapping: S014
 
 A091 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:275
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.idAt(0), firstId)
+Mapping: S014
 
 A092 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:276
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.idAt(1), secondId)
+Mapping: S014
 
 A093 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:280
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-
-    // The appended tab owns its own page, grid and document.
-    QObject *const secondGrid = scene.grid(secondId);
-Original expression:
-QVERIFY(secondGrid != nullptr)
+Mapping: S014
 
 A094 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:281
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(secondGrid != firstGrid, "the appended tab reused the open tab's grid")
+Mapping: S014
 
 A095 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:282
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(secondGrid->property("noteSummary").toString() != firstSummary,
-
-             "the appended tab presents the open tab's document")
+Mapping: S014
 
 A096 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:286
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-    QQuickItem *const firstPage = scene.page(firstId);
-    QQuickItem *const secondPage = scene.page(secondId);
-Original expression:
-QVERIFY(firstPage != nullptr)
+Mapping: S014
 
 A097 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:287
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(secondPage != nullptr)
+Mapping: S014
 
 A098 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:288
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(secondPage->isVisible() && secondPage->isEnabled())
+Mapping: S014
 
 A099 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:289
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(!firstPage->isVisible(), "the outgoing tab's page stayed presented")
+Mapping: S014
 
 A100 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:290
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (each page presents its own session with tabId and title).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.pageSession(firstId), scene.sessionAt(0))
+Mapping: S014
 
 A101 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:291
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (each page presents its own session with tabId and title).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.pageSession(secondId), scene.sessionAt(1))
+Mapping: S014
 
 A102 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:293
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-    QQuickItem *const secondSurface = scene.pageSurface(secondId);
-Original expression:
-QVERIFY(secondSurface != nullptr)
+Mapping: S014
 
 A103 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:294
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (the mounted surface publishes the selected page grid).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(secondSurface->property("gridModel").value<QObject *>(), secondGrid)
+Mapping: S014
 
 A104 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:298
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-
-    // The open tab keeps its page, grid and document untouched, and the mounted
-    // surface publishes the selected page's grid.
-Original expression:
-QCOMPARE(scene.grid(firstId), firstGrid)
+Mapping: S014
 
 A105 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:299
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (appended tab owns its page, session, surface, grid and document).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(firstGrid->property("noteSummary").toString(), firstSummary)
+Mapping: S014
 
 A106 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:300
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (each row publishes its own grid summary).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.gridAt(0), firstGrid)
+Mapping: S014
 
 A107 | SwiftRollGatedTest::songTabsOpenCreatesIndependentWorkspace | src/checks/swiftrollgated/tabchecks.cpp:301
 Disposition: MATCHED
-Mapping/reason: Matched by S014 (the mounted surface publishes the selected page grid).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.m_root->property("gridModel").value<QObject *>(), secondGrid)
+Mapping: S014
 
 A108 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:307
 Disposition: MATCHED
-Mapping/reason: Matched by S001 (shell-tabs entry runs this surface by construction; no mode switch exists).
-Source context since previous assertion:
-void SwiftRollGatedTest::songTabsSwitchPreservesPageState()
-{
-    if (m_mode != QStringLiteral("swiftrollgated"))
-Original expression:
-QSKIP("song tab switching belongs to the swiftrollgated surface")
+Mapping: S001
 
 A109 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:311
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (staged project opens with a rendered grid).
-Source context since previous assertion:
-
-    TabScene scene;
-    QString error;
-Original expression:
-QVERIFY2(scene.open(m_projectRoot, m_songLabel, &error), qPrintable(error))
+Mapping: S002
 
 A110 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:314
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (the label appends a tab with a rendered grid).
-Source context since previous assertion:
-    const int firstId = scene.selectedId();
-    int secondId = -1;
-Original expression:
-QVERIFY2(scene.openSong(kSecondSong, &secondId, &error), qPrintable(error))
+Mapping: S002
 
 A111 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:315
 Disposition: MATCHED
-Mapping/reason: Matched by S004 (real strip click with selectedId and page visibility awaited).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.select(firstId, &error), qPrintable(error))
+Mapping: S004
 
 A112 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:319
 Disposition: MATCHED
-Mapping/reason: Matched by S009 (real pointer drag draws with a new identity awaited).
-Source context since previous assertion:
-
-    // A real edit plus a scrolled camera are this tab's own state.
-    TabNote drawn;
-Original expression:
-QVERIFY2(scene.drawNote(firstId, &drawn, &error), qPrintable(error))
+Mapping: S009
 
 A113 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:321
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-    QObject *const firstGrid = scene.grid(firstId);
-Original expression:
-QVERIFY(firstGrid != nullptr)
+Mapping: S015
 
 A114 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:323
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-    const QString editedSummary = firstGrid->property("noteSummary").toString();
-Original expression:
-QVERIFY(scene.canUndo())
+Mapping: S015
 
 A115 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:325
 Disposition: PARTIAL
@@ -1088,189 +516,87 @@ QVERIFY(gutter != nullptr)
 
 A116 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:328
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-    const double initialScrollY = firstGrid->property("cameraScrollY").toDouble();
-    const double maximumScrollY = firstGrid->property("cameraMaxVScroll").toDouble();
-Original expression:
-QVERIFY(maximumScrollY > 1.0)
+Mapping: S015
 
 A117 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:332
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-    // A wheel over the keyboard gutter scrolls the roll vertically; a wheel over
-    // the plot zooms instead, so the gutter is the scroll target.
-    scene.wheelVertical(*gutter, initialScrollY < maximumScrollY - 1.0 ? -120 : 120);
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(
-        std::abs(firstGrid->property("cameraScrollY").toDouble() - initialScrollY) > 0.5,
-        kSettleTimeoutMs)
+Mapping: S015
 
 A118 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:341
 Disposition: MATCHED
-Mapping/reason: Matched by S004 (real strip click with selectedId and page visibility awaited).
-Source context since previous assertion:
-    const QPointer<QQuickItem> firstPage = scene.page(firstId);
-    const QPointer<QObject> firstGridGuard = firstGrid;
-    const double cameraX = firstGrid->property("cameraScrollX").toDouble();
-    const double cameraY = firstGrid->property("cameraScrollY").toDouble();
-    const QString siblingSummary = scene.grid(secondId)->property("noteSummary").toString();
-Original expression:
-QVERIFY2(scene.select(secondId, &error), qPrintable(error))
+Mapping: S004
 
 A119 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:342
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.grid(secondId)->property("noteSummary").toString(), siblingSummary)
+Mapping: S015
 
 A120 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:343
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(!scene.canUndo(), "the sibling tab inherited the edited tab's history")
+Mapping: S015
 
 A121 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:344
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(firstPage != nullptr)
+Mapping: S015
 
 A122 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:345
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(!firstPage->isVisible(), "the hidden tab's page stayed presented")
+Mapping: S015
 
 A123 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:347
 Disposition: MATCHED
-Mapping/reason: Matched by S004 (real strip click with selectedId and page visibility awaited).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.select(firstId, &error), qPrintable(error))
+Mapping: S004
 
 A124 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:348
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.page(firstId) == firstPage, "switching away and back replaced the tab's page")
+Mapping: S015
 
 A125 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:349
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.grid(firstId) == firstGridGuard,
-
-             "switching away and back replaced the tab's grid")
+Mapping: S015
 
 A126 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:351
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(firstGrid->property("noteSummary").toString(), editedSummary)
+Mapping: S015
 
 A127 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:352
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.canUndo(), "switching away and back dropped the tab's history")
+Mapping: S015
 
 A128 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:353
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(qFuzzyCompare(firstGrid->property("cameraScrollX").toDouble() + 1.0, cameraX + 1.0))
+Mapping: S015
 
 A129 | SwiftRollGatedTest::songTabsSwitchPreservesPageState | src/checks/swiftrollgated/tabchecks.cpp:354
 Disposition: MATCHED
-Mapping/reason: Matched by S015 (drawn edit plus wheel-driven camera survive a switch round trip with history).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(qFuzzyCompare(firstGrid->property("cameraScrollY").toDouble() + 1.0, cameraY + 1.0))
+Mapping: S015
 
 A130 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:360
 Disposition: MATCHED
-Mapping/reason: Matched by S001 (shell-tabs entry runs this surface by construction; no mode switch exists).
-Source context since previous assertion:
-void SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities()
-{
-    if (m_mode != QStringLiteral("swiftrollgated"))
-Original expression:
-QSKIP("pointer tab reordering belongs to the swiftrollgated surface")
+Mapping: S001
 
 A131 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:364
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (staged project opens with a rendered grid).
-Source context since previous assertion:
-
-    TabScene scene;
-    QString error;
-Original expression:
-QVERIFY2(scene.open(m_projectRoot, m_songLabel, &error), qPrintable(error))
+Mapping: S002
 
 A132 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:367
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (the label appends a tab with a rendered grid).
-Source context since previous assertion:
-    const int firstId = scene.selectedId();
-    int secondId = -1;
-Original expression:
-QVERIFY2(scene.openSong(kSecondSong, &secondId, &error), qPrintable(error))
+Mapping: S002
 
 A133 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:368
 Disposition: MATCHED
-Mapping/reason: Matched by S004 (real strip click with selectedId and page visibility awaited).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.select(firstId, &error), qPrintable(error))
+Mapping: S004
 
 A134 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:371
 Disposition: MATCHED
-Mapping/reason: Matched by S009 (real pointer drag draws with a new identity awaited).
-Source context since previous assertion:
-
-    TabNote drawn;
-Original expression:
-QVERIFY2(scene.drawNote(firstId, &drawn, &error), qPrintable(error))
+Mapping: S009
 
 A135 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:374
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-    QObject *const firstGrid = scene.grid(firstId);
-    QObject *const secondGrid = scene.grid(secondId);
-Original expression:
-QVERIFY(firstGrid != nullptr)
+Mapping: S016
 
 A136 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:375
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(secondGrid != nullptr)
+Mapping: S016
 
 A137 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:378
 Disposition: PARTIAL
@@ -1283,33 +609,15 @@ QVERIFY(gutter != nullptr)
 
 A138 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:381
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-    const double initialScrollY = firstGrid->property("cameraScrollY").toDouble();
-    const double maximumScrollY = firstGrid->property("cameraMaxVScroll").toDouble();
-Original expression:
-QVERIFY(maximumScrollY > 1.0)
+Mapping: S016
 
 A139 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:383
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-    scene.wheelVertical(*gutter, initialScrollY < maximumScrollY - 1.0 ? -120 : 120);
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(
-        std::abs(firstGrid->property("cameraScrollY").toDouble() - initialScrollY) > 0.5,
-        kSettleTimeoutMs)
+Mapping: S016
 
 A140 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:390
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-    const double cameraX = firstGrid->property("cameraScrollX").toDouble();
-    const double cameraY = firstGrid->property("cameraScrollY").toDouble();
-
-    const int secondRow = scene.rowForId(secondId);
-Original expression:
-QVERIFY(secondRow >= 0)
+Mapping: S016
 
 A141 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:395
 Disposition: GAP
@@ -1340,22 +648,11 @@ QVERIFY(rowsInserted.isValid())
 
 A144 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:402
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-
-    // A real pointer drag from the first tab to the second tab's position.
-    QQuickItem *const source = scene.selectButton(firstId);
-    QQuickItem *const destination = scene.selectButton(secondId);
-Original expression:
-QVERIFY(source != nullptr)
+Mapping: S016
 
 A145 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:403
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(destination != nullptr)
+Mapping: S016
 
 A146 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:414
 Disposition: PARTIAL
@@ -1375,21 +672,11 @@ QTRY_VERIFY_WITH_TIMEOUT(rowsMoved.count() == 1, kSettleTimeoutMs)
 
 A147 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:415
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.rowForId(firstId) == 1,
-
-             "the pointer drag did not move the dragged tab to the dropped index")
+Mapping: S016
 
 A148 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:417
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.rowForId(secondId), 0)
+Mapping: S016
 
 A149 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:418
 Disposition: PARTIAL
@@ -1419,296 +706,131 @@ QVERIFY2(persistentSecond.isValid() && persistentSecond.row() == 0,
 
 A152 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:422
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.selectedId(), firstId)
+Mapping: S016
 
 A153 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:443
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-
-    // The strip's page pairing survives: each row's `songTab_<id>` page presents
-    // that row's session, and every grid is still the object it was. A model move
-    // rebuilds the pages it moves, so the pairing is awaited rather than read at
-    // one instant.
-    const auto paired = [&scene] {
-        for (int row = 0; row < scene.tabCount(); ++row) {
-            const int tabId = scene.idAt(row);
-            if (tabId < 0)
-                return false;
-            QObject *const session = scene.sessionAt(row);
-            QQuickItem *const surface = scene.pageSurface(tabId);
-            if (!surface || scene.pageSession(tabId) != session)
-                return false;
-            if (surface->property("gridModel").value<QObject *>() !=
-                session->property("grid").value<QObject *>())
-                return false;
-        }
-        return true;
-    };
-Original expression:
-QVERIFY2(QTest::qWaitFor(paired, kSettleTimeoutMs),
-
-             "the pointer reorder broke the strip's page pairing")
+Mapping: S016
 
 A154 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:445
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.grid(firstId), firstGrid)
+Mapping: S016
 
 A155 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:446
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.grid(secondId), secondGrid)
+Mapping: S016
 
 A156 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:447
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(firstGrid->property("noteSummary").toString(), editedSummary)
+Mapping: S016
 
 A157 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:448
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(scene.canUndo())
+Mapping: S016
 
 A158 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:449
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(qFuzzyCompare(firstGrid->property("cameraScrollX").toDouble() + 1.0, cameraX + 1.0))
+Mapping: S016
 
 A159 | SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities | src/checks/swiftrollgated/tabchecks.cpp:450
 Disposition: MATCHED
-Mapping/reason: Matched by S016 (real pointer drag reorders with selection, edit, history and camera preserved).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(qFuzzyCompare(firstGrid->property("cameraScrollY").toDouble() + 1.0, cameraY + 1.0))
+Mapping: S016
 
 A160 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:456
 Disposition: MATCHED
-Mapping/reason: Matched by S001 (shell-tabs entry runs this surface by construction; no mode switch exists).
-Source context since previous assertion:
-void SwiftRollGatedTest::songTabsBackgroundClosePreservesActive()
-{
-    if (m_mode != QStringLiteral("swiftrollgated"))
-Original expression:
-QSKIP("background tab closing belongs to the swiftrollgated surface")
+Mapping: S001
 
 A161 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:460
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (staged project opens with a rendered grid).
-Source context since previous assertion:
-
-    TabScene scene;
-    QString error;
-Original expression:
-QVERIFY2(scene.open(m_projectRoot, m_songLabel, &error), qPrintable(error))
+Mapping: S002
 
 A162 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:464
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (each label appends a tab with a rendered grid).
-Source context since previous assertion:
-    const int firstId = scene.selectedId();
-    int secondId = -1;
-    int thirdId = -1;
-Original expression:
-QVERIFY2(scene.openSong(kSecondSong, &secondId, &error), qPrintable(error))
+Mapping: S002
 
 A163 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:465
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (each label appends a tab with a rendered grid).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.openSong(kThirdSong, &thirdId, &error), qPrintable(error))
+Mapping: S002
 
 A164 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:466
 Disposition: MATCHED
-Mapping/reason: Matched by S004 (real strip click with selectedId and page visibility awaited).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.select(secondId, &error), qPrintable(error))
+Mapping: S004
 
 A165 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:469
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-
-    QObject *const activeGrid = scene.grid(secondId);
-Original expression:
-QVERIFY(activeGrid != nullptr)
+Mapping: S017
 
 A166 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:473
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-    const QString activeSummary = activeGrid->property("noteSummary").toString();
-    const QPointer<QQuickItem> activePage = scene.page(secondId);
-    const int activeRow = scene.rowForId(secondId);
-Original expression:
-QVERIFY(activeRow >= 0)
+Mapping: S017
 
 A167 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:475
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close-button click removes the row and destroys the page).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.clickClose(thirdId, &error), qPrintable(error))
+Mapping: S017
 
 A168 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:476
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(scene.tabCount() == 2, kSettleTimeoutMs)
+Mapping: S017
 
 A169 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:477
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.pendingCloseId(), -1)
+Mapping: S017
 
 A170 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:478
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.rowForId(thirdId), -1)
+Mapping: S017
 
 A171 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:479
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(scene.page(thirdId) == nullptr, kSettleTimeoutMs)
+Mapping: S017
 
 A172 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:480
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.selectedId(), secondId)
+Mapping: S017
 
 A173 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:481
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.selectedIndex(), activeRow)
+Mapping: S017
 
 A174 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:482
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.page(secondId) == activePage, "the background close replaced the active page")
+Mapping: S017
 
 A175 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:483
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.grid(secondId), activeGrid)
+Mapping: S017
 
 A176 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:484
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(activeGrid->property("noteSummary").toString(), activeSummary)
+Mapping: S017
 
 A177 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:485
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(scene.page(secondId)->isVisible())
+Mapping: S017
 
 A178 | SwiftRollGatedTest::songTabsBackgroundClosePreservesActive | src/checks/swiftrollgated/tabchecks.cpp:486
 Disposition: MATCHED
-Mapping/reason: Matched by S017 (real close click with selection, row, page, grid and document intact).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.page(firstId) != nullptr, "the background close dropped the first tab")
+Mapping: S017
 
 A179 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:492
 Disposition: MATCHED
-Mapping/reason: Matched by S001 (shell-tabs entry runs this surface by construction; no mode switch exists).
-Source context since previous assertion:
-void SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen()
-{
-    if (m_mode != QStringLiteral("swiftrollgated"))
-Original expression:
-QSKIP("closing the final tab belongs to the swiftrollgated surface")
+Mapping: S001
 
 A180 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:496
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (staged project opens with a rendered grid).
-Source context since previous assertion:
-
-    TabScene scene;
-    QString error;
-Original expression:
-QVERIFY2(scene.open(m_projectRoot, m_songLabel, &error), qPrintable(error))
+Mapping: S002
 
 A181 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:498
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-    const int onlyId = scene.selectedId();
-Original expression:
-QCOMPARE(scene.tabCount(), 1)
+Mapping: S018
 
 A182 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:502
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-    const QPointer<QQuickView> view = scene.m_view;
-    const QPointer<QQuickItem> rootObject = scene.m_root;
-    QQuickItem *const strip = scene.strip();
-Original expression:
-QVERIFY(strip != nullptr)
+Mapping: S018
 
 A183 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:505
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (published summary carries notes).
-Source context since previous assertion:
-
-    const auto rendered = scene.firstVisibleNote(onlyId);
-Original expression:
-QVERIFY2(rendered.has_value(), "the staged song has no fully visible note")
+Mapping: S018
 
 A184 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:507
 Disposition: PARTIAL
@@ -1728,71 +850,35 @@ QVERIFY(noteFace.isValid())
 
 A186 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:511
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (real close-button click empties the strip).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.clickClose(onlyId, &error), qPrintable(error))
+Mapping: S018
 
 A187 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:512
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(scene.tabCount() == 0, kSettleTimeoutMs)
+Mapping: S018
 
 A188 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:513
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.pendingCloseId(), -1)
+Mapping: S018
 
 A189 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:514
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.selectedId(), -1)
+Mapping: S018
 
 A190 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:515
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.selectedIndex(), -1)
+Mapping: S018
 
 A191 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:516
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(!scene.m_session->property("songOpen").toBool(),
-
-             "the empty strip still reports an open song")
+Mapping: S018
 
 A192 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:518
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(scene.page(onlyId) == nullptr, kSettleTimeoutMs)
+Mapping: S018
 
 A193 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:519
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(!scene.m_root->property("gridModel").value<QObject *>(),
-
-             "the empty strip still publishes a grid")
+Mapping: S018
 
 A194 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:524
 Disposition: PARTIAL
@@ -1806,11 +892,7 @@ QCOMPARE(scene.m_window.gridView(), view.data())
 
 A195 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:525
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(scene.m_root == rootObject)
+Mapping: S018
 
 A196 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:526
 Disposition: PARTIAL
@@ -1822,43 +904,23 @@ QVERIFY(scene.m_view->isExposed())
 
 A197 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:527
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(strip->isVisible(), "the empty strip is not presented")
+Mapping: S018
 
 A198 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:529
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-    QQuickItem *const pages = scene.pages();
-Original expression:
-QVERIFY(pages != nullptr)
+Mapping: S018
 
 A199 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:530
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(pages->isVisible())
+Mapping: S018
 
 A200 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:531
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.awaitFrame(&error), qPrintable(error))
+Mapping: S018
 
 A201 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:533
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-    const QImage emptyFrame = scene.m_view->grabWindow();
-Original expression:
-QVERIFY(!emptyFrame.isNull())
+Mapping: S018
 
 A202 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:535
 Disposition: PARTIAL
@@ -1882,53 +944,27 @@ QVERIFY2(matchingColorCount(emptyFrame, pagesRect, noteFace) == 0,
 
 A204 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:542
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (the label opens from the empty strip with a rendered grid).
-Source context since previous assertion:
-
-    // A later open works from the empty strip and renders inside the same view.
-    int reopenedId = -1;
-Original expression:
-QVERIFY2(scene.openSong(kThirdSong, &reopenedId, &error), qPrintable(error))
+Mapping: S002
 
 A205 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:543
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.tabCount(), 1)
+Mapping: S018
 
 A206 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:544
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(reopenedId >= 0 && reopenedId != onlyId)
+Mapping: S018
 
 A207 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:545
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(scene.page(reopenedId) != nullptr)
+Mapping: S018
 
 A208 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:546
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(scene.page(reopenedId)->isVisible())
+Mapping: S018
 
 A209 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:547
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.selectButton(reopenedId) != nullptr, "the reopened song has no strip tab")
+Mapping: S018
 
 A210 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:548
 Disposition: PARTIAL
@@ -1940,27 +976,15 @@ QCOMPARE(scene.m_window.gridView(), view.data())
 
 A211 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:549
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.awaitFrame(&error), qPrintable(error))
+Mapping: S018
 
 A212 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:551
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-    const QImage reopenedFrame = scene.m_view->grabWindow();
-Original expression:
-QVERIFY(!reopenedFrame.isNull())
+Mapping: S018
 
 A213 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:553
 Disposition: MATCHED
-Mapping/reason: Matched by S018 (final close empties the strip with a background-only blank page and same-scene reopen).
-Source context since previous assertion:
-    const auto reopenedNote = scene.firstVisibleNote(reopenedId);
-Original expression:
-QVERIFY2(reopenedNote.has_value(), "the reopened tab has no fully visible note")
+Mapping: S018
 
 A214 | SwiftRollGatedTest::songTabsFinalCloseEmptyAndReopen | src/checks/swiftrollgated/tabchecks.cpp:555
 Disposition: PARTIAL
@@ -1990,66 +1014,31 @@ QVERIFY2(matchingColorCount(reopenedFrame, sceneRectOf(scene.pages()), reopenedF
 
 A217 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:565
 Disposition: MATCHED
-Mapping/reason: Matched by S001 (shell-tabs entry runs this surface by construction; no mode switch exists).
-Source context since previous assertion:
-void SwiftRollGatedTest::songTabsReopenExistingFocusesTab()
-{
-    if (m_mode != QStringLiteral("swiftrollgated"))
-Original expression:
-QSKIP("focusing an open song tab belongs to the swiftrollgated surface")
+Mapping: S001
 
 A218 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:569
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (staged project opens with a rendered grid).
-Source context since previous assertion:
-
-    TabScene scene;
-    QString error;
-Original expression:
-QVERIFY2(scene.open(m_projectRoot, m_songLabel, &error), qPrintable(error))
+Mapping: S002
 
 A219 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:572
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (each label appends a tab with a rendered grid).
-Source context since previous assertion:
-    const int firstId = scene.selectedId();
-    int secondId = -1;
-Original expression:
-QVERIFY2(scene.openSong(kSecondSong, &secondId, &error), qPrintable(error))
+Mapping: S002
 
 A220 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:573
 Disposition: MATCHED
-Mapping/reason: Matched by S004 (real strip click with selectedId and page visibility awaited).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.select(secondId, &error), qPrintable(error))
+Mapping: S004
 
 A221 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:576
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-
-    const int firstRow = scene.rowForId(firstId);
-Original expression:
-QVERIFY(firstRow >= 0)
+Mapping: S019
 
 A222 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:579
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-    QObject *const firstGrid = scene.grid(firstId);
-    QObject *const secondGrid = scene.grid(secondId);
-Original expression:
-QVERIFY(firstGrid != nullptr)
+Mapping: S019
 
 A223 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:580
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(secondGrid != nullptr)
+Mapping: S019
 
 A224 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:586
 Disposition: GAP
@@ -2081,44 +1070,23 @@ QVERIFY(rowsInserted.isValid())
 
 A227 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:591
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (openSong focuses the open label).
-Source context since previous assertion:
-
-    // Re-opening an open label focuses its tab instead of adding a second one.
-Original expression:
-QVERIFY(QMetaObject::invokeMethod(scene.m_session, "openSong", Q_ARG(QString, m_songLabel)))
+Mapping: S019
 
 A228 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:592
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_COMPARE_WITH_TIMEOUT(scene.selectedId(), firstId, kOpenTimeoutMs)
+Mapping: S019
 
 A229 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:593
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.tabCount(), 2)
+Mapping: S019
 
 A230 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:594
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.rowForId(firstId), firstRow)
+Mapping: S019
 
 A231 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:595
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.selectedIndex(), firstRow)
+Mapping: S019
 
 A232 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:596
 Disposition: PARTIAL
@@ -2146,139 +1114,63 @@ QCOMPARE(rowsInserted.count(), 0)
 
 A235 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:602
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-
-    // Focusing is not a reload: the tab keeps its page, grid and document, and the
-    // sibling tab is untouched.
-Original expression:
-QVERIFY2(scene.page(firstId) == firstPage, "focusing an open tab reloaded its page")
+Mapping: S019
 
 A236 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:603
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.grid(firstId), firstGrid)
+Mapping: S019
 
 A237 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:604
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(firstGrid->property("noteSummary").toString(), firstSummary)
+Mapping: S019
 
 A238 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:605
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.grid(secondId), secondGrid)
+Mapping: S019
 
 A239 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:608
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-    // The selection signals are queued: the page's visible binding re-evaluates
-    // on the next event-loop pass, after selectedId already reads the new tab.
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(scene.page(firstId)->isVisible() && scene.page(firstId)->isEnabled(),
-
-                             kOpenTimeoutMs)
+Mapping: S019
 
 A240 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:610
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(!scene.page(secondId)->isVisible(), kOpenTimeoutMs)
+Mapping: S019
 
 A241 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:612
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-    QQuickItem *const button = scene.selectButton(firstId);
-Original expression:
-QVERIFY(button != nullptr)
+Mapping: S019
 
 A242 | SwiftRollGatedTest::songTabsReopenExistingFocusesTab | src/checks/swiftrollgated/tabchecks.cpp:613
 Disposition: MATCHED
-Mapping/reason: Matched by S019 (re-open focuses without a new row or reload).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(button->property("checked").toBool(), "the focused tab is not the checked tab")
+Mapping: S019
 
 A243 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:619
 Disposition: MATCHED
-Mapping/reason: Matched by S001 (shell-tabs entry runs this surface by construction; no mode switch exists).
-Source context since previous assertion:
-void SwiftRollGatedTest::songTabsDirtyCancelDiscardSave()
-{
-    if (m_mode != QStringLiteral("swiftrollgated"))
-Original expression:
-QSKIP("the dirty tab close gate belongs to the swiftrollgated surface")
+Mapping: S001
 
 A244 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:623
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (staged project opens with a rendered grid).
-Source context since previous assertion:
-
-    TabScene scene;
-    QString error;
-Original expression:
-QVERIFY2(scene.open(m_projectRoot, m_songLabel, &error), qPrintable(error))
+Mapping: S002
 
 A245 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:626
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (each label appends a tab with a rendered grid).
-Source context since previous assertion:
-    const int dirtyId = scene.selectedId();
-    int otherId = -1;
-Original expression:
-QVERIFY2(scene.openSong(kThirdSong, &otherId, &error), qPrintable(error))
+Mapping: S002
 
 A246 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:627
 Disposition: MATCHED
-Mapping/reason: Matched by S004 (real strip click with selectedId and page visibility awaited).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.select(dirtyId, &error), qPrintable(error))
+Mapping: S004
 
 A247 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:633
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-
-    const QString dirtySongPath = songPath(m_projectRoot, m_songLabel);
-    const QString otherSongPath = songPath(m_projectRoot, QString::fromLatin1(kThirdSong));
-    const QByteArray dirtySongBefore = songBytes(dirtySongPath);
-    const QByteArray otherSongBefore = songBytes(otherSongPath);
-Original expression:
-QVERIFY(!dirtySongBefore.isEmpty())
+Mapping: S020
 
 A248 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:634
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(!otherSongBefore.isEmpty())
+Mapping: S020
 
 A249 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:638
 Disposition: MATCHED
-Mapping/reason: Matched by S009 (real pointer drag draws with a new identity awaited).
-Source context since previous assertion:
-
-    // A real edit through the session dirties the tab and marks its caption.
-    TabNote drawn;
-Original expression:
-QVERIFY2(scene.drawNote(dirtyId, &drawn, &error), qPrintable(error))
+Mapping: S009
 
 A250 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:640
 Disposition: PARTIAL
@@ -2290,120 +1182,55 @@ QVERIFY(dirtySession != nullptr)
 
 A251 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:641
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(dirtySession->property("dirty").toBool(), "a real edit did not dirty the tab")
+Mapping: S020
 
 A252 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:643
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-    QQuickItem *const dirtyButton = scene.selectButton(dirtyId);
-Original expression:
-QVERIFY(dirtyButton != nullptr)
+Mapping: S020
 
 A253 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:644
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(dirtyButton->property("text").toString().endsWith(QLatin1Char('*')),
-
-             "a dirty tab's caption is not marked")
+Mapping: S020
 
 A254 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:647
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-    QObject *const dirtyGrid = scene.grid(dirtyId);
-Original expression:
-QVERIFY(dirtyGrid != nullptr)
+Mapping: S020
 
 A255 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:651
 Disposition: MATCHED
-Mapping/reason: Matched by S022 (real close-button click raises the gate).
-Source context since previous assertion:
-    const QString dirtySummary = dirtyGrid->property("noteSummary").toString();
-
-    // Cancel keeps the tab, its work and its page.
-Original expression:
-QVERIFY2(scene.clickClose(dirtyId, &error), qPrintable(error))
+Mapping: S022
 
 A256 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:652
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_COMPARE_WITH_TIMEOUT(scene.pendingCloseId(), dirtyId, kSettleTimeoutMs)
+Mapping: S020
 
 A257 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:653
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (strip gating awaited while the dialog asks).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(!scene.strip()->isEnabled(), "the strip is not gated while the close dialog asks")
+Mapping: S020
 
 A258 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:661
 Disposition: MATCHED
-Mapping/reason: Matched by S022 (Save, Discard and Cancel awaited before any pointer lands).
-Source context since previous assertion:
-    const auto gateOffers = [&scene] {
-        QQuickItem *const save = scene.item(QStringLiteral("songTabSave"));
-        QQuickItem *const discard = scene.item(QStringLiteral("songTabDiscard"));
-        QQuickItem *const cancel = scene.item(QStringLiteral("songTabCancel"));
-        return save && discard && cancel && save->isVisible() && discard->isVisible() &&
-               cancel->isVisible();
-    };
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(gateOffers(), kSettleTimeoutMs)
+Mapping: S022
 
 A259 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:664
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-    // The gate is modal: a background tab cannot be selected while it asks.
-    QQuickItem *const otherButton = scene.selectButton(otherId);
-Original expression:
-QVERIFY(otherButton != nullptr)
+Mapping: S020
 
 A260 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:668
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-    QTest::mouseClick(scene.m_view, Qt::LeftButton, Qt::NoModifier,
-                      otherButton->mapToScene(otherButton->boundingRect().center()).toPoint());
-    QCoreApplication::processEvents();
-Original expression:
-QCOMPARE(scene.selectedId(), dirtyId)
+Mapping: S020
 
 A261 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:669
 Disposition: MATCHED
-Mapping/reason: Matched by S022 (real gate-answer click).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.clickDialogButton(QStringLiteral("songTabCancel"), &error), qPrintable(error))
+Mapping: S022
 
 A262 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:670
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_COMPARE_WITH_TIMEOUT(scene.pendingCloseId(), -1, kSettleTimeoutMs)
+Mapping: S020
 
 A263 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:671
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.tabCount(), 2)
+Mapping: S020
 
 A264 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:672
 Disposition: PARTIAL
@@ -2415,201 +1242,95 @@ QCOMPARE(scene.grid(dirtyId), dirtyGrid)
 
 A265 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:673
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(dirtyGrid->property("noteSummary").toString(), dirtySummary)
+Mapping: S020
 
 A266 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:674
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.sessionAt(scene.rowForId(dirtyId))->property("dirty").toBool(),
-
-             "Cancel dropped the tab's unsaved work")
+Mapping: S020
 
 A267 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:678
 Disposition: MATCHED
-Mapping/reason: Matched by S022 (real close-button click raises the gate).
-Source context since previous assertion:
-
-    // Discard drops the tab's work: nothing was written.
-Original expression:
-QVERIFY2(scene.clickClose(dirtyId, &error), qPrintable(error))
+Mapping: S022
 
 A268 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:679
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_COMPARE_WITH_TIMEOUT(scene.pendingCloseId(), dirtyId, kSettleTimeoutMs)
+Mapping: S020
 
 A269 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:680
 Disposition: MATCHED
-Mapping/reason: Matched by S022 (real gate-answer click).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.clickDialogButton(QStringLiteral("songTabDiscard"), &error), qPrintable(error))
+Mapping: S022
 
 A270 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:681
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_COMPARE_WITH_TIMEOUT(scene.tabCount(), 1, kSettleTimeoutMs)
+Mapping: S020
 
 A271 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:682
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.pendingCloseId(), -1)
+Mapping: S020
 
 A272 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:683
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(scene.page(dirtyId) == nullptr, kSettleTimeoutMs)
+Mapping: S020
 
 A273 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:684
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.selectedId(), otherId)
+Mapping: S020
 
 A274 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:685
 Disposition: MATCHED
-Mapping/reason: Matched by S021 (fingerprint reads staged song bytes before the gate).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(songBytes(dirtySongPath), dirtySongBefore)
+Mapping: S021
 
 A275 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:688
 Disposition: MATCHED
-Mapping/reason: Matched by S004 (real strip click with selectedId and page visibility awaited).
-Source context since previous assertion:
-
-    // Save writes the song and then closes the tab: the drawn note is on disk.
-Original expression:
-QVERIFY2(scene.select(otherId, &error), qPrintable(error))
+Mapping: S004
 
 A276 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:690
 Disposition: MATCHED
-Mapping/reason: Matched by S009 (real pointer drag draws with a new identity awaited).
-Source context since previous assertion:
-    TabNote saved;
-Original expression:
-QVERIFY2(scene.drawNote(otherId, &saved, &error), qPrintable(error))
+Mapping: S009
 
 A277 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:691
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY(scene.sessionAt(scene.rowForId(otherId))->property("dirty").toBool())
+Mapping: S020
 
 A278 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:692
 Disposition: MATCHED
-Mapping/reason: Matched by S022 (real close-button click raises the gate).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.clickClose(otherId, &error), qPrintable(error))
+Mapping: S022
 
 A279 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:693
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_COMPARE_WITH_TIMEOUT(scene.pendingCloseId(), otherId, kSettleTimeoutMs)
+Mapping: S020
 
 A280 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:694
 Disposition: MATCHED
-Mapping/reason: Matched by S022 (real gate-answer click).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(scene.clickDialogButton(QStringLiteral("songTabSave"), &error), qPrintable(error))
+Mapping: S022
 
 A281 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:695
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QTRY_VERIFY_WITH_TIMEOUT(scene.tabCount() == 0, kOpenTimeoutMs)
+Mapping: S020
 
 A282 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:696
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.pendingCloseId(), -1)
+Mapping: S020
 
 A283 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:697
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(!scene.m_session->property("saveInProgress").toBool(),
-
-             "the close gate closed the tab before the save finished")
+Mapping: S020
 
 A284 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:699
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QCOMPARE(scene.m_session->property("lastSaveError").toString(), QString())
+Mapping: S020
 
 A285 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:700
 Disposition: MATCHED
-Mapping/reason: Matched by S021 (fingerprint reads staged song bytes before the gate).
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-QVERIFY2(songBytes(otherSongPath) != otherSongBefore,
-
-             "Save closed the tab without writing the song")
+Mapping: S021
 
 A286 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:704
 Disposition: MATCHED
-Mapping/reason: Matched by S002 (each label appends a tab with a rendered grid).
-Source context since previous assertion:
-
-    int reopenedId = -1;
-Original expression:
-QVERIFY2(scene.openSong(kThirdSong, &reopenedId, &error), qPrintable(error))
+Mapping: S002
 
 A287 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:711
 Disposition: MATCHED
-Mapping/reason: Matched by S020 (dirty caption, modal gate answers, fingerprint-preserved Discard and fingerprint-changing Save).
-Source context since previous assertion:
-    const QList<TabNote> reopened = scene.notes(reopenedId);
-    const bool persisted =
-        std::any_of(reopened.cbegin(), reopened.cend(), [&saved](const TabNote &note) {
-            return note.tick == saved.tick && note.pitch == saved.pitch &&
-                   note.duration == saved.duration;
-        });
-Original expression:
-QVERIFY2(persisted, "the saved song does not carry the note the user drew")
+Mapping: S020
 
 A288 | SwiftRollGatedTest::songTabsDirtyCancelDiscardSave | src/checks/swiftrollgated/tabchecks.cpp:714
 Disposition: GAP
@@ -2621,114 +1342,71 @@ Original expression:
 QVERIFY2(writeSongBytes(otherSongPath, otherSongBefore),
 
              "could not restore the scratch song the save overwrote")
+
 Swift assertion predicates
 
 S001 | entries | src/checks/editorqml/ShellQmlTests.swift
 Anchor: function
-Counterpart expression:
-  stages mus_route101, mus_littleroot_test, mus_route102 and mus_gym with the _fixture_rich voicegroup and runs tst_ShellTabs.qml against the production ShellWindow
 
 S002 | openShell | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  opens the staged project and appends each song label, awaiting tabCount and waitForPage per tab
 
 S003 | waitForPage | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  awaits renderedNoteCount above zero on the tab grid before the next open starts
 
 S004 | clickSelectTab | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  reveals a tab with the production scroll controls and selects it with a real strip click, awaiting selectedId and page visibility
 
 S005 | revealTab | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  scrolls with real scroll-control clicks until tabButtonVisible holds
 
 S006 | tabOrderIds | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  reads strip order from the drawn select buttons sorted by x, mirroring rowForId and idAt
 
 S007 | tabButtonVisible | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  reads whether a tab button lies inside the scrolled viewport minus the scroll controls
 
 S008 | pointFor | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  maps tick and pitch to roll-input coordinates through beatWidth, ticksPerBeat, rowHeight and the camera
 
 S009 | drawNote | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  draws one note with a real pointer drag in an empty lane and awaits summary size plus one with a new identity
 
 S010 | grabRegionStable | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  regionOf maps controls through window coordinates with clamping; changedPixels and matchingColorCount read grabbed frames; grabRegionStable and grabUntilDifferent settle mid-repaint frames
 
 S011 | test_aOpenSwitchAndGeometry | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  three-song open, strip and page geometry, captured production boxes keyed by label font, caption containment, NoFocus policy, checked state and per-tab documents
 
 S012 | test_bSelectionRepaintAndGlyph | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  settled-frame repaint of deselected and selected bodies, untouched third tab, close-glyph pixels and click-selection paint inside the page stack
 
 S013 | test_cScrollAndGridInput | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  window narrowing to overflow, scroll-control reveal both ways, real note click, Escape and pointer-drawn note
 
 S014 | test_dOpenIndependentWorkspace | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  appended tab owns its page, session, surface, grid and document while the open tab is untouched
 
 S015 | test_eSwitchPreservesState | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  drawn edit plus wheel-driven camera survive a switch away and back with history intact
 
 S016 | test_fReorderPreservesIdentities | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  real pointer drag reorders the strip with selection, edit, history and camera preserved
 
 S017 | test_gBackgroundClosePreservesActive | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  real close-button click removes a background tab with selection, row, page, grid and document intact
 
 S018 | test_hFinalCloseEmptyAndReopen | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  final close empties the strip with a background-only blank page, and a later open renders in the same scene
 
 S019 | test_iReopenExistingFocusesTab | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  re-opening an open label focuses its tab with no new row and no reload
 
 S020 | test_jDirtyCancelDiscardSave | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  dirty caption, modal gate with Save, Discard and Cancel, fingerprint-preserved Discard and fingerprint-changing Save with reopened-note persistence
 
 S021 | fileFingerprint | src/checks/editorqml/TabsDrawerProbe.swift
 Anchor: function
-Counterpart expression:
-  size plus FNV-1a fingerprint of a staged song file, read before and after each gate answer
 
 S022 | dialogButton and awaitGateButtons | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: function
-Counterpart expression:
-  window-wide lookup of the gate answers with an await for their presentation

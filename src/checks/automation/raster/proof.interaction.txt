@@ -9,420 +9,28 @@ Additional Swift counterpart: src/checks/automation/presentation/painting.swift 
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
 Additional Swift counterpart: src/checks/editorqml/tst_ShellDrawerParity.qml (ported drawer-parity lane: insertion-hover publication, painted hover change, hovering writes nothing)
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-33 of 72 sites in this file are GAP and 39 are RETIRED-REPRESENTATION (no ingress). The 33 GAP sites are framebufferReady/equality, pixel change/match, annulus hover-ring, filled-node, hover-clear and hover-tooltip-text observations with no executing QML pixel predicate covering the captured raster pixels, plus the repeated-hover, post-leave, drag-phase and post-scroll document-stability observations, the drag-activation geometry, the legacy canvas pointer-press observations and the voice cursor-value observation, none of which has an executing converted-lane predicate; the Swift drawer asserts model state only. Readiness guards and harness plumbing stay RETIRED (fixture/parameter/geometry guards, layer-revision guards, render-grab guards, gesture flags and pointer-release paths); the remaining no-commit snapshot and committed-model sites stay RETIRED on their cited converted-lane predicates (the hovering-writes-nothing revision stability in src/checks/editorqml/tst_ShellDrawerParity.qml and the applied-revision checks in src/checks/editorqml/tst_EditorDrawer.qml). hoverGhostRingAndLeaveClear, voicePressWithoutMoveHasNoPreview and voiceDragPreviewsWithoutCommitUntilRelease rendered the native QQuickWindow raster buffer and compared pixel regions for hover ghost rings, voice-change preview highlights and leave clears. That harness no longer exists: src/checks/automation/raster/interaction.cpp was deleted in 31ea635f, no CMake target builds the raster harness, and checkcatalog.cpp registers no automation lane, so nothing executes these observations; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. Surviving observables are asserted by the ported drawer-parity lane src/checks/editorqml/tst_ShellDrawerParity.qml (insertion-hover publication, painted hover change, hovering writes nothing, drag commit and cancel: the converted counterpart of the retired swiftrollgated/drawerparity.cpp), by src/checks/editorqml/tst_EditorDrawer.qml (applied revision, cancelled-interaction revision stability, committed tempo), and at model level by src/checks/automation/presentation/painting.swift and src/checks/automation/automationcanvaslayout.swift; none observes framebuffer pixels or the legacy widget gesture flags.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-RETIRED-REPRESENTATION identifies an observation whose mechanism has no ingress
-(harness deleted, sources in no current target), not an omitted user behavior.
-Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: no run result is claimed. The harness that produced these observations was deleted in 31ea635f and no lane executes it, so the RETIRED-REPRESENTATION evidence below rests on that no-ingress fact plus the surviving converted-lane predicates (src/checks/editorqml/tst_EditorDrawer.qml; src/checks/automation/presentation/painting.swift).
 Converted-window command: deno task verify:qml --verbose
-The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
-Their sources are reference inventories only, never current execution evidence.
-src/checks/automation/raster/*.cpp appear in no CMake target and checkcatalog.cpp registers no automation lane: that is the no-ingress proof carried in every mapping line below.
-Converted-lane evidence, recorded in src/checks/swiftrollgated/proof.drawerparity.txt and not re-run here: deno task verify:shell --filter shell-drawer-parity --verbose PASS (entry green with every TestCase slot passing) and deno task verify:shell --filter shellwindow --verbose PASS, covering src/checks/editorqml/tst_ShellDrawerParity.qml.
-
-Execution ownership
-AutomationRasterTest in raster/interaction.cpp executed under the native raster check harness, rendering QQuickWindow framebuffers to QImage and analyzing pixel differences. That harness was deleted in 31ea635f and no current target or lane builds it, so none of these observations executes today. The converted lanes that assert surviving drawer behavior are src/checks/editorqml/tst_ShellDrawerParity.qml (the ported drawer-parity contracts), src/checks/editorqml/tst_EditorDrawer.qml and src/checks/automation/presentation/painting.swift; none inspects the retired raster pixels.
-
-Fixture, sequence and row constraints
-Data rows expand hoverGhostRingAndLeaveClear across cc-lane and tempo-lane. Loops sample pixel bounding boxes before and after mouse move, press, and leave events to verify rendered ghost rings and preview elements.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:322
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The fixture staging and configuration this guard performs has no converted-lane ingress.
-Source context since previous assertion:
-  #include "checks/automation/raster/tst_automationraster.h"
-
-  #include <algorithm>
-  #include <array>
-  #include <cmath>
-  #include <cstdint>
-  #include <limits>
-  #include <vector>
-
-  #include <QtTest>
-
-  #include <QAbstractItemModel>
-  #include <QByteArray>
-  #include <QColor>
-  #include <QGuiApplication>
-  #include <QImage>
-  #include <QQuickItem>
-  #include <QStringList>
-  #include <QUndoStack>
-  #include <QtGlobal>
-
-  #include "core/timedefaults.h"
-  #include "ui/editordrawer/automationcanvas.h"
-  #include "ui/editordrawer/automationpage.h"
-  #include "ui/editordrawer/cclanes.h"
-  #include "ui/editordrawer/nodelane/hover.h"
-  #include "ui/editordrawer/tempolane.h"
-  #include "ui/songview.h"
-  #include "ui/songview/quick/timelineinputitem.h"
-  #include "ui/songview/quick/timelinequickscene.h"
-  #include "ui/songview/quick/timelinequickview.h"
-
-  namespace {
-
-  enum class AdapterKind { Tempo, Cc };
-
-  struct HoverCase {
-      AdapterKind kind;
-      const char *name;
-  };
-
-  struct PreparedLane {
-      LaneHandle handle;
-      QRect body;
-      QPointF insertionPosition;
-      QPointF nodePosition;
-      Tick insertionTick = 0;
-      qreal insertionX = 0.0;
-      qreal heldY = 0.0;
-      qreal nodeX = 0.0;
-      qreal nodeY = 0.0;
-      int heldValue = 0;
-      int nodeValue = 0;
-      int cursorValue = 0;
-  };
-
-  struct HoverObservation {
-      songview::TimelineQuickLayerData layer;
-      QImage framebuffer;
-      int textRows = 0;
-      QString valueText;
-      bool chromeVisible = false;
-      bool framebufferReady = false;
-  };
-
-  struct DocumentSnapshot {
-      QByteArray smf;
-      uint64_t revision = 0;
-      int undoIndex = 0;
-
-      bool operator==(const DocumentSnapshot &) const = default;
-  };
-
-  constexpr std::array kHoverCases{
-      HoverCase{AdapterKind::Tempo, "Tempo"},
-      HoverCase{AdapterKind::Cc, "CC"},
-  };
-  constexpr Tick kHeldTick = 0;
-  constexpr Tick kNodeTick = 144;
-  constexpr Tick kInsertionTick = 96;
-  constexpr double kHeldBodyFraction = 0.25;
-  constexpr double kNodeBodyFraction = 0.75;
-  constexpr double kCursorBodyFraction = 0.50;
-  DocumentSnapshot snapshot(SongDocument &document)
-  {
-      return {document.smf().write(), document.revision(), document.undoStack()->index()};
-  }
-
-  uint32_t tempoUsForBpm(int bpm)
-  {
-      return CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(bpm);
-  }
-
-  int valueAtBodyFraction(int minimum, int maximum, double fractionFromBottom)
-  {
-      return minimum + int(std::lround(double(maximum - minimum) * fractionFromBottom));
-  }
-
-  qreal valueY(const QRect &body, const AutomationGeometry &geometry, int minimum, int maximum,
-               int value)
-  {
-      return AutomationProjection::valueY(body, geometry, minimum, maximum, value);
-  }
-
-  HoverObservation observeHover(AutomationRasterFixture &fixture)
-  {
-      HoverObservation observation;
-      QString error;
-      observation.framebuffer = fixture.renderAutomationViewport(&error);
-      observation.framebufferReady = error.isEmpty() && !observation.framebuffer.isNull();
-      observation.layer = fixture.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
-      const QAbstractItemModel *const model = fixture.quickScene().automationHoverTextModel();
-      observation.textRows = model->rowCount();
-      if (observation.textRows > 0) {
-          observation.valueText =
-              model->index(0, 0).data(songview::TimelineQuickTextModel::TextRole).toString();
-      }
-      auto *quickHost = fixture.view().findChild<songview::TimelineQuickView *>(
-          QStringLiteral("timelineQuickCanvas"));
-      const QQuickItem *const root = quickHost ? quickHost->rootObject() : nullptr;
-      const QQuickItem *const chrome =
-          root ? root->findChild<QQuickItem *>(QStringLiteral("timelineQuickAutomationHoverChrome"))
-               : nullptr;
-      observation.chromeVisible = chrome && chrome->isVisible();
-      return observation;
-  }
-
-  bool hasFilledNodeAt(const songview::TimelineQuickLayerData &layer, const QPointF &center)
-  {
-      const qreal tolerance = layout::singlePixel();
-      const auto nearCenter = [&](const QPointF &point) {
-          const QPointF delta = point - center;
-          return delta.x() * delta.x() + delta.y() * delta.y() <= tolerance * tolerance;
-      };
-      return std::any_of(layer.triangles.cbegin(), layer.triangles.cend(),
-                         [&](const songview::TimelineQuickTriangle &triangle) {
-                             return nearCenter(triangle.first) || nearCenter(triangle.second) ||
-                                    nearCenter(triangle.third);
-                         });
-  }
-
-  bool hasAnnulusPixelChanges(const QImage &before, const QImage &after, const QPointF &center,
-                              qreal radius, qreal width)
-  {
-      if (before.isNull() || after.isNull() || before.size() != after.size())
-          return false;
-      const qreal dpr = after.devicePixelRatio();
-      if (dpr <= 0.0 || !qFuzzyCompare(before.devicePixelRatio(), dpr))
-          return false;
-
-      const qreal tolerance = 2 * layout::singlePixel();
-      const qreal inner = std::max<qreal>(0.0, radius - width / 2.0 - tolerance);
-      const qreal outer = radius + width / 2.0 + tolerance;
-      const qreal innerSquared = inner * inner;
-      const qreal outerSquared = outer * outer;
-      const int left = std::max(0, qFloor((center.x() - outer) * dpr));
-      const int top = std::max(0, qFloor((center.y() - outer) * dpr));
-      const int right = std::min(after.width() - 1, qCeil((center.x() + outer) * dpr));
-      const int bottom = std::min(after.height() - 1, qCeil((center.y() + outer) * dpr));
-      int changedPixels = 0;
-      for (int y = top; y <= bottom; ++y) {
-          for (int x = left; x <= right; ++x) {
-              const QPointF delta((x + 0.5) / dpr - center.x(), (y + 0.5) / dpr - center.y());
-              const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
-              if (distanceSquared < innerSquared || distanceSquared > outerSquared)
-                  continue;
-              const QColor oldPixel = before.pixelColor(x, y);
-              const QColor newPixel = after.pixelColor(x, y);
-              const int difference = std::abs(newPixel.alpha() - oldPixel.alpha()) +
-                                     std::abs(newPixel.red() - oldPixel.red()) +
-                                     std::abs(newPixel.green() - oldPixel.green()) +
-                                     std::abs(newPixel.blue() - oldPixel.blue());
-              if (newPixel.alpha() >= 32 && difference >= 32 && ++changedPixels == 2)
-                  return true;
-          }
-      }
-      return false;
-  }
-
-  bool pixelChangedAt(const QImage &before, const QImage &after, const QPointF &point)
-  {
-      if (before.isNull() || after.isNull() || before.size() != after.size())
-          return false;
-      const qreal dpr = after.devicePixelRatio();
-      if (dpr <= 0.0 || !qFuzzyCompare(before.devicePixelRatio(), dpr))
-          return false;
-      const int x = std::clamp(qRound(point.x() * dpr), 0, after.width() - 1);
-      const int y = std::clamp(qRound(point.y() * dpr), 0, after.height() - 1);
-      const QColor oldPixel = before.pixelColor(x, y);
-      const QColor newPixel = after.pixelColor(x, y);
-      return std::abs(newPixel.alpha() - oldPixel.alpha()) +
-                 std::abs(newPixel.red() - oldPixel.red()) +
-                 std::abs(newPixel.green() - oldPixel.green()) +
-                 std::abs(newPixel.blue() - oldPixel.blue()) >=
-             32;
-  }
-
-  bool pixelMatchesIdleAt(const QImage &idle, const QImage &cleared, const QPointF &point)
-  {
-      if (idle.isNull() || cleared.isNull() || idle.size() != cleared.size())
-          return false;
-      const qreal dpr = cleared.devicePixelRatio();
-      if (dpr <= 0.0 || !qFuzzyCompare(idle.devicePixelRatio(), dpr))
-          return false;
-      const int x = std::clamp(qRound(point.x() * dpr), 0, cleared.width() - 1);
-      const int y = std::clamp(qRound(point.y() * dpr), 0, cleared.height() - 1);
-      const QColor idlePixel = idle.pixelColor(x, y);
-      const QColor clearedPixel = cleared.pixelColor(x, y);
-      return std::abs(clearedPixel.alpha() - idlePixel.alpha()) <= 8 &&
-             std::abs(clearedPixel.red() - idlePixel.red()) <= 8 &&
-             std::abs(clearedPixel.green() - idlePixel.green()) <= 8 &&
-             std::abs(clearedPixel.blue() - idlePixel.blue()) <= 8;
-  }
-
-  bool isClear(const HoverObservation &observation)
-  {
-      return observation.framebufferReady && observation.layer.rects.empty() &&
-             observation.layer.triangles.empty() && observation.textRows == 0 &&
-             !observation.chromeVisible;
-  }
-
-  void setTempoPoints(AutomationRasterFixture &fixture, const std::vector<TempoPoint> &points)
-  {
-      TempoEdit edit;
-      edit.remove = fixture.document().tempoPoints();
-      edit.add = points;
-      fixture.document().applyTempoEdit(edit);
-      fixture.documentChanged();
-  }
-
-  void setCcPoints(AutomationRasterFixture &fixture,
-                   const std::vector<SongDocument::LanePointValue> &points)
-  {
-      fixture.document().writeLanePoints(fixture.pan.track, fixture.pan.controller, 0,
-                                         CoreTimeDefaults::kNoTick, points);
-      fixture.documentChanged();
-  }
-
-  PreparedLane prepareLane(AutomationRasterFixture &fixture, AdapterKind kind)
-  {
-      PreparedLane lane;
-      const int minimum = kind == AdapterKind::Tempo ? CoreTimeDefaults::kMinTempoBpm : 0;
-      const int maximum = kind == AdapterKind::Tempo ? CoreTimeDefaults::kMaxTempoBpm : 127;
-      const int held = valueAtBodyFraction(minimum, maximum, kHeldBodyFraction);
-      const int node = valueAtBodyFraction(minimum, maximum, kNodeBodyFraction);
-      const int cursor = valueAtBodyFraction(minimum, maximum, kCursorBodyFraction);
-      lane.heldValue = held;
-      lane.nodeValue = node;
-      lane.cursorValue = cursor;
-      if (kind == AdapterKind::Tempo) {
-          setTempoPoints(fixture,
-                         {{kHeldTick, tempoUsForBpm(held)}, {kNodeTick, tempoUsForBpm(node)}});
-          lane.handle = AutomationRasterFixture::kTempoHandle;
-      } else {
-          lane.handle = fixture.handleFor(fixture.pan);
-          if (!lane.handle.valid())
-              return lane;
-          setCcPoints(fixture, {{kHeldTick, held}, {kNodeTick, node}});
-      }
-
-      const AutomationGeometry geometry = fixture.geometry();
-      const AutomationProjection projection = fixture.projection();
-      lane.body = fixture.bodyFor(lane.handle);
-      lane.insertionPosition = {projection.displayX(kInsertionTick, fixture.automationDpr()),
-                                valueY(lane.body, geometry, minimum, maximum, cursor)};
-      lane.heldY = valueY(lane.body, geometry, minimum, maximum, held);
-      lane.nodeY = valueY(lane.body, geometry, minimum, maximum, node);
-      NodeLaneHoverState insertionProbe(QGuiApplication::font());
-      insertionProbe.hover.lane = lane.handle;
-      insertionProbe.hover.pos = lane.insertionPosition;
-      lane.insertionTick = uint64_t(std::max(0.0, insertionProbe.insertionTick(projection, false)));
-      lane.insertionX = projection.displayX(lane.insertionTick, fixture.automationDpr());
-      lane.nodeX = projection.displayX(kNodeTick, fixture.automationDpr());
-      lane.nodePosition = {lane.nodeX, lane.nodeY};
-      return lane;
-  }
-
-  qreal voiceX(const AutomationRasterFixture &fixture, Tick tick)
-  {
-      return fixture.view().camera().displayX(double(tick), 0.0,
-                                              fixture.voiceInput().devicePixelRatio());
-  }
-
-  QPointF voicePoint(const AutomationRasterFixture &fixture, Tick tick)
-  {
-      return {voiceX(fixture, tick), fixture.voiceInput().bounds().center().y()};
-  }
-
-  void seedVoice(AutomationRasterFixture &fixture)
-  {
-      fixture.document().writeLanePoints(0, DOC_CC_VOICE, 0, CoreTimeDefaults::kNoTick,
-                                         {{24, 5}, {48, 6}});
-      fixture.documentChanged();
-      fixture.pump();
-  }
-
-  // Direct plot presses drive the canvas's attached fixture host, so the input
-  // needs no global mapping: left-button phantom drags never consult it.
-  songview::TimelinePointerInput plotPointer(Qt::MouseButton button, Qt::MouseButtons buttons,
-                                             const QPointF &position)
-  {
-      return {.position = position,
-              .globalPosition = {},
-              .button = button,
-              .buttons = buttons,
-              .modifiers = Qt::NoModifier,
-              .surface = songview::TimelineInputSurface::Plot,
-              .host = nullptr};
-  }
-  } // namespace
-
-  void AutomationRasterTest::hoverGhostRingAndLeaveClear_data()
-  {
-      QTest::addColumn<int>("adapterKind");
-      QTest::newRow(kHoverCases[0].name) << int(kHoverCases[0].kind);
-      QTest::newRow(kHoverCases[1].name) << int(kHoverCases[1].kind);
-  }
-
-  void AutomationRasterTest::hoverGhostRingAndLeaveClear()
-  {
-      QFETCH(int, adapterKind);
-
-Original expression:
-  QVERIFY(configureInteraction());
 
 A002 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:330
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The fixture staging and configuration this guard performs has no converted-lane ingress.
-Source context since previous assertion:
-
-      const auto kind = static_cast<AdapterKind>(adapterKind);
-      // The shared plot only shows the active parameter, so the intended CC or
-      // Tempo must be activated through its selector label before every real
-      // pointer sequence.
-      const EditorAutomationRowId row =
-          kind == AdapterKind::Tempo ? EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}
-                                     : fixture().pan.row;
-
-Original expression:
-  QVERIFY(fixture().activateParameter(row));
 
 A003 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:332
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The legacy AutomationRasterFixture value or lane geometry this guard validated has no converted-lane predicate.
-Source context since previous assertion:
-
-      const PreparedLane lane = prepareLane(fixture(), kind);
-
-Original expression:
-  QVERIFY(lane.handle.valid());
 
 A004 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:333
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The legacy AutomationRasterFixture value or lane geometry this guard validated has no converted-lane predicate.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!lane.body.isEmpty());
 
 A005 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:334
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The legacy AutomationRasterFixture value or lane geometry this guard validated has no converted-lane predicate.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(lane.insertionTick != kHeldTick);
 
 A006 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:335
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The legacy AutomationRasterFixture value or lane geometry this guard validated has no converted-lane predicate.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(lane.insertionTick != kNodeTick);
 
 A007 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:341
 Disposition: GAP
@@ -440,23 +48,6 @@ Original expression:
 
 A008 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:353
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving no-commit observable is asserted by the converted drawer lanes: the "hovering writes nothing" revision stability in src/checks/editorqml/tst_ShellDrawerParity.qml and the applied-revision checks in src/checks/editorqml/tst_EditorDrawer.qml.
-Source context since previous assertion:
-
-      const DocumentSnapshot before = snapshot(fixture().document());
-      const QPointF insertionCenter =
-          fixture().automationContentToViewport(QPointF(lane.insertionX, lane.heldY));
-      const QPointF nodeCenter =
-          fixture().automationContentToViewport(QPointF(lane.nodeX, lane.nodeY));
-      const QPointF framebufferOffset(fixture().automationGutterInput().bounds().width(), 0.0);
-
-      fixture().automationMouseMove(lane.insertionPosition);
-      fixture().pump();
-      fixture().pump();
-      const HoverObservation insertion = observeHover(fixture());
-
-Original expression:
-  QVERIFY(snapshot(fixture().document()) == before);
 
 A009 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:354
 Disposition: GAP
@@ -469,12 +60,6 @@ Original expression:
 
 A010 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:355
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The QSG layer rects, triangles and revisions it inspected belong to the removed automation paint path; the converted drawer exposes no such layer, and surviving geometry is asserted in src/checks/automation/presentation/painting.swift.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(insertion.layer.revision > idle.layer.revision);
 
 A011 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:356
 Disposition: GAP
@@ -529,17 +114,6 @@ Original expression:
 
 A016 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:372
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving no-commit observable is asserted by the converted drawer lanes: the "hovering writes nothing" revision stability in src/checks/editorqml/tst_ShellDrawerParity.qml and the applied-revision checks in src/checks/editorqml/tst_EditorDrawer.qml.
-Source context since previous assertion:
-
-
-      fixture().automationMouseMove(lane.nodePosition);
-      fixture().pump();
-      fixture().pump();
-      const HoverObservation nodeHover = observeHover(fixture());
-
-Original expression:
-  QVERIFY(snapshot(fixture().document()) == before);
 
 A017 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:373
 Disposition: GAP
@@ -552,12 +126,6 @@ Original expression:
 
 A018 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:374
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The QSG layer rects, triangles and revisions it inspected belong to the removed automation paint path; the converted drawer exposes no such layer, and surviving geometry is asserted in src/checks/automation/presentation/painting.swift.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(nodeHover.layer.revision > insertion.layer.revision);
 
 A019 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:375
 Disposition: GAP
@@ -699,12 +267,6 @@ Original expression:
 
 A029 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:433
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The QSG layer rects, triangles and revisions it inspected belong to the removed automation paint path; the converted drawer exposes no such layer, and surviving geometry is asserted in src/checks/automation/presentation/painting.swift.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(phantomHover.layer.revision > scrolledIdle.layer.revision);
 
 A030 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:434
 Disposition: GAP
@@ -763,31 +325,9 @@ Original expression:
 
 A035 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:449
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. No converted-lane predicate observes this legacy widget gesture flag.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(fixture().canvas().gestureActive());
 
 A036 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:458
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The AutomationTransient QSG layer it observes belongs to the removed automation paint path, and no converted-lane predicate observes it.
-Source context since previous assertion:
-
-      // The first move crosses the drag-activation slop and becomes the slop
-      // origin; the second mirrors the press around the target so the effective
-      // drag position is exactly the target value.
-      fixture().canvas().pointerMove(plotPointer(Qt::NoButton, Qt::LeftButton, dragTarget));
-      const QPointF dragAnchor = 2.0 * dragTarget - plotOrigin;
-      fixture().canvas().pointerMove(plotPointer(Qt::NoButton, Qt::LeftButton, dragAnchor));
-      fixture().pump();
-      fixture().pump();
-
-Original expression:
-  QTRY_VERIFY(
-          fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationTransient).revision >
-          transientBefore.revision);
 
 A037 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:463
 Disposition: GAP
@@ -811,51 +351,15 @@ Original expression:
 
 A039 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:471
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The legacy AutomationRasterFixture value or lane geometry this guard validated has no converted-lane predicate.
-Source context since previous assertion:
-
-
-      // Switching away cancels the provisional drag and clears the old hover and
-      // transient pixels; every stored value survives both activations.
-      const EditorAutomationRowId away =
-          kind == AdapterKind::Tempo ? fixture().pan.row
-                                     : EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0};
-
-Original expression:
-  QVERIFY(fixture().activateParameter(away));
 
 A040 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:472
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. No converted-lane predicate observes this legacy widget gesture flag.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!fixture().canvas().gestureActive());
 
 A041 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:473
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The AutomationTransient QSG layer it observes belongs to the removed automation paint path, and no converted-lane predicate observes it.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(fixture()
-                      .quickScene()
-                      .layer(songview::TimelineQuickLayer::AutomationTransient)
-                      .rects.empty());
 
 A042 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:477
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The AutomationTransient QSG layer it observes belongs to the removed automation paint path, and no converted-lane predicate observes it.
-Source context since previous assertion:
-
-
-Original expression:
-  QTRY_VERIFY(fixture()
-                      .quickScene()
-                      .layer(songview::TimelineQuickLayer::AutomationTransient)
-                      .triangles.empty());
 
 A043 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:481
 Disposition: GAP
@@ -877,12 +381,6 @@ Original expression:
 
 A045 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:483
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The legacy AutomationRasterFixture value or lane geometry this guard validated has no converted-lane predicate.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(fixture().activateParameter(row));
 
 A046 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:487
 Disposition: GAP
@@ -914,102 +412,30 @@ Original expression:
 
 A048 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:503
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. No converted-lane predicate observes this legacy widget gesture flag.
-Source context since previous assertion:
-
-      // The first move crosses the drag-activation slop and becomes the slop
-      // origin; the second mirrors the press around the target so the effective
-      // drag position is exactly the target value.
-      fixture().canvas().pointerMove(plotPointer(Qt::NoButton, Qt::LeftButton, dragTarget));
-      const QPointF commitAnchor = 2.0 * dragTarget - plotOrigin;
-      fixture().canvas().pointerMove(plotPointer(Qt::NoButton, Qt::LeftButton, commitAnchor));
-      fixture().pump();
-
-Original expression:
-  QVERIFY(fixture().canvas().gestureActive());
 
 A049 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:506
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. This legacy canvas pointer input path has no converted-lane predicate; the converted drawer is QML.
-Source context since previous assertion:
-
-      // Releasing at the anchor keeps the slop-compensated effective position
-      // on the target value for the commit.
-
-Original expression:
-  QVERIFY(
-          fixture().canvas().pointerRelease(plotPointer(Qt::LeftButton, Qt::NoButton, commitAnchor)));
 
 A050 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:510
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. No converted-lane predicate observes this legacy widget gesture flag.
-Source context since previous assertion:
-
-      fixture().pump();
-      fixture().pump();
-
-Original expression:
-  QVERIFY(!fixture().canvas().gestureActive());
 
 A051 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:511
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving applied-revision observable is asserted by src/checks/editorqml/tst_EditorDrawer.qml (automation document revision cases).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(fixture().document().revision(), scrolled.revision + 1);
 
 A052 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:515
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving committed tempo stream is asserted by src/checks/editorqml/tst_EditorDrawer.qml and EditorQmlTests.swift (tempoBpmAtTickZero).
-Source context since previous assertion:
-
-      if (kind == AdapterKind::Tempo) {
-          const std::vector<TempoPoint> expected{{kHeldTick, tempoUsForBpm(lane.heldValue)},
-                                                 {kNodeTick, tempoUsForBpm(lane.cursorValue)}};
-
-Original expression:
-  QCOMPARE(fixture().document().tempoPoints(), expected);
 
 A053 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:519
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving committed tempo stream is asserted by src/checks/editorqml/tst_EditorDrawer.qml and EditorQmlTests.swift (tempoBpmAtTickZero).
-Source context since previous assertion:
-
-      } else {
-          const std::vector<DocLanePoint> points =
-              fixture().document().lanePoints(fixture().pan.track, fixture().pan.controller);
-
-Original expression:
-  QCOMPARE(points.size(), std::size_t(2));
 
 A054 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:520
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving committed tempo stream is asserted by src/checks/editorqml/tst_EditorDrawer.qml and EditorQmlTests.swift (tempoBpmAtTickZero).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(points[0].tick, kHeldTick);
 
 A055 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:521
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving committed tempo stream is asserted by src/checks/editorqml/tst_EditorDrawer.qml and EditorQmlTests.swift (tempoBpmAtTickZero).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(points[0].value, lane.heldValue);
 
 A056 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:522
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving committed tempo stream is asserted by src/checks/editorqml/tst_EditorDrawer.qml and EditorQmlTests.swift (tempoBpmAtTickZero).
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(points[1].tick, kNodeTick);
 
 A057 | AutomationRasterTest::hoverGhostRingAndLeaveClear | src/checks/automation/raster/interaction.cpp:523
 Disposition: GAP
@@ -1022,55 +448,15 @@ Original expression:
 
 A058 | AutomationRasterTest::voicePressWithoutMoveHasNoPreview | src/checks/automation/raster/interaction.cpp:529
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The fixture staging and configuration this guard performs has no converted-lane ingress.
-Source context since previous assertion:
-
-      }
-  }
-
-  void AutomationRasterTest::voicePressWithoutMoveHasNoPreview()
-  {
-
-Original expression:
-  QVERIFY(configureInteraction());
 
 A059 | AutomationRasterTest::voicePressWithoutMoveHasNoPreview | src/checks/automation/raster/interaction.cpp:537
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The captured QImage framebuffer pixels have no representation in the converted QML drawer, which is checked through drawer state instead.
-Source context since previous assertion:
-
-      fixture().canvas().cancelInteraction();
-      fixture().pump();
-      seedVoice(fixture());
-      const QPointF source = voicePoint(fixture(), 24);
-      const DocumentSnapshot before = snapshot(fixture().document());
-      QString error;
-      const QImage idle = fixture().renderVoiceChanges(&error);
-
-Original expression:
-  QVERIFY2(error.isEmpty() && !idle.isNull(), qPrintable(error));
 
 A060 | AutomationRasterTest::voicePressWithoutMoveHasNoPreview | src/checks/automation/raster/interaction.cpp:542
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The captured QImage framebuffer pixels have no representation in the converted QML drawer, which is checked through drawer state instead.
-Source context since previous assertion:
-
-
-      fixture().voiceMousePress(source);
-      fixture().pump();
-      const QImage pressed = fixture().renderVoiceChanges(&error);
-
-Original expression:
-  QVERIFY2(error.isEmpty() && !pressed.isNull(), qPrintable(error));
 
 A061 | AutomationRasterTest::voicePressWithoutMoveHasNoPreview | src/checks/automation/raster/interaction.cpp:543
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving no-commit observable is asserted by the converted drawer lanes: the "hovering writes nothing" revision stability in src/checks/editorqml/tst_ShellDrawerParity.qml and the applied-revision checks in src/checks/editorqml/tst_EditorDrawer.qml.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(snapshot(fixture().document()) == before);
 
 A062 | AutomationRasterTest::voicePressWithoutMoveHasNoPreview | src/checks/automation/raster/interaction.cpp:544
 Disposition: GAP
@@ -1083,86 +469,24 @@ Original expression:
 
 A063 | AutomationRasterTest::voicePressWithoutMoveHasNoPreview | src/checks/automation/raster/interaction.cpp:548
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. No converted-lane predicate observes this legacy widget gesture flag.
-Source context since previous assertion:
-
-
-      fixture().voiceMouseRelease(source);
-      fixture().pump();
-
-Original expression:
-  QVERIFY(!fixture().view().userGestureActive());
 
 A064 | AutomationRasterTest::voiceDragPreviewsWithoutCommitUntilRelease | src/checks/automation/raster/interaction.cpp:553
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The fixture staging and configuration this guard performs has no converted-lane ingress.
-Source context since previous assertion:
-
-  }
-
-  void AutomationRasterTest::voiceDragPreviewsWithoutCommitUntilRelease()
-  {
-
-Original expression:
-  QVERIFY(configureInteraction());
 
 A065 | AutomationRasterTest::voiceDragPreviewsWithoutCommitUntilRelease | src/checks/automation/raster/interaction.cpp:562
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The captured QImage framebuffer pixels have no representation in the converted QML drawer, which is checked through drawer state instead.
-Source context since previous assertion:
-
-      fixture().canvas().cancelInteraction();
-      fixture().pump();
-      seedVoice(fixture());
-      const QPointF source = voicePoint(fixture(), 24);
-      const QPointF target = voicePoint(fixture(), 72);
-      const DocumentSnapshot before = snapshot(fixture().document());
-      QString error;
-      const QImage idle = fixture().renderVoiceChanges(&error);
-
-Original expression:
-  QVERIFY2(error.isEmpty() && !idle.isNull(), qPrintable(error));
 
 A066 | AutomationRasterTest::voiceDragPreviewsWithoutCommitUntilRelease | src/checks/automation/raster/interaction.cpp:568
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The captured QImage framebuffer pixels have no representation in the converted QML drawer, which is checked through drawer state instead.
-Source context since previous assertion:
-
-
-      fixture().voiceMousePress(source);
-      fixture().voiceMouseMove(target);
-      fixture().pump();
-      const QImage preview = fixture().renderVoiceChanges(&error);
-
-Original expression:
-  QVERIFY2(error.isEmpty() && !preview.isNull(), qPrintable(error));
 
 A067 | AutomationRasterTest::voiceDragPreviewsWithoutCommitUntilRelease | src/checks/automation/raster/interaction.cpp:569
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving no-commit observable is asserted by the converted drawer lanes: the "hovering writes nothing" revision stability in src/checks/editorqml/tst_ShellDrawerParity.qml and the applied-revision checks in src/checks/editorqml/tst_EditorDrawer.qml.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(snapshot(fixture().document()) == before);
 
 A068 | AutomationRasterTest::voiceDragPreviewsWithoutCommitUntilRelease | src/checks/automation/raster/interaction.cpp:570
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. No converted-lane predicate observes this legacy widget gesture flag.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(fixture().view().userGestureActive());
 
 A069 | AutomationRasterTest::voiceDragPreviewsWithoutCommitUntilRelease | src/checks/automation/raster/interaction.cpp:571
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. No converted-lane predicate observes this legacy widget cursor shape.
-Source context since previous assertion:
-
-
-Original expression:
-  QCOMPARE(fixture().voiceInput().cursor().shape(), Qt::SizeHorCursor);
 
 A070 | AutomationRasterTest::voiceDragPreviewsWithoutCommitUntilRelease | src/checks/automation/raster/interaction.cpp:572
 Disposition: GAP
@@ -1184,15 +508,6 @@ Original expression:
 
 A072 | AutomationRasterTest::voiceDragPreviewsWithoutCommitUntilRelease | src/checks/automation/raster/interaction.cpp:577
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/interaction.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. No converted-lane predicate observes this legacy widget gesture flag.
-Source context since previous assertion:
-
-
-      fixture().voiceMouseRelease(target);
-      fixture().pump();
-
-Original expression:
-  QVERIFY(!fixture().view().userGestureActive());
 
 Remaining original source (closing sequence and helper bodies):
 

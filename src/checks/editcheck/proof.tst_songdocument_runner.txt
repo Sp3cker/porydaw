@@ -14,68 +14,42 @@ Fixture and execution: C++ initTestCase opened a staged project, loaded playable
 History caveat: coreEditHistoryCountAtTip measures public Swift undo/redo traversal and checks restored state/identity for other edit certificates; none of this runner proof's staging sites claims history-depth parity.
 Registered run path: src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusLoadCheck -> swiftcore suite 4 via src/checks/support/corecheck/CoreCheckSupport.swift :: pdc_suite_run; counterpart compiled in src/checks/CMakeLists.txt :: swift_core_check. Legacy editcheck does not appear in current CMake targets or checkcatalog.
 
-Original assertion inventory
-
 A001 | EditCheckTest::initTestCase | src/checks/editcheck/tst_songdocument_runner.cpp:12
 Disposition: MATCHED
-Swift: S001 | src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusSongs
-Mapping/reason: Swift S001 explicitly fails the suite when its staged project root is absent or empty under the original initTestCase cppID; the root-required behavior survives although C++ CLI argument plumbing does not.
-Original expression:
-  QVERIFY2(!m_projectRoot.isEmpty(), "editcheck requires its staged project root");
+Mapping: S001
 
 A002 | EditCheckTest::initTestCase | src/checks/editcheck/tst_songdocument_runner.cpp:16
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusSongs / coreEditCorpusLoadCheck
-Mapping/reason: DecompProject::open was C++ fixture-database staging, not a consumer-visible SongDocument edit. The uncompiled legacy check has no Swift suite ingress through this database step: Swift enumerates sound/songs/midi and midi.cfg directly. Missing root, bad flags and unreadable MIDI fail the registered suite through S001/S003/S004/S007; these do not claim the database open itself is matched. The production Qt project service remains native.
-Original expression:
-  QVERIFY2(project.open(m_projectRoot, &error), qPrintable(error));
+Mapping/reason: S001, S003, S004, S007
 
 A003 | EditCheckTest::initTestCase | src/checks/editcheck/tst_songdocument_runner.cpp:24
 Disposition: MATCHED
-Swift: S006 | src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusLoadCheck
-Mapping/reason: For every staged corpus song, Swift decodes its MIDI bytes, constructs SongDocument with that song's config and source, and S006 checks that the document loaded every decoded track. A decode error or construction failure fails the suite, rather than merely reading the source file.
-Original expression:
-  QVERIFY2(document.load(song, &error), qPrintable(error));
+Mapping: S006
 
 A004 | EditCheckTest::initTestCase | src/checks/editcheck/tst_songdocument_runner.cpp:31
 Disposition: MATCHED
-Swift: S002 | src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusSongs
-Mapping/reason: Swift S002 asserts the staged corpus enumerates at least one song under the same cppID, and S003 requires exactly one fixture config row per staged .mid file (failing otherwise), so every counted filename is a configured loadable row, matching the nonempty-playable-corpus requirement.
-Original expression:
-  QVERIFY2(!m_playableSongs.isEmpty(), "editcheck corpus staged no playable songs");
+Mapping: S002, S003
 
 Swift assertion predicates
 Every report.expect/expectEqual/fail call in the mapped Swift functions:
 
 S001 | coreEditCorpusSongs | src/checks/editcheck/tst_songdocument_runner.swift
 Anchor: function
-  report.fail("editcheck/EditCheckTest::initTestCase", "missing staged project root")
 
 S002 | coreEditCorpusSongs | src/checks/editcheck/tst_songdocument_runner.swift
 Anchor: message "edit corpus has playable songs"
-  report.expect(!filenames.isEmpty, cppID: "editcheck/EditCheckTest::initTestCase",
-                    message: "edit corpus has playable songs")
 
 S003 | coreEditCorpusSongs | src/checks/editcheck/tst_songdocument_runner.swift
 Anchor: function
-  report.fail("editcheck/EditCheckTest::initTestCase", "expected one fixture config for \(filename)")
 
 S004 | coreEditCorpusSongs | src/checks/editcheck/tst_songdocument_runner.swift
 Anchor: function
-  report.fail("editcheck/EditCheckTest::initTestCase", "fixture flags changed for \(filename): \(flags)")
 
 S005 | coreEditHistoryCountAtTip | src/checks/editcheck/tst_songdocument_runner.swift
 Anchor: message "counting public undo entries restores the exact state and identity"
-  report.expect(count == replayed && document.state == restoredState &&
-          document.history.currentIdentity == restoredIdentity, cppID: cppID,
-          message: "counting public undo entries restores the exact state and identity")
 
 S006 | coreEditCorpusLoadCheck | src/checks/editcheck/tst_songdocument_runner.swift
 Anchor: message "staged MIDI parses and loads every track into the document"
-  report.expect(document.rawChunks.count == file.chunks.count,
-                cppID: "editcheck/EditCheckTest::initTestCase",
-                message: "staged MIDI parses and loads every track into the document")
 
 S007 | coreEditCorpusLoadCheck | src/checks/editcheck/tst_songdocument_runner.swift
 Anchor: function
-  report.fail("editcheck/EditCheckTest::initTestCase", "staged MIDI cannot load: \(error)")

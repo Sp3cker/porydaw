@@ -6,111 +6,18 @@ Original SHA-256: fe75a27d16134b7551b44aee1b2dc893441eab4b313683debc3d6e88ab9c70
 Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including fixture guards and the filter-menu lambda-local predicates. NATIVE identifies predicates that observe the live Quick window, rendered items, the popup session/panel, delivered mouse/key/wheel input, active focus, or the controller effect of such a natively delivered stimulus; a presenter-level Swift check cannot establish these observations. GAP identifies sites whose rendered EventListPage surface is not yet ported (EventListPage unmounted; presenter wired but unconsumed), including fixture-open/conversion guards, lookup guards, static model mirrors, the fixed filter-category ledger count, and SongView state predicates. A008-A009 are instead MATCHED by the pure-model row-count/EOT-tick contract (S001-S002 in eventListRowsAndEditContract). A swiftcore-wide search (EventChecks, SharedPlayheadChecks, EditorGridCameraChecks, EditorDrawerChecks, SessionChecks, TimeChecks, MidiChecks) found no event-list controller, filter-menu, column-width, typography, scrollbar, or view-state Swift predicates; the Swift suite observes documents, grids, and drawers, never the event-list chrome. None of these labels authorizes deletion or claims whole-case equivalence.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS (1/6 ok, 5 skipped, 10.51s) with `deno task proof check` PASS (suite-level).
 
-Execution and ownership
-runEventListPlayheadChecks (src/checks/eventviews/EventListPlayheadChecks.swift) executes the paired pure-model contract eventListRowsAndEditContract covering A008-A009; no Swift entry point renders EventListPage. Native ownership: runEventViewsChromeCheck in this file drives EventViewsChromeTest (visibilityAndTrackSelection, rowMirrorPlusEot, monoTypography, columnResizeDrag, drawerFocusKeepsNavigation, scrollbarWheelClamps, filterMatrix, viewStateRoundTrip, filterMenuSession, rowMenuActivationCloses, outsideRightCancelsAndSwallowsRelease). The rig fixture lives in src/checks/eventviews/eventview_fixture.h and src/checks/eventviews/eventview_fixture.cpp (openRigFixture shapes Basic, Empty, EotCoincident, Long).
-
-Fixture, sequence and row constraints
-Data rows expand single sites into many cases: rowMirrorPlusEot_data emits 3 shapes (empty chunk, single event at EOT, multi-event chunk); filterMatrix_data emits 4 category rows (meta, meta and notes, none, all). The monoTypography column loop (columns 0, 2, 3, 4 over first and last rows) expands each font QCOMPARE site over 8 cells. The columnResizeDrag 4-step pointer drag, the scrollbarWheelClamps 600/1200-notch wheel loops, and the filterMenuSession/rowMenuActivationCloses multi-phase menu sessions expand their sites over repeated native deliveries; the row-menu retire sequence re-verifies dismissal across four context changes (row change, chunk switch, document edit, selection change).
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
-
 A001 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:62
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Native C++ fixture-open guard does not describe consumer-visible event-list behavior.
-Source context since previous assertion:
-#include "checks/eventviews/eventview_fixture.h"
-#include "checks/eventviews/tst_eventviews.h"
-#include "checks/quickpopupguard.h"
-#include <QCoreApplication>
-#include <QFontInfo>
-#include <QGuiApplication>
-#include <QList>
-#include <QQuickItem>
-#include <QQuickWindow>
-#include <QSignalSpy>
-#include <QVariant>
-#include <QWheelEvent>
-#include <QtTest>
-
-#include "ui/eventtabletypes.h"
-#include "ui/songview.h"
-#include "ui/songview/quick/quickmenumodel.h"
-#include "ui/songview/quick/quickpopupsession.h"
-#include "ui/songview/quick/timelineinputitem.h"
-#include "ui/typography.h"
-
-using checks::eventviews::EventWidgets;
-using checks::eventviews::FixtureShape;
-
-namespace {
-
-// One real wheel notch delivered through the Quick window at a scene point.
-void wheelAt(QQuickWindow &window, const QPointF &scenePos, int notches)
-{
-    QWheelEvent event(scenePos, window.mapToGlobal(scenePos.toPoint()), QPoint(),
-                      QPoint(0, notches * 120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
-                      false);
-    QCoreApplication::sendEvent(&window, &event);
-}
-
-// The row's rendered check mark — the only child carrying the tick stroke
-// metric. Its visibility must mirror the model's checked role.
-bool tickRenderedChecked(QQuickItem &row)
-{
-    for (QQuickItem *child : row.childItems()) {
-        if (child->property("stroke").isValid())
-            return child->isVisible();
-    }
-    return false;
-}
-
-SmfEvent controlChange(uint64_t tick, uint8_t controller, uint8_t value)
-{
-    SmfEvent event;
-    event.tick = tick;
-    event.status = 0xb0;
-    event.data0 = controller;
-    event.data1 = value;
-    return event;
-}
-
-} // namespace
-
-void EventViewsChromeTest::visibilityAndTrackSelection()
-{
-    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
-
-Original expression:
-QVERIFY2(opened, qPrintable(opened.error))
 
 A002 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:63
 Disposition: MATCHED
-Mapping/reason: tst_ShellEventList.qml compares presenter.visible false before the View-menu MIDI Event List action (shell-event-list, executed).
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(!opened.fixture->view().eventListVisible())
 
 A003 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:66
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Native C++ EventWidgets pointer guard is superseded by the Swift QML page.
-Source context since previous assertion:
-;
-
-    const EventWidgets widgets = opened.fixture->openEventList();
-
-Original expression:
-QVERIFY(widgets)
 
 A004 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:69
 Disposition: GAP
@@ -170,29 +77,11 @@ QVERIFY(chunk >= 0)
 
 A008 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:94
 Disposition: MATCHED
-Swift: S001 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRowsAndEditContract
-Mapping/reason: Static row-count mirror proved by the pure-model contract: Swift S001 asserts the same observable — model.rowCount equals chunk.events.count + 1 across the empty, EOT-coincident, and multi-event shapes — under cppID swiftcore/EventList::eventListRowsAndEditContract. The rendered EventListPage stays unmounted.
-Source context since previous assertion:
-;
-    const SmfTrack &track = opened.fixture->document().smf().tracks[chunk];
-    const int projectedTempoRows =
-        chunk == 0 ? int(opened.fixture->document().tempoPoints().size()) : 0;
-
-Original expression:
-QCOMPARE(widgets.model->rowCount(), int(track.events.size()) + projectedTempoRows + 1)
+Mapping: S001
 
 A009 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:95
 Disposition: MATCHED
-Swift: S002 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRowsAndEditContract
-Mapping/reason: Static EOT-tick mirror proved by the pure-model contract: Swift S002 asserts the same observable — the trailing EOT row tick mirrors the chunk endTick — under cppID swiftcore/EventList::eventListRowsAndEditContract. The rendered EventListPage stays unmounted.
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(
-        widgets.model->data(widgets.model->index(widgets.model->rowCount() - 1, 0), Qt::EditRole)
-            .toULongLong(),
-        track.endTick)
+Mapping: S002
 
 A010 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:104
 Disposition: GAP
@@ -326,14 +215,6 @@ QVERIFY(widgets)
 
 A021 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:143
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-;
-    QQuickItem *const handle = checks::eventviews::visualItem(
-        *widgets.quickWindow, QStringLiteral("eventListColumnResizeHandle1"));
-
-Original expression:
-QVERIFY(handle)
 
 A022 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:145
 Disposition: GAP
@@ -406,14 +287,6 @@ QVERIFY(widgets)
 
 A027 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:175
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-;
-    auto *drawer = widgets.quickWindow->findChild<songview::TimelineInputItem *>(
-        QStringLiteral("drawerBarInput"));
-
-Original expression:
-QVERIFY(drawer)
 
 A028 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:178
 Disposition: GAP
@@ -504,24 +377,9 @@ QVERIFY(widgets)
 
 A036 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:201
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-;
-    auto *scrollbar =
-        widgets.quickWindow->findChild<QQuickItem *>(QStringLiteral("eventListVerticalScrollBar"));
-
-Original expression:
-QVERIFY(scrollbar)
 
 A037 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:203
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-;
-    QQuickItem *const table = checks::eventviews::eventListTable(widgets);
-
-Original expression:
-QVERIFY(table)
 
 A038 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:204
 Disposition: GAP
@@ -743,17 +601,6 @@ QVERIFY(widgets)
 
 A053 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:307
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-;
-    QQuickWindow &window = *widgets.quickWindow;
-    EventListController &controller = *widgets.controller;
-
-    QQuickItem *filterButton =
-        checks::eventviews::visualItem(window, QStringLiteral("eventListFilter"));
-
-Original expression:
-QVERIFY(filterButton)
 
 A054 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:312
 Disposition: GAP
@@ -770,13 +617,6 @@ QTRY_VERIFY(controller.menuOpen())
 
 A055 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:314
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-;
-    QQuickItem *panel = checks::eventviews::activeMenuPanel(widgets);
-
-Original expression:
-QVERIFY(panel)
 
 A056 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:316
 Disposition: GAP
@@ -800,19 +640,6 @@ QCOMPARE(rows, 7)
 
 A058 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:326
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-; // the fixture's fixed filter-category ledger
-
-    const auto rowChecked = [&model](int row) {
-        return model->data(model->index(row, 0), songview::QuickMenuModel::CheckedRole).toBool();
-    };
-    const auto ticksMirrorCheckedRole = [&panel, &rows, &rowChecked] {
-        for (int row = 0; row < rows; ++row) {
-            QQuickItem *delegate = quick_popup::menuRowItem(*panel, row);
-
-Original expression:
-QVERIFY(delegate)
 
 A059 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:327
 Disposition: GAP
@@ -1136,13 +963,6 @@ QTRY_COMPARE(controller.currentRow(), row)
 
 A087 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:424
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-; // the pressed row owns the menu
-    QQuickItem *panel = checks::eventviews::activeMenuPanel(widgets);
-
-Original expression:
-QVERIFY(panel)
 
 A088 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:427
 Disposition: GAP
@@ -1340,17 +1160,6 @@ QCOMPARE(opened.fixture->document().revision(), revisionBeforeInsert + 1)
 
 A107 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:472
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-;
-
-    // A stay-open filter menu is a different owned root: row changes while it
-    // is open must not dismiss it.
-    QQuickItem *const filterButton =
-        checks::eventviews::visualItem(window, QStringLiteral("eventListFilter"));
-
-Original expression:
-QVERIFY(filterButton)
 
 A108 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:476
 Disposition: GAP
@@ -1487,13 +1296,6 @@ QVERIFY(retargeted.isValid())
 
 A120 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:511
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-;
-    QQuickItem *const panel = checks::eventviews::activeMenuPanel(widgets);
-
-Original expression:
-QVERIFY(panel)
 
 A121 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:513
 Disposition: GAP
@@ -1652,12 +1454,6 @@ Swift assertion predicates
 
 S001 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadChecks.swift
 Anchor: message "shape \(index) has one EOT row after its events"
-        report.expectEqual(chunk.events.count + 1, model.rowCount,
-                           cppID: rowsAndEditContractID,
-                           what: "shape \(index) has one EOT row after its events")
 
 S002 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadChecks.swift
 Anchor: message "shape \(index) EOT tick mirrors the chunk end"
-        report.expectEqual(chunk.endTick, model.rowTick(row: chunk.events.count),
-                           cppID: rowsAndEditContractID,
-                           what: "shape \(index) EOT tick mirrors the chunk end")

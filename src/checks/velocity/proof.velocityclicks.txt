@@ -9,29 +9,8 @@ Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
 Additional Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; source context preserves setup, rows, loops, and guards between
-assertions verbatim, and the tail preserves the closing sequence verbatim.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-Unresolved entries remain work.
 
-Execution and ownership
-drawerVelocityGestureTransactions (velocity/tst_velocityediting.swift),
-drawerVelocityFrozenGesturePolicy (velocity/velocitydetentdragging.swift),
-drawerVelocityCommandAvailability (swiftcore/VelocityPageChecks.swift),
-drawerVelocityBlankClickDeselects, drawerVelocityGraduationClickEdits and
-drawerVelocityClickBelowNodeCommits (velocity/VelocityClickSelectionChecks.swift,
-called from runVelocityPageChecks) execute the paired checks. Shared setup lives in swiftcore/VelocityPageChecks.swift
-(drawerVelocityVelocityPageFixture, drawerVelocityVelocityFixture); per-case document
-and gesture state live in the paired Swift sources. Their helper expectations execute
-on every call and are inventoried below.
 
-Verification
 Command: deno task verify --filter swiftcore; deno task verify:qml
 Result: swiftcore harness PASS (1/14 ok, 13 sibling harnesses skipped by the filter),
 re-run after the clicks strengthening and again after an unrelated paint-file edit, so
@@ -40,33 +19,7 @@ aa19a567b5814cab; editorqml-drawer PASS (1/1 ok). Controller-provided integrated
 evidence, reused as final; no harness was rerun for this ledger. The SHA-256 values
 above pin the sources these predicates were read from.
 
-Fixture, sequence and row constraints
-No QTest data rows; each method runs once.
-Cases run on the shared VelocityEditingTest in-memory fixture: three notes resolved
-in SMF event order (quiet stacked duplicate, loud stacked duplicate, tick-60 later
-note); assertions read the documentVelocity/timelineVelocity/noteSelectionIs helpers.
-See proof.tst_velocityediting.txt for the init-site inventory.
-Blank/gutter click cases on the shared three-note fixture (quiet velocity 20, loud
-velocity 70). blankClickDeselectsOnRelease presses blank plot space right of every
-node at kBlankVelocity 40 and observes deselect-without-mutation on release;
-graduationClickEditsSelectedNotes drives the timelineVelocityGutterInput graduation
-label; clickBelowSelectedNodeChangesOnlySelection presses below a selected node.
-No data rows; each method is one press/release sequence guarded by grabber,
-selection, revision, undo-depth, and document/timeline velocity sites.
 Methods in file order: blankClickDeselectsOnRelease, graduationClickEditsSelectedNotes, clickBelowSelectedNodeChangesOnlySelection.
-Swift fixture and sequence differences (ported click cases):
-The three ported cases execute drawerVelocityBlankClickDeselects,
-drawerVelocityGraduationClickEdits and drawerVelocityClickBelowNodeCommits, called from
-runVelocityPageChecks in swiftcore/VelocityPageChecks.swift, over the synthetic fixture
-defined in that file: three notes at ticks 0, 24 and 96 with velocities 100, 64 and 32.
-The predicates compare each note against the value it carried before the click or against
-the value the page published for its handle, rather than against the original literals
-20/70/70. Positions map as follows: notes[0] is the quiet sibling the original edited
-before the click, notes[1] is the untouched later note, and notes[2] is the pressed note
-that plays the loud stacked role inside drawerVelocityClickBelowNodeCommits. The original
-focusVelocityBand() anchors (velocityclicks.cpp:46, 98 and 133) are QWidget focus
-mechanics with no Swift ingress and no user-observable effect: they are
-RETIRED-REPRESENTATION candidates and carry no A site in this inventory.
 Exact original source anchors:
 src/checks/velocity/velocityclicks.cpp:34 | m_tab->view().selectionModel().setNoteSelection({m_quietStacked.noteId, m_later.noteId});
 src/checks/velocity/velocityclicks.cpp:46 | focusVelocityBand();
@@ -82,49 +35,9 @@ src/checks/velocity/velocityclicks.cpp:133 | focusVelocityBand();
 src/checks/velocity/velocityclicks.cpp:134 | mousePress(Qt::LeftButton, windowPos);
 src/checks/velocity/velocityclicks.cpp:141 | mouseRelease(Qt::LeftButton, windowPos);
 
-Original assertion inventory
-
 A001 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:35
 Disposition: MATCHED
-Mapping/reason: S080: the case latches the same ordered pair through setSelectedNotes([notes[0].id, notes[2].id]) and refreshFromDocument, then the guard reports failure unless selectedNoteOrder equals that pair, so the rest of the case executes only while the latch held; the original QVERIFY asserted the same membership and order.
-Source context since previous assertion:
-#include "checks/velocity/tst_velocityediting.h"
-
-#include <QObject>
-#include <QPoint>
-#include <QPointF>
-#include <QQuickItem>
-#include <QQuickWindow>
-#include <QRectF>
-#include <QString>
-#include <QtTest>
-#include <cstddef>
-#include <cstdint>
-#include <optional>
-
-#include "core/songdocument.h"
-#include "ui/editordrawer/velocityaxis.h"
-#include "ui/layout.h"
-#include "ui/songview.h"
-#include "ui/songview/quick/timelineinputitem.h"
-#include "ui/songview/quick/timelinequickview.h"
-
-namespace {
-
-constexpr uint8_t kBlankVelocity = 40;
-constexpr uint8_t kGraduationVelocity = 127;
-constexpr uint8_t kQuietVelocityAfterSetup = 1;
-constexpr uint8_t kLoudVelocity = 70;
-constexpr uint8_t kClickVelocity = 40;
-
-} // namespace
-
-void VelocityEditingTest::blankClickDeselectsOnRelease()
-{
-    m_tab->view().selectionModel().setNoteSelection({m_quietStacked.noteId, m_later.noteId});
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
+Mapping: S080
 
 A002 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:40
 Disposition: PARTIAL
@@ -150,48 +63,19 @@ Original expression:
 
 A004 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:48
 Disposition: MATCHED
-Mapping/reason: S081 and S082: the Qt mouseGrabberItem identity is the press-ownership observable; the Swift page reports ownership through the consumed press return and the live gesture it holds for that press, both asserted at the same press-before-release position.
-Source context since previous assertion:
-;
-
-    const uint64_t revisionBefore = m_tab->document().revision();
-    const int undoDepthBefore = m_tab->document().undoStack()->count();
-
-    focusVelocityBand();
-    mousePress(Qt::LeftButton, windowPoint(blankLocal));
-
-Original expression:
-  QTRY_COMPARE(m_quickWindow->mouseGrabberItem(),
-               static_cast<QQuickItem *>(m_velocityInput.data()))
+Mapping: S081, S082
 
 A005 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:50
 Disposition: MATCHED
-Mapping/reason: S083: selectedNoteOrder still equals the latched pair after the press and before the release, the same mid-gesture selection the original QVERIFY required.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
+Mapping: S083
 
 A006 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:53
 Disposition: MATCHED
-Mapping/reason: S085: selectedNoteOrder is empty after the release, the original noteSelection().empty() observable.
-Source context since previous assertion:
-;
-    mouseRelease(Qt::LeftButton, windowPoint(blankLocal));
-
-
-Original expression:
-  QVERIFY(m_tab->view().selectionModel().noteSelection().empty())
+Mapping: S085
 
 A007 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:54
 Disposition: MATCHED
-Mapping/reason: S087: the full document snapshot equality carries document.revision, the original revisionBefore comparison.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revisionBefore)
+Mapping: S087
 
 A008 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:55
 Disposition: PARTIAL
@@ -204,133 +88,47 @@ Original expression:
 
 A009 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:56
 Disposition: MATCHED
-Mapping/reason: S088: the loop asserts every note keeps the velocity captured before the click, the no-mutation observable of the original literal comparison for the quiet stacked note; the literal 20 belongs to the original fixture and the Swift predicate pins the value that note carried before the click.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
+Mapping: S088
 
 A010 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:57
 Disposition: MATCHED
-Mapping/reason: S088: the same all-notes loop instance for the second note, the loud stacked duplicate; the original literal 70 against its own fixture and the Swift predicate against the value that note carried before the click.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
+Mapping: S088
 
 A011 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:58
 Disposition: MATCHED
-Mapping/reason: S088: the same loop instance for the later note; the original literal 70 against its own fixture and the Swift predicate against the pre-click value of the third note.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
+Mapping: S088
 
 A012 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:59
 Disposition: MATCHED
-Mapping/reason: S089: the loop asserts the published handle value of every note still equals its document velocity, the published-side no-op observable of the original timelineVelocity read; the original literal 20 is the original fixture value and the Swift page publishes its own fixture value.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), 20)
+Mapping: S089
 
 A013 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:60
 Disposition: MATCHED
-Mapping/reason: S089: the same published-value loop instance for the second note, the loud stacked duplicate; the original literal 70 against its own fixture.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(kLoudVelocity))
+Mapping: S089
 
 A014 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:61
 Disposition: MATCHED
-Mapping/reason: S089: the same published-value loop instance for the later note; the original literal 70 against its own fixture.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
+Mapping: S089
 
 A015 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:67
 Disposition: MATCHED
-Mapping/reason: S091: the case latches the pair [notes[0].id, notes[1].id] through setSelectedNotes and refreshFromDocument and the guard fails unless selectedNoteOrder equals it, the original QVERIFY membership and order condition.
-Source context since previous assertion:
-;
-}
-
-void VelocityEditingTest::graduationClickEditsSelectedNotes()
-{
-    m_tab->view().selectionModel().setNoteSelection({m_quietStacked.noteId, m_loudStacked.noteId});
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
+Mapping: S091
 
 A016 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:72
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/velocity/velocityclicks.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-;
-
-    songview::TimelineQuickView *const quickView =
-        m_tab->view().findChild<songview::TimelineQuickView *>(
-            QStringLiteral("timelineQuickCanvas"));
-
-Original expression:
-  QVERIFY(quickView)
 
 A017 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:74
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/velocity/velocityclicks.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-;
-    QObject *const quickRoot = quickView->rootObject();
-
-Original expression:
-  QVERIFY(quickRoot)
 
 A018 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:78
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/velocity/velocityclicks.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-;
-    songview::TimelineInputItem *const gutterInput =
-        quickRoot->findChild<songview::TimelineInputItem *>(
-            QStringLiteral("timelineVelocityGutterInput"));
-
-Original expression:
-  QVERIFY(gutterInput)
 
 A019 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:79
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/velocity/velocityclicks.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(gutterInput->window(), m_quickWindow.data())
 
 A020 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:89
 Disposition: MATCHED
-Mapping/reason: S092: the Swift guard selects the published 127 label from page.axisModel.labels and reports failure when it is absent, the same label-existence condition the original loop and QVERIFY established.
-Source context since previous assertion:
-;
-
-    const VelocityAxisLabel *maximumLabel = nullptr;
-    for (std::size_t index = 0; index < m_area->axis().labelCount(); ++index) {
-        const VelocityAxisLabel &label = m_area->axis().labels()[index];
-        if (label.velocity == kGraduationVelocity) {
-            maximumLabel = &label;
-            break;
-        }
-    }
-
-Original expression:
-  QVERIFY(maximumLabel)
+Mapping: S092
 
 A021 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:92
 Disposition: PARTIAL
@@ -345,57 +143,23 @@ Original expression:
 
 A022 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:100
 Disposition: MATCHED
-Mapping/reason: S094: grabber identity replaced by press ownership; the consumed return is asserted after the press and before the release, the same routing claim.
-Source context since previous assertion:
-;
-    const QPoint gutterWindow = gutterInput->mapToScene(gutterLocal).toPoint();
-
-    const uint64_t revisionBefore = m_tab->document().revision();
-    const int undoDepthBefore = m_tab->document().undoStack()->count();
-
-    focusVelocityBand();
-    mousePress(Qt::LeftButton, gutterWindow);
-
-Original expression:
-  QTRY_COMPARE(m_quickWindow->mouseGrabberItem(), static_cast<QQuickItem *>(gutterInput))
+Mapping: S094
 
 A023 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:101
 Disposition: MATCHED
-Mapping/reason: S100: selectedNoteOrder still equals the latched pair after the commit press, the same selection retention.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
+Mapping: S100
 
 A024 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:102
 Disposition: MATCHED
-Mapping/reason: S095: the first selected note holds the value the ruler row resolved through rulerVelocityAt at the 127 label row, the original literal 127 being that row own graduation.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(documentVelocity(m_quietStacked.noteId), int(kGraduationVelocity))
+Mapping: S095
 
 A025 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:103
 Disposition: MATCHED
-Mapping/reason: S096: the second selected note holds the same row-resolved graduation value.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(documentVelocity(m_loudStacked.noteId), int(kGraduationVelocity))
+Mapping: S096
 
 A026 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:106
 Disposition: MATCHED
-Mapping/reason: S098: the revision advanced by exactly one, the original revisionBefore + 1 comparison.
-Source context since previous assertion:
-;
-    mouseRelease(Qt::LeftButton, gutterWindow);
-
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
+Mapping: S098
 
 A027 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:107
 Disposition: PARTIAL
@@ -408,48 +172,23 @@ Original expression:
 
 A028 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:108
 Disposition: MATCHED
-Mapping/reason: S095: observed at commit time; the case asserts the release is inert (S101), so the post-release document fact is the same one the original re-asserted.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kGraduationVelocity))
+Mapping: S095, S101
 
 A029 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:109
 Disposition: MATCHED
-Mapping/reason: S096: the same second-note document predicate, with the inert release asserted at S101.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kGraduationVelocity))
+Mapping: S096, S101
 
 A030 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:110
 Disposition: MATCHED
-Mapping/reason: S097: the unselected note keeps the value it carried before the press, the original literal-70 no-mutation observable.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
+Mapping: S097
 
 A031 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:111
 Disposition: MATCHED
-Mapping/reason: S102: the published handle of the first selected note republishes the clicked graduation, the published-side value the original timelineVelocity read.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(timelineVelocity(m_quietStacked.noteId), int(kGraduationVelocity))
+Mapping: S102
 
 A032 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:112
 Disposition: MATCHED
-Mapping/reason: S103: the published handle of the second selected note republishes the clicked graduation.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(timelineVelocity(m_loudStacked.noteId), int(kGraduationVelocity))
+Mapping: S103
 
 A033 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:113
 Disposition: PARTIAL
@@ -462,26 +201,11 @@ Original expression:
 
 A034 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:114
 Disposition: MATCHED
-Mapping/reason: S100: selection retention after the release, with the inert release asserted at S101.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
+Mapping: S100, S101
 
 A035 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:120
 Disposition: MATCHED
-Mapping/reason: S105: the case latches [later.id] and the guard fails unless selectedNoteOrder equals it, the original single-note selection condition.
-Source context since previous assertion:
-;
-}
-
-void VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection()
-{
-    m_tab->view().selectionModel().setNoteSelection({m_loudStacked.noteId});
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_loudStacked.noteId}))
+Mapping: S105
 
 A036 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:123
 Disposition: PARTIAL
@@ -523,39 +247,15 @@ Original expression:
 
 A040 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:127
 Disposition: MATCHED
-Mapping/reason: S105: the same latched single-note selection before the press.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_loudStacked.noteId}))
+Mapping: S105
 
 A041 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:135
 Disposition: MATCHED
-Mapping/reason: S108: press ownership asserted as a live gesture; the case discards the consumed return, so the held gesture is the ownership observable, the routing the grabber check made.
-Source context since previous assertion:
-;
-
-    const uint64_t revisionBefore = m_tab->document().revision();
-    const int undoDepthBefore = m_tab->document().undoStack()->count();
-    const QPoint windowPos = windowPoint(nodePoint(kClickVelocity, m_loudStacked.tick));
-
-    focusVelocityBand();
-    mousePress(Qt::LeftButton, windowPos);
-
-Original expression:
-  QTRY_COMPARE(m_quickWindow->mouseGrabberItem(),
-               static_cast<QQuickItem *>(m_velocityInput.data()))
+Mapping: S108
 
 A042 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:138
 Disposition: MATCHED
-Mapping/reason: S107: the guard fails unless an off-node press painted a preview for the pressed note, the original has_value check.
-Source context since previous assertion:
-;
-    const std::optional<uint8_t> loudPreview = m_tab->view().previewVelocity(m_loudStacked.noteId);
-
-Original expression:
-  QVERIFY(loudPreview.has_value())
+Mapping: S107
 
 A043 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:139
 Disposition: PARTIAL
@@ -568,23 +268,11 @@ Original expression:
 
 A044 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:140
 Disposition: MATCHED
-Mapping/reason: S109: selectedNoteOrder still equals the pressed note after the press, the same selection retention.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_loudStacked.noteId}))
+Mapping: S109
 
 A045 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:143
 Disposition: MATCHED
-Mapping/reason: S110: the revision advanced by exactly one, the original revisionBefore + 1 comparison.
-Source context since previous assertion:
-;
-    mouseRelease(Qt::LeftButton, windowPos);
-
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
+Mapping: S110
 
 A046 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:144
 Disposition: PARTIAL
@@ -615,12 +303,7 @@ Original expression:
 
 A049 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:147
 Disposition: MATCHED
-Mapping/reason: S114: the untouched second note is asserted to keep its fixture velocity across the click, the no-cross-note-mutation observable of the original literal comparison.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
+Mapping: S114
 
 A050 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:148
 Disposition: PARTIAL
@@ -651,12 +334,7 @@ Original expression:
 
 A053 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:151
 Disposition: MATCHED
-Mapping/reason: S115: selectedNoteOrder still equals the pressed note after the release.
-Source context since previous assertion:
-;
-
-Original expression:
-  QVERIFY(noteSelectionIs({m_loudStacked.noteId}))
+Mapping: S115
 
 Remaining original source (closing sequence and helper bodies):
 ;
@@ -668,558 +346,348 @@ does not close any A entry. Preserve their surrounding setup and order in the pa
 
 S001 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: function
-  report.fail(drawerVelocityTransactionID, "the synthetic fixture published fewer than three notes")
 
 S002 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "one released drag advances the document revision once"
-  report.expectEqual(baseline.revision + 1, committed.revision, cppID: drawerVelocityTransactionID,
-                     what: "one released drag advances the document revision once")
 
 S003 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "one released drag makes exactly one history entry"
-  report.expect(committed.identity != baseline.identity, cppID: drawerVelocityTransactionID,
-                message: "one released drag makes exactly one history entry")
 
 S004 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the drag's entry becomes undoable"
-  report.expect(committed.canUndo && !baseline.canUndo, cppID: drawerVelocityTransactionID,
-                message: "the drag's entry becomes undoable")
 
 S005 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the drag's commit reached the document"
-  report.expect(document.note(notes[0].id)?.velocity != notes[0].velocity, cppID: drawerVelocityTransactionID,
-                message: "the drag's commit reached the document")
 
 S006 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "every selected target moved with the gesture"
-  report.expect(document.note(notes[1].id)?.velocity != notes[1].velocity, cppID: drawerVelocityTransactionID,
-                message: "every selected target moved with the gesture")
 
 S007 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a released gesture clears its preview"
-  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityTransactionID,
-                message: "a released gesture clears its preview")
 
 S008 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the published handle follows the committed value (before \(before) "
-  report.expect(fixture.handle(notes[0])?.y != before, cppID: drawerVelocityProjectionID,
-                message: "the published handle follows the committed value (before \(before) "
-                    + "after \(fixture.handle(notes[0])?.y ?? -1) velocity "
-                    + "\(document.note(notes[0].id)?.velocity ?? 0) level "
-                    + "\(fixture.handle(notes[0])?.level ?? -99)")
 
 S009 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Undo restores the captured velocity"
-  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0),
-                     cppID: drawerVelocityHistoryID, what: "Undo restores the captured velocity")
 
 S010 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Undo restores every target of the transaction"
-  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0),
-                     cppID: drawerVelocityHistoryID, what: "Undo restores every target of the transaction")
 
 S011 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Undo rebuilds the page without losing its handles"
-  report.expectEqual(3, fixture.handles.count, cppID: drawerVelocityHistoryID,
-                     what: "Undo rebuilds the page without losing its handles")
 
 S012 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Redo restores the committed history identity"
-  report.expectEqual(committed.identity, drawerVelocityDocumentSnapshot(document).identity, cppID: drawerVelocityHistoryID,
-                     what: "Redo restores the committed history identity")
 
 S013 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a stationary click records no history"
-  report.expectEqual(pointerBaseline.revision, drawerVelocityDocumentSnapshot(document).revision,
-                     cppID: drawerVelocityTransactionID, what: "a stationary click records no history")
 
 S014 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a stationary click selects only its own note"
-  report.expect(fixture.session.selectedNotes == [notes[0].id], cppID: drawerVelocityTransactionID,
-                message: "a stationary click selects only its own note")
 
 S015 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a live drag previews before release"
-  report.expect(!page.frozenPreview.isEmpty, cppID: drawerVelocityTransactionID,
-                    message: "a live drag previews before release")
 
 S016 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a live drag reports an active interaction"
-  report.expect(page.interactionActive, cppID: drawerVelocityTransactionID,
-                    message: "a live drag reports an active interaction")
 
 S017 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Escape is claimed while a gesture is live"
-  report.expect(page.handleEscape(), cppID: drawerVelocityCancellationID,
-                    message: "Escape is claimed while a gesture is live")
 
 S018 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Escape clears the frozen preview"
-  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityCancellationID,
-                message: "Escape clears the frozen preview")
 
 S019 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Escape writes nothing at all"
-  report.expect(drawerVelocityDocumentSnapshot(document) == cancelBaseline, cppID: drawerVelocityCancellationID,
-                message: "Escape writes nothing at all")
 
 S020 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "Escape restores selection membership and insertion order"
-  report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID,
-                message: "Escape restores selection membership and insertion order")
 
 S021 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a release after a foreign change writes nothing"
-  report.expectEqual(foreignRevision + 1, document.revision, cppID: drawerVelocityCancellationID,
-                         what: "a release after a foreign change writes nothing")
 
 S022 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a stale release ends the gesture"
-  report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID,
-                    message: "a stale release ends the gesture")
 
 S023 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the ruler consumes its own press"
-  report.expect(page.pointerPress(x: 10, y: rulerY, surface: 0, button: 1, modifiers: 0),
-                cppID: drawerVelocityTransactionID, message: "the ruler consumes its own press")
 
 S024 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "one ruler click makes one revision"
-  report.expectEqual(rulerBaseline.revision + 1, document.revision, cppID: drawerVelocityTransactionID,
-                     what: "one ruler click makes one revision")
 
 S025 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "one ruler click makes one history entry"
-  report.expect(document.history.currentIdentity != rulerBaseline.identity, cppID: drawerVelocityTransactionID,
-                message: "one ruler click makes one history entry")
 
 S026 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a press inside the plot is not the ruler's"
-  report.expect(!page.pointerPress(x: 200, y: rulerY, surface: 0, button: 1, modifiers: 0),
-                cppID: drawerVelocityTransactionID, message: "a press inside the plot is not the ruler's")
 
 S027 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a middle drag pans the shared camera"
-  report.expect(fixture.session.camera.snapshot.scrollX > panScroll, cppID: drawerVelocityTransactionID,
-                message: "a middle drag pans the shared camera")
 
 S028 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a live pan suspends follow through the page's own interaction"
-  report.expect(page.interactionActive, cppID: drawerVelocityTransactionID,
-                message: "a live pan suspends follow through the page's own interaction")
 
 S029 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the pan ends on release"
-  report.expect(!page.hasGesture, cppID: drawerVelocityTransactionID, message: "the pan ends on release")
 
 S030 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "panning writes no document state"
-  report.expect(drawerVelocityDocumentSnapshot(document) == panBaseline, cppID: drawerVelocityTransactionID,
-                message: "panning writes no document state")
 
 S031 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a PSG context offers the detent control, enabled by default"
-  report.expect(page.detentsAvailable && page.detentsEnabled, cppID: drawerVelocityTransactionID,
-                message: "a PSG context offers the detent control, enabled by default")
 
 S032 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the PSG context presents the intrinsic ruler"
-  report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode,
-                     cppID: drawerVelocityTransactionID,
-                     what: "the PSG context presents the intrinsic ruler")
 
 S033 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "an enabled detent set draws the level graduations"
-  report.expect(page.axisGraduationsVisible, cppID: drawerVelocityTransactionID,
-                message: "an enabled detent set draws the level graduations")
 
 S034 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the detent case starts from a live preview"
-  report.expect(!page.frozenPreview.isEmpty, cppID: drawerVelocityTransactionID,
-                    message: "the detent case starts from a live preview")
 
 S035 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "toggling detents cancels the live interaction"
-  report.expect(!page.detentsEnabled && page.frozenPreview.isEmpty, cppID: drawerVelocityTransactionID,
-                    message: "toggling detents cancels the live interaction")
 
 S036 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "disabled detents put the ruler on the continuous rendering"
-  report.expect(page.axisGraduationsVisible == false, cppID: drawerVelocityTransactionID,
-                message: "disabled detents put the ruler on the continuous rendering")
 
 S037 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the voice's own map stays intrinsic under the ruler switch"
-  report.expect(page.axisModel.mode == .intrinsic, cppID: drawerVelocityTransactionID,
-                message: "the voice's own map stays intrinsic under the ruler switch")
 
 S038 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a disabled detent set places nodes at their exact velocity"
-  report.expect(abs(handle.y - exactY) < 0.001, cppID: drawerVelocityTransactionID,
-                    message: "a disabled detent set places nodes at their exact velocity")
 
 S039 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the detent toggle writes no document state"
-  report.expect(drawerVelocityDocumentSnapshot(document) == panBaseline, cppID: drawerVelocityTransactionID,
-                message: "the detent toggle writes no document state")
 
 S040 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "a band selection writes nothing"
-  report.expectEqual(bandBaseline.revision, document.revision, cppID: drawerVelocityTransactionID,
-                     what: "a band selection writes nothing")
 
 S041 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
 Anchor: message "the band selected every note it covered"
-  report.expectEqual(3, fixture.session.selectedNotes.count, cppID: drawerVelocityTransactionID,
-                     what: "the band selected every note it covered")
 
 S042 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: function
-  report.fail(drawerVelocityGestureID, "the synthetic fixture published fewer than three notes")
 
 S043 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "every note of the primary track publishes one handle"
-  report.expectEqual(3, fixture.handles.count, cppID: drawerVelocityProjectionID,
-                     what: "every note of the primary track publishes one handle")
 
 S044 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: function
-  report.fail(drawerVelocityProjectionID, "the fixture's notes have no published handles")
 
 S045 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a fresh selection publishes no selected handle"
-  report.expect(!firstHandle.selected, cppID: drawerVelocityProjectionID,
-                message: "a fresh selection publishes no selected handle")
 
 S046 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "an intrinsic handle publishes the level of its displayed value"
-  report.expectEqual(openingMap.level(of: Int(notes[0].velocity)) ?? -1, firstHandle.level,
-                     cppID: drawerVelocityProjectionID,
-                     what: "an intrinsic handle publishes the level of its displayed value")
 
 S047 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the handle's x is a plot-local camera projection"
-  report.expect(abs(firstHandle.x - page.axisModel.geometry.labelWidth - 56) < 1.0
-                    || firstHandle.x <= 400, cppID: drawerVelocityProjectionID,
-                message: "the handle's x is a plot-local camera projection")
 
 S048 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the handle publishes a drawn y inside the body"
-  report.expect(fixture.handle(notes[0])!.y < firstHandle.hitRadius * 2
-                    || firstHandle.y > 0, cppID: drawerVelocityProjectionID,
-                message: "the handle publishes a drawn y inside the body")
 
 S049 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a drag inside the activation distance previews nothing"
-  report.expect(!gesture.relativeActivated && gesture.preview.isEmpty, cppID: drawerVelocityGestureID,
-                message: "a drag inside the activation distance previews nothing")
 
 S050 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "leaving the activation distance arms the relative drag"
-  report.expect(gesture.relativeActivated, cppID: drawerVelocityGestureID,
-                message: "leaving the activation distance arms the relative drag")
 
 S051 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the low note takes the whole delta"
-  report.expectEqual(30, Int(gesture.preview[NoteID(1)] ?? 0), cppID: drawerVelocityGestureID,
-                     what: "the low note takes the whole delta")
 
 S052 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the high note clamps to the maximum instead of wrapping"
-  report.expectEqual(127, Int(gesture.preview[NoteID(2)] ?? 0), cppID: drawerVelocityGestureID,
-                     what: "the high note clamps to the maximum instead of wrapping")
 
 S053 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the commit payload carries one update per frozen note"
-  report.expectEqual(2, VelocityGesturePolicy.updates(gesture).count, cppID: drawerVelocityGestureID,
-                     what: "the commit payload carries one update per frozen note")
 
 S054 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the first level follows the level delta"
-  report.expectEqual(Int(psgMap.representative(9)), Int(psgGesture.preview[NoteID(3)] ?? 0),
-                     cppID: drawerVelocityGestureID, what: "the first level follows the level delta")
 
 S055 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the second level keeps its own offset"
-  report.expectEqual(Int(psgMap.representative(11)), Int(psgGesture.preview[NoteID(4)] ?? 0),
-                     cppID: drawerVelocityGestureID, what: "the second level keeps its own offset")
 
 S056 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the detent unlock takes exact MIDI velocity"
-  report.expectEqual(127,
-                     Int(VelocityGesturePolicy.resolvedVelocity(axis: psgAxis, noteMap: psgMap,
-                                                                detentUnlock: true, y: 0)),
-                     cppID: drawerVelocityGestureID,
-                     what: "the detent unlock takes exact MIDI velocity")
 
 S057 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a locked intrinsic drag canonicalizes onto the note's own map"
-  report.expectEqual(Int(psgMap.canonicalize(76)),
-                     Int(VelocityGesturePolicy.resolvedVelocity(axis: psgAxis, noteMap: psgMap,
-                                                                detentUnlock: false,
-                                                                y: psgAxis.levelToY(9))),
-                     cppID: drawerVelocityGestureID,
-                     what: "a locked intrinsic drag canonicalizes onto the note's own map")
 
 S058 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the sweep covers every node the column reaches"
-  report.expectEqual(2, painted.count, cppID: drawerVelocityGestureID,
-                     what: "the sweep covers every node the column reaches")
 
 S059 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the painted ramp follows the swept line's own direction"
-  report.expect(painted[0].velocity < painted[1].velocity, cppID: drawerVelocityGestureID,
-                message: "the painted ramp follows the swept line's own direction")
 
 S060 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a sweep that stops short leaves the far node alone"
-  report.expectEqual(1, partial.count, cppID: drawerVelocityGestureID,
-                     what: "a sweep that stops short leaves the far node alone")
 
 S061 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a stationary paint only takes the nodes in its own column"
-  report.expectEqual(1, singleColumn.count, cppID: drawerVelocityGestureID,
-                     what: "a stationary paint only takes the nodes in its own column")
 
 S062 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the note at the press position keeps the press velocity"
-  report.expectEqual(100, Int(ramp.preview[NoteID(5)] ?? 0), cppID: drawerVelocityGestureID,
-                     what: "the note at the press position keeps the press velocity")
 
 S063 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a note inside the ramp span takes the swept line's value"
-  report.expectEqual(75, Int(ramp.preview[NoteID(7)] ?? 0), cppID: drawerVelocityGestureID,
-                     what: "a note inside the ramp span takes the swept line's value")
 
 S064 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a note outside the ramp span keeps its captured velocity"
-  report.expectEqual(40, Int(ramp.preview[NoteID(6)] ?? 0), cppID: drawerVelocityGestureID,
-                     what: "a note outside the ramp span keeps its captured velocity")
 
 S065 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a preview that matches the captured values commits nothing"
-  report.expect(VelocityGesturePolicy.updates(flatState).isEmpty, cppID: drawerVelocityGestureID,
-                message: "a preview that matches the captured values commits nothing")
 
 S066 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "only the values that differ from the captured ones are committed"
-  report.expect(moved.count == 1 && moved[0].noteID == movedNote.noteID
-                && moved[0].velocity == Int(movedNote.velocity) + 7,
-                cppID: drawerVelocityGestureID,
-                message: "only the values that differ from the captured ones are committed")
 
 S067 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the ramp interpolates linearly"
-  report.expect(abs(velocityRampValue(at: 20, x0: 0, y0: 0, x1: 40, y1: 40) - 20) < 1e-9,
-                cppID: drawerVelocityGestureID, message: "the ramp interpolates linearly")
 
 S068 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "a vertical span resolves to the near endpoint"
-  report.expect(abs(velocityRampValue(at: 5, x0: 10, y0: 3, x1: 10, y1: 9) - 9) < 1e-9,
-                cppID: drawerVelocityGestureID, message: "a vertical span resolves to the near endpoint")
 
 S069 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
 Anchor: message "the published hit radius is font-relative and positive"
-  report.expect(thirdHandle.hitRadius > 0, cppID: drawerVelocityGestureID,
-                message: "the published hit radius is font-relative and positive")
 
 S070 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "Set Velocity is unavailable with no selection"
-  report.expect(!grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
-                message: "Set Velocity is unavailable with no selection")
 
 S071 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "Set Velocity becomes available with a selection"
-  report.expect(grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
-                message: "Set Velocity becomes available with a selection")
 
 S072 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the existing command row asks its owner for the prompt"
-  report.expectEqual(1, requested, cppID: drawerVelocityCommandID,
-                     what: "the existing command row asks its owner for the prompt")
 
 S073 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the command commits no value before prompt acceptance"
-  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
-                message: "the command commits no value before prompt acceptance")
 
 S074 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the command routes every execution through the same owner"
-  report.expectEqual(2, requested, cppID: drawerVelocityCommandID,
-                     what: "the command routes every execution through the same owner")
 
 S075 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the routed command opened the page's captured prompt"
-  report.expect(fixture.page.promptOpen, cppID: drawerVelocityCommandID,
-                message: "the routed command opened the page's captured prompt")
 
 S076 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "cancelling the routed prompt still commits nothing"
-  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
-                message: "cancelling the routed prompt still commits nothing")
 
 S077 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the command table keeps Set Velocity on the notes arm"
-  report.expectEqual(EditNotesOperation.setVelocity.rawValue,
-                     row?.notesOperation.rawValue ?? -1, cppID: drawerVelocityCommandID,
-                     what: "the command table keeps Set Velocity on the notes arm")
 
 S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
 Anchor: message "the command table keeps Set Velocity's consume route"
-  report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
-                     cppID: drawerVelocityCommandID,
-                     what: "the command table keeps Set Velocity's consume route")
-
-VelocityClickSelectionChecks.swift predicates (blank click, graduation click and off-node click cases)
 
 S079 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  report.fail(drawerVelocityClickSelectionID, "the synthetic fixture published fewer than three notes")
 
 S080 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  report.fail(drawerVelocityClickSelectionID, "the press-time selection did not latch")
 
 S081 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a blank plot press is consumed"
-  report.expect(consumed, cppID: drawerVelocityClickSelectionID, message: "a blank plot press is consumed")
 
 S082 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a blank press holds a live gesture"
-  report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a blank press holds a live gesture")
 
 S083 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a blank press keeps the selection until release"
-  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityClickSelectionID, message: "a blank press keeps the selection until release")
 
 S084 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a blank press previews nothing"
-  report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityClickSelectionID, message: "a blank press previews nothing")
 
 S085 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a blank release clears the selection"
-  report.expect(fixture.session.selectedNoteOrder.isEmpty, cppID: drawerVelocityClickSelectionID, message: "a blank release clears the selection")
 
 S086 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a blank release ends the gesture"
-  report.expect(!page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a blank release ends the gesture")
 
 S087 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "deselecting on release writes nothing"
-  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityTransactionID, message: "deselecting on release writes nothing")
 
 S088 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a blank click leaves every velocity captured"
-  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a blank click leaves every velocity captured")
 
 S089 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a blank click republishes every captured value"
-  report.expectEqual(Int(document.note(note.id)?.velocity ?? 0), fixture.handle(note)?.value ?? -1, cppID: drawerVelocityClickSelectionID, what: "a blank click republishes every captured value")
 
 S090 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  report.fail(drawerVelocityClickSelectionID, "the synthetic fixture published fewer than three notes")
 
 S091 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  report.fail(drawerVelocityClickSelectionID, "the press-time selection did not latch")
 
 S092 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  report.fail(drawerVelocityClickSelectionID, "the ruler published no 127 label")
 
 S093 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  report.fail(drawerVelocityClickSelectionID, "the 127 label row resolved no velocity")
 
 S094 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a graduation press is consumed"
-  report.expect(consumed, cppID: drawerVelocityClickSelectionID, message: "a graduation press is consumed")
 
 S095 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a graduation click sets the first selected note"
-  report.expectEqual(expected, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityClickSelectionID, what: "a graduation click sets the first selected note")
 
 S096 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a graduation click sets the second selected note"
-  report.expectEqual(expected, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityClickSelectionID, what: "a graduation click sets the second selected note")
 
 S097 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a graduation click leaves the unselected note alone"
-  report.expectEqual(untouched, document.note(notes[2].id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a graduation click leaves the unselected note alone")
 
 S098 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "one graduation click makes one revision"
-  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityTransactionID, what: "one graduation click makes one revision")
 
 S099 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "one graduation click makes one history entry"
-  report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityTransactionID, message: "one graduation click makes one history entry")
 
 S100 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "a graduation click keeps the selection"
-  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityClickSelectionID, message: "a graduation click keeps the selection")
 
 S101 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "the release after a graduation commit is inert"
-  report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "the release after a graduation commit is inert")
 
 S102 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "the first handle republishes the clicked graduation"
-  report.expectEqual(expected, fixture.handle(notes[0])?.value ?? -1, cppID: drawerVelocityClickSelectionID, what: "the first handle republishes the clicked graduation")
 
 S103 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "the second handle republishes the clicked graduation"
-  report.expectEqual(expected, fixture.handle(notes[1])?.value ?? -1, cppID: drawerVelocityClickSelectionID, what: "the second handle republishes the clicked graduation")
 
 S104 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  report.fail(drawerVelocityClickSelectionID, "the synthetic fixture published fewer than three notes")
 
 S105 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  report.fail(drawerVelocityClickSelectionID, "the press-time selection did not latch")
 
 S106 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  report.fail(drawerVelocityClickSelectionID, "the fixture's later note has no published handle")
 
 S107 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: function
-  report.fail(drawerVelocityClickSelectionID, "no off-node press previewed without moving")
 
 S108 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "an off-node press holds a live gesture"
-  report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "an off-node press holds a live gesture")
 
 S109 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "an off-node press previews without changing the selection"
-  report.expect(fixture.session.selectedNoteOrder == [later.id], cppID: drawerVelocityClickSelectionID, message: "an off-node press previews without changing the selection")
 
 S110 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "one off-node click makes one revision"
-  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityTransactionID, what: "one off-node click makes one revision")
 
 S111 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "one off-node click makes one history entry"
-  report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityTransactionID, message: "one off-node click makes one history entry")
 
 S112 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "the release commits the pressed preview"
-  report.expectEqual(pressPreview, Int(document.note(later.id)?.velocity ?? 0), cppID: drawerVelocityClickSelectionID, what: "the release commits the pressed preview")
 
 S113 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "an off-node click leaves the first note alone"
-  report.expectEqual(document.note(notes[0].id)?.velocity, notes[0].velocity, cppID: drawerVelocityClickSelectionID, what: "an off-node click leaves the first note alone")
 
 S114 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "an off-node click leaves the second note alone"
-  report.expectEqual(document.note(notes[1].id)?.velocity, notes[1].velocity, cppID: drawerVelocityClickSelectionID, what: "an off-node click leaves the second note alone")
 
 S115 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "an off-node click keeps its own selection"
-  report.expect(fixture.session.selectedNoteOrder == [later.id], cppID: drawerVelocityClickSelectionID, message: "an off-node click keeps its own selection")
 
 S116 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "an off-node release ends the gesture"
-  report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityClickSelectionID, message: "an off-node release ends the gesture")

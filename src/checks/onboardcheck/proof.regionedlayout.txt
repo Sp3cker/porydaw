@@ -8,38 +8,14 @@ Original SHA-256: a59d94a22f58702307844009f0f4f90f7179be69a1b51acafec4ff6e313442
 Swift counterpart: none identified
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-All 82 sites in this file are GAP: regionedValueLayouts and regionedAliasLayouts exercise pure SongRegistry register/unregister/makePlan helpers against regioned song_table.inc/songs.h fixtures on a copied project. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them — feature not yet ported: regioned song-table layout checks. The native harness is uncompiled in all CMake targets and unregistered in checkcatalog, so these sites never execute in any lane.
 Site tally: 82 sites (82 GAP).
 
-Execution and ownership
-The native harness runOnboardCheck (support.cpp) is the only owner of these checks (QTest::qExec of OnboardingTest), but the file is uncompiled in all CMake targets and unregistered in checkcatalog, so no lane executes it. No Swift entry point executes these checks either; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf) and the file-local define/song/regionFixture layout helpers, which carry no assertion sites.
 
-Fixture, sequence and row constraints
-regionedValueLayouts_data expands markerless, music, se, and delete into distinct runs; regionedAliasLayouts_data expands insert, stranded, and overflow. The markerless and se branches return early after asserting plan ids and header edits; the delete branch asserts repointing of PH_ONE/PH_TWO across table, header, and charmap snapshots; the stranded branch migrates a straggler entry and asserts refill reuse of id 8; the overflow branch asserts SE id allocation (4, then 9 past the music region) and END_MUS aliasing. Per-path snapshot loops expand single sites into per-file instances. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Verification
 Command: deno task verify --filter onboardcheck --verbose
 Result: pending integrated run.
-No deno lane covers the native QTest harness; the entry point is runOnboardCheck (support.cpp) via QTest::qExec. Native harness results support only retained native obligations, not Swift parity.
 
-Swift sources inspected (SHA-256)
-No same-dir regionedlayout.swift exists, and no Swift check references this
-file's methods or behavior. Inspected at this revision:
-src/checks/editcheck/EventChecks.swift: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
-(sole Swift file carrying onboardcheck/ cppIDs; all of them name
 OnboardingTest::import* methods, none in this file).
-
-Original assertion inventory and source sequence
 
 A001 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:78
 Disposition: GAP

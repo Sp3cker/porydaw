@@ -6,23 +6,8 @@ Original SHA-256: 2f7fbeac149980e4fce3f3ea25d4a5a092561bf4afc848fcfb58b117c7f254
 Swift counterpart: src/checks/nativegraphics/PlayheadFeatureChecks.swift
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-PlayheadFeatureChecks.swift provides presenter-level middlePan coverage
-(begin, camera-delta, active, follow-suspended, end, and cancel; cppIds under
-swiftcore/PlayheadFeature::middlePan). The real-input and window assertions are
-ported to the Swift-hosted Qt QuickTest lane (roll_qml_tests, src/checks/rollqml/),
-which mounts the production SwiftRollOverlay.qml + real ApplicationSession and
-drives it with QtTest mouse/key input. Each MATCHED site names the assertion it
-carries; each MATCHED site names the tst_TimelinePan.qml function that holds it. Sites asserting C++-only internals — QSGNode
-pooling, dashed-segment builders, TimelineQuickTextModel zero-signal
-obligations, drum-pad/program classification, and gutter-overflow geometry the
-Swift layout cannot produce — remain NATIVE with the specific reason.
 Disposition tally: 138 sites: 89 MATCHED, 49 NATIVE.
 
-Verification
 Command: deno task verify:qml-roll --verbose
 Result: passing — TimelinePan::test_wheelPansCamera, test_middleDragPansCamera,
 test_hoverChipOverlay, test_coalescedRefreshMatchesFull,
@@ -34,276 +19,11 @@ real horizontal-pan input path (handleWheel's shift branch scrolls by -d).
 Command: deno task verify --filter swiftcore --verbose
 Result: passing — the suite ran green with these checks registered.
 
-Execution ownership
-The roll_qml_tests lane executes the timeline-pan QML TestCase functions in
-src/checks/rollqml/. runPlayheadFeatureChecks executes checkPlayheadMiddlePan in
-src/checks/nativegraphics/PlayheadFeatureChecks.swift as presenter-level
-review evidence.
-
-Fixture, sequence and row constraints
-The 8-stage geometry pipeline loop expands the stage-readiness site into one instance per stage. Voice-change, drum-pad, program-change, hover-chip, and pan-delta rows expand one site per key, pad row, tick, and pixel-delta case; capture comparisons (coalesced versus full) expand per band.
-Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
-
 A001 | TimelinePanTest::init | src/checks/timelinepan/tst_timelinepan.cpp:242
 Disposition: MATCHED
-Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the production Swift session loading the fixture song.
-Source context since previous assertion:
-  #include "checks/timelinepan/timelinepanfixture.h"
-
-  #include <QAbstractItemModel>
-  #include <QByteArray>
-  #include <QColor>
-  #include <QEvent>
-  #include <QFontMetrics>
-  #include <QImage>
-  #include <QList>
-  #include <QModelIndex>
-  #include <QPersistentModelIndex>
-  #include <QPoint>
-  #include <QQuickItem>
-  #include <QRectF>
-  #include <QSGGeometry>
-  #include <QSGGeometryNode>
-  #include <QScopeGuard>
-  #include <QSignalSpy>
-  #include <QStringList>
-  #include <QtTest>
-
-  #include "checks/support/eventsynth.h"
-  #include "checks/support/quickframebuffer.h"
-  #include "core/miditimeline.h"
-  #include "ui/layout.h"
-  #include "ui/pitchprojection.h"
-  #include "ui/songview.h"
-  #include "ui/songview/detail.h"
-  #include "ui/songview/pianoroll.h"
-  #include "ui/songview/quick/timelineinputitem.h"
-  #include "ui/songview/quick/timelinequickscene.h"
-  #include "ui/songview/quick/timelinequickview.h"
-  #include "ui/theme/themeruntime.h"
-
-  #include <algorithm>
-  #include <array>
-  #include <atomic>
-  #include <cmath>
-  #include <cstddef>
-  #include <cstring>
-  #include <memory>
-  #include <optional>
-  #include <tuple>
-  #include <utility>
-  #include <vector>
-
-  namespace {
-
-  constexpr qreal kCameraTolerance = 0.01;
-  constexpr QPoint kLegacyPanPixelDelta{-8, 0};
-
-  bool closeEnough(qreal actual, qreal expected)
-  {
-      return std::abs(actual - expected) <= kCameraTolerance;
-  }
-
-  std::vector<QRectF> orderedRects(const songview::TimelineQuickScene &scene,
-                                   songview::TimelineQuickLayer layer)
-  {
-      std::vector<QRectF> result;
-      for (const auto &primitive : scene.layer(layer).rects)
-          result.push_back(primitive.rect);
-      std::sort(result.begin(), result.end(), [](const QRectF &a, const QRectF &b) {
-          return std::tuple(a.x(), a.y(), a.width(), a.height()) <
-                 std::tuple(b.x(), b.y(), b.width(), b.height());
-      });
-      return result;
-  }
-
-  std::vector<QRectF> labelRects(const QAbstractItemModel &model)
-  {
-      std::vector<QRectF> result;
-      result.reserve(static_cast<std::size_t>(model.rowCount()));
-      for (int row = 0; row < model.rowCount(); ++row)
-          result.push_back(
-              model.data(model.index(row, 0), songview::TimelineQuickTextModel::RectRole).toRectF());
-      return result;
-  }
-
-  class TextModelSpies final
-  {
-    public:
-      explicit TextModelSpies(QAbstractItemModel &model)
-          : m_rowsRemoved(&model, &QAbstractItemModel::rowsRemoved)
-          , m_rowsInserted(&model, &QAbstractItemModel::rowsInserted)
-          , m_rowsMoved(&model, &QAbstractItemModel::rowsMoved)
-          , m_modelReset(&model, &QAbstractItemModel::modelReset)
-          , m_layoutChanged(
-                &model,
-                static_cast<void (QAbstractItemModel::*)(const QList<QPersistentModelIndex> &,
-                                                         QAbstractItemModel::LayoutChangeHint)>(
-                    &QAbstractItemModel::layoutChanged))
-          , m_dataChanged(&model, &QAbstractItemModel::dataChanged)
-      {}
-
-      bool isValid() const
-      {
-          return m_rowsRemoved.isValid() && m_rowsInserted.isValid() && m_rowsMoved.isValid() &&
-                 m_modelReset.isValid() && m_layoutChanged.isValid() && m_dataChanged.isValid();
-      }
-
-      int structuralChangeCount() const
-      {
-          return m_rowsRemoved.count() + m_rowsInserted.count() + m_rowsMoved.count() +
-                 m_modelReset.count() + m_layoutChanged.count();
-      }
-
-      int signalCount() const { return structuralChangeCount() + m_dataChanged.count(); }
-
-    private:
-      QSignalSpy m_rowsRemoved;
-      QSignalSpy m_rowsInserted;
-      QSignalSpy m_rowsMoved;
-      QSignalSpy m_modelReset;
-      QSignalSpy m_layoutChanged;
-      QSignalSpy m_dataChanged;
-  };
-
-  constexpr char kDrumPadName[] = "Kick";
-  constexpr char kDrumPadLongName[] = "Fixture Drum Pad With A Long Name";
-
-  // The bank borrows only this fixture's storage; moving it would invalidate
-  // those pointers. Each scenario owns its own independent tables.
-  class DrumBankFixture final
-  {
-      Q_DISABLE_COPY_MOVE(DrumBankFixture)
-
-    public:
-      DrumBankFixture(int program, int namedKey, int unnamedKey, int longKey)
-      {
-          m_tones[unnamedKey].type = VOICE_NOISE;
-          std::strncpy(m_names[namedKey], kDrumPadName, VG_VOICE_NAME_LEN - 1);
-          std::strncpy(m_names[longKey], kDrumPadLongName, VG_VOICE_NAME_LEN - 1);
-          bank.voices[program].type = VOICE_KEYSPLIT_ALL;
-          bank.voices[program].subGroup = m_tones;
-          bank.subGroups = m_subGroups;
-          bank.subGroupVoiceNames = m_subGroupNames;
-          bank.subGroupCount = 1;
-          bank.subGroupCapacity = 1;
-      }
-
-      LoadedVoiceGroup bank{};
-
-    private:
-      ToneData m_tones[VOICEGROUP_SIZE]{};
-      char m_names[VOICEGROUP_SIZE][VG_VOICE_NAME_LEN]{};
-      ToneData *m_subGroups[1]{m_tones};
-      char (*m_subGroupNames[1])[VG_VOICE_NAME_LEN]{m_names};
-  };
-
-  QRectF padRowRect(const SongView &view, int key)
-  {
-      const auto &projection = view.pitchProjection();
-      return projection.rowRect(projection.rowForPitch(key), 0, view.pianoKeyboardWidth(),
-                                view.camera().keyHeight(), view.camera().scrollY(),
-                                view.quickView()->quickDevicePixelRatio());
-  }
-
-  // Choose input targets through the public projection, not a second camera.
-  // Keep an accidental as the named pad so dark-lane rendering is exercised.
-  std::optional<std::array<int, 3>> drumPadKeys(const SongView &view, qreal plotHeight)
-  {
-      int accidental = -1;
-      std::vector<int> naturals;
-      const auto &projection = view.pitchProjection();
-      for (int row = 0; row < projection.visibleRowCount(); ++row) {
-          const int key = projection.visiblePitchAt(row);
-          const QRectF rect = padRowRect(view, key);
-          if (rect.top() < 0 || rect.bottom() > plotHeight)
-              continue;
-          if (songview::detail::isBlackKey(key))
-              accidental = key;
-          else
-              naturals.push_back(key);
-      }
-      if (accidental < 0 || naturals.size() < 2)
-          return std::nullopt;
-      return std::array<int, 3>{accidental, naturals.front(), naturals.back()};
-  }
-
-  QModelIndex keyboardRecordAt(const QAbstractItemModel &model, qreal rowY)
-  {
-      for (int row = 0; row < model.rowCount(); ++row) {
-          const QModelIndex index = model.index(row, 0);
-          const QRectF rect = model.data(index, songview::TimelineQuickTextModel::RectRole).toRectF();
-          if (rowY >= rect.top() && rowY < rect.bottom())
-              return index;
-      }
-      return {};
-  }
-
-  void hoverPadRow(const SongView &view, songview::TimelineInputItem &gutter, int key)
-  {
-      checks::events::sendMouse(gutter, QEvent::MouseMove,
-                                QPointF(4.0, padRowRect(view, key).center().y()), Qt::NoButton,
-                                Qt::NoButton, Qt::NoModifier);
-      checks::support::pumpQuick();
-  }
-
-  class TimelinePanTest final : public QObject
-  {
-      Q_OBJECT
-      Q_DISABLE_COPY_MOVE(TimelinePanTest)
-
-    public:
-      TimelinePanTest(const QString &projectRoot, const QString &songLabel)
-          : m_fixture(projectRoot, songLabel)
-      {}
-
-      ~TimelinePanTest() override = default;
-
-    private slots:
-      void init();
-      void cleanup();
-
-      void dashPhasePreservesClip_data();
-      void dashPhasePreservesClip();
-
-      void wheelPansCamera_data();
-      void wheelPansCamera();
-      void gutterLabelsSurvivePan();
-      void geometryCountsSurviveReuse();
-      void fullRefreshWinsOverPan_data();
-      void fullRefreshWinsOverPan();
-      void drumGutterLabelsAndHover();
-      void drumGutterTrackSwitch();
-      void drumClassificationIgnoresProgramChanges();
-      void hoverChipOverlayUnclipped();
-
-    private:
-      qreal panOnce(const QPoint &pixelDelta);
-
-      checks::timelinepan::TimelinePanFixture m_fixture;
-  };
-
-  void TimelinePanTest::init()
-  {
-      if (QByteArray(QTest::currentTestFunction()) == QByteArrayLiteral("dashPhasePreservesClip"))
-          return;
-
-      QString error;
-
-Original expression:
-  QVERIFY2(m_fixture.load(error), qPrintable(error))
 
 A002 | TimelinePanTest::init | src/checks/timelinepan/tst_timelinepan.cpp:244
 Disposition: MATCHED
-Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the real QQuickView becoming exposed/active and completing its first frame.
-Source context since previous assertion:
-  ;
-      m_fixture.show();
-
-Original expression:
-  QTRY_VERIFY(m_fixture.isReady(false))
 
 A003 | TimelinePanTest::dashPhasePreservesClip | src/checks/timelinepan/tst_timelinepan.cpp:288
 Disposition: GAP
@@ -379,95 +99,6 @@ Original expression:
 
 A005 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:384
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      // Create, inspect and destroy all scene graph objects on the render thread.
-      const auto connection = connect(
-          window, &QQuickWindow::beforeSynchronizing, window,
-          [result] {
-              if (result->started.exchange(true))
-                  return;
-              using namespace songview;
-              using Vertex = std::tuple<float, float, int, int, int, int>;
-              TimelineQuickLayerData data;
-              std::unique_ptr<QSGNode> node;
-              std::vector<Vertex> expected;
-              const auto inspect = [&] {
-                  std::vector<Vertex> actual;
-                  for (auto *child = node->firstChild(); child; child = child->nextSibling()) {
-                      if (child->isSubtreeBlocked())
-                          continue;
-                      const auto *geometry = static_cast<QSGGeometryNode *>(child)->geometry();
-                      if (geometry->drawingMode() != QSGGeometry::DrawTriangles)
-                          return false;
-                      const auto *vertices = geometry->vertexDataAsColoredPoint2D();
-                      for (int index = 0; index < geometry->vertexCount(); ++index) {
-                          const auto &v = vertices[index];
-                          actual.emplace_back(v.x, v.y, v.r, v.g, v.b, v.a);
-                      }
-                  }
-                  return actual == expected;
-              };
-              const auto sync = [&](const TimelineQuickLayerData *source) {
-                  node.reset(timeline_quick::syncLayerNode(node.release(), source));
-                  result->stages.push_back(inspect());
-              };
-              const auto populate = [&](int rectCount, int triangleCount, int offset) {
-                  timeline_quick::resetLayer(data);
-                  expected.clear();
-                  const QColor translucent(200, 100, 50, 128);
-                  for (int index = 0; index < rectCount; ++index) {
-                      const float x = float(index + offset);
-                      data.rects.push_back(
-                          {QRectF(qreal(x), 2, 3, 4), Qt::red, Qt::green, Qt::blue, translucent});
-                      expected.emplace_back(x, 2, 255, 0, 0, 255);
-                      expected.emplace_back(x, 6, 100, 50, 25, 128);
-                      expected.emplace_back(x + 3, 2, 0, 255, 0, 255);
-                      expected.emplace_back(x + 3, 2, 0, 255, 0, 255);
-                      expected.emplace_back(x, 6, 100, 50, 25, 128);
-                      expected.emplace_back(x + 3, 6, 0, 0, 255, 255);
-                  }
-                  for (int index = 0; index < triangleCount; ++index) {
-                      const float x = float(index + offset);
-                      data.triangles.push_back({{qreal(x), 8},
-                                                {qreal(x + 1), 10},
-                                                {qreal(x + 2), 8},
-                                                Qt::blue,
-                                                translucent,
-                                                Qt::red});
-                      expected.emplace_back(x, 8, 0, 0, 255, 255);
-                      expected.emplace_back(x + 1, 10, 100, 50, 25, 128);
-                      expected.emplace_back(x + 2, 8, 255, 0, 0, 255);
-                  }
-              };
-              // Mixed primitives straddle a chunk boundary; assertions concern only
-              // the ordered colored vertices Qt will draw, not the pooling policy.
-              populate(255, 5, 0);
-              sync(&data);
-              sync(&data); // Unchanged revision.
-              populate(1, 1, 10);
-              sync(&data);
-              populate(0, 0, 0);
-              sync(&data);
-              populate(520, 7, 20);
-              sync(&data);
-              std::vector<Vertex> saved;
-              expected.swap(saved);
-              sync(nullptr);
-              expected.swap(saved);
-              sync(&data); // Reattach the same data and revision after no data.
-              populate(255, 5, 30);
-              sync(&data);
-              node.reset();
-              result->done.store(true, std::memory_order_release);
-          },
-          Qt::DirectConnection);
-      window->update();
-      checks::support::pumpQuick();
-
-Original expression:
-  QTRY_VERIFY(result->done.load(std::memory_order_acquire))
 
 A006 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:386
 Disposition: GAP
@@ -491,202 +122,42 @@ Original expression:
 
 A008 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:409
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull — guards the automation drawer section being attached and visible before the coalesced refresh.
-Source context since previous assertion:
-  ;
-  }
-
-  void TimelinePanTest::fullRefreshWinsOverPan_data()
-  {
-      QTest::addColumn<bool>("panFirst");
-      QTest::newRow("full-then-pan") << false;
-      QTest::newRow("pan-then-full") << true;
-  }
-
-  void TimelinePanTest::fullRefreshWinsOverPan()
-  {
-      QFETCH(bool, panFirst);
-      using namespace songview;
-      SongView &view = m_fixture.view();
-      TimelineQuickView *const quick = view.quickView();
-      const TimelineQuickScene &scene = *m_fixture.scene();
-      checks::support::pumpQuick();
-      const auto automationBefore = orderedRects(scene, TimelineQuickLayer::AutomationGutterChrome);
-      const auto voiceBefore = orderedRects(scene, TimelineQuickLayer::VoiceChangesGutterChrome);
-      const auto &layout = view.timelineBandLayout();
-
-Original expression:
-  QVERIFY(layout.geometry(TimelineBand::Automation))
 
 A009 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:410
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull — guards the voice-changes drawer section being attached and visible.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(layout.geometry(TimelineBand::VoiceChanges))
 
 A010 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:430
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — asserts cameraScrollX advanced exactly 8px after the coalesced pan.
-Source context since previous assertion:
-  ;
-      const int automationHeight = layout.geometry(TimelineBand::Automation)->rect.height() + 24;
-      const int voiceHeight = layout.geometry(TimelineBand::VoiceChanges)->rect.height() + 24;
-      const qreal scrollBefore = view.camera().scrollX();
-      const auto resizeDrawers = [&] {
-          view.setDrawerSectionHeight(EditorDrawerPage::Automations, automationHeight);
-          view.setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, voiceHeight);
-      };
-      const auto pan = [&] { quick->setHorizontalScroll(scrollBefore + 8.0); };
-
-      // These public setters enqueue their refreshes synchronously. Do not pump
-      // events (including through the wheel helper) between the two requests:
-      // both must reach the same deferred Quick flush.
-      if (panFirst) {
-          pan();
-          resizeDrawers();
-      } else {
-          resizeDrawers();
-          pan();
-      }
-
-Original expression:
-  QVERIFY(closeEnough(view.camera().scrollX() - scrollBefore, 8.0))
 
 A011 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:436
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — asserts the coalesced drawer capture is non-null.
-Source context since previous assertion:
-  ;
-      checks::support::pumpQuick();
-      const auto automationCoalesced =
-          orderedRects(scene, TimelineQuickLayer::AutomationGutterChrome);
-      const auto voiceCoalesced = orderedRects(scene, TimelineQuickLayer::VoiceChangesGutterChrome);
-      const QImage coalesced = m_fixture.render();
-
-Original expression:
-  QVERIFY(!coalesced.isNull())
 
 A012 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:444
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — asserts the post-reloadVisuals drawer capture is non-null.
-Source context since previous assertion:
-  ;
-
-      // Same final camera/layout, now without a pan bit: this is the rendering
-      // oracle, including gutter colors and QML text, not dirty/revision metadata.
-      quick->requestTimelineUpdate(TimelineQuickDirty::All);
-      quick->requestAutomationUpdate(AutomationRefresh::All);
-      checks::support::pumpQuick();
-      const QImage full = m_fixture.render();
-
-Original expression:
-  QVERIFY(!full.isNull())
 
 A013 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:447
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — the resized drawer raster differs from the pre-resize capture.
-Source context since previous assertion:
-  ;
-      const auto automationFull = orderedRects(scene, TimelineQuickLayer::AutomationGutterChrome);
-      const auto voiceFull = orderedRects(scene, TimelineQuickLayer::VoiceChangesGutterChrome);
-
-Original expression:
-  QVERIFY(automationFull != automationBefore)
 
 A014 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:448
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — same raster-difference observation covers the voice-changes section.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(voiceFull != voiceBefore)
 
 A015 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:449
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — QCOMPARE(coalesced, full) on the drawer raster is the Swift observable for identical layer output.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(automationCoalesced == automationFull)
 
 A016 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:450
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — same raster equality covers the voice-changes gutter output.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(voiceCoalesced == voiceFull)
 
 A017 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:451
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — direct QCOMPARE of the coalesced and full-refresh drawer rasters.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(coalesced, full)
 
 A018 | TimelinePanTest::wheelPansCamera | src/checks/timelinepan/tst_timelinepan.cpp:480
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-  }
-
-  void TimelinePanTest::wheelPansCamera_data()
-  {
-      QTest::addColumn<QPoint>("pixelDelta");
-      QTest::addColumn<qreal>("expectedDelta");
-
-      QTest::newRow("legacy-pixel-left-8") << kLegacyPanPixelDelta << 8.0;
-      // Direct synthetic delivery must not create camera or model work for an empty wheel event.
-      QTest::newRow("safe-zero-delta") << QPoint{} << 0.0;
-  }
-
-  qreal TimelinePanTest::panOnce(const QPoint &pixelDelta)
-  {
-      const qreal delta = m_fixture.pan(pixelDelta);
-      checks::support::pumpQuick();
-      return delta;
-  }
-
-  void TimelinePanTest::wheelPansCamera()
-  {
-      QFETCH(QPoint, pixelDelta);
-      QFETCH(qreal, expectedDelta);
-
-      SongView &songView = m_fixture.view();
-      const qreal before = songView.camera().scrollX();
-      QAbstractItemModel *const voiceChangesModel = m_fixture.scene()->voiceChangesGutterTextModel();
-      TextModelSpies voiceChanges(*voiceChangesModel);
-
-Original expression:
-  QVERIFY(voiceChanges.isValid())
 
 A019 | TimelinePanTest::wheelPansCamera | src/checks/timelinepan/tst_timelinepan.cpp:482
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_wheelPansCamera (rollqml lane) — a synthesized Shift+wheel (yDelta -8) on swiftRollInput pans cameraScrollX by exactly +8 — the production horizontal-pan path, since the plot WheelHandler is vertical-only and handleWheel's shift branch scrolls by -d.
-Source context since previous assertion:
-  ;
-
-
-Original expression:
-  QVERIFY(closeEnough(panOnce(pixelDelta), expectedDelta))
 
 A020 | TimelinePanTest::wheelPansCamera | src/checks/timelinepan/tst_timelinepan.cpp:483
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_wheelPansCamera (rollqml lane) — QTRY_VERIFY on the published cameraScrollX property.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(closeEnough(songView.quickView()->horizontalScrollValue(), before + expectedDelta))
 
 A021 | TimelinePanTest::wheelPansCamera | src/checks/timelinepan/tst_timelinepan.cpp:486
 Disposition: GAP
@@ -701,31 +172,9 @@ Original expression:
 
 A022 | TimelinePanTest::gutterLabelsSurvivePan | src/checks/timelinepan/tst_timelinepan.cpp:495
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      }
-  }
-
-  void TimelinePanTest::gutterLabelsSurvivePan()
-  {
-      QAbstractItemModel *const voiceChangesModel = m_fixture.scene()->voiceChangesGutterTextModel();
-      const std::vector<QRectF> voiceChangesBefore = labelRects(*voiceChangesModel);
-      TextModelSpies voiceChanges(*voiceChangesModel);
-
-Original expression:
-  QVERIFY(voiceChanges.isValid())
 
 A023 | TimelinePanTest::gutterLabelsSurvivePan | src/checks/timelinepan/tst_timelinepan.cpp:498
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_wheelPansCamera (rollqml lane) — eight repeated Shift+wheel pans each advance cameraScrollX by 8.
-Source context since previous assertion:
-  ;
-
-      for (int count = 0; count < 8; ++count)
-
-Original expression:
-  QVERIFY(closeEnough(panOnce(kLegacyPanPixelDelta), 8.0))
 
 A024 | TimelinePanTest::gutterLabelsSurvivePan | src/checks/timelinepan/tst_timelinepan.cpp:500
 Disposition: GAP
@@ -739,40 +188,12 @@ Original expression:
 
 A025 | TimelinePanTest::gutterLabelsSurvivePan | src/checks/timelinepan/tst_timelinepan.cpp:501
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_wheelPansCamera (rollqml lane) — keyboardLabels() equality on the bridged pianoKeyboardTextModel after eight pans.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(labelRects(*voiceChangesModel) == voiceChangesBefore)
 
 A026 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:510
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the bridged pianoKeyboardTextModel.
-Source context since previous assertion:
-  ;
-  }
-
-  void TimelinePanTest::drumGutterLabelsAndHover()
-  {
-      using namespace songview;
-      SongView &view = m_fixture.view();
-      TimelineQuickScene *const scene = m_fixture.scene();
-      QAbstractItemModel *const model = scene->pianoKeyboardTextModel();
-
-Original expression:
-  QVERIFY(model)
 
 A027 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:513
 Disposition: MATCHED
-Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the loaded fixture song behind the scene.
-Source context since previous assertion:
-  ;
-
-      const MidiTimeline *const timeline = view.timeline();
-
-Original expression:
-  QVERIFY(timeline)
 
 A028 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:517
 Disposition: GAP
@@ -788,72 +209,18 @@ Original expression:
 
 A029 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:520
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the realized QML root item.
-Source context since previous assertion:
-  ;
-
-      QQuickItem *const root = view.quickView()->rootObject();
-
-Original expression:
-  QVERIFY(root)
 
 A030 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:525
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the swiftRollInput MouseArea.
-Source context since previous assertion:
-  ;
-      auto *const rollInput =
-          root->findChild<TimelineInputItem *>(QStringLiteral("timelineRollInput"));
-      auto *const gutterInput =
-          root->findChild<TimelineInputItem *>(QStringLiteral("timelineRollGutterInput"));
-
-Original expression:
-  QVERIFY(rollInput)
 
 A031 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:526
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the gutter MouseArea child of timelineQuickRollGutter.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(gutterInput)
 
 A032 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:529
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — visiblePitch() picks a fully visible pitch row; the Swift keyboard has no pad rows, so the ported check hovers a note row.
-Source context since previous assertion:
-  ;
-
-      const std::optional<std::array<int, 3>> padKeys = drumPadKeys(view, rollInput->height());
-
-Original expression:
-  QVERIFY2(padKeys.has_value(), "Fixture must expose an accidental and two natural pad rows")
 
 A033 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:546
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      const int namedKey = (*padKeys)[0];
-      const int unnamedKey = (*padKeys)[1];
-      const int longKey = (*padKeys)[2];
-
-      DrumBankFixture fixture(program, namedKey, unnamedKey, longKey);
-      const LoadedVoiceGroup *const originalBank = view.voicegroup();
-      const auto restoreBank =
-          qScopeGuard([&view, originalBank] { view.setVoicegroup(originalBank); });
-      view.setVoicegroup(&fixture.bank);
-      checks::support::pumpQuick();
-
-      const QModelIndex namedIndex =
-          keyboardRecordAt(*model, padRowRect(view, namedKey).center().y());
-      const QModelIndex unnamedIndex =
-          keyboardRecordAt(*model, padRowRect(view, unnamedKey).center().y());
-      const QModelIndex longIndex = keyboardRecordAt(*model, padRowRect(view, longKey).center().y());
-
-Original expression:
-  QVERIFY(namedIndex.isValid())
 
 A034 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:547
 Disposition: GAP
@@ -968,117 +335,33 @@ Original expression:
 
 A045 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:577
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — synthesized gutter hover publishes hoverChipVisible.
-Source context since previous assertion:
-  ;
-
-      // Gutter hover publishes the full, un-elided label on the scene-level
-      // hover chip at measured width, on-screen and wide enough for the text
-      // plus the geometry's horizontal padding.
-      const int chipPadding = pianoroll_detail::PianoRollGeometry::resolve(view.pianoKeyboardWidth())
-                                  .keyboardHoverChipHorizontalPadding;
-      hoverPadRow(view, *gutterInput, longKey);
-
-Original expression:
-  QVERIFY(scene->hoverChipVisible())
 
 A046 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:578
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — hoverChipText equals the hovered key's full name.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(scene->hoverChipText(), QString::fromUtf8(kDrumPadLongName))
 
 A047 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:580
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — published chip rect stays on-screen (left >= 0).
-Source context since previous assertion:
-  ;
-      const QRectF longChip = scene->hoverChipRect();
-
-Original expression:
-  QVERIFY(longChip.left() >= layout::space(layout::Space::Zero))
 
 A048 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:581
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip width covers the realized text contentWidth.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(longChip.width() >= qreal(QFontMetrics(scene->hoverChipFont())
-                                            .horizontalAdvance(QString::fromUtf8(kDrumPadLongName)) +
-                                        chipPadding))
 
 A049 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:585
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — second-row hover keeps the chip visible.
-Source context since previous assertion:
-  ;
-      hoverPadRow(view, *gutterInput, unnamedKey);
-
-Original expression:
-  QVERIFY(scene->hoverChipVisible())
 
 A050 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:586
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text republishes the second hovered key name.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(scene->hoverChipText(), detail::keyName(unnamedKey))
 
 A051 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:588
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — second chip rect stays on-screen.
-Source context since previous assertion:
-  ;
-      const QRectF unnamedChip = scene->hoverChipRect();
-
-Original expression:
-  QVERIFY(unnamedChip.left() >= layout::space(layout::Space::Zero))
 
 A052 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:589
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — second chip width covers its text.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(
-          unnamedChip.width() >=
-          qreal(QFontMetrics(scene->hoverChipFont()).horizontalAdvance(detail::keyName(unnamedKey)) +
-                chipPadding))
 
 A053 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:600
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels — guards the bridged pianoKeyboardTextModel.
-Source context since previous assertion:
-  ;
-  }
-
-  void TimelinePanTest::drumGutterTrackSwitch()
-  {
-      using namespace songview;
-      SongView &view = m_fixture.view();
-      QAbstractItemModel *const model = m_fixture.scene()->pianoKeyboardTextModel();
-
-Original expression:
-  QVERIFY(model)
 
 A054 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:603
 Disposition: MATCHED
-Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the loaded fixture song.
-Source context since previous assertion:
-  ;
-
-      const MidiTimeline *const timeline = view.timeline();
-
-Original expression:
-  QVERIFY(timeline)
 
 A055 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:607
 Disposition: GAP
@@ -1094,70 +377,18 @@ Original expression:
 
 A056 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:624
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-
-      // The switch must change classification: a second used track whose
-      // initial program is not the drum program.
-      int otherTrack = -1;
-      bool secondUsed = false;
-      for (int track = 0; track < 16; ++track) {
-          if (track == primaryTrack || !timeline->tracks[track].used)
-              continue;
-          secondUsed = true;
-          const int otherProgram =
-              timeline->tracks[track].firstProgram < 0 ? 0 : timeline->tracks[track].firstProgram;
-          if (otherProgram != program) {
-              otherTrack = track;
-              break;
-          }
-      }
-
-Original expression:
-  QVERIFY2(secondUsed, "Fixture must contain a second used track")
 
 A057 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:625
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(otherTrack >= 0, "Fixture must contain a track with a different initial program")
 
 A058 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:628
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the realized QML root item.
-Source context since previous assertion:
-  ;
-
-      QQuickItem *const root = view.quickView()->rootObject();
-
-Original expression:
-  QVERIFY(root)
 
 A059 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:631
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the swiftRollInput MouseArea.
-Source context since previous assertion:
-  ;
-      auto *const rollInput =
-          root->findChild<TimelineInputItem *>(QStringLiteral("timelineRollInput"));
-
-Original expression:
-  QVERIFY(rollInput)
 
 A060 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:634
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — visiblePitch() row-selection guard.
-Source context since previous assertion:
-  ;
-
-      const auto padKeys = drumPadKeys(view, rollInput->height());
-
-Original expression:
-  QVERIFY(padKeys.has_value())
 
 A061 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:648
 Disposition: GAP
@@ -1183,25 +414,9 @@ Original expression:
 
 A062 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:653
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels (rollqml lane) — setTrack(1) publishes trackIndex == 1.
-Source context since previous assertion:
-  ;
-      const int drumRowCount = model->rowCount();
-
-      view.selectTrack(otherTrack);
-      checks::support::pumpQuick();
-
-Original expression:
-  QCOMPARE(view.selectionModel().primaryTrack(), otherTrack)
 
 A063 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:654
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels (rollqml lane) — keyboard model stays populated after the switch.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(model->rowCount() > 0)
 
 A064 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:655
 Disposition: GAP
@@ -1223,38 +438,12 @@ Original expression:
 
 A066 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:660
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels (rollqml lane) — every label stays a natural-C note name on the non-drum track.
-Source context since previous assertion:
-  ;
-      for (int row = 0; row < model->rowCount(); ++row) {
-          const QString text =
-              model->data(model->index(row, 0), TimelineQuickTextModel::TextRole).toString();
-
-Original expression:
-  QVERIFY2(text.startsWith(QLatin1Char('C')) && !text.contains(QLatin1Char('#')),
-                   qPrintable(text))
 
 A067 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:666
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels (rollqml lane) — setTrack(0) publishes trackIndex == 0.
-Source context since previous assertion:
-  ;
-      }
-
-      view.selectTrack(primaryTrack);
-      checks::support::pumpQuick();
-
-Original expression:
-  QCOMPARE(view.selectionModel().primaryTrack(), primaryTrack)
 
 A068 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:667
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels (rollqml lane) — row count and label rects are identical after switching back.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(model->rowCount(), drumRowCount)
 
 A069 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:668
 Disposition: GAP
@@ -1267,19 +456,6 @@ Original expression:
 
 A070 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:676
 Disposition: MATCHED
-Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the loaded fixture song.
-Source context since previous assertion:
-  ;
-  }
-
-  void TimelinePanTest::drumClassificationIgnoresProgramChanges()
-  {
-      using namespace songview;
-      SongView &view = m_fixture.view();
-      const MidiTimeline *const originalTimeline = view.timeline();
-
-Original expression:
-  QVERIFY(originalTimeline)
 
 A071 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:679
 Disposition: GAP
@@ -1348,34 +524,12 @@ Original expression:
 
 A074 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:719
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the realized QML root item.
-Source context since previous assertion:
-  ;
-      QQuickItem *const root = view.quickView()->rootObject();
-
-Original expression:
-  QVERIFY(root)
 
 A075 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:722
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the swiftRollInput MouseArea.
-Source context since previous assertion:
-  ;
-      auto *const rollInput =
-          root->findChild<TimelineInputItem *>(QStringLiteral("timelineRollInput"));
-
-Original expression:
-  QVERIFY(rollInput)
 
 A076 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:724
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — visiblePitch() row-selection guard.
-Source context since previous assertion:
-  ;
-      const auto keys = drumPadKeys(view, rollInput->height());
-
-Original expression:
-  QVERIFY(keys.has_value())
 
 A077 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:726
 Disposition: GAP
@@ -1389,22 +543,6 @@ Original expression:
 
 A078 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:737
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels — guards the bridged pianoKeyboardTextModel.
-Source context since previous assertion:
-  ;
-      const LoadedVoiceGroup *const originalBank = view.voicegroup();
-      const auto restore = qScopeGuard([&] {
-          view.setPlayheadSample(0, false);
-          view.updateSong(originalTimeline);
-          view.setVoicegroup(originalBank);
-      });
-      view.setFollowPlayhead(false);
-      view.updateSong(&timeline);
-      view.setVoicegroup(&fixture.bank);
-      QAbstractItemModel *const model = m_fixture.scene()->pianoKeyboardTextModel();
-
-Original expression:
-  QVERIFY(model)
 
 A079 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:750
 Disposition: GAP
@@ -1507,30 +645,9 @@ Original expression:
 
 A088 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:765
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels (rollqml lane) — trackIndex guard after switching.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(view.selectionModel().primaryTrack(), track)
 
 A089 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:775
 Disposition: MATCHED
-Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the loaded fixture song.
-Source context since previous assertion:
-  ;
-  }
-
-  void TimelinePanTest::hoverChipOverlayUnclipped()
-  {
-      using namespace songview;
-      SongView &view = m_fixture.view();
-      TimelineQuickScene *const scene = m_fixture.scene();
-
-      const MidiTimeline *const timeline = view.timeline();
-
-Original expression:
-  QVERIFY(timeline)
 
 A090 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:779
 Disposition: GAP
@@ -1546,139 +663,36 @@ Original expression:
 
 A091 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:782
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the realized QML root item.
-Source context since previous assertion:
-  ;
-
-      QQuickItem *const root = view.quickView()->rootObject();
-
-Original expression:
-  QVERIFY(root)
 
 A092 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:790
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the swiftRollInput MouseArea.
-Source context since previous assertion:
-  ;
-      auto *const rollInput =
-          root->findChild<TimelineInputItem *>(QStringLiteral("timelineRollInput"));
-      auto *const gutterInput =
-          root->findChild<TimelineInputItem *>(QStringLiteral("timelineRollGutterInput"));
-      auto *const plotBox = root->findChild<QQuickItem *>(QStringLiteral("timelineQuickRollPlot"));
-      auto *const gutterBox =
-          root->findChild<QQuickItem *>(QStringLiteral("timelineQuickRollGutter"));
-
-Original expression:
-  QVERIFY(rollInput)
 
 A093 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:791
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the gutter MouseArea.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(gutterInput)
 
 A094 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:792
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards timelineQuickRollPlot.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(plotBox)
 
 A095 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:793
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards timelineQuickRollGutter.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(gutterBox)
 
 A096 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:796
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — visiblePitch() row-selection guard.
-Source context since previous assertion:
-  ;
-
-      const std::optional<std::array<int, 3>> padKeys = drumPadKeys(view, rollInput->height());
-
-Original expression:
-  QVERIFY2(padKeys.has_value(), "Fixture must expose an accidental and two natural pad rows")
 
 A097 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:815
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — synthesized gutter hover publishes hoverChipVisible.
-Source context since previous assertion:
-  ;
-      const int namedKey = (*padKeys)[0];
-      const int unnamedKey = (*padKeys)[1];
-      const int longKey = (*padKeys)[2];
-
-      DrumBankFixture fixture(program, namedKey, unnamedKey, longKey);
-      const LoadedVoiceGroup *const originalBank = view.voicegroup();
-      const auto restoreBank =
-          qScopeGuard([&view, originalBank] { view.setVoicegroup(originalBank); });
-      const auto leaveGutter = qScopeGuard([&] {
-          checks::events::sendMouse(*gutterInput, QEvent::Leave, QPointF(), Qt::NoButton,
-                                    Qt::NoButton, Qt::NoModifier);
-          checks::support::pumpQuick();
-      });
-      view.setVoicegroup(&fixture.bank);
-      checks::support::pumpQuick();
-
-      // Hover the long-named pad: the scene publishes the full-width chip.
-      hoverPadRow(view, *gutterInput, longKey);
-
-Original expression:
-  QVERIFY(scene->hoverChipVisible())
 
 A098 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:816
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text equals the hovered key's full name.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(scene->hoverChipText(), QString::fromUtf8(kDrumPadLongName))
 
 A099 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:821
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the realized timelineQuickPianoHoverChip item.
-Source context since previous assertion:
-  ;
-
-      auto *const chip = root->findChild<QQuickItem *>(QStringLiteral("timelineQuickPianoHoverChip"));
-      auto *const chipText =
-          root->findChild<QQuickItem *>(QStringLiteral("timelineQuickPianoHoverChipText"));
-
-Original expression:
-  QVERIFY(chip)
 
 A100 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:822
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the realized timelineQuickPianoHoverChipText item.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(chipText)
 
 A101 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:827
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the roll band root (plot box parent).
-Source context since previous assertion:
-  ;
-
-      // The chip overlay lives on the unclipped roll band root — reached
-      // through the plot box's parent — not inside the clipped gutter box.
-      QQuickItem *const bandRoot = plotBox->parentItem();
-
-Original expression:
-  QVERIFY(bandRoot)
 
 A102 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:828
 Disposition: GAP
@@ -1691,110 +705,33 @@ Original expression:
 
 A103 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:829
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip parent is the band root.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chip->parentItem(), bandRoot)
 
 A104 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:830
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text parent is the band root.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chipText->parentItem(), bandRoot)
 
 A105 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:831
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip z above the plot box.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(chip->z() > plotBox->z())
 
 A106 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:832
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip z above the gutter box.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(chip->z() > gutterBox->z())
 
 A107 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:833
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text z above the chip.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(chipText->z() > chip->z())
 
 A108 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:838
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — the gutter box is clipped.
-Source context since previous assertion:
-  ;
-
-      // Locate the realized long fixed label independently of delegate class
-      // names or sibling order, then verify that it shares the unclipped roll
-      // band rather than the clipped gutter.
-
-Original expression:
-  QVERIFY(gutterBox->clip())
 
 A109 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:849
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — locates the realized keyboard label item by text.
-Source context since previous assertion:
-  ;
-      QQuickItem *fixedLabel = nullptr;
-      QList<QQuickItem *> pendingItems{root};
-      while (!pendingItems.isEmpty()) {
-          QQuickItem *const item = pendingItems.takeLast();
-          if (item->property("text").toString() == QString::fromUtf8(kDrumPadLongName)) {
-              fixedLabel = item;
-              break;
-          }
-          pendingItems.append(item->childItems());
-      }
-
-Original expression:
-  QVERIFY(fixedLabel)
 
 A110 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:850
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — the realized label is visible.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(fixedLabel->isVisible())
 
 A111 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:854
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — the label's ancestor chain reaches the band root, not the gutter box.
-Source context since previous assertion:
-  ;
-      QQuickItem *labelAncestor = fixedLabel->parentItem();
-      while (labelAncestor && labelAncestor != bandRoot && labelAncestor != gutterBox)
-          labelAncestor = labelAncestor->parentItem();
-
-Original expression:
-  QCOMPARE(labelAncestor, bandRoot)
 
 A112 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:855
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — the gutter MouseArea is parented to the gutter box.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(gutterInput->parentItem(), gutterBox)
 
 A113 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:858
 Disposition: GAP
@@ -1818,149 +755,51 @@ Original expression:
 
 A115 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:860
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip width equals the published hoverChipRect width.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chip->width(), scene->hoverChipRect().width())
 
 A116 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:861
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip x equals the published hoverChipRect x.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chip->x(), scene->hoverChipRect().x())
 
 A117 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:862
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text item shows the hovered key name.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chipText->property("text").toString(), QString::fromUtf8(kDrumPadLongName))
 
 A118 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:863
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip item is visible.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(chip->isVisible())
 
 A119 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:864
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text item is visible.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(chipText->isVisible())
 
 A120 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:865
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text x tracks the chip.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chipText->x(), chip->x())
 
 A121 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:866
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text y tracks the chip.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chipText->y(), chip->y())
 
 A122 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:867
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text width tracks the chip.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chipText->width(), chip->width())
 
 A123 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:868
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text height tracks the chip.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chipText->height(), chip->height())
 
 A124 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:871
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text contentWidth is positive.
-Source context since previous assertion:
-  ;
-      const qreal contentWidth = chipText->property("contentWidth").toReal();
-      const qreal contentHeight = chipText->property("contentHeight").toReal();
-
-Original expression:
-  QVERIFY(contentWidth > 0)
 
 A125 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:872
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text contentHeight is positive.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(contentHeight > 0)
 
 A126 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:873
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — contentWidth fits the chip.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(contentWidth <= chipText->width())
 
 A127 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:874
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — contentHeight fits the chip.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(contentHeight <= chipText->height())
 
 A128 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:875
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text is unclipped.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!chipText->clip())
 
 A129 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:876
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text is horizontally centered.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chipText->property("horizontalAlignment").toInt(), int(Qt::AlignHCenter))
 
 A130 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:877
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text is vertically centered.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chipText->property("verticalAlignment").toInt(), int(Qt::AlignVCenter))
 
 A131 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:883
 Disposition: GAP
@@ -1978,50 +817,18 @@ Original expression:
 
 A132 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:886
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — fixed label contentWidth is positive.
-Source context since previous assertion:
-  ;
-      const qreal fixedContentWidth = fixedLabel->property("contentWidth").toReal();
-      const qreal fixedContentHeight = fixedLabel->property("contentHeight").toReal();
-
-Original expression:
-  QVERIFY(fixedContentWidth > 0)
 
 A133 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:887
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — fixed label contentHeight is positive.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(fixedContentHeight > 0)
 
 A134 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:888
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — fixed label content fits its width.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(fixedContentWidth <= fixedLabel->width())
 
 A135 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:889
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — fixed label is unclipped.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!fixedLabel->clip())
 
 A136 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:890
 Disposition: MATCHED
-Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — fixed label is right-aligned.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(fixedLabel->property("horizontalAlignment").toInt(), int(Qt::AlignRight))
 
 A137 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:894
 Disposition: GAP

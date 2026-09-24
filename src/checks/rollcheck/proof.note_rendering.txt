@@ -7,29 +7,7 @@ Swift counterpart: src/checks/rollcheck/note_rendering.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellNoteVisuals.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact counterpart predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution is recorded in Verification.
-PARTIAL identifies related counterpart predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift surface.
-GAP identifies an original predicate without a replacement assertion.
-Reconciled against commit caaf177f: 4 MATCHED, 11 PARTIAL, 35 GAP, 4 NATIVE.
-checkNoteBorders and checkIdentityNoteColors in note_rendering.swift execute scene-model
-predicates that name the original sites — the 5.0-key-height tiny border (A002–A004), the
-selected ring with its inset black frame and the unselected border (A007–A014), and the
-velocity fills (A020–A025); the live shell note-visuals lane samples the production
-framebuffer for the same border/ring/thinning family. Eleven ring/border/thinning sites stay
-PARTIAL because the Swift predicates observe the published scene model (and the shell lane a
-different surface) rather than the legacy Quick surface's physical pixels. The ghost-note and
-note-name families are GAP because the production grid emits no ghost GridNote primitives and
-paints no note-name labels; the velocity-colour ramp and the palette-only zero-velocity
-predicates are GAP; the remaining velocityValueRaster framebuffer sites stay NATIVE.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run, replayed here verbatim); the
 swiftcore projectSession suite executed note_rendering.swift (S001–S012).
@@ -38,22 +16,6 @@ Result: PASS — 11/11 ok (controller-recorded post-change run); the shell note-
 executed the framebuffer border/ring/thinning probes cited as S013.
 Command: deno task verify:qml-roll --verbose
 Result: PASS — 1/1 ok (controller-recorded post-change run); no note_rendering site depends on it.
-
-Execution and ownership
-runNoteRenderingChecks executes checkNoteBorders and checkIdentityNoteColors — scene-primitive
-and published-note-fill assertions — in the swiftcore projectSession suite (S001–S012); no
-framebuffer pixels are observed there. test_noteRasterParity in
-src/checks/editorqml/tst_ShellNoteVisuals.qml samples the production shell's framebuffer for
-the border/ring/thinning family (S013) under deno task verify:shell --verbose. The retired
-swiftrollgated C++ source (notevisuals.cpp) is not on disk and is not registered in this
-checkout; it is superseded by that shell lane entry.
-
-Fixture, sequence and row constraints
-velocityValueRaster expands over two keyHeight rows (8.6px/9.0px); the per-velocity loop (2..127, early break) and per-pixel loops re-execute hue, ring and border sites; velocityValueRaster_data carries no assertions. Each slot unwinds its document edits to the local SMF baseline.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | PianoRollTest::tinyNoteBorderRaster | src/checks/rollcheck/note_rendering.cpp:40
 Disposition: GAP
@@ -479,35 +441,19 @@ Original expression:
 
 A022 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:298
 Disposition: MATCHED
-Mapping: S009 (src/checks/rollcheck/note_rendering.swift) compares the published velocity-127 note fill with the track identity palette fill after the same note velocity is set.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QCOMPARE(maximum, SongView::trackColor(track));
+Mapping: S009
 
 A023 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:299
 Disposition: MATCHED
-Mapping: S010 (src/checks/rollcheck/note_rendering.swift) asserts the published velocity-127 note fill has an opaque #RRGGBB value.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QCOMPARE(maximum.alpha(), 255);
+Mapping: S010
 
 A024 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:300
 Disposition: MATCHED
-Mapping: S011 (src/checks/rollcheck/note_rendering.swift) asserts the published velocity-64 note fill has an opaque #RRGGBB value.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QCOMPARE(midpoint.alpha(), 255);
+Mapping: S011
 
 A025 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:301
 Disposition: MATCHED
-Mapping: S012 (src/checks/rollcheck/note_rendering.swift) asserts the published velocity-64 note fill differs from the neutral zero palette and the published velocity-127 fill (also velocity 1).
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY(midpoint != zero && midpoint != maximum);
+Mapping: S012
 
 A026 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:307
 Disposition: GAP
@@ -1097,88 +1043,39 @@ execution and equivalent setup.
 
 S001 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A007/A012 3px contiguous selection ring stops at inset"
-Counterpart expression:
-report.expect(hasFrame(borders, box: box, inset: 0, thickness: ring,
-                       color: grid.palette.selectionRing),
-              cppID: id, message: "A007/A012 3px contiguous selection ring stops at inset")
 
 S002 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A008-A011 2px black frame lies inside every selected edge"
-Counterpart expression:
-report.expect(hasFrame(borders, box: box, inset: ring, thickness: border,
-                       color: grid.palette.noteBorder),
-              cppID: id, message: "A008-A011 2px black frame lies inside every selected edge")
 
 S003 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A013/A014 unselected bottom border bounds the face"
-Counterpart expression:
-report.expect(hasFrame(borders, box: box, inset: 0, thickness: border,
-                       color: grid.palette.noteBorder),
-              cppID: id, message: "A013/A014 unselected bottom border bounds the face")
 
 S004 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A002 5.0-key-height note has room for a 1px border"
-Counterpart expression:
-report.expect(fitted == 1, cppID: tinyID,
-              message: "A002 5.0-key-height note has room for a 1px border")
 
 S005 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A003 tiny note retains its 1px black border"
-Counterpart expression:
-report.expect(hasFrame(borders, box: tiny, inset: 0, thickness: Double(fitted),
-                       color: grid.palette.noteBorder),
-              cppID: tinyID, message: "A003 tiny note retains its 1px black border")
 
 S006 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A004 tiny note face survives inside its border"
-Counterpart expression:
-report.expect(tinyFill.fillColor == grid.palette.noteFill(track: grid.trackIndex, velocity: 100)
-                  && tiny.w > 2 * Double(fitted) && tiny.h > 2 * Double(fitted),
-              cppID: tinyID, message: "A004 tiny note face survives inside its border")
 
 S007 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A020 velocity zero uses the neutral palette fill"
-Counterpart expression:
-report.expect(zero == palette.noteVelocityZero, cppID: id,
-              message: "A020 velocity zero uses the neutral palette fill")
-Palette-only and echo-style: palette.noteFill(track:velocity: 0) returns the zeroColor argument,
-so this predicate compares the palette entry with itself rather than an independent view fill.
 
 S008 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A021 velocity zero palette fill is opaque"
-Counterpart expression:
-report.expect(publishedOpaque(zero), cppID: id,
-              message: "A021 velocity zero palette fill is opaque")
-Palette-only: the document clamps note velocities to 1..127, so the neutral endpoint is reachable
-only through the palette API.
 
 S009 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A022 published full velocity uses the track identity fill"
-Counterpart expression:
-report.expect(maximum == palette.noteFill(track: track, velocity: 127),
-              cppID: id, message: "A022 published full velocity uses the track identity fill")
 
 S010 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A023 published full velocity is opaque"
-Counterpart expression:
-report.expect(publishedOpaque(maximum), cppID: id,
-              message: "A023 published full velocity is opaque")
 
 S011 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A024 published middle velocity is opaque"
-Counterpart expression:
-report.expect(publishedOpaque(midpoint), cppID: id,
-              message: "A024 published middle velocity is opaque")
 
 S012 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A025 published middle velocity differs from both endpoints"
-Counterpart expression:
-report.expect(midpoint != zero && midpoint != minimum && midpoint != maximum, cppID: id,
-              message: "A025 published middle velocity differs from both endpoints")
 
 S013 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: function
-Shell framebuffer probes of the production roll: the unselected note face follows the
-track/velocity contract beside its display-scaled black border; a selected note keeps its
-selection-ring role colour, its inset black border and its face; at the small-font viewport the
-physical border thins instead of vanishing while ring and face survive.

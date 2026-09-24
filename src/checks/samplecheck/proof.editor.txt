@@ -5,36 +5,10 @@ Original: src/checks/samplecheck/editor.cpp
 Original SHA-256: 1ae310e3a37396448c692a91dbd51cac6ed6681ebf0b55e352ee2c488545f99b
 Swift counterpart: none identified
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards, refusal oracles,
-and loop bodies. Source context preserves setup, rows, loops, and guards between
-assertions verbatim. No Swift counterpart file was identified for this suite, so no
-S predicates exist and no Swift execution is claimed.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted window.
-GAP identifies an original predicate without a replacement assertion.
-Methods cover the SampleEditorDialog pipeline (prefill collision, prepared defaults, key/loop/rate/crop/normalize commits), native dialog interactions (handle drag, pitch adoption, loop populate/refine, crossfade overlay, audition strip, undo, scroll, splitter, commit-to-project), and Space-key audition through the production null AudioEngine.
 Inventory: 130 sites across 17 test methods (editorAuditionStrip, editorCommit, editorCrossfade, editorDrag, editorLoopPopulate, editorLoopRefine, editorPitchAdoption, editorScroll, editorSplitter, editorUndo, pipelineCropNormalize, pipelineKeyOverride, pipelineLoopToggle, pipelinePrefillCollision, pipelinePreparedDefaults, pipelineRateCommit, spaceAudition). Tally: 80 GAP, 50 NATIVE, 0 MATCHED, 0 PARTIAL.
 
-Verification
 Command: deno task verify --filter samplecheck --verbose
 Result: pending integrated run.
-
-Execution and ownership
-No Swift entry points execute these checks. Retained native execution owns this suite:
-the samplecheck harness via the Verification command above. Shared fixture construction
-lives in src/checks/samplecheck/fixtures.h and src/checks/samplecheck/fixtures.cpp; those
-files carry no assertion sites (see Shared helpers).
-
-Fixture, sequence and row constraints
-pipelineRateCommit_data holds a single fractional-free-entry row. Every dialog test constructs its own SampleEditorDialog over preparedSampleWav or hiResSampleWav with per-test widget lookups; synthetic wav2agb projects isolate registration tests. Space audition parks the production null device and renders fixed frame windows (512 idle/stop frames, 0.25 s starts, 2.0 s release drains).
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:81
 Disposition: GAP
@@ -178,49 +152,18 @@ Original expression:
 
 A006 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:102
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(nameEdit->text() == registeredSampleName, "name prefilled from the source file")
 
 A007 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:103
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(!addButton->isEnabled(), "collision disables the commit")
 
 A008 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:104
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(!status->text().isEmpty(), "collision displays validation status")
 
 A009 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:106
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      nameEdit->setText(QStringLiteral("fresh_tone"));
-
-Original expression:
-  QVERIFY2(addButton->isEnabled(), "valid name enables the commit")
 
 A010 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:107
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(!status->text().isEmpty(), "valid name displays registration status")
 
 A011 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:108
 Disposition: GAP
@@ -234,13 +177,6 @@ Original expression:
 
 A012 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:111
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      nameEdit->setText(QStringLiteral("Bad Name"));
-
-Original expression:
-  QVERIFY2(!addButton->isEnabled(), "bad grammar disables the commit")
 
 A013 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:118
 Disposition: GAP
@@ -286,13 +222,6 @@ Original expression:
 
 A016 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:130
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(baseKey->value() == 58 && std::abs(fineTune->value() - 25.0) < 1e-9,
-               "key/cents prefilled from smpl")
 
 A017 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:135
 Disposition: GAP
@@ -563,27 +492,9 @@ Original expression:
 
 A037 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:244
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-  }
-
-  void SampleProcessingTest::editorDrag()
-  {
-      QTemporaryDir scratch;
-
-Original expression:
-  QVERIFY2(scratch.isValid(), "editor-drag scratch directory is available")
 
 A038 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:246
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      const QString root = scratch.filePath(QStringLiteral("wavproj"));
-
-Original expression:
-  QVERIFY2(createWav2AgbProject(root), "editor-drag synthetic project is created")
 
 A039 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:249
 Disposition: GAP
@@ -600,22 +511,6 @@ Original expression:
 
 A040 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:262
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-      });
-      dialog.resize(900, 640);
-      dialog.show();
-      QApplication::processEvents();
-      WaveformView *wave = dialog.waveform();
-      SampleDocument *document = dialog.document();
-      QUndoStack *undo = dialog.undoStack();
-
-Original expression:
-  QVERIFY2(wave && document && undo && wave->width() > 200, "waveform view laid out")
 
 A041 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:263
 Disposition: GAP
@@ -629,63 +524,18 @@ Original expression:
 
 A042 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:276
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      const QPoint fromPoint = wave->handlePoint(WaveformView::LoopStartHandle);
-      const QPoint toPoint(wave->xForSample(3000), fromPoint.y());
-      checks::events::sendMouse(*wave, QEvent::MouseButtonPress, QPointF(fromPoint), Qt::LeftButton,
-                                Qt::LeftButton, Qt::NoModifier);
-      const QPoint midpoint = (fromPoint + toPoint) / 2;
-      checks::events::sendMouse(*wave, QEvent::MouseMove, QPointF(midpoint), Qt::NoButton,
-                                Qt::LeftButton, Qt::NoModifier);
-      checks::events::sendMouse(*wave, QEvent::MouseMove, QPointF(toPoint), Qt::NoButton,
-                                Qt::LeftButton, Qt::NoModifier);
-      checks::events::sendMouse(*wave, QEvent::MouseButtonRelease, QPointF(toPoint), Qt::LeftButton,
-                                Qt::NoButton, Qt::NoModifier);
-
-Original expression:
-  QVERIFY2(std::llabs(document->params().loopStart - 3000) <= 40,
-               "loop-start handle drag lands near the target")
 
 A043 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:278
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(undo->count() == 1, "handle drag is one undo entry")
 
 A044 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:279
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(document->processed().looped && document->processed().seam.valid,
-               "drag re-renders with live seam metrics")
 
 A045 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:282
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      undo->undo();
-
-Original expression:
-  QVERIFY2(document->params().loopStart == 2000, "undo restores the pre-drag loop")
 
 A046 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:284
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      undo->redo();
-
-Original expression:
-  QVERIFY2(std::llabs(document->params().loopStart - 3000) <= 40, "redo re-applies the drag")
 
 A047 | SampleProcessingTest::editorPitchAdoption | src/checks/samplecheck/editor.cpp:290
 Disposition: GAP
@@ -746,33 +596,12 @@ Original expression:
 
 A051 | SampleProcessingTest::editorPitchAdoption | src/checks/samplecheck/editor.cpp:310
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(pitchApply->isVisible(), "metadata/detection mismatch exposes an adopt action")
 
 A052 | SampleProcessingTest::editorPitchAdoption | src/checks/samplecheck/editor.cpp:312
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      pitchApply->click();
-
-Original expression:
-  QVERIFY2(baseKey->value() == 57 && std::abs(fineTune->value() - 3.93) < 1.5 &&
-                   undo->count() == 1,
-               "the button adopts the detected pitch as one undo entry")
 
 A053 | SampleProcessingTest::editorPitchAdoption | src/checks/samplecheck/editor.cpp:315
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(!pitchApply->isVisible(), "agreement hides the detect chrome")
 
 A054 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:321
 Disposition: GAP
@@ -837,34 +666,12 @@ Original expression:
 
 A058 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:345
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(loopBody->isVisible(), "loop body shows while looped")
 
 A059 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:347
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      group->setChecked(false);
-
-Original expression:
-  QVERIFY2(!document->params().loopOn && !loopBody->isVisible(),
-               "unchecking the group hides the loop chrome")
 
 A060 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:351
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      loopEnd->setValue(0);
-      loopStart->setValue(0);
-
-Original expression:
-  QVERIFY2(undo->count() == 3, "loop reset landed")
 
 A061 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:353
 Disposition: GAP
@@ -880,12 +687,6 @@ Original expression:
 
 A062 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:356
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(undo->count() == 4, "auto-populate is one undo entry")
 
 A063 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:357
 Disposition: GAP
@@ -910,21 +711,9 @@ Original expression:
 
 A065 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:362
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(badge->isVisible(), "clean loop exposes seam status")
 
 A066 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:363
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(loopBody->isVisible(), "loop chrome is back")
 
 A067 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:365
 Disposition: GAP
@@ -1028,16 +817,6 @@ Original expression:
 
 A075 | SampleProcessingTest::editorLoopRefine | src/checks/samplecheck/editor.cpp:402
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      loopStart->setValue(2000);
-      loopEnd->setValue(2137);
-
-Original expression:
-  QVERIFY2(document->processed().seam.valid && badge->isVisible() &&
-                   (document->processed().seam.ampLsb > 2 || document->processed().seam.derivLsb > 3),
-               "misaligned loop exposes non-clean seam metrics")
 
 A076 | SampleProcessingTest::editorLoopRefine | src/checks/samplecheck/editor.cpp:408
 Disposition: GAP
@@ -1054,13 +833,6 @@ Original expression:
 
 A077 | SampleProcessingTest::editorLoopRefine | src/checks/samplecheck/editor.cpp:410
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(undo->count() >= undoBeforeRefine && undo->count() <= undoBeforeRefine + 1,
-               "refine contributes at most one undo entry")
 
 A078 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:417
 Disposition: GAP
@@ -1138,25 +910,9 @@ Original expression:
 
 A083 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:448
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      const int undoBeforeCrossfade = undo->count();
-      crossfade->setChecked(true);
-
-Original expression:
-  QVERIFY2(document->params().crossfadeOn && undo->count() == undoBeforeCrossfade + 1,
-               "crossfade toggle is undoable")
 
 A084 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:450
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(wave->seamEndWindow() != endBefore || wave->seamStartWindow() != startBefore,
-               "crossfade bake reshapes the seam overlay")
 
 A085 | SampleProcessingTest::editorAuditionStrip | src/checks/samplecheck/editor.cpp:458
 Disposition: GAP
@@ -1198,17 +954,6 @@ Original expression:
 
 A088 | SampleProcessingTest::editorAuditionStrip | src/checks/samplecheck/editor.cpp:471
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-      });
-      auto *play = dialog.findChild<QPushButton *>(QStringLiteral("sampleAuditionPlay"));
-
-Original expression:
-  QVERIFY2(play && !play->isEnabled(), "audition strip disabled without audio")
 
 A089 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:477
 Disposition: GAP
@@ -1265,13 +1010,6 @@ Original expression:
 
 A093 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:494
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      baseKey->setValue(57);
-
-Original expression:
-  QVERIFY2(undo->count() == 1, "key edit creates an undo entry")
 
 A094 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:497
 Disposition: GAP
@@ -1298,27 +1036,9 @@ Original expression:
 
 A096 | SampleProcessingTest::editorScroll | src/checks/samplecheck/editor.cpp:507
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-  }
-
-  void SampleProcessingTest::editorScroll()
-  {
-      QTemporaryDir scratch;
-
-Original expression:
-  QVERIFY2(scratch.isValid(), "editor-scroll scratch directory is available")
 
 A097 | SampleProcessingTest::editorScroll | src/checks/samplecheck/editor.cpp:509
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      const QString root = scratch.filePath(QStringLiteral("wavproj"));
-
-Original expression:
-  QVERIFY2(createWav2AgbProject(root), "editor-scroll synthetic project is created")
 
 A098 | SampleProcessingTest::editorScroll | src/checks/samplecheck/editor.cpp:512
 Disposition: GAP
@@ -1335,31 +1055,9 @@ Original expression:
 
 A099 | SampleProcessingTest::editorScroll | src/checks/samplecheck/editor.cpp:523
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-      });
-      dialog.resize(900, 640);
-      dialog.show();
-      QApplication::processEvents();
-      auto *scroll = dialog.findChild<QScrollArea *>(QStringLiteral("sampleScroll"));
-
-Original expression:
-  QVERIFY2(scroll, "control-column scroll area found")
 
 A100 | SampleProcessingTest::editorScroll | src/checks/samplecheck/editor.cpp:526
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      dialog.resize(900, 280);
-      QApplication::processEvents();
-
-Original expression:
-  QVERIFY2(scroll->verticalScrollBar()->maximum() > 0, "short window scrolls the controls")
 
 A101 | SampleProcessingTest::editorSplitter | src/checks/samplecheck/editor.cpp:534
 Disposition: GAP
@@ -1420,15 +1118,6 @@ Original expression:
 
 A105 | SampleProcessingTest::editorSplitter | src/checks/samplecheck/editor.cpp:555
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      const int tall = wave->height();
-      split->setSizes({wave->minimumSizeHint().height(), 10000});
-      QApplication::processEvents();
-
-Original expression:
-  QVERIFY2(wave->height() < tall, "splitter drag shrinks the waveform")
 
 A106 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:563
 Disposition: GAP
@@ -1550,17 +1239,6 @@ Original expression:
 
 A115 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:604
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      const ProcessedSample &out = document->processed();
-      const WaveData *wave = voicegroup->voices[0].wav;
-
-Original expression:
-  QVERIFY2(wave && wave->freq == out.freq && wave->loopStart == out.loopStart &&
-                   wave->size == out.size && wave->status == (out.looped ? 0x4000 : 0) &&
-                   wave->data && std::memcmp(wave->data, out.s8.constData(), out.size) == 0,
-               "committed sample loads back identical (audition == build)")
 
 A116 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:614
 Disposition: GAP
@@ -1581,185 +1259,45 @@ Original expression:
 
 A117 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:623
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-      // Use the required production null backend, then park its callback so
-      // the actual AudioEngine process path can be rendered deterministically.
-      ScopedNullAudioBackend nullBackend;
-      AudioEngine engine;
-      QString audioError;
-
-Original expression:
-  QVERIFY2(engine.init(&audioError), qPrintable(audioError))
 
 A118 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:624
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(engine.nullBackendForced() && engine.usingNullBackend(),
-               "Space audition uses the required production null backend")
 
 A119 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:626
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(checks::AudioEngineTestAccess::parkDevice(engine),
-               "Space audition parks the null device for deterministic PCM capture")
 
 A120 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:653
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-      const auto renderFrames = [&](uint32_t frames) {
-          auto pcm = std::vector<float>(static_cast<std::size_t>(frames) * 2);
-          checks::AudioEngineTestAccess::renderParked(engine, std::span<float>(pcm));
-          return pcm;
-      };
-      const auto renderSeconds = [&](double seconds) {
-          const auto frames =
-              std::max(uint32_t{1}, uint32_t(std::ceil(seconds * engine.sampleRate())));
-          return renderFrames(frames);
-      };
-      const auto peak = [](const std::vector<float> &pcm) {
-          auto result = 0.0;
-          for (const float sample : pcm)
-              result = std::max(result, std::abs(double(sample)));
-          return result;
-      };
-
-      SampleEditorDialog dialog(hiRes, [](const QString &, QString *) { return true; }, &engine);
-      dialog.resize(900, 640);
-      dialog.show();
-      QApplication::processEvents();
-      auto *play = dialog.findChild<QPushButton *>(QStringLiteral("sampleAuditionPlay"));
-      auto *auditionNameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
-      auto *keySpin = dialog.findChild<QSpinBox *>(QStringLiteral("sampleAuditionKey"));
-
-Original expression:
-  QVERIFY2(play && play->isEnabled() && auditionNameEdit && keySpin,
-               "audition controls are enabled by a live AudioEngine")
 
 A121 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:657
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      const QString idlePresentation = play->text();
-      const auto idlePcm = renderFrames(512);
-
-Original expression:
-  QVERIFY2(peak(idlePcm) <= 1.0e-7, "parked engine is silent before the Space audition")
 
 A122 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:661
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-      sendSpaceStroke(dialog, Qt::NoModifier, false);
-      const auto startedPcm = renderSeconds(0.25);
-
-Original expression:
-  QVERIFY2(peak(startedPcm) >= 0.01 && rmsOf(startedPcm, 0, startedPcm.size()) >= 0.001,
-               "Space produces sustained non-silent PCM through the production audition engine")
 
 A123 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:663
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(play->text() != idlePresentation, "Space starts an engine-backed audition")
 
 A124 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:667
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      sendSpaceStroke(dialog, Qt::NoModifier, false);
-      renderSeconds(2.0); // drain the real release envelope
-      const auto stoppedPcm = renderFrames(512);
-
-Original expression:
-  QVERIFY2(peak(stoppedPcm) <= 1.0e-7, "Space stop leaves digitally silent engine output")
 
 A125 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:668
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(play->text(), idlePresentation)
 
 A126 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:673
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-      const QString nameBefore = auditionNameEdit->text();
-      sendSpaceStroke(*auditionNameEdit, Qt::NoModifier, false);
-      const auto focusedPcm = renderSeconds(0.25);
-
-Original expression:
-  QVERIFY2(peak(focusedPcm) >= 0.01 && rmsOf(focusedPcm, 0, focusedPcm.size()) >= 0.001,
-               "Space in the name field reaches the production audition engine")
 
 A127 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:675
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(auditionNameEdit->text(), nameBefore)
 
 A128 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:679
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-      sendSpaceStroke(*keySpin, Qt::NoModifier, false);
-      renderSeconds(2.0); // drain the real release envelope
-      const auto focusedStopPcm = renderFrames(512);
-
-Original expression:
-  QVERIFY2(peak(focusedStopPcm) <= 1.0e-7, "Space on the key spin box stops the audition output")
 
 A129 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:684
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-      sendSpaceStroke(dialog, Qt::ControlModifier, false);
-      sendSpaceStroke(dialog, Qt::NoModifier, true);
-      const auto ignoredPcm = renderFrames(512);
-
-Original expression:
-  QVERIFY2(peak(ignoredPcm) <= 1.0e-7,
-               "modified and auto-repeat Space do not restart audition output")
 
 A130 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:686
 Disposition: NATIVE
-Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(play->text(), idlePresentation)
 
 Remaining original source (closing sequence and helper bodies):
   ;

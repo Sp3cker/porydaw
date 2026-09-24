@@ -6,39 +6,11 @@ Original SHA-256: 6ce29f432dbc1378d18cfbd24b1b4a03699ad616cd0781a4d16da021faa6f6
 Swift counterpart: src/checks/editcheck/SelectionChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below (52 sites across four test methods),
-including notification-transition guards. Source context preserves setup and
-guards between assertions verbatim. The current Swift counterpart is
-src/checks/editcheck/SelectionChecks.swift :: clipboardNoteSelectionChecks plus
-clipboardUnifiedTimeSelectionChecks; its executed predicates cover the
-note-selection sanitization, clear, reconciliation, per-owner time-commit,
-clear-ops cross-preservation and idempotent-reconcile observables of this file
-and are indexed as S001-S039 below.
-Sites whose only observable is unified-model preemption or a transition payload
-stay GAP: Swift keeps note selection (DocumentSession.selectedNoteOrder/selectedNotes)
-and the AutomationPage time selection (AutomationTimeSelection) as separate owners,
-so the C++ note/time preemption transitions (A008, A014-A016, A033) and the
-previousTrackTime/trackTime payloads (A029-A032, A038-A041) have no counterpart.
-The combined note/time/scope notification masks are PARTIAL: each owner half is
-asserted (page availability publication, session silence or selection domain)
-while the single-transition mask stays unproved. A similar method name or a
-passing suite is not evidence; every MATCHED site below cites the predicate that
-executes its observable.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted check.
-GAP identifies an original predicate without a replacement assertion.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS: build ok; "ok: swiftcore (10.20s)"; "verify: 1/6 ok (5 skipped)";
-"run_checks: PASS".
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS: build ok 13.31s; "ok: swiftcore (16.81s)"; "verify: 1/6 ok (5 skipped)";
-"run_checks: PASS". Controller-observed; covers S001-S016.
 Provenance: observed verification reported for this round-2 re-pin; this
 proof-only reconciliation did not rebuild or re-run any suite. LSP diagnostics
 were clean on all touched files. The Swift SHA-256 above is the final
@@ -49,138 +21,36 @@ Result: PASS: "ok: shell-clipboard (1.15s)"; "verify: 1/11 ok"; "run_checks: PAS
 Command: deno task verify --filter swiftcore
 Result: PASS: build ok (17.84s); "verify: 1/6 ok (10.91s, 5 skipped)"; "run_checks: PASS". Slice-observed; covers S001-S039 with the DocumentSession conditional-selection production fix.
 
-Execution ownership
-The executing entry point is runClipboardSelectionChecks
-(src/checks/editcheck/SelectionChecks.swift), invoked from
-runProjectSessionSuite (src/checks/workspace/SessionChecks.swift) and reached
-through pdcSuiteRun case 10
-(src/checks/support/corecheck/CoreCheckSupport.swift); the counterpart
-is compiled into swift_core_check at src/checks/CMakeLists.txt:109.
-The legacy original is the C++ SelectionCheckTest of this file; its methods
-noteSelectionSanitizesAndExcludesTime, timeSelectionAndScopeCommitAtomically,
-clearOperationsPreserveTheOtherSelection and reconciliationPreservesSelectionOrder
-ran historically under runSelectionCheck. Neither that file nor its runner
-appears in any CMake target or check catalog entry in this checkout (worktree
-search excluding build output and external, 2026-09-24), so no native execution
-and no native obligation is claimed for it here; the sites below are reconciled
-against the Swift predicates only.
-The model under test was a plain C++ value/observer object (no window), so no
-site is NATIVE. Automation-page Swift checks (SessionChecks page-selection paths,
-automationselection.swift band selection over drawer rows) assert a different
-selection surface over AutomationTimeSelection, not the EditorSelectionModel
-note/time/commit/clear/reconcile contract inventoried here; the per-owner halves
-of that contract execute in clipboardUnifiedTimeSelectionChecks below, while the
-preemption and payload sites stay GAP for the reasons each cites.
 
-Fixture, sequence and row constraints
-Each method constructs a local EditorSelectionModel with an attached
-NotificationLog observer; received() and the size comparisons pin the exact
-notification transition sequence (changes bitmask and transition count). No
-_data rows and no loops expand sites in this file; every site executes once
-per method run. Equivalent-change operations must not notify; clearing an
-empty selection must not notify. Keep each method's note IDs, tick bounds,
-scope masks, and clear/reconcile order; they are the inputs the paired check
-must carry.
 Swift-side fixture and sequence: runClipboardSelectionChecks builds a three-note
-MidiFile (division 24, channel-voice notes 60/62/64 at ticks 0/24/48, endTick
-96) on track 0 and delegates to clipboardNoteSelectionChecks; the selection
-sequence uses document.notes(in: 0) identifiers and records
-SessionChangeDomains publication through session.onChange.
-clipboardUnifiedTimeSelectionChecks builds its own identical three-note fixture
-with an attached AutomationPage, recording page availability alongside session domains.
-
-Original assertion inventory and source sequence
 
 A001 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:36
 Disposition: MATCHED
-Mapping/reason: MATCHED: clipboardNoteSelectionChecks calls session.setSelectedNotes([invalid, ids[0], ids[0], ids[1]]) on the three-note fixture, the Swift form of setNoteSelection({NoteId{}, 7, 7, 8}), and asserts expectEqual([ids[0], ids[1]], session.selectedNoteOrder); S001. Unassigned and duplicate IDs are dropped and insertion order is kept.
-Source context since previous assertion:
-  #include "checks/clipboard/selectioncheck_test.h"
-
-  #include <QtTest>
-
-  #include <span>
-  #include <vector>
-
-  #include "core/songdocument.h"
-
-  namespace checks::clipboard {
-
-  namespace {
-
-  using EditorSelectionModel = songview::EditorSelectionModel;
-  using SelectionChange = EditorSelectionModel::SelectionChange;
-
-  constexpr uint32_t kTrackScope = static_cast<uint32_t>(SelectionChange::TrackScope);
-  constexpr uint32_t kNoteSelection = static_cast<uint32_t>(SelectionChange::NoteSelection);
-  constexpr uint32_t kTimeSelection = static_cast<uint32_t>(SelectionChange::TimeSelection);
-
-  bool received(const NotificationLog &log, size_t before, uint32_t changes)
-  {
-      return log.transitions.size() == before + 1 &&
-             static_cast<uint32_t>(log.transitions.back().changes) == changes;
-  }
-
-  } // namespace
-
-  void SelectionCheckTest::noteSelectionSanitizesAndExcludesTime()
-  {
-      EditorSelectionModel model;
-      NotificationLog notifications;
-      notifications.attach(model);
-
-      model.setNoteSelection({NoteId{}, NoteId{7}, NoteId{7}, NoteId{8}});
-Original expression:
-  QVERIFY((model.noteSelection() == std::vector<NoteId>{NoteId{7}, NoteId{8}}));
+Mapping: S001
 
 A002 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:37
 Disposition: MATCHED
-Mapping/reason: MATCHED: expect(session.selectedNotes.contains(ids[0])) after the sanitized set; S002, the Swift form of isNoteSelected(NoteId{7}) for the first retained note.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(model.isNoteSelected(NoteId{7}));
+Mapping: S002
 
 A003 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:38
 Disposition: MATCHED
-Mapping/reason: MATCHED: expect(session.selectedNotes.contains(ids[1])); S003, the Swift form of isNoteSelected(NoteId{8}).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(model.isNoteSelected(NoteId{8}));
+Mapping: S003
 
 A004 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:39
 Disposition: MATCHED
-Mapping/reason: MATCHED: expect(!session.selectedNotes.contains(ids[2])) for the third fixture note; S004, isNoteSelected(NoteId{9}) is false.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!model.isNoteSelected(NoteId{9}));
+Mapping: S004
 
 A005 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:40
 Disposition: MATCHED
-Mapping/reason: MATCHED: expect(!session.selectedNotes.contains(invalid)) for the unassigned NoteID(); S005, isNoteSelected(NoteId{}) is false.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!model.isNoteSelected(NoteId{}));
+Mapping: S005
 
 A006 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:41
 Disposition: MATCHED
-Mapping/reason: MATCHED: expectEqual([SessionChangeDomains.selection], changes) after the set, one publication; S006. The C++ command mask kNoteSelection corresponds to the Swift selection domain.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(received(notifications, 0, kNoteSelection));
+Mapping: S006
 
 A007 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:45
 Disposition: MATCHED
-Mapping/reason: MATCHED: a second set with an equivalent normalized selection ([invalid, ids[0], ids[1], ids[1]]) leaves changes empty; S007, equivalent-change notification suppression.
-Source context since previous assertion:
-      const size_t beforeEquivalent = notifications.transitions.size();
-      model.setNoteSelection({NoteId{}, NoteId{7}, NoteId{8}, NoteId{8}});
-Original expression:
-  QCOMPARE(notifications.transitions.size(), beforeEquivalent);
+Mapping: S007
 
 A008 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:51
 Disposition: GAP
@@ -195,11 +65,7 @@ Original expression:
 
 A009 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:52
 Disposition: MATCHED
-Mapping/reason: MATCHED: clipboardUnifiedTimeSelectionChecks applies a 10-20 lane-scoped selection on the attached page and asserts page.selection?.isActive; S017, the Swift form of timeSelection().active().
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(model.timeSelection().active());
+Mapping: S017
 
 A010 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:53
 Disposition: PARTIAL
@@ -211,28 +77,15 @@ Original expression:
 
 A011 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:57
 Disposition: MATCHED
-Mapping/reason: MATCHED: setSelectedNotes([invalid]) on the empty note selection publishes nothing while the page selection stays active; S020, the Swift form of the empty-note guard preserving an active time selection.
-Source context since previous assertion:
-      const size_t afterTime = notifications.transitions.size();
-      model.setNoteSelection({NoteId{}});
-Original expression:
-  QVERIFY(model.timeSelection().active());
+Mapping: S020
 
 A012 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:58
 Disposition: MATCHED
-Mapping/reason: MATCHED: expect(session.selectedNoteOrder.isEmpty); S021.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(model.noteSelection().empty());
+Mapping: S021
 
 A013 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:59
 Disposition: MATCHED
-Mapping/reason: MATCHED: expect(changes.isEmpty && availability == 1); S022, no-notify on the empty-note guard.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(notifications.transitions.size(), afterTime);
+Mapping: S022
 
 A014 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:62
 Disposition: GAP
@@ -260,46 +113,23 @@ Original expression:
 
 A017 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:69
 Disposition: MATCHED
-Mapping/reason: MATCHED: with notes selected and the page selection nil, clearTimeSelection preserves the note order; S024, the Swift form of the inactive-selection no-op.
-Source context since previous assertion:
-      EditorSelectionModel::TimeSelection inactive;
-      const size_t beforeInactive = notifications.transitions.size();
-      model.setTimeSelection(inactive);
-Original expression:
-  QVERIFY((model.noteSelection() == std::vector<NoteId>{NoteId{19}}));
+Mapping: S024
 
 A018 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:70
 Disposition: MATCHED
-Mapping/reason: MATCHED: expect(page.selection == nil); S025.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!model.timeSelection().active());
+Mapping: S025
 
 A019 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:71
 Disposition: MATCHED
-Mapping/reason: MATCHED: expect(changes.isEmpty && availability == 2); S026, no-notify on the inactive time commit.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(notifications.transitions.size(), beforeInactive);
+Mapping: S026
 
 A020 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:74
 Disposition: MATCHED
-Mapping/reason: MATCHED: session.clearSelectedNotes() after the populated note selection publishes exactly one selection change; S008.
-Source context since previous assertion:
-      model.clearNoteSelection();
-Original expression:
-  QVERIFY(received(notifications, beforeInactive, kNoteSelection));
+Mapping: S008
 
 A021 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:77
 Disposition: MATCHED
-Mapping/reason: MATCHED: clearing the already-empty note selection and the nil page selection changes neither owner (S027) and publishes on neither channel (S028).
-Source context since previous assertion:
-      const size_t beforeClearEmptyTime = notifications.transitions.size();
-      model.clearTimeSelection();
-Original expression:
-  QCOMPARE(notifications.transitions.size(), beforeClearEmptyTime);
+Mapping: S027, S028
 
 A022 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:82
 Disposition: PARTIAL
@@ -329,32 +159,11 @@ Original expression:
 
 A025 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:98
 Disposition: MATCHED
-Mapping/reason: MATCHED: S032 asserts the committed .tracks range keeps startTick 40; the Swift form of the atomic time endpoint commit.
-Source context since previous assertion:
-  ;
-  }
-
-  void SelectionCheckTest::timeSelectionAndScopeCommitAtomically()
-  {
-      EditorSelectionModel model;
-      model.applyPrimaryTrackTransition(3);
-      NotificationLog notifications;
-      notifications.attach(model);
-
-      EditorSelectionModel::TimeSelection selection;
-      selection.startTick = 40;
-      selection.endTick = 80;
-      model.setTimeSelectionAndTrackScope(selection, trackBit(1) | trackBit(20));
-Original expression:
-  QCOMPARE(model.timeSelection().startTick, uint64_t{40});
+Mapping: S032
 
 A026 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:99
 Disposition: MATCHED
-Mapping/reason: MATCHED: S032 asserts the committed .tracks range keeps endTick 80.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(model.timeSelection().endTick, uint64_t{80});
+Mapping: S032
 
 A027 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:100
 Disposition: PARTIAL
@@ -418,27 +227,15 @@ Original expression:
 
 A034 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:114
 Disposition: MATCHED
-Mapping/reason: MATCHED: S036 asserts the stored scope equals .tracks([0]).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(model.storedTrackScope(), trackBit(2) | trackBit(3));
+Mapping: S036
 
 A035 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:115
 Disposition: MATCHED
-Mapping/reason: MATCHED: S035 asserts the second commit keeps startTick 50.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(model.timeSelection().startTick, uint64_t{50});
+Mapping: S035
 
 A036 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:116
 Disposition: MATCHED
-Mapping/reason: MATCHED: S035 asserts the second commit keeps endTick 90.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(model.timeSelection().endTick, uint64_t{90});
+Mapping: S035
 
 A037 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:117
 Disposition: PARTIAL
@@ -482,124 +279,47 @@ Original expression:
 
 A042 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:126
 Disposition: MATCHED
-Mapping/reason: MATCHED: re-applying the identical page selection publishes on neither channel; S023, the Swift form of the equivalent-commit no-notify rule.
-Source context since previous assertion:
-      const size_t beforeNoOp = notifications.transitions.size();
-      model.setTimeSelectionAndTrackScope(selection, trackBit(2) | trackBit(3));
-Original expression:
-  QCOMPARE(notifications.transitions.size(), beforeNoOp);
+Mapping: S023
 
 A043 | SelectionCheckTest::clearOperationsPreserveTheOtherSelection | src/checks/clipboard/selectioncheck_core.cpp:141
 Disposition: MATCHED
-Mapping/reason: MATCHED: S038 asserts the active page selection survives clearing the (empty) note selection.
-Source context since previous assertion:
-  ;
-  }
-
-  void SelectionCheckTest::clearOperationsPreserveTheOtherSelection()
-  {
-      EditorSelectionModel model;
-      NotificationLog notifications;
-      notifications.attach(model);
-
-      EditorSelectionModel::TimeSelection time;
-      time.startTick = 5;
-      time.endTick = 10;
-      model.setTimeSelection(time);
-      notifications.clear();
-      model.clearNoteSelection();
-Original expression:
-  QVERIFY(model.timeSelection().active());
+Mapping: S038
 
 A044 | SelectionCheckTest::clearOperationsPreserveTheOtherSelection | src/checks/clipboard/selectioncheck_core.cpp:142
 Disposition: MATCHED
-Mapping/reason: MATCHED: S039 asserts neither channel publishes; the Swift form of the empty-clear no-notify rule.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(notifications.transitions.empty());
+Mapping: S039
 
 A045 | SelectionCheckTest::clearOperationsPreserveTheOtherSelection | src/checks/clipboard/selectioncheck_core.cpp:148
 Disposition: MATCHED
-Mapping/reason: MATCHED: expect(session.selectedNoteOrder.isEmpty) after clearSelectedNotes(); S009. The native site ran after its own time selection had been cleared (A022-A024) and the Swift model holds no time selection (see A008); the note-clearing observable is what is asserted here.
-Source context since previous assertion:
-      model.clearTimeSelection();
-      model.setNoteSelection({NoteId{81}});
-      notifications.clear();
-      model.clearNoteSelection();
-Original expression:
-  QVERIFY(model.noteSelection().empty());
+Mapping: S009
 
 A046 | SelectionCheckTest::clearOperationsPreserveTheOtherSelection | src/checks/clipboard/selectioncheck_core.cpp:149
 Disposition: MATCHED
-Mapping/reason: MATCHED: the populated clear publishes exactly one selection change; S010.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(received(notifications, 0, kNoteSelection));
+Mapping: S010
 
 A047 | SelectionCheckTest::clearOperationsPreserveTheOtherSelection | src/checks/clipboard/selectioncheck_core.cpp:152
 Disposition: MATCHED
-Mapping/reason: MATCHED: a repeated clearSelectedNotes() on the already-empty selection publishes nothing; S011.
-Source context since previous assertion:
-      const size_t beforeRepeatedClear = notifications.transitions.size();
-      model.clearNoteSelection();
-Original expression:
-  QCOMPARE(notifications.transitions.size(), beforeRepeatedClear);
+Mapping: S011
 
 A048 | SelectionCheckTest::reconciliationPreservesSelectionOrder | src/checks/clipboard/selectioncheck_core.cpp:165
 Disposition: MATCHED
-Mapping/reason: MATCHED: with selection order [ids[2], ids[0], ids[1]], document.deleteNotes([ids[1]]) leaves expectEqual([ids[2], ids[0]], session.selectedNoteOrder); S012. Deletion reconciliation keeps the insertion order of the surviving notes rather than document order, the Swift form of reconcileNoteSelection({3, 1, 4, 1}) yielding {1, 3}.
-Source context since previous assertion:
-  ;
-  }
-
-  void SelectionCheckTest::reconciliationPreservesSelectionOrder()
-  {
-      EditorSelectionModel model;
-      NotificationLog notifications;
-      notifications.attach(model);
-      model.setNoteSelection({NoteId{1}, NoteId{2}, NoteId{3}});
-      notifications.clear();
-
-      const std::vector<NoteId> valid = {NoteId{3}, NoteId{1}, NoteId{4}, NoteId{1}};
-      model.reconcileNoteSelection(std::span<const NoteId>{valid});
-Original expression:
-  QVERIFY((model.noteSelection() == std::vector<NoteId>{NoteId{1}, NoteId{3}}));
+Mapping: S012
 
 A049 | SelectionCheckTest::reconciliationPreservesSelectionOrder | src/checks/clipboard/selectioncheck_core.cpp:166
 Disposition: MATCHED
-Mapping/reason: MATCHED: the deletion reconciliation publishes exactly one change carrying the selection domain; S013.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(received(notifications, 0, kNoteSelection));
+Mapping: S013
 
 A050 | SelectionCheckTest::reconciliationPreservesSelectionOrder | src/checks/clipboard/selectioncheck_core.cpp:171
 Disposition: MATCHED
-Mapping/reason: MATCHED: revised S016 asserts the rename-track reconciliation publishes exactly [.document, .dirty, .history] with the selection order untouched; the Swift form of idempotent-reconcile suppression, enabled by the DocumentSession conditional-selection production fix.
-Source context since previous assertion:
-      const size_t beforeSame = notifications.transitions.size();
-      const std::vector<NoteId> sameValid = {NoteId{3}, NoteId{1}, NoteId{3}};
-      model.reconcileNoteSelection(std::span<const NoteId>{sameValid});
-Original expression:
-  QCOMPARE(notifications.transitions.size(), beforeSame);
+Mapping: S016
 
 A051 | SelectionCheckTest::reconciliationPreservesSelectionOrder | src/checks/clipboard/selectioncheck_core.cpp:174
 Disposition: MATCHED
-Mapping/reason: MATCHED: deleting the remaining selected notes empties both selectedNoteOrder and selectedNotes; S014, reconcile to empty.
-Source context since previous assertion:
-      model.reconcileNoteSelection(std::span<const NoteId>{});
-Original expression:
-  QVERIFY(model.noteSelection().empty());
+Mapping: S014
 
 A052 | SelectionCheckTest::reconciliationPreservesSelectionOrder | src/checks/clipboard/selectioncheck_core.cpp:175
 Disposition: MATCHED
-Mapping/reason: MATCHED: the reconciliation to empty publishes exactly one selection change; S015.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(received(notifications, beforeSame, kNoteSelection));
+Mapping: S015
 
 Remaining original source (closing sequence and helper bodies):
   }
@@ -627,317 +347,120 @@ reconcile = clipboard/SelectionCheckTest::reconciliationPreservesSelectionOrder;
 
 S001 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A001 unassigned and duplicate IDs are removed without changing order"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A001
-Swift expression:
-  report.expectEqual([ids[0], ids[1]], session.selectedNoteOrder, cppID: sanitize,
-                     what: "A001 unassigned and duplicate IDs are removed without changing order")
 
 S002 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A002 first selected note is indexed"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A002
-Swift expression:
-  report.expect(session.selectedNotes.contains(ids[0]), cppID: sanitize,
-                message: "A002 first selected note is indexed")
 
 S003 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A003 second selected note is indexed"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A003
-Swift expression:
-  report.expect(session.selectedNotes.contains(ids[1]), cppID: sanitize,
-                message: "A003 second selected note is indexed")
 
 S004 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A004 unselected note is not indexed"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A004
-Swift expression:
-  report.expect(!session.selectedNotes.contains(ids[2]), cppID: sanitize,
-                message: "A004 unselected note is not indexed")
 
 S005 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A005 unassigned note is not indexed"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A005
-Swift expression:
-  report.expect(!session.selectedNotes.contains(invalid), cppID: sanitize,
-                message: "A005 unassigned note is not indexed")
 
 S006 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A006 note selection publishes exactly once"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A006
-Swift expression:
-  report.expectEqual([SessionChangeDomains.selection], changes, cppID: sanitize,
-                     what: "A006 note selection publishes exactly once")
 
 S007 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A007 equivalent normalized selection publishes nothing"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A007
-Swift expression:
-  report.expect(changes.isEmpty, cppID: sanitize,
-                message: "A007 equivalent normalized selection publishes nothing")
 
 S008 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A020 clearing notes publishes exactly once"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A020
-Swift expression:
-  report.expectEqual([SessionChangeDomains.selection], changes, cppID: sanitize,
-                     what: "A020 clearing notes publishes exactly once")
 
 S009 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A045 clearing populated note selection removes every note"
-cppID: clipboard/SelectionCheckTest::clearOperationsPreserveTheOtherSelection
-Covers: A045
-Swift expression:
-  report.expect(session.selectedNoteOrder.isEmpty, cppID: clear,
-                message: "A045 clearing populated note selection removes every note")
 
 S010 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A046 clearing populated note selection publishes once"
-cppID: clipboard/SelectionCheckTest::clearOperationsPreserveTheOtherSelection
-Covers: A046
-Swift expression:
-  report.expectEqual([SessionChangeDomains.selection], changes, cppID: clear,
-                     what: "A046 clearing populated note selection publishes once")
 
 S011 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A047 repeated empty clear publishes nothing"
-cppID: clipboard/SelectionCheckTest::clearOperationsPreserveTheOtherSelection
-Covers: A047
-Swift expression:
-  report.expect(changes.isEmpty, cppID: clear,
-                message: "A047 repeated empty clear publishes nothing")
 
 S012 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A048 reconciliation preserves reverse selection order rather than sorting by document order"
-cppID: clipboard/SelectionCheckTest::reconciliationPreservesSelectionOrder
-Covers: A048
-Swift expression:
-  report.expectEqual([ids[2], ids[0]], session.selectedNoteOrder, cppID: reconcile,
-                     what: "A048 reconciliation preserves reverse selection order rather than sorting by document order")
 
 S013 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A049 one selection publication accompanies deletion reconciliation"
-cppID: clipboard/SelectionCheckTest::reconciliationPreservesSelectionOrder
-Covers: A049
-Swift expression:
-  report.expect(changes.count == 1 && changes[0].contains(.selection), cppID: reconcile,
-                message: "A049 one selection publication accompanies deletion reconciliation")
 
 S014 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A051 reconciliation to empty removes membership"
-cppID: clipboard/SelectionCheckTest::reconciliationPreservesSelectionOrder
-Covers: A051
-Swift expression:
-  report.expect(session.selectedNoteOrder.isEmpty && session.selectedNotes.isEmpty,
-                cppID: reconcile, message: "A051 reconciliation to empty removes membership")
 
 S015 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A052 reconciliation to empty publishes once"
-cppID: clipboard/SelectionCheckTest::reconciliationPreservesSelectionOrder
-Covers: A052
-Swift expression:
-  report.expect(changes.count == 1 && changes[0].contains(.selection), cppID: reconcile,
-                message: "A052 reconciliation to empty publishes once")
 
 S016 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A050 idempotent reconciliation publishes no selection change"
-cppID: clipboard/SelectionCheckTest::reconciliationPreservesSelectionOrder
-Covers: A050
-Swift expression:
-  report.expect(changes.count == 1 && changes[0] == [.document, .dirty, .history]
-                && session.selectedNoteOrder == [ids[2], ids[0]], cppID: reconcile,
-                message: "A050 idempotent reconciliation publishes no selection change")
 
 S017 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A009 committed time selection is active"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A009
-Swift expression:
-  report.expect(page.selection?.isActive == true, cppID: sanitize,
-                message: "A009 committed time selection is active")
 
 S018 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A010 time commit notifies through the page while the session stays silent"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A010
-Swift expression:
-  report.expect(changes.isEmpty && session.selectedNoteOrder.isEmpty, cppID: sanitize,
-                message: "A010 time commit notifies through the page while the session stays silent")
 
 S019 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A010 time commit publishes one page availability change"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A010
-Swift expression:
-  report.expectEqual(1, availability, cppID: sanitize,
-                     what: "A010 time commit publishes one page availability change")
 
 S020 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A011 empty note guard preserves the active time selection"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A011
-Swift expression:
-  report.expect(page.selection?.isActive == true, cppID: sanitize,
-                message: "A011 empty note guard preserves the active time selection")
 
 S021 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A012 empty note guard leaves no notes selected"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A012
-Swift expression:
-  report.expect(session.selectedNoteOrder.isEmpty, cppID: sanitize,
-                message: "A012 empty note guard leaves no notes selected")
 
 S022 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A013 empty note guard publishes nothing"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A013
-Swift expression:
-  report.expect(changes.isEmpty && availability == 1, cppID: sanitize,
-                message: "A013 empty note guard publishes nothing")
 
 S023 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A042 equivalent time and scope commit publishes nothing"
-cppID: clipboard/SelectionCheckTest::timeSelectionAndScopeCommitAtomically
-Covers: A042
-Swift expression:
-  report.expect(changes.isEmpty && availability == 1, cppID: commit,
-                message: "A042 equivalent time and scope commit publishes nothing")
 
 S024 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A017 inactive time commit preserves the note selection"
-cppID: clipboard/SelectionCheckTest::clearOperationsPreserveTheOtherSelection
-Covers: A017
-Swift expression:
-  report.expect(session.selectedNoteOrder == [ids[0]], cppID: clear,
-                message: "A017 inactive time commit preserves the note selection")
 
 S025 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A018 cleared time selection stays inactive"
-cppID: clipboard/SelectionCheckTest::clearOperationsPreserveTheOtherSelection
-Covers: A018
-Swift expression:
-  report.expect(page.selection == nil, cppID: clear,
-                message: "A018 cleared time selection stays inactive")
 
 S026 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A019 inactive time commit publishes nothing"
-cppID: clipboard/SelectionCheckTest::clearOperationsPreserveTheOtherSelection
-Covers: A019
-Swift expression:
-  report.expect(changes.isEmpty && availability == 2, cppID: clear,
-                message: "A019 inactive time commit publishes nothing")
 
 S027 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A021 clearing empty selections changes neither owner"
-cppID: clipboard/SelectionCheckTest::clearOperationsPreserveTheOtherSelection
-Covers: A021
-Swift expression:
-  report.expect(page.selection == nil && session.selectedNoteOrder.isEmpty, cppID: clear,
-                message: "A021 clearing empty selections changes neither owner")
 
 S028 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A021 clearing empty selections publishes nothing"
-cppID: clipboard/SelectionCheckTest::clearOperationsPreserveTheOtherSelection
-Covers: A021
-Swift expression:
-  report.expect(changes.isEmpty && availability == 2, cppID: clear,
-                message: "A021 clearing empty selections publishes nothing")
 
 S029 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A022 clearing the committed time selection deactivates it"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A022
-Swift expression:
-  report.expect(page.selection == nil, cppID: sanitize,
-                message: "A022 clearing the committed time selection deactivates it")
 
 S030 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A023 clearing time leaves the empty note selection empty"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A023
-Swift expression:
-  report.expect(session.selectedNoteOrder.isEmpty, cppID: sanitize,
-                message: "A023 clearing time leaves the empty note selection empty")
 
 S031 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A024 clearing time publishes one page availability change"
-cppID: clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime
-Covers: A024
-Swift expression:
-  report.expect(availability == 4 && changes.isEmpty, cppID: sanitize,
-                message: "A024 clearing time publishes one page availability change")
 
 S032 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A025-A026 track-scoped commit keeps its tick endpoints"
-cppID: clipboard/SelectionCheckTest::timeSelectionAndScopeCommitAtomically
-Covers: A025, A026
-Swift expression:
-  report.expectEqual(TimeRange(startTick: 40, endTick: 80), page.selection?.range, cppID: commit,
-                     what: "A025-A026 track-scoped commit keeps its tick endpoints")
 
 S033 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A027 resolved scope drops the out-of-range track"
-cppID: clipboard/SelectionCheckTest::timeSelectionAndScopeCommitAtomically
-Covers: A027
-Swift expression:
-  report.expect(committed?.covers(.controlChange(track: 0, controller: 7), usedTracks: [0]) == true
-                && committed?.covers(.controlChange(track: 20, controller: 7), usedTracks: [0]) == false,
-                cppID: commit, message: "A027 resolved scope drops the out-of-range track")
 
 S034 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A028 track-scoped commit publishes one page availability change"
-cppID: clipboard/SelectionCheckTest::timeSelectionAndScopeCommitAtomically
-Covers: A028
-Swift expression:
-  report.expectEqual(5, availability, cppID: commit,
-                     what: "A028 track-scoped commit publishes one page availability change")
 
 S035 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A035-A036 second track-scoped commit keeps its tick endpoints"
-cppID: clipboard/SelectionCheckTest::timeSelectionAndScopeCommitAtomically
-Covers: A035, A036
-Swift expression:
-  report.expectEqual(TimeRange(startTick: 50, endTick: 90), page.selection?.range, cppID: commit,
-                     what: "A035-A036 second track-scoped commit keeps its tick endpoints")
 
 S036 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A034 second commit stores its track scope"
-cppID: clipboard/SelectionCheckTest::timeSelectionAndScopeCommitAtomically
-Covers: A034
-Swift expression:
-  report.expectEqual(AutomationTimeSelection.Scope.tracks([0]), page.selection?.scope, cppID: commit,
-                     what: "A034 second commit stores its track scope")
 
 S037 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A037 second track-scoped commit publishes one page availability change"
-cppID: clipboard/SelectionCheckTest::timeSelectionAndScopeCommitAtomically
-Covers: A037
-Swift expression:
-  report.expectEqual(6, availability, cppID: commit,
-                     what: "A037 second track-scoped commit publishes one page availability change")
 
 S038 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A043 clearing notes preserves the active time selection"
-cppID: clipboard/SelectionCheckTest::clearOperationsPreserveTheOtherSelection
-Covers: A043
-Swift expression:
-  report.expect(page.selection?.isActive == true, cppID: clear,
-                message: "A043 clearing notes preserves the active time selection")
 
 S039 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
 Anchor: message "A044 clearing the empty note selection publishes nothing"
-cppID: clipboard/SelectionCheckTest::clearOperationsPreserveTheOtherSelection
-Covers: A044
-Swift expression:
-  report.expect(changes.isEmpty && availability == 6, cppID: clear,
-                message: "A044 clearing the empty note selection publishes nothing")
 
 Shared helpers
 None: the fixture above is local to the counterpart function and carries no

@@ -6,25 +6,8 @@ Original: src/checks/automationgesturecheck/hover.cpp
 Original SHA-256: c0bbc4a68e09aec50cdbfcbf6f3fec04750e3c34fcf6f7c7de7a6e5d495d3bed
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original require() predicate site appears below, including snapshot guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact counterpart predicates, listed after the inventory.
-Direct hover routing plus per-adapter topology cases (Tempo, CC) pin insertion-tick
-placement, node rings and labels, insertion line and label, held ghosts,
-no-repeat churn, and leave-cleared pixels on the retired Quick surface. Seven sites are
-matched by the converted hover model predicates and twenty-three require the retired
-native window, pixels, focus, grabs, cursor, or fixture.
 Disposition tally: 30 sites: 7 MATCHED, 23 NATIVE.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related counterpart predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift surface.
-GAP identifies an original predicate without a replacement assertion.
-Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
-Verification
 Command: deno task verify --filter swiftcore (implementer run on the counterpart
 hashes pinned above) -> run_checks PASS (1/14 ok, 13 skipped).
 Command: deno task verify:qml (same tree, same implementer run) -> run_checks PASS
@@ -41,362 +24,8 @@ menu-muting and hover-residual predicates are owned by sibling lanes and out of 
 Converted-suite note: the retired automation-gestures C++ harness never runs again;
 candidate model predicates live in the automation lane Swift suite.
 
-Execution and ownership
-checkDirectHoverRoute drives the CC lane hover path end to end (window, hover,
-leave, focus, grab, and cancellation probes); runCase replays the same topology
-assertions per kCases row (Tempo, CC) through checkNodeLaneHoverParity. Shared
-fixture: AutomationGestureCheckRig from rig.h (Quick host, canvas stack,
-framebuffer grabber, mouse rig); hover domain labelling comes from Check in
-support.h.
-
-Fixture, sequence and row constraints
-Direct check(...) guards at lines 590, 601, and 607 (Tempo expansion, topology
-equality, CC lane availability) report through the same AutomationGestureCheck
-callback and appear verbatim in the context below; the A inventory tracks the
-domain-labelled require() predicate sites.
-Held tick 0 and node tick 144 anchor every topology; insertion parks between them
-at kFixtureTick. No _data rows expand sites in this file.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
-
 A001 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:330
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automationgesturecheck/hover.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  #include "domains.h"
-  #include "support.h"
-
-  #include <algorithm>
-  #include <array>
-  #include <cmath>
-  #include <cstdint>
-  #include <limits>
-  #include <vector>
-
-  #include <QAbstractItemModel>
-  #include <QDeadlineTimer>
-  #include <QImage>
-
-  #include <QPointF>
-  #include <QQuickItem>
-  #include <QSize>
-
-  #include "core/songdocument.h"
-  #include "core/timedefaults.h"
-  #include "rig.h"
-  #include "ui/editordrawer/automationcanvas.h"
-  #include "ui/editordrawer/automationpage.h"
-  #include "ui/editordrawer/automationprojection.h"
-  #include "ui/editordrawer/nodelane/hover.h"
-  #include "ui/editordrawer/nodelane/nodelane.h"
-  #include "ui/layout.h"
-  #include "ui/songview.h"
-  #include "ui/songview/quick/timelineinputitem.h"
-  #include "ui/songview/quick/timelinequickscene.h"
-  #include "ui/songview/quick/timelinequickview.h"
-  #include <QRect>
-  #include <QRectF>
-  #include <QString>
-  #include <QtGlobal>
-
-  namespace {
-
-  enum class AdapterKind { Tempo, Cc };
-
-  struct Case {
-      AdapterKind kind = AdapterKind::Tempo;
-      const char *name = "";
-  };
-
-  struct Topology {
-      bool insertionLine = false;
-      bool heldGhost = false;
-      bool insertionLabel = false;
-      bool nodeRing = false;
-      bool nodeLabel = false;
-      bool noInsertionGhost = false;
-      bool leaveCleared = false;
-      bool noRepeatChurn = false;
-  };
-
-  struct PreparedLane {
-      LaneHandle handle;
-      QRect body;
-      QPointF insertionPos;
-      QPointF nodePos;
-      uint64_t insertionTick = 0;
-      qreal insertionX = 0;
-      qreal heldY = 0;
-      qreal nodeX = 0;
-      qreal nodeY = 0;
-  };
-
-  constexpr std::array kCases{
-      Case{AdapterKind::Tempo, "Tempo"},
-      Case{AdapterKind::Cc, "CC"},
-  };
-
-  constexpr uint64_t kHeldTick = 0;
-  constexpr uint64_t kNodeTick = 144;
-  constexpr double kHeldBodyFraction = 0.25;
-  constexpr double kNodeBodyFraction = 0.75;
-  constexpr double kCursorBodyFraction = 0.50;
-
-  int valueAtBodyFraction(int minimum, int maximum, double fractionFromBottom)
-  {
-      return minimum + int(std::lround(double(maximum - minimum) * fractionFromBottom));
-  }
-
-  void leaveCanvas(AutomationGestureCheckRig &rig)
-  {
-      rig.canvas().pointerLeave();
-      rig.pump();
-  }
-
-  struct HoverObservation {
-      songview::TimelineQuickLayerData layer;
-      QImage framebuffer;
-      int textRows = 0;
-      int valueTextRows = 0;
-      int drawableValueTextRows = 0;
-      int viewportValueTextRows = 0;
-      QString text;
-      QRectF rect;
-      QRectF clip;
-      bool chromeVisible = false;
-      bool framebufferReady = false;
-  };
-
-  HoverObservation observeHover(AutomationGestureCheckRig &rig)
-  {
-      HoverObservation observation;
-      QString captureError;
-      observation.framebuffer = rig.renderAutomationViewport(&captureError);
-      observation.framebufferReady = captureError.isEmpty() && !observation.framebuffer.isNull();
-      observation.layer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
-      const QSize viewportSize = rig.automationViewportSize();
-      const QRectF viewportRect(0.0, 0.0, qreal(viewportSize.width()), qreal(viewportSize.height()));
-      const QAbstractItemModel *const model = rig.quickScene().automationHoverTextModel();
-      observation.textRows = model->rowCount();
-      for (int row = 0; row < observation.textRows; ++row) {
-          const QModelIndex index = model->index(row, 0);
-          const QString text =
-              model->data(index, songview::TimelineQuickTextModel::TextRole).toString();
-          if (text.isEmpty())
-              continue;
-          ++observation.valueTextRows;
-          observation.text = text;
-          observation.rect = model->data(index, songview::TimelineQuickTextModel::RectRole).toRectF();
-          observation.clip =
-              model->data(index, songview::TimelineQuickTextModel::ClipRectRole).toRectF();
-          if (!observation.rect.isEmpty() && !observation.clip.isEmpty() &&
-              observation.rect.intersects(observation.clip)) {
-              ++observation.drawableValueTextRows;
-          }
-          if (viewportRect.contains(observation.clip))
-              ++observation.viewportValueTextRows;
-      }
-      songview::TimelineQuickView *const quickHost =
-          rig.view().findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-      const QQuickItem *const root = quickHost ? quickHost->rootObject() : nullptr;
-      const QQuickItem *const chrome =
-          root ? root->findChild<QQuickItem *>(QStringLiteral("timelineQuickAutomationHoverChrome"))
-               : nullptr;
-      observation.chromeVisible = chrome && chrome->isVisible();
-      return observation;
-  }
-
-  bool hasFilledNodeAt(const songview::TimelineQuickLayerData &layer, const QPointF &center)
-  {
-      const qreal tolerance = layout::singlePixel();
-      const auto nearCenter = [&](const QPointF &point) {
-          const QPointF delta = point - center;
-          return delta.x() * delta.x() + delta.y() * delta.y() <= tolerance * tolerance;
-      };
-      return std::any_of(layer.triangles.cbegin(), layer.triangles.cend(),
-                         [&](const songview::TimelineQuickTriangle &triangle) {
-                             return nearCenter(triangle.first) || nearCenter(triangle.second) ||
-                                    nearCenter(triangle.third);
-                         });
-  }
-
-  bool hasAnnulusPixelChanges(const QImage &before, const QImage &after, const QPointF &center,
-                              qreal radius, qreal width)
-  {
-      if (before.isNull() || after.isNull() || before.size() != after.size())
-          return false;
-      const qreal dpr = after.devicePixelRatio();
-      if (dpr <= 0.0 || !qFuzzyCompare(before.devicePixelRatio(), dpr))
-          return false;
-      const qreal tolerance = 2 * layout::singlePixel();
-      const qreal inner = std::max<qreal>(0.0, radius - width / 2.0 - tolerance);
-      const qreal outer = radius + width / 2.0 + tolerance;
-      const qreal innerSquared = inner * inner;
-      const qreal outerSquared = outer * outer;
-      const int left = std::max(0, qFloor((center.x() - outer) * dpr));
-      const int top = std::max(0, qFloor((center.y() - outer) * dpr));
-      const int right = std::min(after.width() - 1, qCeil((center.x() + outer) * dpr));
-      const int bottom = std::min(after.height() - 1, qCeil((center.y() + outer) * dpr));
-      int changedPixels = 0;
-      for (int y = top; y <= bottom; ++y) {
-          for (int x = left; x <= right; ++x) {
-              const QPointF delta((x + 0.5) / dpr - center.x(), (y + 0.5) / dpr - center.y());
-              const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
-              if (distanceSquared < innerSquared || distanceSquared > outerSquared)
-                  continue;
-              const QColor oldPixel = before.pixelColor(x, y);
-              const QColor newPixel = after.pixelColor(x, y);
-              const int difference = std::abs(newPixel.alpha() - oldPixel.alpha()) +
-                                     std::abs(newPixel.red() - oldPixel.red()) +
-                                     std::abs(newPixel.green() - oldPixel.green()) +
-                                     std::abs(newPixel.blue() - oldPixel.blue());
-              if (newPixel.alpha() >= 32 && difference >= 32 && ++changedPixels == 2)
-                  return true;
-          }
-      }
-      return false;
-  }
-
-  bool pixelChangedAt(const QImage &before, const QImage &after, const QPointF &point)
-  {
-      if (before.isNull() || after.isNull() || before.size() != after.size())
-          return false;
-      const qreal dpr = after.devicePixelRatio();
-      if (dpr <= 0.0 || !qFuzzyCompare(before.devicePixelRatio(), dpr))
-          return false;
-      const int x = std::clamp(qRound(point.x() * dpr), 0, after.width() - 1);
-      const int y = std::clamp(qRound(point.y() * dpr), 0, after.height() - 1);
-      const QColor oldPixel = before.pixelColor(x, y);
-      const QColor newPixel = after.pixelColor(x, y);
-      return std::abs(newPixel.alpha() - oldPixel.alpha()) +
-                 std::abs(newPixel.red() - oldPixel.red()) +
-                 std::abs(newPixel.green() - oldPixel.green()) +
-                 std::abs(newPixel.blue() - oldPixel.blue()) >=
-             32;
-  }
-
-  bool pixelClearedAt(const QImage &idle, const QImage &cleared, const QPointF &point)
-  {
-      if (idle.isNull() || cleared.isNull() || idle.size() != cleared.size())
-          return false;
-      const qreal dpr = cleared.devicePixelRatio();
-      if (dpr <= 0.0 || !qFuzzyCompare(idle.devicePixelRatio(), dpr))
-          return false;
-      const int x = std::clamp(qRound(point.x() * dpr), 0, cleared.width() - 1);
-      const int y = std::clamp(qRound(point.y() * dpr), 0, cleared.height() - 1);
-      const QColor idlePixel = idle.pixelColor(x, y);
-      const QColor clearedPixel = cleared.pixelColor(x, y);
-      return std::abs(clearedPixel.alpha() - idlePixel.alpha()) <= 8 &&
-             std::abs(clearedPixel.red() - idlePixel.red()) <= 8 &&
-             std::abs(clearedPixel.green() - idlePixel.green()) <= 8 &&
-             std::abs(clearedPixel.blue() - idlePixel.blue()) <= 8;
-  }
-
-  bool hasValueText(const HoverObservation &observation)
-  {
-      return observation.framebufferReady && observation.valueTextRows == 1 &&
-             observation.drawableValueTextRows == 1 && observation.viewportValueTextRows == 1 &&
-             !observation.layer.rects.empty();
-  }
-
-  bool isClear(const HoverObservation &observation)
-  {
-      return observation.framebufferReady && observation.layer.rects.empty() &&
-             observation.layer.triangles.empty() && observation.textRows == 0 &&
-             !observation.chromeVisible;
-  }
-
-  bool sameRetainedHover(const HoverObservation &left, const HoverObservation &right)
-  {
-      return left.framebufferReady && right.framebufferReady &&
-             left.framebuffer == right.framebuffer && left.textRows == right.textRows &&
-             left.valueTextRows == right.valueTextRows &&
-             left.drawableValueTextRows == right.drawableValueTextRows &&
-             left.viewportValueTextRows == right.viewportValueTextRows && left.text == right.text &&
-             left.rect == right.rect && left.clip == right.clip &&
-             left.chromeVisible == right.chromeVisible;
-  }
-
-  void setTempoPoints(AutomationGestureCheckRig &rig, const std::vector<TempoPoint> &points)
-  {
-      if (rig.document().tempoPoints() == points)
-          return;
-      TempoEdit edit;
-      edit.remove = rig.document().tempoPoints();
-      edit.add = points;
-      rig.document().applyTempoEdit(edit);
-      rig.documentChanged();
-  }
-
-  void setCcPoints(AutomationGestureCheckRig &rig,
-                   const std::vector<SongDocument::LanePointValue> &points)
-  {
-      rig.document().writeLanePoints(rig.pan.track, rig.pan.controller, 0,
-                                     std::numeric_limits<uint64_t>::max(), points);
-      rig.documentChanged();
-  }
-
-  std::vector<SongDocument::LanePointValue> laneValues(const std::vector<DocLanePoint> &points)
-  {
-      std::vector<SongDocument::LanePointValue> values;
-      values.reserve(points.size());
-      for (const auto &point : points)
-          values.push_back({point.tick, point.value});
-      return values;
-  }
-
-  qreal valueY(const QRect &body, const AutomationGeometry &geometry, int minimum, int maximum,
-               int value)
-  {
-      return AutomationProjection::valueY(body, geometry, minimum, maximum, value);
-  }
-
-  PreparedLane prepareLane(AutomationGestureCheckRig &rig, const Case &row)
-  {
-      PreparedLane lane;
-      const int minimum = row.kind == AdapterKind::Tempo ? CoreTimeDefaults::kMinTempoBpm : 0;
-      const int maximum = row.kind == AdapterKind::Tempo ? CoreTimeDefaults::kMaxTempoBpm : 127;
-      const int held = valueAtBodyFraction(minimum, maximum, kHeldBodyFraction);
-      const int node = valueAtBodyFraction(minimum, maximum, kNodeBodyFraction);
-      const int cursor = valueAtBodyFraction(minimum, maximum, kCursorBodyFraction);
-      if (row.kind == AdapterKind::Tempo) {
-          setTempoPoints(rig, {{kHeldTick, tempoUsForBpm(held)}, {kNodeTick, tempoUsForBpm(node)}});
-          lane.handle = AutomationGestureCheckRig::kTempoHandle;
-      } else {
-          lane.handle = rig.handleFor(rig.pan);
-          if (!lane.handle.valid())
-              return lane;
-          setCcPoints(rig, {{kHeldTick, held}, {kNodeTick, node}});
-      }
-      const auto geometry = rig.geometry();
-      const qreal dpr = rig.automationDpr();
-      const auto projection = rig.projection();
-      lane.body = rig.bodyFor(lane.handle);
-      lane.insertionPos = {projection.displayX(kFixtureTick, dpr),
-                           valueY(lane.body, geometry, minimum, maximum, cursor)};
-      lane.heldY = valueY(lane.body, geometry, minimum, maximum, held);
-      lane.nodeY = valueY(lane.body, geometry, minimum, maximum, node);
-      NodeLaneHoverState insertionProbe(rig.view().font());
-      insertionProbe.hover.lane = lane.handle;
-      insertionProbe.hover.pos = lane.insertionPos;
-      lane.insertionTick = uint64_t(std::max(0.0, insertionProbe.insertionTick(projection, false)));
-      lane.insertionX = projection.displayX(lane.insertionTick, dpr);
-      lane.nodeX = projection.displayX(kNodeTick, dpr);
-      lane.nodePos = QPointF(lane.nodeX, lane.nodeY);
-      return lane;
-  }
-
-  void checkDirectHoverRoute(AutomationGestureCheckRig &rig, const PreparedLane &lane,
-                             const AutomationGestureCheck &check)
-  {
-      const Check probe{check, "direct hover"};
-      songview::TimelineQuickView *const quickHost =
-          rig.view().findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-Original expression:
-      probe.require(quickHost && quickHost->quickWindow(),
-                    QStringLiteral("native Quick timeline host is unavailable"));
 
 A002 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:335
 Disposition: GAP
@@ -420,15 +49,7 @@ Original expression:
 
 A004 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:343
 Disposition: MATCHED
-Mapping/reason: S011, S012, and S013 (hovering the background, repeating a hover, and hovering a node each leave the snapshot unchanged) assert the original non-mutation guard.
-Source context since previous assertion:
-
-      const auto before = snapshot(rig.document());
-      const auto previewUnchanged = [&](const char *label) {
-Original expression:
-          probe.require(
-              isUnchanged(before, snapshot(rig.document())),
-              QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
+Mapping: S011, S012, S013
 
 A005 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:365
 Disposition: GAP
@@ -492,29 +113,11 @@ Original expression:
 
 A009 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:382
 Disposition: MATCHED
-Mapping/reason: S014 (a background hover reads the value the lane holds there) and S015 (the node hover reads the node own text) assert the insertion value readout through the published hover model; the original predicate only requires the readout row to exist.
-Source context since previous assertion:
-Original expression:
-      probe.require(hasValueText(routed),
-                    QStringLiteral("direct pointer move did not render the insertion value"));
+Mapping: S014, S015
 
 A010 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:395
 Disposition: MATCHED
-Mapping/reason: S016, S017, and S018 (pointer leave clears the hover, its text and the hover object, and never arms the pencil cursor) assert the original clear-on-leave outcome.
-Source context since previous assertion:
-
-      const int cursorClearsBeforeLeave = rig.automationHost().cursorClears();
-      // A direct pointer leave clears the hover chrome completely.
-      leaveCanvas(rig);
-      QDeadlineTimer leaveTimeout{1000};
-      HoverObservation cleared = observeHover(rig);
-      while (!isClear(cleared) && !leaveTimeout.hasExpired()) {
-          rig.pump();
-          cleared = observeHover(rig);
-      }
-      previewUnchanged("pointer leave");
-Original expression:
-      probe.require(isClear(cleared), QStringLiteral("hover survived its pointer leave"));
+Mapping: S016, S017, S018
 
 A011 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:396
 Disposition: GAP
@@ -577,17 +180,7 @@ Original expression:
 
 A016 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:431
 Disposition: MATCHED
-Mapping/reason: S019 (a strong cancellation clears a live hover) asserts the original clearing; the converted predicate cancels through the page section interaction where the original deactivates the window.
-Source context since previous assertion:
-      QDeadlineTimer cancelTimeout{1000};
-      HoverObservation cancelled = observeHover(rig);
-      while (!isClear(cancelled) && !cancelTimeout.hasExpired()) {
-          rig.pump();
-          cancelled = observeHover(rig);
-      }
-Original expression:
-      probe.require(isClear(cancelled),
-                    QStringLiteral("hover survived strong window-deactivation cancellation"));
+Mapping: S019
 
 A017 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:446
 Disposition: GAP
@@ -612,67 +205,21 @@ Original expression:
 
 A018 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:454
 Disposition: MATCHED
-Mapping/reason: S020, S021, and S022 (cancelling a hover and an idle cancellation leave document and history unchanged and no interaction live) assert the original preservation and idle outcome.
-Source context since previous assertion:
-
-      // The remaining strong reasons cancel cleanly while idle.
-      const auto idleReasonsBefore = snapshot(rig.document());
-      rig.canvas().inputCancelled(songview::TimelineInputCancelReason::Hidden);
-      rig.canvas().inputCancelled(songview::TimelineInputCancelReason::PointerUngrabbed);
-      rig.pump();
-Original expression:
-      probe.require(
-          isUnchanged(idleReasonsBefore, snapshot(rig.document())) && rig.isIdle(),
-          QStringLiteral("hidden or ungrab cancellation mutated the document or left a gesture"));
+Mapping: S020, S021, S022
 
 A019 | runCase | src/checks/automationgesturecheck/hover.cpp:467
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automationgesturecheck/hover.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-      leaveCanvas(rig);
-  }
-
-  Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
-                   const AutomationGestureCheck &check)
-  {
-      Topology topology;
-      const Check probe{check, row.name};
-      const auto lane = prepareLane(rig, row);
-      if (!lane.handle.valid() || lane.body.isEmpty()) {
-Original expression:
-          probe.require(false, QStringLiteral("lane body is missing from the canvas stack"));
 
 A020 | runCase | src/checks/automationgesturecheck/hover.cpp:470
 Disposition: MATCHED
-Mapping/reason: S023 (the insertion tick sits between its neighboring nodes) asserts the original distinct-tick outcome.
-Source context since previous assertion:
-          return topology;
-      }
-Original expression:
-      probe.require(lane.insertionTick != kHeldTick && lane.insertionTick != kNodeTick,
-                    QStringLiteral("inter-node insertion landed on an existing node"));
+Mapping: S023
 
 A021 | runCase | src/checks/automationgesturecheck/hover.cpp:476
 Disposition: MATCHED
-Mapping/reason: S011, S013, and S024 (background, node, and Tempo topology hovers leave the snapshot unchanged) assert the per-topology preservation guard.
-Source context since previous assertion:
-      leaveCanvas(rig);
-      const HoverObservation idle = observeHover(rig);
-      const auto before = snapshot(rig.document());
-      const auto previewUnchanged = [&](const char *label) {
-Original expression:
-          probe.require(
-              isUnchanged(before, snapshot(rig.document())),
-              QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
+Mapping: S011, S013, S024
 
 A022 | runCase | src/checks/automationgesturecheck/hover.cpp:480
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automationgesturecheck/hover.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-      };
-Original expression:
-      probe.require(idle.framebufferReady,
-                    QStringLiteral("Quick automation framebuffer was unavailable"));
 
 A023 | runCase | src/checks/automationgesturecheck/hover.cpp:502
 Disposition: GAP
@@ -858,151 +405,72 @@ The S entries are exact predicates defined in the converted automation Swift sui
 
 S001 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a hover on a node publishes the node"
-Counterpart expression:
-      report.expect(fixture.page.hover?.hasPoint == true, cppID: drawerAutomationContextID,
-                    message: "a hover on a node publishes the node")
 
 S002 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a node hover reads out the node's value"
-Counterpart expression:
-      report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: drawerAutomationContextID,
-                         what: "a node hover reads out the node's value")
 
 S003 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a written node advertises node movement"
-Counterpart expression:
-      report.expectEqual(AutomationHintProfile.node, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
-                         what: "a written node advertises node movement")
 
 S004 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a hover on the background publishes the tick"
-Counterpart expression:
-      report.expect(fixture.page.hover?.hasPoint == false, cppID: drawerAutomationContextID,
-                    message: "a hover on the background publishes the tick")
 
 S005 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a background hover reads the value the lane holds there"
-Counterpart expression:
-      report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: drawerAutomationContextID,
-                         what: "a background hover reads the value the lane holds there")
 
 S006 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the hover publications are counted"
-Counterpart expression:
-      report.expect(fixture.page.hoverBuildCount > hoverBuilds, cppID: drawerAutomationContextID,
-                    message: "the hover publications are counted")
 
 S007 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the background advertises sweep and ramp input"
-Counterpart expression:
-      report.expectEqual(AutomationHintProfile.sweep, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
-                         what: "the background advertises sweep and ramp input")
 
 S008 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "switching tools updates stationary hover instructions"
-Counterpart expression:
-      report.expectEqual(AutomationHintProfile.pencil, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
-                         what: "switching tools updates stationary hover instructions")
 
 S009 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "leaving pencil mode restores sweep instructions"
-Counterpart expression:
-      report.expectEqual(AutomationHintProfile.sweep, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
-                         what: "leaving pencil mode restores sweep instructions")
 
 S010 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift
 Anchor: message "leaving the plot clears the hover"
-Counterpart expression:
-      report.expect(fixture.page.hover == nil, cppID: drawerAutomationContextID,
-                    message: "leaving the plot clears the hover")
 
 S011 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "hovering the background writes nothing"
-Counterpart expression:
-      report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
-                         what: "hovering the background writes nothing")
 
 S012 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a repeated hover still writes nothing"
-Counterpart expression:
-      report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
-                         what: "a repeated hover still writes nothing")
 
 S013 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "hovering a node writes nothing"
-Counterpart expression:
-      report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
-                         what: "hovering a node writes nothing")
 
 S014 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a background hover reads the value the lane holds there"
-Counterpart expression:
-      report.expectEqual(AutomationParameterMetadata(parameter: fixture.panLane)
-          .valueText(lane.heldValue(at: backgroundTick) ?? 64), page.hoverText,
-                         cppID: drawerAutomationHoverModelID,
-                         what: "a background hover reads the value the lane holds there")
 
 S015 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the node hover reads the node's own text"
-Counterpart expression:
-      report.expectEqual(AutomationParameterMetadata(parameter: fixture.panLane).valueText(64),
-                         page.hoverText, cppID: drawerAutomationHoverModelID,
-                         what: "the node hover reads the node's own text")
 
 S016 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "leaving the plot clears the hover"
-Counterpart expression:
-      report.expect(!page.hoverVisible, cppID: drawerAutomationHoverModelID,
-                    message: "leaving the plot clears the hover")
 
 S017 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "leaving the plot clears the hover text"
-Counterpart expression:
-      report.expectEqual("", page.hoverText, cppID: drawerAutomationHoverModelID,
-                         what: "leaving the plot clears the hover text")
-      report.expect(page.hover == nil, cppID: drawerAutomationHoverModelID,
-                    message: "leaving the plot drops the hover")
 
 S018 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "an arrow hover never arms the pencil cursor"
-Counterpart expression:
-      report.expectEqual(AutomationCursorKind.arrow.rawValue, page.cursorKind,
-                         cppID: drawerAutomationHoverModelID,
-                         what: "an arrow hover never arms the pencil cursor")
 
 S019 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a strong cancellation clears a live hover"
-Counterpart expression:
-      report.expect(!page.hoverVisible && page.hover == nil, cppID: drawerAutomationHoverModelID,
-                    message: "a strong cancellation clears a live hover")
 
 S020 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "cancelling a hover changes no document or history state"
-Counterpart expression:
-      report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
-                         what: "cancelling a hover changes no document or history state")
 
 S021 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "an idle cancellation is a no-op on document and history"
-Counterpart expression:
-      report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
-                         what: "an idle cancellation is a no-op on document and history")
 
 S022 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "an idle cancellation leaves no interaction live"
-Counterpart expression:
-      report.expect(!page.interactionActive, cppID: drawerAutomationHoverModelID,
-                    message: "an idle cancellation leaves no interaction live")
 
 S023 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the insertion tick sits between its neighboring nodes"
-Counterpart expression:
-      report.expect(backgroundHover.tick != 24 && backgroundHover.tick != 120,
-                    cppID: drawerAutomationHoverModelID,
-                    message: "the insertion tick sits between its neighboring nodes")
 
 S024 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Tempo hover topology preserves the document"
-Counterpart expression:
-      report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
-                         what: "Tempo hover topology preserves the document")

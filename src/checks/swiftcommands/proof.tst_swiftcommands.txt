@@ -7,1605 +7,368 @@ Swift counterpart: src/checks/swiftcommands/SwiftCommandsCheck.swift
 
 Retired in: feature/w2-retired-prototypes — this ledger is the deletion certificate for
 src/checks/swiftcommands/tst_swiftcommands.cpp and src/checks/swiftcommands/SwiftCommandsCheck.swift.
-The C++ original is uncompiled in every CMake target and unregistered in
-src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt,
-src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted
-from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never
-touches the retired command mechanism. The controller deletes the dead sources after this ledger passes;
-nothing is deleted by this edit.
 
 Reference revision: fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced
 Original: src/checks/swiftcommands/tst_swiftcommands.cpp
 Original SHA-256: 8a4c514120397574cb6ae33827e816b52e782be39245441ddd9bfc635ac2da63
-Swift counterpart (retired, pinned pre-retirement): src/checks/swiftcommands/SwiftCommandsCheck.swift
 Verification: lane run recorded by the controller, not re-run for this ledger:
 deno task verify --filter swiftcore --verbose -> verify: 1/6 ok (11.40s, 5 skipped); run_checks: PASS
 (all harnesses in 11.40s).
 Result: swiftcore PASS. No live native swiftcommands run exists or is claimed; the deleted harness
 neither builds nor executes.
 
-Deletion certificate
 Retirement: 117 original assertion sites, all terminal (117 RETIRED-REPRESENTATION, zero PARTIAL, zero
-GAP, zero NATIVE, zero MATCHED). No executing predicate carries an original sgc_ cppID, so nothing is
-MATCHED. Every behavior-covered site is RETIRED-REPRESENTATION with an executing-predicate citation plus
-the exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas,
-DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_
-sequence/matrix end-to-end. Mechanism-only sites (sgc_submit/SgcOutcome plumbing, intent-executor
-fixture, SgcCommandPipe guard tokens S001-S011, sgd_ delivery wiring) retire with the no-ingress proof
-above. The reference-revision sources remain the authority for the original setup, guards and helpers,
-and no whole-case equivalence, native execution or parity claim is made.
-
-Purpose and status
-Each numbered entry records one original assertion/failure site, not one test
-method or one runtime execution. Loops/data rows reuse a site; their instances
-are described below. QFAIL/qFail guards and helper calls are part of the contract.
-MATCHED means a corresponding Swift predicate carrying the original cppID was identified and executed;
-RETIRED-REPRESENTATION identifies an unreachable old implementation input with
-an explicit replacement-contract justification, not an omitted user behavior;
-PARTIAL means a related check exists but differs in a stated way;
-GAP means an equivalent Swift assertion is not established.
-None of these labels claims whole-case equivalence. Native passes do not prove the Swift replacement.
-
-Execution and ownership
-Registered run paths (swiftcore lane): editcheck suites -> NoteChecks (movementAndResize:115,
-insertionAndCollision:73, velocityEditing:191), NoteMoveTransactionChecks
-(coreNoteMoveCollisionRejections:19), NoteCorpusChecks (abuttingNoteRow:150),
-tst_songdocument_songnotes (coreNoteResizeChecks:89), DocumentEditChecks, EventChecks (trackEditing:52,
-trackRenameContract:611, trackMoveContract:446), TrackCorpusChecks (coreTrackRenameRow:226),
-DocumentTrackChecks (trackRemapPublicationContract:88, documentDuplicationOwnershipContract:12),
-DocumentHistoryChecks (documentPublicationNetZeroContract:74); projectSession suite ->
-sessionPlaybackProjectionAndStatePublication (session_playback.swift); rollcheck -> selection
-(checkSelectionBandSweep:13). The retired sgc_check_swift_submission entry point (S001-S011) executes
-nothing in any registered check; the S001-S011 trailer below is the historical record of the retired
-counterpart, not execution evidence.
-
-Fixture, sequence and row constraints
-Undo-granularity counts (baseUndo+N) pin one undo entry per mutating intent
-and none for well-formed no-ops (zero-delta moves/resizes, from==to reorder).
-Batch legs collect members across engine tracks and assert every member
-position. Validation matrices (stale tokens, duplicate tokens, empty and null
-lists, out-of-range tracks/keys/velocities/durations/deltas, malformed names,
-loop-marker names) must reject with SGC_REJECTED_INVALID without mutation or
-new undo entries. Session intents (mute/solo/selection) must leave the undo
-stack and document revision untouched. The add leg requires the
-documentChanged emission to push a fresh feed snapshot synchronously.
-
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | expectSubmit | src/checks/swiftcommands/tst_swiftcommands.cpp:79
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  #include <QtTest>
-
-  #include <bit>
-  #include <memory>
-  #include <utility>
-  #include <vector>
-
-  #include "checks/support/songfixture.h"
-  #include "commands_check.h"
-  #include "core/songdocument.h"
-  #include "core/timedefaults.h"
-  #include "ui/songview.h"
-  #include "ui/songview/editorselectionmodel.h"
-  #include "ui/songview/quick/swiftgrid/intent_executor.h"
-  #include "ui/songview/quick/swiftgrid/swift_grid_document_feed.h"
-
-  namespace {
-
-  uint64_t tokenOf(const DocNote &note)
-  {
-      return std::bit_cast<uint64_t>(note.noteId);
-  }
-
-  struct CommandFixture {
-      std::unique_ptr<checks::LoadedSong> song;
-      std::unique_ptr<checks::SongViewRig> rig;
-      std::unique_ptr<SwiftGridDocumentFeed> feed;
-      std::unique_ptr<SwiftGridIntentExecutor> executor;
-
-      bool prepare(const QString &projectRoot, const QString &songLabel, QString &error)
-      {
-          song = checks::LoadedSong::load(projectRoot, songLabel, error);
-          if (!song)
-              return false;
-          rig = checks::SongViewRig::create(std::move(song), 48000.0, error);
-          if (!rig)
-              return false;
-          feed = std::make_unique<SwiftGridDocumentFeed>(rig->document());
-          executor = std::make_unique<SwiftGridIntentExecutor>(rig->view(), feed->documentId());
-          return true;
-      }
-
-      SongDocument &document() { return rig->document(); }
-      SongView &view() { return rig->view(); }
-      uint64_t documentId() const { return feed->documentId(); }
-  };
-
-  struct Capture {
-      int deliveries = 0;
-      SgdDocumentHeader header{};
-      std::vector<SgdNote> notes;
-
-      static void receive(const SgdDocumentHeader *incomingHeader, const SgdNote *incomingNotes,
-                          const SgdTimeSignature *, void *context)
-      {
-          auto &capture = *static_cast<Capture *>(context);
-          ++capture.deliveries;
-          capture.header = *incomingHeader;
-          capture.notes.clear();
-          if (incomingNotes && incomingHeader->noteCount > 0)
-              capture.notes.assign(incomingNotes, incomingNotes + incomingHeader->noteCount);
-      }
-  };
-
-  SgcResult dummyExecute(const SgcIntentCommand *, SgcOutcome *outcome, void *context)
-  {
-      ++*static_cast<int *>(context);
-      if (outcome) {
-          outcome->result = SGC_EXECUTED;
-          outcome->noteId = 77;
-      }
-      return SGC_EXECUTED;
-  }
-
-  void expectSubmit(const SgcIntentCommand &command, SgcResult expected,
-                    SgcOutcome *outcome = nullptr)
-  {
-      SgcOutcome local{};
-
-Original expression:
-  QCOMPARE(sgc_submit(&command, &local), expected)
 
 A002 | expectSubmit | src/checks/swiftcommands/tst_swiftcommands.cpp:80
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(local.result, expected)
 
 A003 | SwiftCommandsTest::registryRoutingAndOutcomeContract | src/checks/swiftcommands/tst_swiftcommands.cpp:117
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-      if (outcome)
-          *outcome = local;
-  }
-
-  SgcIntentCommand noteCommand(uint64_t documentId, SgcIntent intent, uint64_t noteId)
-  {
-      SgcIntentCommand command{};
-      command.documentId = documentId;
-      command.intent = intent;
-      command.payload.noteMove.noteId = noteId;
-      return command;
-  }
-
-  SgcIntentCommand trackCommand(uint64_t documentId, SgcIntent intent, int32_t track)
-  {
-      SgcIntentCommand command{};
-      command.documentId = documentId;
-      command.intent = intent;
-      command.payload.trackIndex.trackIndex = track;
-      return command;
-  }
-
-  class SwiftCommandsTest final : public QObject
-  {
-      Q_OBJECT
-
-    public:
-      SwiftCommandsTest(QString projectRoot, QString songLabel)
-          : m_projectRoot(std::move(projectRoot))
-          , m_songLabel(std::move(songLabel))
-      {}
-
-    private slots:
-      void registryRoutingAndOutcomeContract()
-      {
-          SgcOutcome outcome{};
-
-Original expression:
-  QCOMPARE(sgc_submit(nullptr, &outcome), SGC_REJECTED_INVALID)
 
 A004 | SwiftCommandsTest::registryRoutingAndOutcomeContract | src/checks/swiftcommands/tst_swiftcommands.cpp:118
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(outcome.result, SGC_REJECTED_INVALID)
 
 A005 | SwiftCommandsTest::registryRoutingAndOutcomeContract | src/checks/swiftcommands/tst_swiftcommands.cpp:129
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-          SgcIntentCommand command{};
-          command.intent = SGC_SELECTION_CLEAR;
-          expectSubmit(command, SGC_REJECTED_UNAVAILABLE);
-          command.documentId = 424242;
-          expectSubmit(command, SGC_REJECTED_UNAVAILABLE);
-
-          {
-              CommandFixture fixture;
-              QString error;
-
-Original expression:
-  QVERIFY2(fixture.prepare(m_projectRoot, m_songLabel, error), qPrintable(error))
 
 A006 | SwiftCommandsTest::registryRoutingAndOutcomeContract | src/checks/swiftcommands/tst_swiftcommands.cpp:135
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-              const uint64_t id = fixture.documentId();
-
-              command.documentId = id;
-              outcome.noteId = 999;
-              expectSubmit(command, SGC_EXECUTED, &outcome);
-
-Original expression:
-  QCOMPARE(outcome.noteId, uint64_t(0))
 
 A007 | SwiftCommandsTest::registryRoutingAndOutcomeContract | src/checks/swiftcommands/tst_swiftcommands.cpp:138
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-              int calls = 0;
-
-Original expression:
-  QVERIFY(!sgc_set_executor(id, dummyExecute, &calls))
 
 A008 | SwiftCommandsTest::registryRoutingAndOutcomeContract | src/checks/swiftcommands/tst_swiftcommands.cpp:139
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!sgc_set_executor(id, nullptr, &calls))
 
 A009 | SwiftCommandsTest::registryRoutingAndOutcomeContract | src/checks/swiftcommands/tst_swiftcommands.cpp:140
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!sgc_set_executor(id, dummyExecute, nullptr))
 
 A010 | SwiftCommandsTest::registryRoutingAndOutcomeContract | src/checks/swiftcommands/tst_swiftcommands.cpp:141
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!sgc_set_executor(0, dummyExecute, &calls))
 
 A011 | SwiftCommandsTest::registryRoutingAndOutcomeContract | src/checks/swiftcommands/tst_swiftcommands.cpp:146
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-              sgc_clear_executor(id);
-              expectSubmit(command, SGC_REJECTED_UNAVAILABLE);
-
-
-Original expression:
-  QVERIFY(sgc_set_executor(id, dummyExecute, &calls))
 
 A012 | SwiftCommandsTest::registryRoutingAndOutcomeContract | src/checks/swiftcommands/tst_swiftcommands.cpp:148
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-              expectSubmit(command, SGC_EXECUTED, &outcome);
-
-Original expression:
-  QCOMPARE(calls, 1)
 
 A013 | SwiftCommandsTest::registryRoutingAndOutcomeContract | src/checks/swiftcommands/tst_swiftcommands.cpp:149
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(outcome.noteId, uint64_t(77))
 
 A014 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:160
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-              sgc_clear_executor(id);
-              expectSubmit(command, SGC_REJECTED_UNAVAILABLE);
-          }
-          expectSubmit(command, SGC_REJECTED_UNAVAILABLE);
-      }
-
-      void noteIntentValidationAndUndoGranularity()
-      {
-          CommandFixture fixture;
-          QString error;
-
-Original expression:
-  QVERIFY2(fixture.prepare(m_projectRoot, m_songLabel, error), qPrintable(error))
 
 A015 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:166
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          SongDocument &document = fixture.document();
-          QUndoStack *const undo = document.undoStack();
-          const uint64_t id = fixture.documentId();
-
-          const auto firstNotes = document.notesForTrack(0);
-
-Original expression:
-  QVERIFY(!firstNotes.empty())
 
 A016 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:176
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-note move/resize effects, collision/out-of-range/stale rejection, persistence and undo granularity are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteMovement.moveNotes / NoteEditing.resizeNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          const DocNote first = firstNotes.front();
-          const uint64_t token = tokenOf(first);
-          const int baseUndo = undo->count();
-
-          // Valid move: one undo entry, production clamp semantics.
-          SgcIntentCommand command = noteCommand(id, SGC_NOTE_MOVE, token);
-          command.payload.noteMove.deltaTicks = 96;
-          command.payload.noteMove.deltaKeys = 0;
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 1)
 
 A017 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:178
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-note move/resize effects, collision/out-of-range/stale rejection, persistence and undo granularity are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteMovement.moveNotes / NoteEditing.resizeNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          DocNote moved;
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{token}, &moved))
 
 A018 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:179
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-note move/resize effects, collision/out-of-range/stale rejection, persistence and undo granularity are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteMovement.moveNotes / NoteEditing.resizeNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.tick, first.tick + 96)
 
 A019 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:184
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-note move/resize effects, collision/out-of-range/stale rejection, persistence and undo granularity are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteMovement.moveNotes / NoteEditing.resizeNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // A zero-delta move is a well-formed no-op: executed, no undo entry.
-          command.payload.noteMove.deltaTicks = 0;
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 1)
 
 A020 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:193
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-note move/resize effects, collision/out-of-range/stale rejection, persistence and undo granularity are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteMovement.moveNotes / NoteEditing.resizeNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // Stale token and out-of-range delta reject without mutation.
-          SgcIntentCommand stale = noteCommand(id, SGC_NOTE_MOVE, token + 100000);
-          stale.payload.noteMove.deltaTicks = 1;
-          expectSubmit(stale, SGC_REJECTED_INVALID);
-          stale = noteCommand(id, SGC_NOTE_MOVE, token);
-          stale.payload.noteMove.deltaTicks = int64_t(CoreTimeDefaults::kMaxTick) + 1;
-          expectSubmit(stale, SGC_REJECTED_INVALID);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 1)
 
 A021 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:194
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-note move/resize effects, collision/out-of-range/stale rejection, persistence and undo granularity are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteMovement.moveNotes / NoteEditing.resizeNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{token}, &moved))
 
 A022 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:195
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-note move/resize effects, collision/out-of-range/stale rejection, persistence and undo granularity are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteMovement.moveNotes / NoteEditing.resizeNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.tick, first.tick + 96)
 
 A023 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:201
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-note move/resize effects, collision/out-of-range/stale rejection, persistence and undo granularity are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteMovement.moveNotes / NoteEditing.resizeNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // Valid resize: one undo entry.
-          command = noteCommand(id, SGC_NOTE_RESIZE, token);
-          command.payload.noteResize.durationTicks = first.duration + 24;
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 2)
 
 A024 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:202
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-note move/resize effects, collision/out-of-range/stale rejection, persistence and undo granularity are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteMovement.moveNotes / NoteEditing.resizeNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{token}, &moved))
 
 A025 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:203
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-note move/resize effects, collision/out-of-range/stale rejection, persistence and undo granularity are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteMovement.moveNotes / NoteEditing.resizeNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.duration, first.duration + 24)
 
 A026 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:210
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible single-note move/resize effects, collision/out-of-range/stale rejection, persistence and undo granularity are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteMovement.moveNotes / NoteEditing.resizeNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // Malformed resizes reject without mutation.
-          command.payload.noteResize.durationTicks = 0;
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.noteResize.durationTicks = CoreTimeDefaults::kMaxTick;
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 2)
 
 A027 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:218
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-          // Batch delete: one undo entry for the whole token list.
-          std::vector<DocNote> batch;
-          for (int track = 0; track < document.engineTrackCount() && batch.size() < 2; ++track) {
-              const auto notes = document.notesForTrack(track);
-              batch.insert(batch.end(), notes.begin(), notes.end());
-          }
-
-Original expression:
-  QVERIFY(batch.size() >= 2)
 
 A028 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:223
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible batch-delete effects and survivor identity are asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and the corpus adjacency inspection src/checks/editcheck/NoteCorpusChecks.swift::abuttingNoteRow:150 (production NoteEditing.deleteNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          const uint64_t batchTokens[] = {tokenOf(batch[0]), tokenOf(batch[1])};
-          command = noteCommand(id, SGC_NOTE_DELETE, 0);
-          command.payload.noteList = {batchTokens, 2};
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 3)
 
 A029 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:224
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible batch-delete effects and survivor identity are asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and the corpus adjacency inspection src/checks/editcheck/NoteCorpusChecks.swift::abuttingNoteRow:150 (production NoteEditing.deleteNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!document.findNote(NoteId{batchTokens[0]}, &moved))
 
 A030 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:225
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible batch-delete effects and survivor identity are asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and the corpus adjacency inspection src/checks/editcheck/NoteCorpusChecks.swift::abuttingNoteRow:150 (production NoteEditing.deleteNotes). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!document.findNote(NoteId{batchTokens[1]}, &moved))
 
 A031 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:233
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          DocNote survivor{};
-          for (int track = 0; track < document.engineTrackCount() && !survivor.noteId.isAssigned();
-               ++track) {
-              const auto notes = document.notesForTrack(track);
-              if (!notes.empty())
-                  survivor = notes.front();
-          }
-
-Original expression:
-  QVERIFY(survivor.noteId.isAssigned())
 
 A032 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:238
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible duplicate/stale/empty batch rejection with full state preservation is asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and ::movementAndResize:115 (conflict and no-op preservation; production NoteEditing.resolve rejects unassigned, duplicate and stale ids). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          // A stale member rejects the whole batch; nothing is deleted.
-          const uint64_t mixedTokens[] = {tokenOf(survivor), token + 100000};
-          command.payload.noteList = {mixedTokens, 2};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QVERIFY(document.findNote(survivor.noteId, &moved))
 
 A033 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:243
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible duplicate/stale/empty batch rejection with full state preservation is asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and ::movementAndResize:115 (conflict and no-op preservation; production NoteEditing.resolve rejects unassigned, duplicate and stale ids). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          // Duplicate tokens are malformed.
-          const uint64_t duplicateTokens[] = {tokenOf(survivor), tokenOf(survivor)};
-          command.payload.noteList = {duplicateTokens, 2};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QVERIFY(document.findNote(survivor.noteId, &moved))
 
 A034 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:249
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible duplicate/stale/empty batch rejection with full state preservation is asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and ::movementAndResize:115 (conflict and no-op preservation; production NoteEditing.resolve rejects unassigned, duplicate and stale ids). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          // Empty and null lists are malformed.
-          command.payload.noteList = {batchTokens, 0};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.noteList = {nullptr, 1};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 3)
 
 A035 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:257
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-          // Valid add: executed, outcome carries the minted token, one undo entry.
-          command.documentId = id;
-          command.intent = SGC_NOTE_ADD;
-          command.payload.noteAdd = {0, 60, 0, 24, 90};
-          SgcOutcome added{};
-          expectSubmit(command, SGC_EXECUTED, &added);
-
-Original expression:
-  QVERIFY(added.noteId != 0)
 
 A036 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:258
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible note-add mutation, field persistence, invalid-input rejection and undo are asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and ::velocityEditing:191 (production NoteEditing.addNotes:43-87). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 4)
 
 A037 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:259
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible note-add mutation, field persistence, invalid-input rejection and undo are asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and ::velocityEditing:191 (production NoteEditing.addNotes:43-87). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{added.noteId}, &moved))
 
 A038 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:260
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible note-add mutation, field persistence, invalid-input rejection and undo are asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and ::velocityEditing:191 (production NoteEditing.addNotes:43-87). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.key, uint8_t(60))
 
 A039 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:261
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible note-add mutation, field persistence, invalid-input rejection and undo are asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and ::velocityEditing:191 (production NoteEditing.addNotes:43-87). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.tick, Tick(0))
 
 A040 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:262
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible note-add mutation, field persistence, invalid-input rejection and undo are asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and ::velocityEditing:191 (production NoteEditing.addNotes:43-87). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.duration, uint32_t(24))
 
 A041 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:263
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible note-add mutation, field persistence, invalid-input rejection and undo are asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and ::velocityEditing:191 (production NoteEditing.addNotes:43-87). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.velocity, uint8_t(90))
 
 A042 | SwiftCommandsTest::noteIntentValidationAndUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:279
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible note-add mutation, field persistence, invalid-input rejection and undo are asserted by executing src/checks/editcheck/NoteChecks.swift::insertionAndCollision:73 and ::velocityEditing:191 (production NoteEditing.addNotes:43-87). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // Out-of-range fields reject without mutation.
-          const int beforeInvalid = undo->count();
-          command.payload.noteAdd = {-1, 60, 0, 24, 90};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.noteAdd = {document.engineTrackCount(), 60, 0, 24, 90};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.noteAdd = {0, 128, 0, 24, 90};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.noteAdd = {0, 60, 0, 24, 0};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.noteAdd = {0, 60, 0, 0, 90};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.noteAdd = {0, 60, CoreTimeDefaults::kMaxTick, 1, 90};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QCOMPARE(undo->count(), beforeInvalid)
 
 A043 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:286
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-      }
-
-      void batchMoveAndResizeUndoGranularity()
-      {
-          CommandFixture fixture;
-          QString error;
-
-Original expression:
-  QVERIFY2(fixture.prepare(m_projectRoot, m_songLabel, error), qPrintable(error))
 
 A044 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:290
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          SongDocument &document = fixture.document();
-          QUndoStack *const undo = document.undoStack();
-          const uint64_t id = fixture.documentId();
-
-Original expression:
-  QVERIFY(document.engineTrackCount() >= 2)
 
 A045 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:297
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-          // Cross-track members: the batch's own clamp logic never pairs
-          // notes from different engine tracks, so the uniform delta lands
-          // exactly and the assertions below are fixture-deterministic.
-          const auto trackZero = document.notesForTrack(0);
-          const auto trackOne = document.notesForTrack(1);
-
-Original expression:
-  QVERIFY(!trackZero.empty() && !trackOne.empty())
 
 A046 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:309
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-move member positions, no-op history behavior and invalid batch rejection are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 and src/checks/editcheck/NoteMoveTransactionChecks.swift::coreNoteMoveCollisionRejections:19 (production NoteMovement.moveNotes resolves ids and relocates atomically). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          const DocNote first = trackZero.front();
-          const DocNote second = trackOne.front();
-          const uint64_t tokens[] = {tokenOf(first), tokenOf(second)};
-          const int baseUndo = undo->count();
-
-          // Batch move: one undo entry, every member position applied.
-          SgcIntentCommand command{};
-          command.documentId = id;
-          command.intent = SGC_NOTE_MOVE_BATCH;
-          command.payload.noteMoveBatch = {tokens, 2, 96, 0};
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 1)
 
 A047 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:311
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-move member positions, no-op history behavior and invalid batch rejection are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 and src/checks/editcheck/NoteMoveTransactionChecks.swift::coreNoteMoveCollisionRejections:19 (production NoteMovement.moveNotes resolves ids and relocates atomically). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          DocNote moved;
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{tokens[0]}, &moved))
 
 A048 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:312
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-move member positions, no-op history behavior and invalid batch rejection are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 and src/checks/editcheck/NoteMoveTransactionChecks.swift::coreNoteMoveCollisionRejections:19 (production NoteMovement.moveNotes resolves ids and relocates atomically). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.tick, first.tick + 96)
 
 A049 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:313
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-move member positions, no-op history behavior and invalid batch rejection are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 and src/checks/editcheck/NoteMoveTransactionChecks.swift::coreNoteMoveCollisionRejections:19 (production NoteMovement.moveNotes resolves ids and relocates atomically). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{tokens[1]}, &moved))
 
 A050 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:314
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-move member positions, no-op history behavior and invalid batch rejection are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 and src/checks/editcheck/NoteMoveTransactionChecks.swift::coreNoteMoveCollisionRejections:19 (production NoteMovement.moveNotes resolves ids and relocates atomically). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.tick, second.tick + 96)
 
 A051 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:319
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-move member positions, no-op history behavior and invalid batch rejection are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 and src/checks/editcheck/NoteMoveTransactionChecks.swift::coreNoteMoveCollisionRejections:19 (production NoteMovement.moveNotes resolves ids and relocates atomically). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // A zero-delta batch move is a well-formed no-op: executed, no entry.
-          command.payload.noteMoveBatch = {tokens, 2, 0, 0};
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 1)
 
 A052 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:325
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-move member positions, no-op history behavior and invalid batch rejection are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 and src/checks/editcheck/NoteMoveTransactionChecks.swift::coreNoteMoveCollisionRejections:19 (production NoteMovement.moveNotes resolves ids and relocates atomically). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // A stale member rejects the whole batch; nothing moves.
-          const uint64_t mixed[] = {tokens[0], tokens[0] + 100000};
-          command.payload.noteMoveBatch = {mixed, 2, 48, 0};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{tokens[0]}, &moved))
 
 A053 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:326
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-move member positions, no-op history behavior and invalid batch rejection are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 and src/checks/editcheck/NoteMoveTransactionChecks.swift::coreNoteMoveCollisionRejections:19 (production NoteMovement.moveNotes resolves ids and relocates atomically). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.tick, first.tick + 96)
 
 A054 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:339
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-move member positions, no-op history behavior and invalid batch rejection are asserted by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115 and src/checks/editcheck/NoteMoveTransactionChecks.swift::coreNoteMoveCollisionRejections:19 (production NoteMovement.moveNotes resolves ids and relocates atomically). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          // Duplicate tokens are malformed.
-          const uint64_t duplicates[] = {tokens[0], tokens[0]};
-          command.payload.noteMoveBatch = {duplicates, 2, 48, 0};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          // Empty and null lists are malformed.
-          command.payload.noteMoveBatch = {tokens, 0, 48, 0};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.noteMoveBatch = {nullptr, 1, 48, 0};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          // An out-of-range delta rejects like the single move.
-          command.payload.noteMoveBatch = {tokens, 2, int64_t(CoreTimeDefaults::kMaxTick) + 1, 0};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 1)
 
 A055 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:342
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-          // Batch resize: one undo entry, the uniform delta over every member.
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{tokens[0]}, &moved))
 
 A056 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:344
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          const uint32_t firstDuration = moved.duration;
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{tokens[1]}, &moved))
 
 A057 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:349
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-resize member durations, no-op behavior, invalid validation and undo granularity are asserted by executing src/checks/editcheck/tst_songdocument_songnotes.swift::coreNoteResizeChecks:89 and src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteEditing.resizeNotesDurations/resizeNoteLengths). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          const uint32_t secondDuration = moved.duration;
-          command.intent = SGC_NOTE_RESIZE_BATCH;
-          command.payload.noteResizeBatch = {tokens, 2, 24};
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 2)
 
 A058 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:350
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-resize member durations, no-op behavior, invalid validation and undo granularity are asserted by executing src/checks/editcheck/tst_songdocument_songnotes.swift::coreNoteResizeChecks:89 and src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteEditing.resizeNotesDurations/resizeNoteLengths). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{tokens[0]}, &moved))
 
 A059 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:351
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-resize member durations, no-op behavior, invalid validation and undo granularity are asserted by executing src/checks/editcheck/tst_songdocument_songnotes.swift::coreNoteResizeChecks:89 and src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteEditing.resizeNotesDurations/resizeNoteLengths). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.duration, firstDuration + 24)
 
 A060 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:352
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-resize member durations, no-op behavior, invalid validation and undo granularity are asserted by executing src/checks/editcheck/tst_songdocument_songnotes.swift::coreNoteResizeChecks:89 and src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteEditing.resizeNotesDurations/resizeNoteLengths). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{tokens[1]}, &moved))
 
 A061 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:353
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-resize member durations, no-op behavior, invalid validation and undo granularity are asserted by executing src/checks/editcheck/tst_songdocument_songnotes.swift::coreNoteResizeChecks:89 and src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteEditing.resizeNotesDurations/resizeNoteLengths). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.duration, secondDuration + 24)
 
 A062 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:358
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-resize member durations, no-op behavior, invalid validation and undo granularity are asserted by executing src/checks/editcheck/tst_songdocument_songnotes.swift::coreNoteResizeChecks:89 and src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteEditing.resizeNotesDurations/resizeNoteLengths). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // A zero-delta batch resize is a well-formed no-op: executed, no entry.
-          command.payload.noteResizeBatch = {tokens, 2, 0};
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 2)
 
 A063 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:363
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-resize member durations, no-op behavior, invalid validation and undo granularity are asserted by executing src/checks/editcheck/tst_songdocument_songnotes.swift::coreNoteResizeChecks:89 and src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteEditing.resizeNotesDurations/resizeNoteLengths). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // A stale member rejects the whole batch; nothing resizes.
-          command.payload.noteResizeBatch = {mixed, 2, 24};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{tokens[0]}, &moved))
 
 A064 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:364
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-resize member durations, no-op behavior, invalid validation and undo granularity are asserted by executing src/checks/editcheck/tst_songdocument_songnotes.swift::coreNoteResizeChecks:89 and src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteEditing.resizeNotesDurations/resizeNoteLengths). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(moved.duration, firstDuration + 24)
 
 A065 | SwiftCommandsTest::batchMoveAndResizeUndoGranularity | src/checks/swiftcommands/tst_swiftcommands.cpp:375
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-track batch-resize member durations, no-op behavior, invalid validation and undo granularity are asserted by executing src/checks/editcheck/tst_songdocument_songnotes.swift::coreNoteResizeChecks:89 and src/checks/editcheck/NoteChecks.swift::movementAndResize:115 (production NoteEditing.resizeNotesDurations/resizeNoteLengths). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          // Duplicates, empty and null lists are malformed.
-          command.payload.noteResizeBatch = {duplicates, 2, 24};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.noteResizeBatch = {tokens, 0, 24};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.noteResizeBatch = {nullptr, 1, 24};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          // A delta that pushes a member past the end of time rejects.
-          command.payload.noteResizeBatch = {tokens, 2, int64_t(CoreTimeDefaults::kMaxTick)};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 2)
 
 A066 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:382
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-      }
-
-      void trackIntentValidationAndRouting()
-      {
-          CommandFixture fixture;
-          QString error;
-
-Original expression:
-  QVERIFY2(fixture.prepare(m_projectRoot, m_songLabel, error), qPrintable(error))
 
 A067 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:388
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          SongDocument &document = fixture.document();
-          SongView &view = fixture.view();
-          QUndoStack *const undo = document.undoStack();
-          const uint64_t id = fixture.documentId();
-          const int tracks = document.engineTrackCount();
-
-Original expression:
-  QVERIFY(tracks >= 2)
 
 A068 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:397
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          const int baseUndo = undo->count();
-
-          // Add: one undo entry, appended engine slot, production selection follow.
-          SgcIntentCommand command{};
-          command.documentId = id;
-          command.intent = SGC_TRACK_ADD;
-          command.payload.trackAdd.voice = 40;
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(document.engineTrackCount(), tracks + 1)
 
 A069 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:398
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 1)
 
 A070 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:399
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(view.selectionModel().primaryTrack(), tracks)
 
 A071 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:404
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          command.payload.trackAdd.voice = -1;
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.trackAdd.voice = 128;
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QCOMPARE(document.engineTrackCount(), tracks + 1)
 
 A072 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:409
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // Duplicate: one undo entry, copy selected.
-          command = trackCommand(id, SGC_TRACK_DUPLICATE, 0);
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(document.engineTrackCount(), tracks + 2)
 
 A073 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:410
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 2)
 
 A074 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:411
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(view.selectionModel().primaryTrack(), tracks + 1)
 
 A075 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:419
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // Rename: one undo entry; the name anchors the reorder below.
-          command = trackCommand(id, SGC_TRACK_RENAME, 0);
-          const char name[] = "Bass";
-          command.payload.trackRename.name = name;
-          command.payload.trackRename.nameLength = 4;
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 3)
 
 A076 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:420
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.trackName(0), QStringLiteral("Bass"))
 
 A077 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:428
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // Reorder: one undo entry. Name-anchored like
-          // tst_songdocument_metadata.cpp's moveTrack oracle: the chunk carries
-          // its name to the target engine slot whatever the engine->chunk map.
-          command = trackCommand(id, SGC_TRACK_REORDER, 0);
-          command.payload.trackReorder.newIndex = 1;
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 4)
 
 A078 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:429
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.trackName(1), QStringLiteral("Bass"))
 
 A079 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:436
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          // from == to is a well-formed no-op: production moveTrack returns
-          // false and pushes nothing; the executor still reports the intent
-          // executed since nothing needed to change.
-          command = trackCommand(id, SGC_TRACK_REORDER, 1);
-          command.payload.trackReorder.newIndex = 1;
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 4)
 
 A080 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:437
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.trackName(1), QStringLiteral("Bass"))
 
 A081 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:451
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // Loop-marker and malformed names reject without mutation.
-          command = trackCommand(id, SGC_TRACK_RENAME, 1);
-          const char marker[] = "[";
-          command.payload.trackRename.name = marker;
-          command.payload.trackRename.nameLength = 1;
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.trackRename.name = nullptr;
-          command.payload.trackRename.nameLength = 4;
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command.payload.trackRename.name = name;
-          command.payload.trackRename.nameLength = -1;
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QCOMPARE(document.trackName(1), QStringLiteral("Bass"))
 
 A082 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:456
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // Delete: one undo entry.
-          command = trackCommand(id, SGC_TRACK_DELETE, document.engineTrackCount() - 1);
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(document.engineTrackCount(), tracks + 1)
 
 A083 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:457
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo + 5)
 
 A084 | SwiftCommandsTest::trackIntentValidationAndRouting | src/checks/swiftcommands/tst_swiftcommands.cpp:474
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible track add/duplicate/rename/reorder/delete, invalid voice/name/index rejection, and selection/undo effects are asserted by executing src/checks/editcheck/EventChecks.swift::trackEditing:52 and ::trackRenameContract:611, src/checks/editcheck/TrackCorpusChecks.swift::coreTrackRenameRow:226, and src/checks/editcheck/DocumentTrackChecks.swift::trackRemapPublicationContract:88 and ::documentDuplicationOwnershipContract:12. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // Out-of-range tracks reject without mutation.
-          const int beforeInvalid = undo->count();
-          command = trackCommand(id, SGC_TRACK_DUPLICATE, -1);
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command = trackCommand(id, SGC_TRACK_DUPLICATE, document.engineTrackCount());
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command = trackCommand(id, SGC_TRACK_DELETE, document.engineTrackCount());
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command = trackCommand(id, SGC_TRACK_REORDER, 0);
-          command.payload.trackReorder.newIndex = document.engineTrackCount();
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command = trackCommand(id, SGC_TRACK_RENAME, document.engineTrackCount());
-          command.payload.trackRename.name = name;
-          command.payload.trackRename.nameLength = 4;
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QCOMPARE(undo->count(), beforeInvalid)
 
 A085 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:481
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-      }
-
-      void sessionIntentsLeaveUndoStackUntouched()
-      {
-          CommandFixture fixture;
-          QString error;
-
-Original expression:
-  QVERIFY2(fixture.prepare(m_projectRoot, m_songLabel, error), qPrintable(error))
 
 A086 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:490
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          SongDocument &document = fixture.document();
-          SongView &view = fixture.view();
-          QUndoStack *const undo = document.undoStack();
-          const uint64_t id = fixture.documentId();
-          const int baseUndo = undo->count();
-          const uint64_t baseRevision = document.revision();
-
-          const auto notes = document.notesForTrack(0);
-
-Original expression:
-  QVERIFY(!notes.empty())
 
 A087 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:496
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session mute/solo/selection intents, selection clear, and undo/revision isolation are asserted by executing src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          const uint64_t token = tokenOf(notes.front());
-
-          SgcIntentCommand command = trackCommand(id, SGC_TRACK_MUTE, 2);
-          command.payload.trackFlag.on = 1;
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(view.muteMask(), uint32_t(1u << 2))
 
 A088 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:500
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session mute/solo/selection intents, selection clear, and undo/revision isolation are asserted by executing src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          command.intent = SGC_TRACK_SOLO;
-          command.payload.trackFlag.trackIndex = 3;
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(view.soloMask(), uint32_t(1u << 3))
 
 A089 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:505
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session mute/solo/selection intents, selection clear, and undo/revision isolation are asserted by executing src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          command.intent = SGC_TRACK_MUTE;
-          command.payload.trackFlag.trackIndex = 2;
-          command.payload.trackFlag.on = 0;
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(view.muteMask(), uint32_t(0))
 
 A090 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:511
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session mute/solo/selection intents, selection clear, and undo/revision isolation are asserted by executing src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          const uint64_t selection[] = {token};
-          command = noteCommand(id, SGC_SELECTION_SET_NOTES, 0);
-          command.payload.noteList = {selection, 1};
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QCOMPARE(view.selectionModel().noteSelection(), (std::vector<NoteId>{NoteId{token}}))
 
 A091 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:514
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session mute/solo/selection intents, selection clear, and undo/revision isolation are asserted by executing src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          command.intent = SGC_SELECTION_CLEAR;
-          expectSubmit(command, SGC_EXECUTED);
-
-Original expression:
-  QVERIFY(view.selectionModel().noteSelection().empty())
 
 A092 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:516
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session mute/solo/selection intents, selection clear, and undo/revision isolation are asserted by executing src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo)
 
 A093 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:517
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible session mute/solo/selection intents, selection clear, and undo/revision isolation are asserted by executing src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.revision(), baseRevision)
 
 A094 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:533
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible preservation of masks, selection, undo and revision across invalid session inputs is asserted by executing src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (equal-assignment silence and session-only isolation; production DocumentSession setters). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // Invalid session payloads reject without touching the masks.
-          command = trackCommand(id, SGC_TRACK_MUTE, 16);
-          command.payload.trackFlag.on = 1;
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command = trackCommand(id, SGC_TRACK_MUTE, 0);
-          command.payload.trackFlag.on = 2;
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          command = trackCommand(id, SGC_TRACK_SOLO, -1);
-          command.payload.trackFlag.on = 1;
-          expectSubmit(command, SGC_REJECTED_INVALID);
-          const uint64_t staleSelection[] = {token + 100000};
-          command = noteCommand(id, SGC_SELECTION_SET_NOTES, 0);
-          command.payload.noteList = {staleSelection, 1};
-          expectSubmit(command, SGC_REJECTED_INVALID);
-
-Original expression:
-  QCOMPARE(view.muteMask(), uint32_t(0))
 
 A095 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:534
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible preservation of masks, selection, undo and revision across invalid session inputs is asserted by executing src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (equal-assignment silence and session-only isolation; production DocumentSession setters). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(view.soloMask(), uint32_t(1u << 3))
 
 A096 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:535
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible preservation of masks, selection, undo and revision across invalid session inputs is asserted by executing src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (equal-assignment silence and session-only isolation; production DocumentSession setters). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(view.selectionModel().noteSelection().empty())
 
 A097 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:536
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible preservation of masks, selection, undo and revision across invalid session inputs is asserted by executing src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (equal-assignment silence and session-only isolation; production DocumentSession setters). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(undo->count(), baseUndo)
 
 A098 | SwiftCommandsTest::sessionIntentsLeaveUndoStackUntouched | src/checks/swiftcommands/tst_swiftcommands.cpp:537
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible preservation of masks, selection, undo and revision across invalid session inputs is asserted by executing src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10 (equal-assignment silence and session-only isolation; production DocumentSession setters). No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.revision(), baseRevision)
 
 A099 | SwiftCommandsTest::addRoundTripsThroughDocumentFeed | src/checks/swiftcommands/tst_swiftcommands.cpp:544
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-      }
-
-      void addRoundTripsThroughDocumentFeed()
-      {
-          CommandFixture fixture;
-          QString error;
-
-Original expression:
-  QVERIFY2(fixture.prepare(m_projectRoot, m_songLabel, error), qPrintable(error))
 
 A100 | SwiftCommandsTest::addRoundTripsThroughDocumentFeed | src/checks/swiftcommands/tst_swiftcommands.cpp:549
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          SongDocument &document = fixture.document();
-          const uint64_t id = fixture.documentId();
-
-          Capture capture;
-
-Original expression:
-  QVERIFY(sgd_set_delivery(id, Capture::receive, &capture))
 
 A101 | SwiftCommandsTest::addRoundTripsThroughDocumentFeed | src/checks/swiftcommands/tst_swiftcommands.cpp:551
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          fixture.feed->pushSnapshot();
-
-Original expression:
-  QCOMPARE(capture.deliveries, 1)
 
 A102 | SwiftCommandsTest::addRoundTripsThroughDocumentFeed | src/checks/swiftcommands/tst_swiftcommands.cpp:559
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-
-          SgcIntentCommand command{};
-          command.documentId = id;
-          command.intent = SGC_NOTE_ADD;
-          command.payload.noteAdd = {0, 72, 480, 96, 100};
-          SgcOutcome outcome{};
-          expectSubmit(command, SGC_EXECUTED, &outcome);
-
-Original expression:
-  QVERIFY(outcome.noteId != 0)
 
 A103 | SwiftCommandsTest::addRoundTripsThroughDocumentFeed | src/checks/swiftcommands/tst_swiftcommands.cpp:562
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible synchronous document publication after add (delivery count, revision/header, payload vs live document) is asserted by executing src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // The documentChanged emission pushed a fresh snapshot synchronously.
-
-Original expression:
-  QCOMPARE(capture.deliveries, 2)
 
 A104 | SwiftCommandsTest::addRoundTripsThroughDocumentFeed | src/checks/swiftcommands/tst_swiftcommands.cpp:563
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible synchronous document publication after add (delivery count, revision/header, payload vs live document) is asserted by executing src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.header.revision, document.revision())
 
 A105 | SwiftCommandsTest::addRoundTripsThroughDocumentFeed | src/checks/swiftcommands/tst_swiftcommands.cpp:564
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible synchronous document publication after add (delivery count, revision/header, payload vs live document) is asserted by executing src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(capture.header.documentId, id)
 
 A106 | SwiftCommandsTest::addRoundTripsThroughDocumentFeed | src/checks/swiftcommands/tst_swiftcommands.cpp:571
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible synchronous document publication after add (delivery count, revision/header, payload vs live document) is asserted by executing src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          bool found = false;
-          for (const SgdNote &note : capture.notes) {
-              if (note.trackIndex == 0 && note.key == 72 && note.onTick == 480 &&
-                  note.durationTicks == 96 && note.velocity == 100)
-                  found = true;
-          }
-
-Original expression:
-  QVERIFY(found)
 
 A107 | SwiftCommandsTest::addRoundTripsThroughDocumentFeed | src/checks/swiftcommands/tst_swiftcommands.cpp:573
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible synchronous document publication after add (delivery count, revision/header, payload vs live document) is asserted by executing src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-          DocNote added;
-
-Original expression:
-  QVERIFY(document.findNote(NoteId{outcome.noteId}, &added))
 
 A108 | SwiftCommandsTest::addRoundTripsThroughDocumentFeed | src/checks/swiftcommands/tst_swiftcommands.cpp:574
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible synchronous document publication after add (delivery count, revision/header, payload vs live document) is asserted by executing src/checks/editcheck/DocumentHistoryChecks.swift::documentPublicationNetZeroContract:74. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(added.key, uint8_t(72))
 
 A109 | SwiftCommandsTest::swiftSubmissionGuard | src/checks/swiftcommands/tst_swiftcommands.cpp:582
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          sgd_clear_delivery(id);
-      }
-
-      void swiftSubmissionGuard()
-      {
-          CommandFixture fixture;
-          QString error;
-
-Original expression:
-  QVERIFY2(fixture.prepare(m_projectRoot, m_songLabel, error), qPrintable(error))
 
 A110 | SwiftCommandsTest::swiftSubmissionGuard | src/checks/swiftcommands/tst_swiftcommands.cpp:587
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Retired-bridge mechanism: this site pins the retired sgc_submit/SgcOutcome plumbing, SwiftGridIntentExecutor fixture, SgcCommandPipe guard token, or sgd_ delivery wiring of the deleted command bridge. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed.
-Source context since previous assertion:
-  ;
-          SongDocument &document = fixture.document();
-          SongView &view = fixture.view();
-          const int baseUndo = document.undoStack()->count();
-
-
-Original expression:
-  QCOMPARE(sgc_check_swift_submission(fixture.documentId()), int32_t(0))
 
 A111 | SwiftCommandsTest::swiftSubmissionGuard | src/checks/swiftcommands/tst_swiftcommands.cpp:591
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible end-to-end post-state (note position/duration, track name, mute/solo masks, selection, undo depth) is asserted component-wise by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115, src/checks/editcheck/EventChecks.swift::trackEditing:52, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-          // The Swift-driven intents landed through the same executor.
-          DocNote note;
-
-Original expression:
-  QVERIFY(document.findNote(0, 48, 62, &note))
 
 A112 | SwiftCommandsTest::swiftSubmissionGuard | src/checks/swiftcommands/tst_swiftcommands.cpp:592
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible end-to-end post-state (note position/duration, track name, mute/solo masks, selection, undo depth) is asserted component-wise by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115, src/checks/editcheck/EventChecks.swift::trackEditing:52, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.duration, uint32_t(96))
 
 A113 | SwiftCommandsTest::swiftSubmissionGuard | src/checks/swiftcommands/tst_swiftcommands.cpp:593
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible end-to-end post-state (note position/duration, track name, mute/solo masks, selection, undo depth) is asserted component-wise by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115, src/checks/editcheck/EventChecks.swift::trackEditing:52, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.trackName(0), QStringLiteral("Lead"))
 
 A114 | SwiftCommandsTest::swiftSubmissionGuard | src/checks/swiftcommands/tst_swiftcommands.cpp:594
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible end-to-end post-state (note position/duration, track name, mute/solo masks, selection, undo depth) is asserted component-wise by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115, src/checks/editcheck/EventChecks.swift::trackEditing:52, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(view.muteMask(), uint32_t(1u << 0))
 
 A115 | SwiftCommandsTest::swiftSubmissionGuard | src/checks/swiftcommands/tst_swiftcommands.cpp:595
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible end-to-end post-state (note position/duration, track name, mute/solo masks, selection, undo depth) is asserted component-wise by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115, src/checks/editcheck/EventChecks.swift::trackEditing:52, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(view.soloMask(), uint32_t(1u << 1))
 
 A116 | SwiftCommandsTest::swiftSubmissionGuard | src/checks/swiftcommands/tst_swiftcommands.cpp:596
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible end-to-end post-state (note position/duration, track name, mute/solo masks, selection, undo depth) is asserted component-wise by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115, src/checks/editcheck/EventChecks.swift::trackEditing:52, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(view.selectionModel().noteSelection().empty())
 
 A117 | SwiftCommandsTest::swiftSubmissionGuard | src/checks/swiftcommands/tst_swiftcommands.cpp:597
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible end-to-end post-state (note position/duration, track name, mute/solo masks, selection, undo depth) is asserted component-wise by executing src/checks/editcheck/NoteChecks.swift::movementAndResize:115, src/checks/editcheck/EventChecks.swift::trackEditing:52, and src/checks/workspace/session_playback.swift::sessionPlaybackProjectionAndStatePublication:10. No-ingress: tst_swiftcommands.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired command mechanism. No live native run exists or is claimed. Exact-matrix caveat: QUndoStack baseUndo+N counts map only to coreEditHistoryCountAtTip deltas, DocNote/findNote handles map only to public-API predicates, and no predicate reproduces the exact sgc_ command sequence/matrix end-to-end.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.undoStack()->count(), baseUndo + 4)
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -1638,54 +401,33 @@ source:
 
 S001 | runCommandsCheck (guard code 1) | src/checks/swiftcommands/SwiftCommandsCheck.swift
 Anchor: deleted
-      guard added.result == .executed, added.noteId != 0 else { return 1 }
 
 S002 | runCommandsCheck (guard code 2) | src/checks/swiftcommands/SwiftCommandsCheck.swift
 Anchor: deleted
-      guard pipe.submit(.noteMove(noteId: added.noteId, deltaTicks: 48, deltaKeys: 2)).result
-          == .executed else { return 2 }
 
 S003 | runCommandsCheck (guard code 3) | src/checks/swiftcommands/SwiftCommandsCheck.swift
 Anchor: deleted
-      guard pipe.submit(.noteResize(noteId: added.noteId, durationTicks: 96)).result
-          == .executed else { return 3 }
 
 S004 | runCommandsCheck (guard code 4) | src/checks/swiftcommands/SwiftCommandsCheck.swift
 Anchor: deleted
-      guard pipe.submit(.trackRename(track: 0, name: "Lead")).result == .executed else { return 4 }
 
 S005 | runCommandsCheck (guard code 5) | src/checks/swiftcommands/SwiftCommandsCheck.swift
 Anchor: deleted
-      guard pipe.submit(.selectionSetNotes(noteIds: [added.noteId])).result == .executed
-          else { return 5 }
 
 S006 | runCommandsCheck (guard code 6) | src/checks/swiftcommands/SwiftCommandsCheck.swift
 Anchor: deleted
-      guard pipe.submit(.trackMute(track: 0, on: true)).result == .executed else { return 6 }
 
 S007 | runCommandsCheck (guard code 7) | src/checks/swiftcommands/SwiftCommandsCheck.swift
 Anchor: deleted
-      guard pipe.submit(.trackSolo(track: 1, on: true)).result == .executed else { return 7 }
 
 S008 | runCommandsCheck (guard code 8) | src/checks/swiftcommands/SwiftCommandsCheck.swift
 Anchor: deleted
-      guard pipe.submit(.selectionClear).result == .executed else { return 8 }
 
 S009 | runCommandsCheck (guard code 9) | src/checks/swiftcommands/SwiftCommandsCheck.swift
 Anchor: deleted
-      guard pipe.submit(.noteMove(noteId: added.noteId + 100_000, deltaTicks: 1, deltaKeys: 0))
-          .result == .rejectedInvalid else { return 9 }
 
 S010 | runCommandsCheck (guard code 10) | src/checks/swiftcommands/SwiftCommandsCheck.swift
 Anchor: deleted
-      guard pipe.submit(.noteAdd(track: 99, key: 60, onTick: 0, durationTicks: 24, velocity: 90))
-          .result == .rejectedInvalid else { return 10 }
 
 S011 | runCommandsCheck (guard code 11) | src/checks/swiftcommands/SwiftCommandsCheck.swift
 Anchor: deleted
-      guard orphan.submit(.selectionClear).result == .rejectedUnavailable else { return 11 }
-
-Shared helper:
-No shared Swift fixture file carrying expects was identified for this lane.
-swiftcore report.expect*/expectEqual predicates belong to other lanes' proofs
-and are not inventoried here.

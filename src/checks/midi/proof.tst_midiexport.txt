@@ -10,87 +10,13 @@ Shared SHA-256: 2bb40884c45fa62a7a88a6acfaf210e5766d3be4e58197b1759f8701e4e72612
 Shared helper: src/checks/support/corecheck/CoreCheckSupport.swift
 Shared SHA-256: e974d8ddfba8e2e21fc1aab0657cbe1e542b828d7dfe2c24908a25bb344f551d
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-The original file was deleted in the S6 flip cutover; the ported successor is
-src/checks/projectstore/ExportChecks.swift, which drives the flipped
-ProjectService front end, renders WAV output in-process, and reports every
-original case under cppID "exportcheck/MidiExportTest::<case>".
-S identifiers identify exact Swift predicates in that counterpart, listed after
-the inventory.
-MATCHED identifies a Swift predicate that asserts the same observable under the
-same case and song rows. C++ API-shape conditions (optional has_value(),
-error-string emptiness, QTemporaryDir handles) count as representation when the
-Swift value predicate establishes the same behavior.
-PARTIAL identifies a related Swift predicate with an explicit unproved part: a
-guard or file read whose Swift counterpart is a throwing construction, or a
-fixture that copies the staged root into a temporary scratch, is recorded
-PARTIAL rather than MATCHED.
-GAP identifies an original predicate without a replacement assertion.
-Unsure between MATCHED and PARTIAL resolves to PARTIAL; bookkeeping must not
-overclaim. No site is GAP: 23 MATCHED and 13 PARTIAL entries cover the 36
-original observations, and no label claims whole-case equivalence.
 
-Verification
 Command: deno task verify --filter exportcheck-loop --verbose
 Result: controller-observed 2026-09-24 for this tree — verify: 1/49 ok, no failures.
 Command: deno task verify --filter exportcheck-tail --verbose
 Result: controller-observed 2026-09-24 for this tree — verify: 1/49 ok, no failures.
 Command: deno task verify --verbose
 Result: controller-observed 2026-09-24 for this tree — verify: 49/49 ok (full unfiltered gate).
-Both lanes now dispatch swiftExport (checkcatalog.cpp:383,385) to the Swift
-suite; the legacy C++ exportcheck source no longer exists, so its inventory here
-is a historical record. This bookkeeping pass reused the controller-observed
-runs above and re-ran only deno task proof check (structure and tallies); it did
-not re-run a lane.
-
-Execution ownership
-The historical C++ owner was runExportCheck in the deleted
-src/checks/midi/tst_midiexport.cpp, which qExecd MidiExportTest under the
-"exportcheck" application id against a staged project root through a
-pd_service_* worker; that source is recoverable from the Reference revision and
-SHA-256 above, never from HEAD.
-The Swift entry point is runExportChecks (src/checks/projectstore/ExportChecks.swift),
-dispatched from src/checks/support/corecheck/CoreCheckSupport.swift
-(PDC_SUITE_EXPORT_CHECKS = 32) by
-src/checks/support/corecheck/tst_swiftcore.cpp:183; checkcatalog.cpp:383,385
-register exportcheck-loop (mus_route101) and exportcheck-tail (mus_route102)
-with native(..., swiftExport). exportCase (ExportChecks.swift) runs
-withExportFixture once per staged label and reports report.pass/report.fail
-under the original cppID; withExportFixture (ExportChecks.swift) opens the
-scratch copy through ProjectService, and renderExport (ExportChecks.swift)
-writes the RIFF header and streams AudioRenderEngine PCM through the
-service-loaded song bank with the scratch root as the exported project.
-
-Fixture, sequence and row constraints
-withExportFixture requires CheckEnvironment.fixtureRoot to be a directory
-(ExportChecks.swift), copies it to an isolated temporary scratch root, opens
-it through ProjectService, opens the song label, decodes the MIDI bytes and
-builds PlaybackTimeline at 44100 Hz with the song's exactGate/extendedClocks
-flags. runExportChecks stages the label rows mus_route101 and mus_route102
-(exportcheck-loop/exportcheck-tail), filtered by the presence of
-sound/songs/midi/<label>.mid in the fixture root; when neither is present the
-single row label "" fails the root and label guards. Every case expands over the
-staged labels.
-durationCalculationMatchesRenderParity recomputes the expected frame count (loop
-end plus a one-second tail, or timeline length plus one second) and requires the
-rendered byte count to equal 44 + expected*4.
-offlineExportProducesValidRiffPcm asserts a strictly monotonic 0-to-1.0 progress
-callback, the 44-byte RIFF header fields, an audible peak (>= 256), and a
-fade-to-silence tail when the timeline loops.
-resonanceSuppressionChangesPcmWithoutChangingFrames renders baseline and
-suppressed files and compares header-stripped PCM byte-wise.
-cancelledExportRemovesPartialFile rejects the progress callback at its first
-report and requires no partial file.
-The original QTemporaryDir scratch, the wavExportTotals/expectedTotalSamples
-helper pair, and song-label routing at the reference revision remain
-authoritative for the C++ inventory; the Swift rows replace the scratch with a
-copied fixture root and the helper pair with ExportFixture.totalFrames
-(ExportChecks.swift).
-
-Original assertion inventory and source sequence
 
 A001 | MidiExportTest::initTestCase | src/checks/midi/tst_midiexport.cpp:194
 Disposition: PARTIAL
@@ -322,15 +248,7 @@ Original expression:
 
 A004 | MidiExportTest::durationCalculationMatchesRenderParity | src/checks/midi/tst_midiexport.cpp:208
 Disposition: MATCHED
-Mapping/reason: Predicates S004 and S006 (src/checks/projectstore/ExportChecks.swift and :208). The Swift case recomputes the expected frame total and requires the rendered file to be exactly 44 + expected times 4 bytes, so the original totals-versus-expected duration parity holds and is extended to the rendered artifact; the C++ optional and error-string shape is representation.
-Source context since previous assertion:
-  ;
-
-      const WavExportTotals totals = wavExportTotals(*fixture->timeline, fixture->options);
-
-Original expression:
-  QCOMPARE(qulonglong(totals.totalSamples),
-               qulonglong(expectedTotalSamples(*fixture->timeline, fixture->options)))
+Mapping: S004, S006
 
 A005 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:216
 Disposition: PARTIAL
@@ -361,34 +279,11 @@ Original expression:
 
 A007 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:224
 Disposition: MATCHED
-Mapping/reason: Predicate S007 (src/checks/projectstore/ExportChecks.swift). The Swift row requires renderExport to return true while the recording progress callback allows completion, the same exportWav success condition the original established with the same progress contract; the C++ error-string argument is representation.
-Source context since previous assertion:
-  ;
-      const QString path = scratch.filePath(QStringLiteral("export.wav"));
-      double lastFraction = -1.0;
-      bool strictlyMonotonic = true;
-
-Original expression:
-  QVERIFY2(exportWav(
-                   path, *fixture->timeline, pd_bank_lease_native(fixture->bank.get()),
-                   fixture->settings, fixture->options,
-                   [&](double fraction) {
-                       strictlyMonotonic = strictlyMonotonic && fraction > lastFraction;
-                       lastFraction = fraction;
-                       return true;
-                   },
-                   &error),
-               qPrintable(error))
+Mapping: S007
 
 A008 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:234
 Disposition: MATCHED
-Mapping/reason: Predicate S008 (src/checks/projectstore/ExportChecks.swift). The Swift row requires monotonic and lastFraction == 1, the same strictly-monotonic-through-1.0 progress observation the original callback recorded.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(strictlyMonotonic && lastFraction == 1.0,
-               "WAV export progress was not strictly monotonic through 1.0")
+Mapping: S008
 
 A009 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:238
 Disposition: PARTIAL
@@ -403,142 +298,59 @@ Original expression:
 
 A010 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:240
 Disposition: MATCHED
-Mapping/reason: Predicate S010 (src/checks/projectstore/ExportChecks.swift). The Swift row requires wav.count == 44 + Int(fixture.totalFrames) times 4, the same rendered-byte-count-versus-frame-count equality the original dataSize check asserted.
-Source context since previous assertion:
-  ;
-      const uint64_t dataSize = totals.totalSamples * 4;
-
-Original expression:
-  QVERIFY2(uint64_t(wav.size()) == 44 + dataSize,
-               "WAV byte count does not match the rendered frame count")
+Mapping: S010
 
 A011 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:242
 Disposition: MATCHED
-Mapping/reason: Predicate S011 (src/checks/projectstore/ExportChecks.swift). The header conjunction requires wav.count >= 44, the same 44-byte lower bound the original asserted before its field checks.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(wav.size() >= 44)
+Mapping: S011
 
 A012 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:243
 Disposition: MATCHED
-Mapping/reason: Predicate S011 (src/checks/projectstore/ExportChecks.swift). The header conjunction requires bytes 0..<4 to equal "RIFF", the same field the original compared at offset 0.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(wav.left(4), QByteArray("RIFF"))
+Mapping: S011
 
 A013 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:244
 Disposition: MATCHED
-Mapping/reason: Predicate S011 (src/checks/projectstore/ExportChecks.swift). The header conjunction requires bytes 8..<12 to equal "WAVE", the same field the original compared at offset 8.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(wav.mid(8, 4), QByteArray("WAVE"))
+Mapping: S011
 
 A014 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:245
 Disposition: MATCHED
-Mapping/reason: Predicate S011 (src/checks/projectstore/ExportChecks.swift). The header conjunction requires bytes 12..<16 to equal "fmt ", the same field the original compared at offset 12.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(wav.mid(12, 4), QByteArray("fmt "))
+Mapping: S011
 
 A015 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:246
 Disposition: MATCHED
-Mapping/reason: Predicate S011 (src/checks/projectstore/ExportChecks.swift). The header conjunction requires bytes 36..<40 to equal "data", the same field the original compared at offset 36.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(wav.mid(36, 4), QByteArray("data"))
+Mapping: S011
 
 A016 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:247
 Disposition: MATCHED
-Mapping/reason: Predicate S011 (src/checks/projectstore/ExportChecks.swift). The header conjunction requires le16(wav, 20) == 1, the same PCM format-tag value the original read at offset 20.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(int(littleEndianU16(wav, 20)), 1)
+Mapping: S011
 
 A017 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:248
 Disposition: MATCHED
-Mapping/reason: Predicate S011 (src/checks/projectstore/ExportChecks.swift). The header conjunction requires le16(wav, 22) == 2, the same channel-count value the original read at offset 22.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(int(littleEndianU16(wav, 22)), 2)
+Mapping: S011
 
 A018 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:249
 Disposition: MATCHED
-Mapping/reason: Predicate S011 (src/checks/projectstore/ExportChecks.swift). The header conjunction requires le16(wav, 34) == 16, the same bits-per-sample value the original read at offset 34.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(int(littleEndianU16(wav, 34)), 16)
+Mapping: S011
 
 A019 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:250
 Disposition: MATCHED
-Mapping/reason: Predicate S011 (src/checks/projectstore/ExportChecks.swift). The header conjunction requires le32(wav, 24) == UInt32(exportRate) with exportRate 44100, the same sample rate the original compared against options.sampleRate.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(qulonglong(littleEndianU32(wav, 24)), qulonglong(fixture->options.sampleRate))
+Mapping: S011
 
 A020 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:251
 Disposition: MATCHED
-Mapping/reason: Predicate S011 (src/checks/projectstore/ExportChecks.swift). The header conjunction requires le32(wav, 40) == UInt32(fixture.totalFrames times 4), the same data-chunk size the original compared against its computed dataSize.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(qulonglong(littleEndianU32(wav, 40)), qulonglong(dataSize))
+Mapping: S011
 
 A021 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:256
 Disposition: MATCHED
-Mapping/reason: Predicate S012 (src/checks/projectstore/ExportChecks.swift). The Swift row scans every 16-bit PCM sample from byte 44 as Int16 and requires peak >= 256, the same near-silence rejection the original peak scan established.
-Source context since previous assertion:
-  ;
-
-      int peak = 0;
-      for (uint64_t sampleIndex = 0; sampleIndex < totals.totalSamples * 2; ++sampleIndex)
-          peak = std::max(peak, std::abs(int(sampleAt(wav, sampleIndex))));
-
-Original expression:
-  QVERIFY2(peak >= 256, "offline WAV render is nearly silent")
+Mapping: S012
 
 A022 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:259
 Disposition: MATCHED
-Mapping/reason: Predicate S013 (src/checks/projectstore/ExportChecks.swift). Under the same fixture.hasLoop guard the Swift row requires fixture.totalFrames >= 16 before the tail check, the original hasLoop length guard.
-Source context since previous assertion:
-  ;
-
-      if (hasLoop(*fixture->timeline)) {
-
-Original expression:
-  QVERIFY2(totals.totalSamples >= 16, "looping export is too short for tail verification")
+Mapping: S013
 
 A023 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:265
 Disposition: MATCHED
-Mapping/reason: Predicate S014 (src/checks/projectstore/ExportChecks.swift). The Swift row requires tailPeak <= peak / 16 over the final 16 frames, the same fade-to-silence bound the original computed over its tail window.
-Source context since previous assertion:
-  ;
-          int tailPeak = 0;
-          for (uint64_t sampleIndex = (totals.totalSamples - 16) * 2;
-               sampleIndex < totals.totalSamples * 2; ++sampleIndex) {
-              tailPeak = std::max(tailPeak, std::abs(int(sampleAt(wav, sampleIndex))));
-          }
-
-Original expression:
-  QVERIFY2(tailPeak <= peak / 16, "looping WAV export did not fade to silence")
+Mapping: S014
 
 A024 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:273
 Disposition: PARTIAL
@@ -569,16 +381,7 @@ Original expression:
 
 A026 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:279
 Disposition: MATCHED
-Mapping/reason: Predicate S015 (src/checks/projectstore/ExportChecks.swift). The Swift row requires the baseline renderExport call to return true, the same successful-export condition the original first exportWav call established; the baseline file is rendered without resonance suppression, as in the original.
-Source context since previous assertion:
-  ;
-      const QString baselinePath = scratch.filePath(QStringLiteral("baseline.wav"));
-      const QString suppressedPath = scratch.filePath(QStringLiteral("suppressed.wav"));
-
-Original expression:
-  QVERIFY2(exportWav(baselinePath, *fixture->timeline, pd_bank_lease_native(fixture->bank.get()),
-                         fixture->settings, fixture->options, {}, &error),
-               qPrintable(error))
+Mapping: S015
 
 A027 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:283
 Disposition: PARTIAL
@@ -592,17 +395,7 @@ Original expression:
 
 A028 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:286
 Disposition: MATCHED
-Mapping/reason: Predicate S016 (src/checks/projectstore/ExportChecks.swift). The Swift row requires the suppressed renderExport call with suppress true to return true, the same second export condition the original established with options.resonanceSuppression set.
-Source context since previous assertion:
-  ;
-
-      fixture->options.resonanceSuppression = true;
-
-Original expression:
-  QVERIFY2(exportWav(suppressedPath, *fixture->timeline,
-                         pd_bank_lease_native(fixture->bank.get()), fixture->settings,
-                         fixture->options, {}, &error),
-               qPrintable(error))
+Mapping: S016
 
 A029 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:291
 Disposition: PARTIAL
@@ -616,21 +409,11 @@ Original expression:
 
 A030 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:292
 Disposition: MATCHED
-Mapping/reason: Predicate S019 (src/checks/projectstore/ExportChecks.swift). The Swift row requires after.count == before.count, the same frame-count equality the original size comparison asserted.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(suppressed.size(), baseline.size())
+Mapping: S019
 
 A031 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:293
 Disposition: MATCHED
-Mapping/reason: Predicate S020 (src/checks/projectstore/ExportChecks.swift). The Swift row requires the header-stripped PCM to differ between baseline and suppressed renders; S019 pins equal frame counts, so both files carry a header derived from the same totalFrames and full-file inequality is equivalent to the original byte-array comparison.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(suppressed != baseline, "resonance suppression did not alter exported PCM bytes")
+Mapping: S020, S019
 
 A032 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:300
 Disposition: PARTIAL
@@ -660,16 +443,7 @@ Original expression:
 
 A034 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:306
 Disposition: MATCHED
-Mapping/reason: Predicate S021 (src/checks/projectstore/ExportChecks.swift). The Swift row requires that a render whose progress callback returns false for fraction 0 did not complete, the same cancellation condition the original asserted by negating exportWav.
-Source context since previous assertion:
-  ;
-      const QString path = scratch.filePath(QStringLiteral("cancelled.wav"));
-      fixture->options.resonanceSuppression = true;
-
-Original expression:
-  QVERIFY(!exportWav(
-          path, *fixture->timeline, pd_bank_lease_native(fixture->bank.get()), fixture->settings,
-          fixture->options, [](double) { return false; }, &error))
+Mapping: S021
 
 A035 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:309
 Disposition: PARTIAL
@@ -682,12 +456,7 @@ Original expression:
 
 A036 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:310
 Disposition: MATCHED
-Mapping/reason: Predicate S022 (src/checks/projectstore/ExportChecks.swift). The Swift row requires the cancelled export path not to exist, the same partial-file rejection the original asserted with QFile::exists.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(!QFile::exists(path), "cancelled WAV export left a partial file")
+Mapping: S022
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -706,125 +475,69 @@ Swift assertion predicates
 
 S001 | withExportFixture | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  guard let root = CheckEnvironment.fixtureRoot,
-        FileManager.default.fileExists(atPath: root, isDirectory: &isDirectory),
-        isDirectory.boolValue else {
-      throw ExportCheckError.failed("exportcheck project root is not a directory: \(CheckEnvironment.fixtureRoot ?? "")")
-  }
 
 S002 | withExportFixture | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  guard !label.isEmpty else {
-      throw ExportCheckError.failed("exportcheck requires a song label")
-  }
 
 S003 | withExportFixture | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try FileManager.default.copyItem(at: URL(filePath: root), to: scratch)
-  try exportAwait { try await service.open(root: scratch.path) }
-  let song = try exportAwait { try await service.openSong(label: label) }
-  (a throwing construction: a failed copy, service open, song open, MIDI decode or
-  timeline build fails the row through exportCase:190 report.fail; no value predicate
-  exists for the copy itself)
 
 S004 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(try renderExport(fixture, at: path), "duration render was cancelled")
 
 S005 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  let bytes = try Data(contentsOf: path)
 
 S006 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(bytes.count == 44 + Int(expected) * 4,
-                    "calculated duration differs from rendered frame count")
 
 S007 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(try renderExport(fixture, at: path) { fraction in
-      monotonic = monotonic && fraction > lastFraction
-      lastFraction = fraction
-      return true
-  }, "WAV export was cancelled")
 
 S008 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(monotonic && lastFraction == 1,
-                    "WAV export progress was not strictly monotonic through 1.0")
 
 S009 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  let wav = try Data(contentsOf: path)
 
 S010 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(wav.count == 44 + Int(fixture.totalFrames) * 4,
-                    "WAV byte count does not match the rendered frame count")
 
 S011 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(wav.count >= 44 && String(decoding: wav[0..<4], as: UTF8.self) == "RIFF" &&
-                    String(decoding: wav[8..<12], as: UTF8.self) == "WAVE" &&
-                    String(decoding: wav[12..<16], as: UTF8.self) == "fmt " &&
-                    String(decoding: wav[36..<40], as: UTF8.self) == "data" &&
-                    le32(wav, 4) == UInt32(wav.count - 8) && le32(wav, 16) == 16 &&
-                    le16(wav, 20) == 1 && le16(wav, 22) == 2 &&
-                    le32(wav, 24) == UInt32(exportRate) &&
-                    le32(wav, 28) == UInt32(exportRate * 4) &&
-                    le16(wav, 32) == 4 && le16(wav, 34) == 16 &&
-                    le32(wav, 40) == UInt32(fixture.totalFrames * 4),
-                    "export did not produce a valid RIFF/stereo PCM header")
 
 S012 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(peak >= 256, "offline WAV render is nearly silent")
 
 S013 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  if fixture.hasLoop {
-      try exportRequire(fixture.totalFrames >= 16,
-                        "looping export is too short for tail verification")
 
 S014 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(tailPeak <= peak / 16, "looping WAV export did not fade to silence")
 
 S015 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(try renderExport(fixture, at: baseline), "baseline render was cancelled")
 
 S016 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(try renderExport(fixture, at: suppressed, suppress: true),
-                    "suppressed render was cancelled")
 
 S017 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  let before = try Data(contentsOf: baseline)
 
 S018 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  let after = try Data(contentsOf: suppressed)
 
 S019 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(after.count == before.count, "suppression changed exported frame count")
 
 S020 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(after.dropFirst(44) != before.dropFirst(44),
-                    "resonance suppression did not alter exported PCM bytes")
 
 S021 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  let completed = try renderExport(fixture, at: path, suppress: true) { fraction in fraction == 0 }
-  try exportRequire(!completed, "cancelled export unexpectedly completed")
 
 S022 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
-  try exportRequire(!FileManager.default.fileExists(atPath: path.path),
-                    "cancelled WAV export left a partial file")
 
 Shared helpers
 src/checks/projectstore/ProjectStoreCheckSupport.swift (awaitValue, shared with the

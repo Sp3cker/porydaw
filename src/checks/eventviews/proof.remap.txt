@@ -9,23 +9,9 @@ Additional Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swif
 Additional Swift counterpart: src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including fixture guards. PARTIAL identifies document-operation effects with related Swift document-level predicates and an explicit unproved condition (the controller chunk anchor or mirrored row count). A036-A038 and A041-A043 are instead MATCHED by the presenter anchor/row-count contract in eventListRemapAnchorAndProjection (S047-S052); Qt signal-order halves stay PARTIAL and tempo/metadata projection halves stay GAP/PARTIAL with renderer-absence reasons. Assertions whose stimulus is a direct document call and whose observable is portable are MATCHED when a registered Swift predicate exercises the same contract (A049, A050, A052, A053: the channel-ownership promotion path, proved by S042–S046 in tst_songdocument_songraw.swift; A036-A038 and A041-A043: the presenter anchor/row-count contract, proved by S047–S052 in EventListPlayheadChecks.swift). GAP identifies Qt signal-ordering observations, operation-return guards, fixture/conversion/computation guards, and event-table model observations (chunk selection, tempo-row projection, row lookup) with no Swift equivalent; unsure between PARTIAL and GAP resolves to GAP. The Swift counterpart search covered src/checks/swiftcore (EventChecks trackEditing observes trackRemap publications for add, move, duplicate, rename, and delete) and src/checks/editcheck (coreRawEventDocumentSeams observes engineTracks promotion), and confirmed no Swift event-list controller exists. None of these labels authorizes deletion or claims whole-case equivalence.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS (1/6 ok, 10.33s), zero failures with `deno task proof check` PASS (suite-level).
-
-Execution and ownership
-Paired document-level checks execute in runEventEditsSuite (src/checks/editcheck/EventChecks.swift) via trackEditing, which publishes and observes trackRemap entries for add, move, duplicate, rename, and delete with undo/redo republication. runRawEventOriginalChecks (src/checks/editcheck/tst_songdocument_songraw.swift) calls coreRawEventDocumentSeams, which proves the metadataChunkTransition promotion contract: inserting a channel event on a free channel into a metadata-only chunk raises engineTracks.usedTrackCount, an engine track owns the chunk, and undo/redo demote and repromote it. The presenter anchor observations (chunk(), mirrored rowCount, row focus, unselection) are proved by eventListRemapAnchorAndProjection (S047-S052); the rendered tempoRowForExactTick/rowForTickAndType projections and Qt signal order have no Swift owner. Native ownership of the full cases: runEventViewsRemapCheck in this file drives EventViewsRemapTest (notifyOrder, anchorFollowsMove, deletedChunkUnselects, metadataChunkTransition, tempoProjectionRows); fixtures live in src/checks/eventviews/eventview_fixture.h and src/checks/eventviews/eventview_fixture.cpp (openTabFixture shape Tempo).
-runEventViewsRemapBucketsParityChecks (src/checks/editcheck/EventViewsRemapBucketsParity.swift) is wired into runEventEditsSuite as suite 6; its remapParityAnchorTracking entry (renamed from remapParityNotifyOrder per review, lines 57-165) proves the notifyOrder anchor, remap presence/absence, and return contract through the single-DocumentChange observer, while Qt remap-before-changed emission order stays unproved because Swift coalesces each operation into one onChange.
-
-Fixture, sequence and row constraints
-No _data rows exist in this file; sequencing is phasal instead. notifyOrder expands its signal-order and anchor sites over six operation phases (move, undo, redo, rename with undo/redo, add with undo/redo, duplicate with undo/redo), each phase clearing and re-recording the notification list. anchorFollowsMove sequences move/undo/redo chunk comparisons; deletedChunkUnselects sequences delete/undo/redo anchor checks against the empty (-1) anchor; metadataChunkTransition loops the 16 channel candidates to find a free channel before the program-event promotion; tempoProjectionRows compares the tempo projection before and after a programmatic track selection.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:42
 Disposition: GAP
@@ -100,21 +86,7 @@ QTRY_COMPARE(widgets.controller->chunk(), document.smfTrackFor(1))
 
 A004 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:56
 Disposition: MATCHED
-Swift: S054 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Move-return contract: Swift S054 asserts the same observable — moveTrack(1, to: 0) returns true, on the S053 fixture where the second engine owns the third chunk — under cppID eventviews/EventViewsRemapTest::notifyOrder. Only the single-DocumentChange contract is ported; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-;
-            return panel && quick_popup::menuModel(*panel);
-        })) {
-        menu.diagnostic = diagnostic;
-        return menu;
-    }
-    QQuickItem *const panel = quick_popup::menuPanel(*live);
-    songview::QuickMenuModel *const model = panel ? quick_popup::menuModel(*panel) : nullptr;
-    if (!model) {
-        menu.diagnostic = diagno
-Original expression:
-QVERIFY(document.moveTrack(1, 0))
+Mapping: S054, S053
 
 A005 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:57
 Disposition: GAP
@@ -126,12 +98,7 @@ QTRY_VERIFY(signalsRespectRemapOrder(notifications, true))
 
 A006 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:58
 Disposition: MATCHED
-Swift: S057 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract after move: Swift S057 asserts the same observable — the tracked chunk anchor follows the move (0) — with S055-S056 (move publishes a remap mapping the third chunk to the front), S058 (engine anchor follows), and S059 (moved chunk projects its events plus sentinel) under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-stic.c
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(0)))
+Mapping: S055, S056, S057, S058, S059
 
 A007 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:61
 Disposition: GAP
@@ -144,12 +111,7 @@ QTRY_VERIFY(signalsRespectRemapOrder(notifications, true))
 
 A008 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:62
 Disposition: MATCHED
-Swift: S061 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract after undo: Swift S061 asserts the same observable — undo restores the chunk anchor (2) — with S060 (undo publishes the inverse remap), S062 (engine anchor restored), and S063 (chunk projection restored) under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-u menu
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(1)))
+Mapping: S061, S060, S062, S063
 
 A009 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:65
 Disposition: GAP
@@ -163,101 +125,43 @@ QTRY_VERIFY(signalsRespectRemapOrder(notifications, true))
 
 A010 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:66
 Disposition: MATCHED
-Swift: S065 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract after redo: Swift S065 asserts the same observable — redo follows the moved chunk again (0) — with S064 (redo republishes the forward remap) and S066 (moved chunk projection rebuilt) under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-as no
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(0)))
+Mapping: S065, S064, S066
 
 A011 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:68
 Disposition: MATCHED
-Swift: S067 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract on the restoring undo before rename: Swift S067 asserts the same observable — the anchor returns to the third chunk (2) — under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-       control.mapToScene(QPointF(contro
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(1)))
+Mapping: S067
 
 A012 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:72
 Disposition: MATCHED
-Swift: S068 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Rename nil-remap contract: Swift S068 asserts the same observable — rename publishes no track remap (trackRemap == nil on the single DocumentChange) — under cppID eventviews/EventViewsRemapTest::notifyOrder. Absence asserts no emission order, so the order restraint does not apply here; Qt signal order for remap-carrying operations stays unproved.
-Source context since previous assertion:
-lick(session->window(), Qt::LeftButton, Qt::NoModifier, center);
-    return awaitRulerGridMenu(
-        view
-Original expression:
-QTRY_VERIFY(signalsRespectRemapOrder(notifications, false))
+Mapping: S068
 
 A013 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:73
 Disposition: MATCHED
-Swift: S069 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract across rename: Swift S069 asserts the same observable — rename keeps the chunk anchor (2) — with S070 (projected row count kept) and S068 (no remap published) under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-ed gri
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(1)))
+Mapping: S069, S070, S068
 
 A014 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:76
 Disposition: MATCHED
-Swift: S071 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Rename-undo nil-remap contract: Swift S071 asserts the same observable — rename undo publishes no track remap — under cppID eventviews/EventViewsRemapTest::notifyOrder. Absence asserts no emission order, so the order restraint does not apply here; Qt signal order for remap-carrying operations stays unproved.
-Source context since previous assertion:
-songview::TimelineQuickView *quick = nullptr;
-    QQuickItem *divis
-Original expression:
-QTRY_VERIFY(signalsRespectRemapOrder(notifications, false))
+Mapping: S071
 
 A015 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:77
 Disposition: MATCHED
-Swift: S072 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract across rename undo: Swift S072 asserts the same observable — rename undo keeps the chunk anchor (2) — with S071 (no remap published) under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-::Time
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(1)))
+Mapping: S072, S071
 
 A016 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:80
 Disposition: MATCHED
-Swift: S073 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Rename-redo nil-remap contract: Swift S073 asserts the same observable — rename redo publishes no track remap — under cppID eventviews/EventViewsRemapTest::notifyOrder. Absence asserts no emission order, so the order restraint does not apply here; Qt signal order for remap-carrying operations stays unproved.
-Source context since previous assertion:
-nullptr;
-
-    bool valid() const { return quick && division && feel
-Original expression:
-QTRY_VERIFY(signalsRespectRemapOrder(notifications, false))
+Mapping: S073
 
 A017 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:81
 Disposition: MATCHED
-Swift: S074 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract across rename redo: Swift S074 asserts the same observable — rename redo keeps the chunk anchor (2) — with S073 (no remap published) under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-rface(
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(1)))
+Mapping: S074, S073
 
 A018 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:84
 Disposition: MATCHED
-Swift: S075 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Track-budget contract: Swift S075 asserts the same observable — canAddTrack admits one more track — under cppID eventviews/EventViewsRemapTest::notifyOrder. Only the single-DocumentChange contract is ported; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-      view.findChild<songview::TimelineQu
-Original expression:
-QVERIFY(document.canAddTrack())
+Mapping: S075
 
 A019 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:87
 Disposition: MATCHED
-Swift: S076 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Add-return contract: Swift S076 asserts the same observable — addTrack returns the new engine slot (non-nil) — under cppID eventviews/EventViewsRemapTest::notifyOrder. Only the single-DocumentChange contract is ported; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-lineQuickCanvas"));
-    if (!surface.quick)
-        return surface;
-    QQuic
-Original expression:
-QVERIFY(added >= 0)
+Mapping: S076
 
 A020 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:88
 Disposition: GAP
@@ -269,13 +173,7 @@ QTRY_VERIFY(signalsRespectRemapOrder(notifications, true))
 
 A021 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:89
 Disposition: MATCHED
-Swift: S078 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract across add: Swift S078 asserts the same observable — add keeps the chunk anchor (2) — with S077 (add publishes a remap) and S079 (projected row count kept) under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-ace;
-
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(1)))
+Mapping: S078, S077, S079
 
 A022 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:92
 Disposition: GAP
@@ -288,12 +186,7 @@ QTRY_VERIFY(signalsRespectRemapOrder(notifications, true))
 
 A023 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:93
 Disposition: MATCHED
-Swift: S081 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract across add undo: Swift S081 asserts the same observable — add undo keeps the chunk anchor (2) — with S080 (undo publishes the inverse remap) under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-rol"))
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(1)))
+Mapping: S081, S080
 
 A024 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:96
 Disposition: GAP
@@ -306,29 +199,11 @@ QTRY_VERIFY(signalsRespectRemapOrder(notifications, true))
 
 A025 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:97
 Disposition: MATCHED
-Swift: S083 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract across add redo: Swift S083 asserts the same observable — add redo keeps the chunk anchor (2) — with S082 (redo republishes the forward remap) under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-ast<so
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(1)))
+Mapping: S083, S082
 
 A026 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:102
 Disposition: MATCHED
-Swift: S084 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Duplicate-return contract: Swift S084 asserts the same observable — duplicateTrack returns the new engine slot (non-nil) — under cppID eventviews/EventViewsRemapTest::notifyOrder. Only the single-DocumentChange contract is ported; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-          : nullptr;
-    return surface;
-}
-
-class RulerGridMenuTest final : public QObject
-{
-    Q_OBJECT
-  public:
-    Ru
-Original expression:
-QVERIFY(duplicate >= 0)
+Mapping: S084
 
 A027 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:103
 Disposition: GAP
@@ -341,13 +216,7 @@ QTRY_VERIFY(signalsRespectRemapOrder(notifications, true))
 
 A028 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:104
 Disposition: MATCHED
-Swift: S086 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract across duplicate: Swift S086 asserts the same observable — duplicate keeps the chunk anchor (2) — with S085 (duplicate publishes a remap) and S087 (projected row count kept) under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-ts:
-
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(1)))
+Mapping: S086, S085, S087
 
 A029 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:107
 Disposition: GAP
@@ -361,12 +230,7 @@ QTRY_VERIFY(signalsRespectRemapOrder(notifications, true))
 
 A030 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:108
 Disposition: MATCHED
-Swift: S089 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract across duplicate undo: Swift S089 asserts the same observable — duplicate undo keeps the chunk anchor (2) — with S088 (undo publishes the inverse remap) under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
- host.
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(1)))
+Mapping: S089, S088
 
 A031 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:111
 Disposition: GAP
@@ -379,12 +243,7 @@ QTRY_VERIFY(signalsRespectRemapOrder(notifications, true))
 
 A032 | EventViewsRemapTest::notifyOrder | src/checks/eventviews/remap.cpp:112
 Disposition: MATCHED
-Swift: S091 | src/checks/editcheck/EventViewsRemapBucketsParity.swift :: remapParityAnchorTracking
-Mapping/reason: Chunk-anchor contract across duplicate redo: Swift S091 asserts the same observable — duplicate redo keeps the chunk anchor (2) — with S090 (redo republishes the forward remap) under cppID eventviews/EventViewsRemapTest::notifyOrder. The expected chunk is the non-tempo third chunk, so no tempoRowForExactTick condition applies; Qt remap-before-changed emission order stays unproved.
-Source context since previous assertion:
-sEnabl
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, document.smfTrackFor(1)))
+Mapping: S091, S090
 
 A033 | EventViewsRemapTest::anchorFollowsMove | src/checks/eventviews/remap.cpp:118
 Disposition: GAP
@@ -418,31 +277,15 @@ QVERIFY(document.moveTrack(1, 0))
 
 A036 | EventViewsRemapTest::anchorFollowsMove | src/checks/eventviews/remap.cpp:126
 Disposition: MATCHED
-Swift: S047 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRemapAnchorAndProjection
-Mapping/reason: Chunk-anchor contract after move: Swift S047 asserts the same observable — the presenter chunk anchor follows the move (chunkIndex 0 after moving the second track to front) — under cppID swiftcore/EventList::eventListRemapAnchorAndProjection. Only the pure presenter contract is ported; the rendered EventListPage stays unmounted.
-Source context since previous assertion:
-
-Original expression:
-QTRY_COMPARE(widgets.controller->chunk(), checks::eventviews::chunkForTrack(document, 0))
+Mapping: S047
 
 A037 | EventViewsRemapTest::anchorFollowsMove | src/checks/eventviews/remap.cpp:128
 Disposition: MATCHED
-Swift: S048 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRemapAnchorAndProjection
-Mapping/reason: Chunk-anchor contract after undo: Swift S048 asserts the same observable — undo restores the presenter chunk anchor (chunkIndex 2) — under cppID swiftcore/EventList::eventListRemapAnchorAndProjection. Only the pure presenter contract is ported; the rendered EventListPage stays unmounted.
-Source context since previous assertion:
-view.findChild<QMenu *>(),
-
-Original expression:
-QTRY_COMPARE(widgets.controller->chunk(), checks::eventviews::chunkForTrack(document, 1))
+Mapping: S048
 
 A038 | EventViewsRemapTest::anchorFollowsMove | src/checks/eventviews/remap.cpp:130
 Disposition: MATCHED
-Swift: S049 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRemapAnchorAndProjection
-Mapping/reason: Chunk-anchor contract after redo: Swift S049 asserts the same observable — redo follows the moved chunk again (chunkIndex 0) — under cppID swiftcore/EventList::eventListRemapAnchorAndProjection. Only the pure presenter contract is ported; the rendered EventListPage stays unmounted.
-Source context since previous assertion:
-d::array<int, 6> divisionIds{-1, 4, 8, 1
-Original expression:
-QTRY_COMPARE(widgets.controller->chunk(), checks::eventviews::chunkForTrack(document, 0))
+Mapping: S049
 
 A039 | EventViewsRemapTest::deletedChunkUnselects | src/checks/eventviews/remap.cpp:136
 Disposition: GAP
@@ -466,36 +309,15 @@ QVERIFY(widgets)
 
 A041 | EventViewsRemapTest::deletedChunkUnselects | src/checks/eventviews/remap.cpp:144
 Disposition: MATCHED
-Swift: S050 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRemapAnchorAndProjection
-Mapping/reason: Unselection contract after delete: Swift S050 asserts the same observables — chunkIndex -1, rowCount 0, and currentRow -1 after deleting the selected chunk, matching anchorMatches(..., -1) — under cppID swiftcore/EventList::eventListRemapAnchorAndProjection. Only the pure presenter contract is ported; the rendered EventListPage stays unmounted.
-Source context since previous assertion:
-t(row)]);
-            QVERIFY(item->enabled);
-            QVERIFY(item->checkable);
-            divisionChecked += item->checked ? 1 : 0;
-        }
-        QCOMPARE(divisionCh
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, -1))
+Mapping: S050
 
 A042 | EventViewsRemapTest::deletedChunkUnselects | src/checks/eventviews/remap.cpp:146
 Disposition: MATCHED
-Swift: S051 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRemapAnchorAndProjection
-Mapping/reason: Unselection contract after undo: Swift S051 asserts the same observables — the unselected anchor stays empty (chunkIndex -1, rowCount 0, currentRow -1) after undoing the deletion — under cppID swiftcore/EventList::eventListRemapAnchorAndProjection. Only the pure presenter contract is ported; the rendered EventListPage stays unmounted.
-Source context since previous assertion:
-
-            divisionMenu.model->rowForI
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, -1))
+Mapping: S051
 
 A043 | EventViewsRemapTest::deletedChunkUnselects | src/checks/eventviews/remap.cpp:148
 Disposition: MATCHED
-Swift: S052 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRemapAnchorAndProjection
-Mapping/reason: Unselection contract after redo: Swift S052 asserts the same observables — the unselected anchor stays empty (chunkIndex -1, rowCount 0, currentRow -1) after redoing the deletion — under cppID swiftcore/EventList::eventListRemapAnchorAndProjection. Only the pure presenter contract is ported; the rendered EventListPage stays unmounted.
-Source context since previous assertion:
-IFY2(currentDivisionRow >= 0, "the divis
-Original expression:
-QTRY_VERIFY(anchorMatches(widgets, document, -1))
+Mapping: S052
 
 A044 | EventViewsRemapTest::metadataChunkTransition | src/checks/eventviews/remap.cpp:154
 Disposition: GAP
@@ -547,26 +369,11 @@ QVERIFY(freeChannel >= 0)
 
 A049 | EventViewsRemapTest::metadataChunkTransition | src/checks/eventviews/remap.cpp:175
 Disposition: MATCHED
-Swift: S043 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawEventDocumentSeams
-Mapping/reason: The stimulus is a direct document.insertRawEvent call on a metadata-only chunk; Swift S043 asserts the same observable — engineTracks.usedTrackCount rises to 3 as the first channel event promotes the chunk — under cppID eventviews/EventViewsRemapTest::metadataChunkTransition.
-Source context since previous assertion:
-          "the division row did not receive a real click");
-        QCoreApplication::processEvents();
-        QVERIFY2(!divisionMenu.session->isOpen(), "
-Original expression:
-QTRY_VERIFY(document.engineTrackCount() == 3)
+Mapping: S043
 
 A050 | EventViewsRemapTest::metadataChunkTransition | src/checks/eventviews/remap.cpp:181
 Disposition: MATCHED
-Swift: S044 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawEventDocumentSeams
-Mapping/reason: The owner lookup reads document engine-track state, not the controller; Swift S044 asserts an engine track owns the promoted metadata chunk (midiChunk == metadataChunk) under cppID eventviews/EventViewsRemapTest::metadataChunkTransition.
-Source context since previous assertion:
-        QVERIFY(!QApplication::activePopupWidget());
-        QCOMPARE(view.viewState().gridSelection,
-                 songview::GridSelection::musical(uint32_t(targetDivision)));
-        QCOMPA
-Original expression:
-QVERIFY(owner >= 0)
+Mapping: S044
 
 A051 | EventViewsRemapTest::metadataChunkTransition | src/checks/eventviews/remap.cpp:182
 Disposition: GAP
@@ -578,21 +385,11 @@ QVERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 0, eventlist::Type
 
 A052 | EventViewsRemapTest::metadataChunkTransition | src/checks/eventviews/remap.cpp:185
 Disposition: MATCHED
-Swift: S045 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawEventDocumentSeams
-Mapping/reason: The stimulus is document.history undo, not the controller; Swift S045 asserts engineTracks.usedTrackCount returns to 2 after undo under cppID eventviews/EventViewsRemapTest::metadataChunkTransition.
-Source context since previous assertion:
-ened = openRulerGridMenu(view, *surface.d
-Original expression:
-QTRY_COMPARE(document.engineTrackCount(), 2)
+Mapping: S045
 
 A053 | EventViewsRemapTest::metadataChunkTransition | src/checks/eventviews/remap.cpp:187
 Disposition: MATCHED
-Swift: S046 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawEventDocumentSeams
-Mapping/reason: The stimulus is document.history redo, not the controller; Swift S046 asserts engineTracks.usedTrackCount returns to 3 after redo under cppID eventviews/EventViewsRemapTest::metadataChunkTransition.
-Source context since previous assertion:
-session, qUtf8Printable(divisionReopened
-Original expression:
-QTRY_COMPARE(document.engineTrackCount(), 3)
+Mapping: S046
 
 A054 | EventViewsRemapTest::tempoProjectionRows | src/checks/eventviews/remap.cpp:193
 Disposition: GAP
@@ -1132,505 +929,273 @@ Swift assertion predicates
 
 S001 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "new track occupies the next engine slot"
-  report.expectEqual(2, added,
-                       cppID: "editcheck/EditCheckTest::trackCreateDelete",
-                       what: "new track occupies the next engine slot")
 
 S002 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "new track voice is clamped and seeded"
-  report.expectEqual(127, document.lanePoints(track: added ?? -1, lane: .voice).first?.value,
-                       cppID: "editcheck/EditCheckTest::voiceLanePoint",
-                       what: "new track voice is clamped and seeded")
 
 S003 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "add publishes old engine-track identities"
-  report.expectEqual([0, 1], changes.last?.trackRemap?.engineTrackMap.compactMap { $0 },
-                       cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
-                       what: "add publishes old engine-track identities")
 
 S004 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "undo publishes the inverse track remap"
-  report.expectEqual(2, changes.last?.trackRemap?.newEngineTrackCount,
-                       cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
-                       what: "undo publishes the inverse track remap")
 
 S005 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "redo republishes the forward track remap"
-  report.expectEqual(3, changes.last?.trackRemap?.newEngineTrackCount,
-                       cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
-                       what: "redo republishes the forward track remap")
 
 S006 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: function
-  report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
 
 S007 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "duplicate preserves the fixture's literal note"
-  report.expectEqual(["8:60:4"],
-                       document.notes(in: copy).map { "\($0.tick):\($0.pitch):\($0.duration)" },
-                       cppID: "editcheck/EditCheckTest::trackDuplicate",
-                       what: "duplicate preserves the fixture's literal note")
 
 S008 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "duplicate remints note identities"
-  report.expect(document.notes(in: 0).first?.id != document.notes(in: copy).first?.id,
-                  cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
-                  message: "duplicate remints note identities")
 
 S009 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "conductor time signature survives reorder"
-  report.expect(document.timeSignatures.contains { $0.tick == 2 },
-                  cppID: "editcheck/EditCheckTest::trackMove",
-                  message: "conductor time signature survives reorder")
 
 S010 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "conductor marker remains in chunk zero"
-  report.expect(document.rawChunks[0].events.contains { MidiFile.metaIsMarker($0) },
-                  cppID: "editcheck/EditCheckTest::trackMarkerName",
-                  message: "conductor marker remains in chunk zero")
 
 S011 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "global signature is rescued before chunk deletion"
-  report.expect(document.rawChunks[0].events.contains { event in
-        event.metaType == 0x58 && event.tick == 2
-    }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
-    message: "global signature is rescued before chunk deletion")
 
 S012 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "winning loop marker is rescued"
-  report.expect(document.rawChunks[0].events.contains { event in
-        event.tick == 16 && MidiFile.metaIsMarker(event)
-    }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
-    message: "winning loop marker is rescued")
 
 S013 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "deleting the chunk-zero track retains the conductor chunk"
-  report.expectEqual(chunksBeforeChunkZeroDelete, document.rawChunks.count,
-                       cppID: "editcheck/EditCheckTest::trackCreateDelete",
-                       what: "deleting the chunk-zero track retains the conductor chunk")
 
 S014 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "rename trims the stored display name"
-  report.expectEqual("Bass", document.trackName(0),
-                       cppID: "editcheck/EditCheckTest::trackRename",
-                       what: "rename trims the stored display name")
 
 S015 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "loop-marker-shaped name is rejected"
-  report.expectEqual(revision + 1, document.revision,
-                       cppID: "editcheck/EditCheckTest::trackRename",
-                       what: "loop-marker-shaped name is rejected")
 
 S016 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "configured track budget rejects an added track"
-  report.expect(budgetLimited.addTrack(voice: 1) == nil,
-                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
-                  message: "configured track budget rejects an added track")
 
 S017 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "hardware track ceiling rejects a seventeenth track"
-  report.expect(ceiling.addTrack(voice: 1) == nil,
-                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
-                  message: "hardware track ceiling rejects a seventeenth track")
 
 S018 | trackNameRoles | src/checks/editcheck/EventChecks.swift
 Anchor: message "document query ignores a channel-prefixed name"
-  report.expectEqual("Bare", document.trackName(0),
-                       cppID: "editcheck/EditCheckTest::markerVersusTrackName",
-                       what: "document query ignores a channel-prefixed name")
 
 S019 | trackNameRoles | src/checks/editcheck/EventChecks.swift
 Anchor: message "rename changes only bare names after empty-prefix or channel clearing"
-  report.expectEqual(["Scoped", "Lead", "ScopedAfterBare"], names,
-                       cppID: "editcheck/EditCheckTest::markerVersusTrackName",
-                       what: "rename changes only bare names after empty-prefix or channel clearing")
 
 S020 | trackNameRoles | src/checks/editcheck/EventChecks.swift
 Anchor: message "import and document queries select the same bare name"
-  report.expectEqual("Bare", imported.tracks.first?.name,
-                       cppID: "onboardcheck/OnboardingTest::importAnalysis[default]",
-                       what: "import and document queries select the same bare name")
 
 S021 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "raw tempo meta is rejected"
-  report.expectEqual(beforeTempoRaw, document.revision,
-                       cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
-                       what: "raw tempo meta is rejected")
 
 S022 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "tempo normalization keeps the last same-tick value"
-  report.expectEqual([TempoPoint(tick: 8, microsecondsPerQuarterNote: 600_000)],
-                       document.state.tempo,
-                       cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
-                       what: "tempo normalization keeps the last same-tick value")
 
 S023 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "mixed raw and tempo replacement is atomic"
-  report.expectEqual(rawCount, document.rawChunks[0].events.count,
-                       cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
-                       what: "mixed raw and tempo replacement is atomic")
 
 S024 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "one undo restores both domains"
-  report.expectEqual(1, document.state.tempo.count,
-                       cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
-                       what: "one undo restores both domains")
 
 S025 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "same-tick signature is replaced"
-  report.expectEqual(1, document.timeSignatures.filter { $0.tick == 20 }.count,
-                       cppID: "editcheck/EditCheckTest::songTimeSignature",
-                       what: "same-tick signature is replaced")
 
 S026 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "signature moves with its payload"
-  report.expect(document.timeSignatures.contains { $0.tick == 24 && $0.numerator == 3 },
-                  cppID: "editcheck/EditCheckTest::songTimeSignature",
-                  message: "signature moves with its payload")
 
 S027 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "signature deletion removes destination"
-  report.expect(!document.timeSignatures.contains { $0.tick == 24 },
-                  cppID: "editcheck/EditCheckTest::songTimeSignature",
-                  message: "signature deletion removes destination")
 
 S028 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "move preserves every cross-chunk source signature"
-  report.expectEqual([3, 5], crossChunk.timeSignatures.filter { $0.tick == 24 }
-        .map { Int($0.numerator) }.sorted(),
-        cppID: "editcheck/EditCheckTest::songTimeSignature",
-        what: "move preserves every cross-chunk source signature")
 
 S029 | laneEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "span write replaces and clamps points"
-  report.expectEqual([LanePoint(chunk: 0, eventIndex: 1, tick: 6, value: 127)],
-                       document.lanePoints(track: 0, lane: .controller(7)),
-                       cppID: "editcheck/EditCheckTest::automationLanePoints",
-                       what: "span write replaces and clamps points")
 
 S030 | laneEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "lane move relocates the selected identity"
-  report.expectEqual(["9:40"], document.lanePoints(track: 0, lane: .controller(7))
-        .map { "\($0.tick):\($0.value)" },
-        cppID: "automation-domain/laneMoveDestinationCollision",
-        what: "lane move relocates the selected identity")
 
 S031 | laneEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "foreign-chunk XCMD point cannot delete a local event"
-  report.expectEqual(beforeForeignDelete, xcmdDocument.rawChunks,
-                       cppID: "automation-domain/laneDeleteForeignChunk",
-                       what: "foreign-chunk XCMD point cannot delete a local event")
 
 S032 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "import counts logical XCMD points"
-  report.expectEqual(2, analysis.xcmd.first?.count,
-                       cppID: "smfcheck/MidiSmfTest::importReportCountsEveryPayloadOfSharedSelector",
-                       what: "import counts logical XCMD points")
 
 S033 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "unknown controller is not exported"
-  report.expectEqual(.notExported, analysis.controllers.first { $0.controller == 0x4B }?.support,
-                       cppID: "smfcheck/MidiSmfTest::importReportVerdictsOrdinaryControllers",
-                       what: "unknown controller is not exported")
 
 S034 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "player track budget identifies silent tracks"
-  report.expectEqual(1, analysis.silentTracks,
-                       cppID: "onboardcheck/OnboardingTest::importAnalysis",
-                       what: "player track budget identifies silent tracks")
 
 S035 | importAnalysis | src/checks/editcheck/EventChecks.swift
 Anchor: message "notes before instrument are reported"
-  report.expect(analysis.tracks[0].notesBeforeProgram,
-                  cppID: "onboardcheck/OnboardingTest::importAnalysis",
-                  message: "notes before instrument are reported")
 
 S036 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "only eligible same-tick setter is removed"
-  report.expectEqual(1, MidiImport.removeRedundantSetters(&file),
-                       cppID: "onboardcheck/OnboardingTest::importDedup",
-                       what: "only eligible same-tick setter is removed")
 
 S037 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "action-like XCMD selectors are preserved"
-  report.expectEqual([UInt8(2), 8, 9], file.chunks[0].events.map {
-        if case let .channel(status, data0, data1) = $0.payload {
-            return status >> 4 == 0xC ? data0 : data1
-        }
-        return 0
-    }, cppID: "onboardcheck/OnboardingTest::importDedup",
-    what: "action-like XCMD selectors are preserved")
 
 S038 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "rescale uses floor arithmetic"
-  report.expectEqual([Tick(0), 0, 0], file.chunks[0].events.map(\.tick),
-                       cppID: "onboardcheck/OnboardingTest::importRescale",
-                       what: "rescale uses floor arithmetic")
 
 S039 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "end tick uses the same floor arithmetic"
-  report.expectEqual(Tick(1), file.chunks[0].endTick,
-                       cppID: "onboardcheck/OnboardingTest::importRescale",
-                       what: "end tick uses the same floor arithmetic")
 
 S040 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: function
-  report.fail("onboardcheck/OnboardingTest::importRescaleOverflow",
-                    "overflowing rescale unexpectedly succeeded")
 
 S041 | importTransforms | src/checks/editcheck/EventChecks.swift
 Anchor: message "overflow rejection leaves file untouched"
-  report.expectEqual(baseline, overflow,
-                           cppID: "onboardcheck/OnboardingTest::importRescaleOverflow",
-                           what: "overflow rejection leaves file untouched")
 
 S042 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift
 Anchor: function
-  report.fail(remapID, "no free channel for metadata-chunk promotion")
 
 S043 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift
 Anchor: message "channel event promotes the metadata chunk to an engine track"
-  report.expectEqual(3, promoted.engineTracks.usedTrackCount, cppID: remapID,
-                       what: "channel event promotes the metadata chunk to an engine track")
 
 S044 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift
 Anchor: message "an engine track owns the promoted metadata chunk"
-  report.expect(promoted.engineTracks.tracks
-        .prefix(promoted.engineTracks.usedTrackCount)
-        .contains { $0.midiChunk == metadataChunk },
-        cppID: remapID,
-        message: "an engine track owns the promoted metadata chunk")
 
 S045 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift
 Anchor: message "undo demotes the metadata chunk"
-  report.expectEqual(2, promoted.engineTracks.usedTrackCount, cppID: remapID,
-                       what: "undo demotes the metadata chunk")
 
 S046 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift
 Anchor: message "redo repromotes the metadata chunk"
-  report.expectEqual(3, promoted.engineTracks.usedTrackCount, cppID: remapID,
-                       what: "redo repromotes the metadata chunk")
 
 S047 | eventListRemapAnchorAndProjection | src/checks/eventviews/EventListPlayheadChecks.swift
 Anchor: message "chunk anchor follows the move"
-    report.expectEqual(0, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
-                       what: "chunk anchor follows the move")
 
 S048 | eventListRemapAnchorAndProjection | src/checks/eventviews/EventListPlayheadChecks.swift
 Anchor: message "undo restores the chunk anchor"
-    report.expectEqual(2, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
-                       what: "undo restores the chunk anchor")
 
 S049 | eventListRemapAnchorAndProjection | src/checks/eventviews/EventListPlayheadChecks.swift
 Anchor: message "redo follows the moved chunk again"
-    report.expectEqual(0, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
-                       what: "redo follows the moved chunk again")
 
 S050 | eventListRemapAnchorAndProjection | src/checks/eventviews/EventListPlayheadChecks.swift
 Anchor: message "deleting the selected chunk clears its anchor"
-    report.expectEqual(-1, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
-                       what: "deleting the selected chunk clears its anchor")
-    report.expectEqual(0, presenter.rowCount, cppID: remapAnchorAndProjectionID,
-                       what: "deleted chunk has no projected rows")
-    report.expectEqual(-1, presenter.currentRow, cppID: remapAnchorAndProjectionID,
-                       what: "deleting the selected chunk clears row focus")
 
 S051 | eventListRemapAnchorAndProjection | src/checks/eventviews/EventListPlayheadChecks.swift
 Anchor: message "undoing deletion leaves the unselected anchor empty"
-    report.expect(presenter.chunkIndex == -1 && presenter.rowCount == 0
-        && presenter.currentRow == -1,
-        cppID: remapAnchorAndProjectionID,
-        message: "undoing deletion leaves the unselected anchor empty")
 
 S052 | eventListRemapAnchorAndProjection | src/checks/eventviews/EventListPlayheadChecks.swift
 Anchor: message "redoing deletion leaves the unselected anchor empty"
-    report.expect(presenter.chunkIndex == -1 && presenter.rowCount == 0
-        && presenter.currentRow == -1,
-        cppID: remapAnchorAndProjectionID,
-        message: "redoing deletion leaves the unselected anchor empty")
 
 S053 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "initial second engine owns the third chunk"
-  report.expectEqual(2, document.engineTracks.tracks[1].midiChunk ?? -1, cppID: remapNotifyOrderID,
-      what: "initial second engine owns the third chunk")
 
 S054 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "move accepts the second track"
-  report.expectEqual(true, moved, cppID: remapNotifyOrderID, what: "move accepts the second track")
 
 S055 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "move publishes a track remap"
-  report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID,
-      message: "move publishes a track remap")
 
 S056 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "move maps the third chunk to the front"
-  report.expect(changes.last?.trackRemap?.chunkMap.indices.contains(2) == true
-      && changes.last?.trackRemap?.chunkMap[2] == 0, cppID: remapNotifyOrderID,
-      message: "move maps the third chunk to the front")
 
 S057 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "chunk anchor follows the move"
-  report.expectEqual(0, trackedChunk, cppID: remapNotifyOrderID, what: "chunk anchor follows the move")
 
 S058 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "engine anchor follows the move"
-  report.expectEqual(0, trackedEngine, cppID: remapNotifyOrderID, what: "engine anchor follows the move")
 
 S059 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "moved chunk projects its events and sentinel"
-  report.expectEqual(remapParityExpectedCount(document, chunk: trackedChunk),
-      remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID,
-      what: "moved chunk projects its events and sentinel")
 
 S060 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "move undo publishes the inverse remap"
-  report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID,
-      message: "move undo publishes the inverse remap")
 
 S061 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "undo restores the chunk anchor"
-  report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "undo restores the chunk anchor")
 
 S062 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "undo restores the engine anchor"
-  report.expectEqual(1, trackedEngine, cppID: remapNotifyOrderID, what: "undo restores the engine anchor")
 
 S063 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "undo restores the chunk projection"
-  report.expectEqual(remapParityExpectedCount(document, chunk: trackedChunk),
-      remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID,
-      what: "undo restores the chunk projection")
 
 S064 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "move redo republishes the forward remap"
-  report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID,
-      message: "move redo republishes the forward remap")
 
 S065 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "redo follows the moved chunk again"
-  report.expectEqual(0, trackedChunk, cppID: remapNotifyOrderID, what: "redo follows the moved chunk again")
 
 S066 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "redo rebuilds the moved chunk projection"
-  report.expectEqual(remapParityExpectedCount(document, chunk: trackedChunk),
-      remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID,
-      what: "redo rebuilds the moved chunk projection")
 
 S067 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "restoring undo returns the anchor before rename"
-  report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID,
-      what: "restoring undo returns the anchor before rename")
 
 S068 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "rename publishes no track remap"
-  report.expect(changes.last?.trackRemap == nil, cppID: remapNotifyOrderID,
-      message: "rename publishes no track remap")
 
 S069 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "rename keeps the chunk anchor"
-  report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "rename keeps the chunk anchor")
 
 S070 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "rename keeps the projected row count"
-  report.expectEqual(remapParityExpectedCount(document, chunk: trackedChunk),
-      remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID,
-      what: "rename keeps the projected row count")
 
 S071 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "rename undo publishes no track remap"
-  report.expect(changes.last?.trackRemap == nil, cppID: remapNotifyOrderID,
-      message: "rename undo publishes no track remap")
 
 S072 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "rename undo keeps the chunk anchor"
-  report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "rename undo keeps the chunk anchor")
 
 S073 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "rename redo publishes no track remap"
-  report.expect(changes.last?.trackRemap == nil, cppID: remapNotifyOrderID,
-      message: "rename redo publishes no track remap")
 
 S074 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "rename redo keeps the chunk anchor"
-  report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "rename redo keeps the chunk anchor")
 
 S075 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "track budget admits one more track"
-  report.expect(document.canAddTrack, cppID: remapNotifyOrderID, message: "track budget admits one more track")
 
 S076 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "add returns the new engine slot"
-  report.expect(added != nil, cppID: remapNotifyOrderID, message: "add returns the new engine slot")
 
 S077 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "add publishes a track remap"
-  report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID,
-      message: "add publishes a track remap")
 
 S078 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "add keeps the chunk anchor"
-  report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "add keeps the chunk anchor")
 
 S079 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "add keeps the projected row count"
-  report.expectEqual(remapParityExpectedCount(document, chunk: trackedChunk),
-      remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID,
-      what: "add keeps the projected row count")
 
 S080 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "add undo publishes the inverse remap"
-  report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID,
-      message: "add undo publishes the inverse remap")
 
 S081 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "add undo keeps the chunk anchor"
-  report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "add undo keeps the chunk anchor")
 
 S082 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "add redo republishes the forward remap"
-  report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID,
-      message: "add redo republishes the forward remap")
 
 S083 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "add redo keeps the chunk anchor"
-  report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "add redo keeps the chunk anchor")
 
 S084 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "duplicate returns the new engine slot"
-  report.expect(duplicated != nil, cppID: remapNotifyOrderID, message: "duplicate returns the new engine slot")
 
 S085 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "duplicate publishes a track remap"
-  report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID,
-      message: "duplicate publishes a track remap")
 
 S086 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "duplicate keeps the chunk anchor"
-  report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "duplicate keeps the chunk anchor")
 
 S087 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "duplicate keeps the projected row count"
-  report.expectEqual(remapParityExpectedCount(document, chunk: trackedChunk),
-      remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID,
-      what: "duplicate keeps the projected row count")
 
 S088 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "duplicate undo publishes the inverse remap"
-  report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID,
-      message: "duplicate undo publishes the inverse remap")
 
 S089 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "duplicate undo keeps the chunk anchor"
-  report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID,
-      what: "duplicate undo keeps the chunk anchor")
 
 S090 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "duplicate redo republishes the forward remap"
-  report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID,
-      message: "duplicate redo republishes the forward remap")
 
 S091 | remapParityAnchorTracking | src/checks/editcheck/EventViewsRemapBucketsParity.swift
 Anchor: message "duplicate redo keeps the chunk anchor"
-  report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID,
-      what: "duplicate redo keeps the chunk anchor")

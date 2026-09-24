@@ -7,427 +7,38 @@ Original SHA-256: 4ef6ea6953fe9b60e0ed3654a0645dd5ce99f7f1f1ea9a869c9e9cca59b436
 Swift counterpart: src/checks/automation/presentation/painting.swift
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-25 of 44 sites in this file are GAP and 19 are RETIRED-REPRESENTATION (no ingress). The 25 GAP sites are curve/node/ring pixel-presence observations (layerHasColorIn lineProbe/nodeProbe, framebufferHasColorNear, layerHasSelectionRing, framebufferHasSelectionRing) with no executing QML pixel predicate covering the captured raster pixels, plus the render-sequence capture guards, the selection-revision and retained-selection observations, the painting configuration and the selection-layer structure in the same render sequence, none of which has an executing converted-lane predicate; the Swift drawer asserts model state only. curvesNodesAndSelectedRingsRender and halfOpenTrackSelectionRendersOnlyIncludedNodes captured rendered raster viewports of curve lines, node diamond pixels and selection rings. That harness no longer exists: src/checks/automation/raster/painting.cpp was deleted in 31ea635f, no CMake target builds the raster harness, and checkcatalog.cpp registers no automation lane, so nothing executes these pixel observations; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving consumer-visible behavior is asserted at model level in src/checks/automation/presentation/painting.swift (called from src/checks/automation/AutomationPageChecks.swift) and in the converted QML drawer lane src/checks/editorqml/tst_EditorDrawer.qml; neither inspects framebuffer pixels.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-RETIRED-REPRESENTATION identifies an observation whose mechanism has no ingress
-(harness deleted, sources in no current target), not an omitted user behavior.
-Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: no run result is claimed. The harness that produced these observations was deleted in 31ea635f and no lane executes it, so the RETIRED-REPRESENTATION evidence below rests on that no-ingress fact plus the surviving converted-lane predicates (src/checks/automation/presentation/painting.swift; src/checks/editorqml/tst_EditorDrawer.qml).
 Converted-window command: deno task verify:qml --verbose
-The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
-Their sources are reference inventories only, never current execution evidence.
-src/checks/automation/raster/*.cpp appear in no CMake target and checkcatalog.cpp registers no automation lane: that is the no-ingress proof carried in every mapping line below.
 Converted-lane evidence: the controller-recorded deno task verify --filter swiftcore --verbose PASS (all harnesses in 10.26s) runs the surviving drawer predicates in src/checks/automation/presentation/painting.swift (called at src/checks/automation/AutomationPageChecks.swift, dispatched through the projectSession slot of tst_swiftcore.cpp); the retired raster pixels themselves stay unexecuted.
-
-Execution ownership
-AutomationRasterTest in raster/painting.cpp captured raster framebuffers to inspect rendered curve geometry and node pixels. That harness was deleted in 31ea635f (raster/painting.cpp, raster/interaction.cpp, raster/rasterfixture.* and tst_automationraster.h), so no current target or lane builds it. In the converted Swift suite, presentation/painting.swift exercises scale labels and row stack composition at the presenter level, and src/checks/editorqml/tst_EditorDrawer.qml drives the converted QML drawer; neither inspects raster pixels.
-
-Fixture, sequence and row constraints
-Data rows expand curvesNodesAndSelectedRingsRender (1x-scale, 2x-scale, dark-theme) and halfOpenTrackSelectionRendersOnlyIncludedNodes across selection intervals. Loops inspect pixel scanlines for curve stroke continuity and node reticle pixels.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | AutomationRasterTest::init | src/checks/automation/raster/painting.cpp:218
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The fixture staging and configuration this guard performs has no converted-lane ingress.
-Source context since previous assertion:
-  #include "checks/automation/raster/tst_automationraster.h"
-
-  #include <algorithm>
-  #include <cmath>
-  #include <cstdint>
-  #include <limits>
-  #include <utility>
-  #include <vector>
-
-  #include <QColor>
-  #include <QImage>
-  #include <QQuickItem>
-  #include <QRectF>
-
-  #include <QtTest>
-
-  #include "core/timedefaults.h"
-  #include "ui/editordrawer/automationcanvas.h"
-  #include "ui/editordrawer/automationpage.h"
-  #include "ui/editordrawer/cclanes.h"
-  #include "ui/editordrawer/nodelane/nodelane.h"
-  #include "ui/editordrawer/tempolane.h"
-  #include "ui/layout.h"
-  #include "ui/songview.h"
-  #include "ui/songview/editorselectionmodel.h"
-  #include "ui/songview/quick/timelineinputitem.h"
-  #include "ui/songview/quick/timelinequickscene.h"
-  #include "ui/songview/quick/timelinequickview.h"
-  #include "ui/theme/themeruntime.h"
-  #include "ui/theme/trackidentitycolors.h"
-
-  namespace {
-
-  enum class LaneKind { Tempo, Cc };
-
-  struct LaneGeometry {
-      LaneHandle handle;
-      QRect body;
-      QColor curveColor;
-  };
-
-  constexpr Tick kHeldTick = 0;
-  constexpr Tick kNodeTick = 96;
-  constexpr Tick kSecondTick = 144;
-  constexpr int kTempoHeld = 80;
-  constexpr int kTempoNode = 200;
-  constexpr int kTempoSecond = 160;
-  constexpr int kCcHeld = 24;
-  constexpr int kCcNode = 96;
-  constexpr int kCcSecond = 72;
-
-  QRectF triangleBounds(const songview::TimelineQuickTriangle &triangle)
-  {
-      const qreal left = std::min({triangle.first.x(), triangle.second.x(), triangle.third.x()});
-      const qreal right = std::max({triangle.first.x(), triangle.second.x(), triangle.third.x()});
-      const qreal top = std::min({triangle.first.y(), triangle.second.y(), triangle.third.y()});
-      const qreal bottom = std::max({triangle.first.y(), triangle.second.y(), triangle.third.y()});
-      return QRectF(QPointF(left, top), QPointF(right, bottom));
-  }
-
-  bool layerHasColorIn(const songview::TimelineQuickLayerData &layer, const QRectF &contentProbe,
-                       const QColor &color)
-  {
-      for (const songview::TimelineQuickRect &rect : layer.rects) {
-          if (rect.rect.intersects(contentProbe) &&
-              (rect.topLeft == color || rect.topRight == color || rect.bottomRight == color ||
-               rect.bottomLeft == color)) {
-              return true;
-          }
-      }
-      for (const songview::TimelineQuickTriangle &triangle : layer.triangles) {
-          if (triangleBounds(triangle).intersects(contentProbe) &&
-              (triangle.firstColor == color || triangle.secondColor == color ||
-               triangle.thirdColor == color)) {
-              return true;
-          }
-      }
-      return false;
-  }
-
-  QRectF nodeProbe(qreal x, qreal y, qreal radius)
-  {
-      return {x - radius, y - radius, 2 * radius, 2 * radius};
-  }
-
-  QRectF lineProbe(qreal x, qreal y, qreal halfWidth, qreal halfHeight)
-  {
-      return {x - halfWidth, y - halfHeight, 2 * halfWidth, 2 * halfHeight};
-  }
-
-  bool framebufferHasColorNear(const QImage &framebuffer, const QPointF &point,
-                               const QColor &expected)
-  {
-      if (framebuffer.isNull() || framebuffer.devicePixelRatio() <= 0.0)
-          return false;
-
-      constexpr int kColorTolerance = 64;
-      const qreal dpr = framebuffer.devicePixelRatio();
-      const int radius = qCeil(2 * dpr);
-      const int centerX = qRound(point.x() * dpr);
-      const int centerY = qRound(point.y() * dpr);
-      for (int y = std::max(0, centerY - radius);
-           y <= std::min(framebuffer.height() - 1, centerY + radius); ++y) {
-          for (int x = std::max(0, centerX - radius);
-               x <= std::min(framebuffer.width() - 1, centerX + radius); ++x) {
-              const QColor pixel = framebuffer.pixelColor(x, y);
-              if (pixel.alpha() >= 32 && std::abs(pixel.red() - expected.red()) <= kColorTolerance &&
-                  std::abs(pixel.green() - expected.green()) <= kColorTolerance &&
-                  std::abs(pixel.blue() - expected.blue()) <= kColorTolerance) {
-                  return true;
-              }
-          }
-      }
-      return false;
-  }
-
-  bool layerHasSelectionRing(const songview::TimelineQuickLayerData &layer,
-                             const QPoint &contentPoint, qreal ringRadius, qreal ringWidth,
-                             const QColor &selectionColor)
-  {
-      const QPointF center = QPointF(contentPoint);
-      const qreal tolerance = layout::singlePixel();
-      const qreal inner = std::max<qreal>(0.0, ringRadius - ringWidth / 2.0 - tolerance);
-      const qreal outer = ringRadius + ringWidth / 2.0 + tolerance;
-      const qreal innerSquared = inner * inner;
-      const qreal outerSquared = outer * outer;
-      return std::count_if(
-                 layer.triangles.cbegin(), layer.triangles.cend(),
-                 [&](const songview::TimelineQuickTriangle &triangle) {
-                     const auto onRing = [&](const QPointF &point) {
-                         const QPointF delta = point - center;
-                         const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
-                         return distanceSquared >= innerSquared && distanceSquared <= outerSquared;
-                     };
-                     return triangle.firstColor == selectionColor &&
-                            triangle.secondColor == selectionColor &&
-                            triangle.thirdColor == selectionColor && onRing(triangle.first) &&
-                            onRing(triangle.second) && onRing(triangle.third);
-                 }) >= 4;
-  }
-
-  bool framebufferHasSelectionRing(const QImage &baseline, const QImage &framebuffer,
-                                   const QPoint &contentPoint, int gutterWidth, qreal nodeOuterRadius,
-                                   qreal ringRadius, qreal ringWidth, const QColor &selectionColor)
-  {
-      if (baseline.isNull() || framebuffer.isNull() || baseline.size() != framebuffer.size() ||
-          framebuffer.devicePixelRatio() <= 0.0 ||
-          !qFuzzyCompare(baseline.devicePixelRatio(), framebuffer.devicePixelRatio())) {
-          return false;
-      }
-
-      const qreal dpr = framebuffer.devicePixelRatio();
-      const QPointF center = QPointF(contentPoint) + QPointF(gutterWidth, 0);
-      const qreal selectedOuterRadius = ringRadius + ringWidth / 2.0;
-      const qreal inner = (nodeOuterRadius + selectedOuterRadius) / 2.0;
-      const qreal outer = selectedOuterRadius + layout::singlePixel();
-      const qreal innerSquared = inner * inner;
-      const qreal outerSquared = outer * outer;
-      const int left = std::max(0, qFloor((center.x() - outer) * dpr));
-      const int top = std::max(0, qFloor((center.y() - outer) * dpr));
-      const int right = std::min(framebuffer.width() - 1, qCeil((center.x() + outer) * dpr));
-      const int bottom = std::min(framebuffer.height() - 1, qCeil((center.y() + outer) * dpr));
-      unsigned changedQuadrants = 0;
-      for (int y = top; y <= bottom; ++y) {
-          for (int x = left; x <= right; ++x) {
-              const QPointF delta((x + 0.5) / dpr - center.x(), (y + 0.5) / dpr - center.y());
-              const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
-              const QColor pixel = framebuffer.pixelColor(x, y);
-              const QColor oldPixel = baseline.pixelColor(x, y);
-              const int difference = std::abs(pixel.alpha() - oldPixel.alpha()) +
-                                     std::abs(pixel.red() - oldPixel.red()) +
-                                     std::abs(pixel.green() - oldPixel.green()) +
-                                     std::abs(pixel.blue() - oldPixel.blue());
-              if (distanceSquared >= innerSquared && distanceSquared <= outerSquared &&
-                  difference >= 32 && pixel.alpha() >= 32 &&
-                  std::abs(pixel.red() - selectionColor.red()) <= 64 &&
-                  std::abs(pixel.green() - selectionColor.green()) <= 64 &&
-                  std::abs(pixel.blue() - selectionColor.blue()) <= 64) {
-                  const unsigned quadrant =
-                      (delta.x() >= 0.0 ? 1U : 0U) | (delta.y() >= 0.0 ? 2U : 0U);
-                  changedQuadrants |= 1U << quadrant;
-              }
-          }
-      }
-      return changedQuadrants == 0xFU;
-  }
-
-  // Stable production row identities for the fixture's two lane kinds; the
-  // parameter index itself comes only from AutomationCanvas::parameterIndex.
-  EditorAutomationRowId laneRow(LaneKind kind)
-  {
-      if (kind == LaneKind::Tempo)
-          return {EditorAutomationRowKind::Tempo, 0, 0};
-      return {EditorAutomationRowKind::ControlChange, 0, 10};
-  }
-
-  LaneGeometry laneGeometry(const AutomationRasterFixture &fixture, LaneKind kind)
-  {
-      LaneGeometry geometry;
-      geometry.handle = kind == LaneKind::Tempo ? AutomationRasterFixture::kTempoHandle
-                                                : fixture.handleFor(fixture.pan);
-      geometry.curveColor = themes::color(themes::Role::song_view_automation_node_ink);
-      geometry.body = fixture.bodyFor(geometry.handle);
-      return geometry;
-  }
-
-  } // namespace
-
-  AutomationRasterTest::AutomationRasterTest(QString project, QString song)
-      : m_projectPath(std::move(project))
-      , m_song(std::move(song))
-  {}
-
-  void AutomationRasterTest::init()
-  {
-      QString error;
-      m_project = checks::ProjectFixture::copyOf(m_projectPath, error);
-
-Original expression:
-  QVERIFY2(m_project, qPrintable(error));
 
 A002 | AutomationRasterTest::init | src/checks/automation/raster/painting.cpp:220
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The fixture staging and configuration this guard performs has no converted-lane ingress.
-Source context since previous assertion:
-
-      m_fixture = AutomationRasterFixture::create(m_project->root(), m_song, error);
-
-Original expression:
-  QVERIFY2(m_fixture, qPrintable(error));
 
 A003 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:268
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The fixture staging and configuration this guard performs has no converted-lane ingress.
-Source context since previous assertion:
-
-  }
-
-  void AutomationRasterTest::cleanup()
-  {
-      if (m_fixture) {
-          m_fixture->shutdown();
-          m_fixture.reset();
-      }
-      m_project.reset();
-  }
-
-  bool AutomationRasterTest::configurePainting()
-  {
-      fixture().configurePainting();
-      return fixture().page().canvas() && !fixture().automationGutterInput().bounds().isEmpty();
-  }
-
-  bool AutomationRasterTest::configureInteraction()
-  {
-      fixture().configureInteraction();
-      return fixture().page().canvas() && !fixture().voiceInput().bounds().isEmpty();
-  }
-
-  AutomationRasterFixture &AutomationRasterTest::fixture() noexcept
-  {
-      return *m_fixture;
-  }
-
-  const AutomationRasterFixture &AutomationRasterTest::fixture() const noexcept
-  {
-      return *m_fixture;
-  }
-
-  void AutomationRasterTest::curvesNodesAndSelectedRingsRender_data()
-  {
-      QTest::addColumn<int>("laneKind");
-      QTest::addColumn<bool>("logicalDpr");
-      QTest::newRow("tempo-native-dpr") << int(LaneKind::Tempo) << false;
-      QTest::newRow("cc-native-dpr") << int(LaneKind::Cc) << false;
-      // This row exercises the logical-DPR projection path separately from the native window DPR.
-      QTest::newRow("tempo-one-dpr") << int(LaneKind::Tempo) << true;
-  }
-
-  void AutomationRasterTest::curvesNodesAndSelectedRingsRender()
-  {
-      QFETCH(int, laneKind);
-      QFETCH(bool, logicalDpr);
-
-Original expression:
-  QVERIFY(configurePainting());
 
 A004 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:273
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The legacy AutomationRasterFixture value, device pixel ratio or lane/ring geometry this guard validated has no converted-lane predicate.
-Source context since previous assertion:
-
-      if (logicalDpr)
-          fixture().setAutomationDpr(1.0);
-      else
-          fixture().setAutomationDpr(fixture().nativeAutomationDpr());
-
-Original expression:
-  QVERIFY(fixture().automationDpr() > 0.0);
 
 A005 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:278
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The fixture staging and configuration this guard performs has no converted-lane ingress.
-Source context since previous assertion:
-
-
-      const auto kind = static_cast<LaneKind>(laneKind);
-      // Each parameter owns the shared plot only while active: activate before
-      // writing and observing its own image and layer geometry.
-
-Original expression:
-  QVERIFY(fixture().activateParameter(laneRow(kind)));
 
 A006 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:305
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The legacy AutomationRasterFixture value, device pixel ratio or lane/ring geometry this guard validated has no converted-lane predicate.
-Source context since previous assertion:
-
-      SongDocument &document = fixture().document();
-      TempoLane tempoLane(document);
-      CCLaneAdapter ccLane(document, 0, uint8_t{10});
-      NodeLane &lane = kind == LaneKind::Tempo ? static_cast<NodeLane &>(tempoLane)
-                                               : static_cast<NodeLane &>(ccLane);
-      // Seed both parameters so the away activation below repaints written
-      // content rather than a slot with no curve at all.
-      TempoEdit edit;
-      edit.remove = document.tempoPoints();
-      edit.add = {{kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoHeld)},
-                  {kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoNode)},
-                  {kSecondTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoSecond)}};
-      document.applyTempoEdit(edit);
-      document.writeLanePoints(
-          0, uint8_t{10}, 0, CoreTimeDefaults::kNoTick,
-          {{kHeldTick, kCcHeld}, {kNodeTick, kCcNode}, {kSecondTick, kCcSecond}});
-
-      const quint64 curvesBefore =
-          fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationCurves).revision;
-      const quint64 nodesBefore =
-          fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes).revision;
-      fixture().documentChanged();
-      fixture().automationPointerLeave();
-      fixture().pump();
-
-      const LaneGeometry geometry = laneGeometry(fixture(), kind);
-
-Original expression:
-  QVERIFY(geometry.handle.valid());
 
 A007 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:306
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The legacy AutomationRasterFixture value, device pixel ratio or lane/ring geometry this guard validated has no converted-lane predicate.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!geometry.body.isEmpty());
 
 A008 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:317
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The QSG layer rects, triangles, colors and revisions it inspected belong to the removed automation paint path; the converted drawer exposes no such layer, and surviving geometry is asserted in src/checks/automation/presentation/painting.swift.
-Source context since previous assertion:
-
-      const int held = kind == LaneKind::Tempo ? kTempoHeld : kCcHeld;
-      const int node = kind == LaneKind::Tempo ? kTempoNode : kCcNode;
-      const qreal heldY = nodelane::valueY(lane, geometry.body, fixture().geometry(), held);
-      const qreal nodeY = nodelane::valueY(lane, geometry.body, fixture().geometry(), node);
-      const qreal nodeX = fixture().projection().displayX(kNodeTick, fixture().automationDpr());
-      const qreal midX = fixture().projection().displayX(48, fixture().automationDpr());
-      const qreal nodeRadius = nodelane::hoverRingRadius(fixture().geometry());
-      const qreal lineHalf =
-          std::max(qreal(layout::singlePixel()), qreal(fixture().geometry().hoverPaintPadding + 1));
-      const auto &scene = fixture().quickScene();
-
-Original expression:
-  QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationCurves).revision > curvesBefore);
 
 A009 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:318
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The QSG layer rects, triangles, colors and revisions it inspected belong to the removed automation paint path; the converted drawer exposes no such layer, and surviving geometry is asserted in src/checks/automation/presentation/painting.swift.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision > nodesBefore);
 
 A010 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:319
 Disposition: GAP
@@ -546,53 +157,15 @@ Original expression:
 
 A019 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:362
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The QSG layer rects, triangles, colors and revisions it inspected belong to the removed automation paint path; the converted drawer exposes no such layer, and surviving geometry is asserted in src/checks/automation/presentation/painting.swift.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision >
-              selectedNodesBefore);
 
 A020 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:374
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The fixture staging and configuration this guard performs has no converted-lane ingress.
-Source context since previous assertion:
-
-
-      // Activating the away parameter must clear the inactive plot's stale QSG
-      // geometry and repaint the away curve while the logical selection stays
-      // untouched and available for subsequent edits.
-      const auto awayKind = kind == LaneKind::Tempo ? LaneKind::Cc : LaneKind::Tempo;
-      const LaneGeometry awayGeometry = laneGeometry(fixture(), awayKind);
-      const quint64 awayCurvesBefore =
-          scene.layer(songview::TimelineQuickLayer::AutomationCurves).revision;
-      const quint64 awayNodesBefore =
-          scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision;
-
-Original expression:
-  QVERIFY(fixture().activateParameter(laneRow(awayKind)));
 
 A021 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:377
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The QSG layer rects, triangles, colors and revisions it inspected belong to the removed automation paint path; the converted drawer exposes no such layer, and surviving geometry is asserted in src/checks/automation/presentation/painting.swift.
-Source context since previous assertion:
-
-      fixture().automationPointerLeave();
-      fixture().pump();
-
-Original expression:
-  QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationCurves).revision >
-              awayCurvesBefore);
 
 A022 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:379
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The QSG layer rects, triangles, colors and revisions it inspected belong to the removed automation paint path; the converted drawer exposes no such layer, and surviving geometry is asserted in src/checks/automation/presentation/painting.swift.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision > awayNodesBefore);
 
 A023 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:388
 Disposition: GAP
@@ -656,15 +229,6 @@ Original expression:
 
 A028 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:403
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The fixture staging and configuration this guard performs has no converted-lane ingress.
-Source context since previous assertion:
-
-
-      // Switching back re-renders the original parameter's selected rings from
-      // the retained logical selection.
-
-Original expression:
-  QVERIFY(fixture().activateParameter(laneRow(kind)));
 
 A029 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:406
 Disposition: GAP
@@ -701,46 +265,12 @@ Original expression:
 
 A031 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:421
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The fixture staging and configuration this guard performs has no converted-lane ingress.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(fixture().activateParameter(fixture().pan.row));
 
 A032 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:438
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The legacy AutomationRasterFixture value, device pixel ratio or lane/ring geometry this guard validated has no converted-lane predicate.
-Source context since previous assertion:
-
-      fixture().setAutomationDpr(fixture().nativeAutomationDpr());
-
-      SongView &view = fixture().view();
-      const Tick groupA = view.grid().snapTick(48.0, false);
-      const Tick groupB = view.grid().snapTick(72.0, false);
-      const Tick groupC = view.grid().snapTick(120.0, false);
-      constexpr int kGroupAValue = 40;
-      constexpr int kGroupBValue = 80;
-      constexpr int kGroupCValue = 55;
-      fixture().document().writeLanePoints(
-          0, fixture().pan.controller, 0, CoreTimeDefaults::kNoTick,
-          {{Tick(groupA), kGroupAValue}, {Tick(groupB), kGroupBValue}, {Tick(groupC), kGroupCValue}});
-      fixture().documentChanged();
-
-      const LaneHandle panHandle = fixture().handleFor(fixture().pan);
-      const QRect body = fixture().bodyFor(panHandle);
-
-Original expression:
-  QVERIFY(panHandle.valid());
 
 A033 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:439
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The legacy AutomationRasterFixture value, device pixel ratio or lane/ring geometry this guard validated has no converted-lane predicate.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(!body.isEmpty());
 
 A034 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:451
 Disposition: GAP
@@ -764,37 +294,9 @@ Original expression:
 
 A035 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:468
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The legacy AutomationRasterFixture value, device pixel ratio or lane/ring geometry this guard validated has no converted-lane predicate.
-Source context since previous assertion:
-
-
-      const quint64 nodesBefore =
-          fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes).revision;
-      songview::EditorSelectionModel::TimeSelection selection;
-      selection.startTick = groupA;
-      selection.endTick = includeEnd ? groupB + 1 : groupB;
-      view.selectionModel().setTimeSelection(selection);
-      fixture().documentChanged();
-      fixture().pump();
-
-      const auto &nodes = fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes);
-      const QColor selectionColor = fixture().automationGutterInput().palette().highlight().color();
-      const qreal ringRadius = fixture().geometry().selectedNodeRingRadius;
-      const qreal ringWidth = fixture().geometry().selectedNodeRingDipWidth;
-      const qreal nodeOuterRadius =
-          fixture().geometry().nodePaintRadius + fixture().geometry().nodeOutlineDipWidth;
-
-Original expression:
-  QVERIFY(ringRadius + ringWidth / 2.0 > nodeOuterRadius);
 
 A036 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:469
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION (no ingress): the offscreen QQuickWindow raster harness src/checks/automation/raster/painting.cpp was deleted in 31ea635f and appears in no CMake target, and checkcatalog.cpp registers no automation lane, so nothing executes this observation; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The QSG layer rects, triangles, colors and revisions it inspected belong to the removed automation paint path; the converted drawer exposes no such layer, and surviving geometry is asserted in src/checks/automation/presentation/painting.swift.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(nodes.revision > nodesBefore);
 
 A037 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:470
 Disposition: GAP
@@ -899,189 +401,102 @@ does not close any A entry. Preserve their surrounding setup and order in the pa
 
 S001 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "a centered parameter emits maximum, minimum and neutral labels"
-  report.expectEqual([AutomationScaleLabel.Role.maximum, .minimum, .neutral],
-                         pan.scaleLabels.map(\.role), cppID: drawerAutomationLabelsID,
-                         what: "a centered parameter emits maximum, minimum and neutral labels")
 
 S002 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the scale labels use the parameter's own formatting"
-  report.expectEqual(["c_v+63", "c_v-64", "c_v+0"], pan.scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
-                         what: "the scale labels use the parameter's own formatting")
 
 S003 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the neutral label names the neutral value"
-  report.expectEqual(64, pan.scaleLabels[2].value, cppID: drawerAutomationLabelsID,
-                         what: "the neutral label names the neutral value")
 
 S004 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "maximum, neutral and minimum sit at their curve-true heights"
-  report.expect(pan.scaleLabels[0].y < pan.scaleLabels[2].y
-                        && pan.scaleLabels[2].y < pan.scaleLabels[1].y,
-                    cppID: drawerAutomationLabelsID,
-                    message: "maximum, neutral and minimum sit at their curve-true heights")
 
 S005 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "a parameter without a neutral emits only its extremes"
-  report.expectEqual([AutomationScaleLabel.Role.maximum, .minimum],
-                         volume.scaleLabels.map(\.role), cppID: drawerAutomationLabelsID,
-                         what: "a parameter without a neutral emits only its extremes")
 
 S006 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "Volume's scale labels are its raw values"
-  report.expectEqual(["127", "0"], volume.scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
-                         what: "Volume's scale labels are its raw values")
 
 S007 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "Tempo's scale labels are its BPM bounds with no neutral"
-  report.expectEqual(["255", "20"], fixture.projection(.tempo).scaleLabels.map(\.text),
-                         cppID: drawerAutomationLabelsID,
-                         what: "Tempo's scale labels are its BPM bounds with no neutral")
 
 S008 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "Bend's scale labels take the bend format path"
-  report.expectEqual(["+8191", "-8192", "0"], fixture.projection(fixture.bendLane)
-          .scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
-                         what: "Bend's scale labels take the bend format path")
 
 S009 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the row stack carries one row per catalog parameter"
-  report.expectEqual(AutomationCatalog.count, stack.rows.count, cppID: drawerAutomationLabelsID,
-                         what: "the row stack carries one row per catalog parameter")
 
 S010 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the Tempo row leads the stack"
-  report.expectEqual(AutomationParameter.tempo, stack.rows[0].parameter, cppID: drawerAutomationLabelsID,
-                         what: "the Tempo row leads the stack")
 
 S011 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "a row counts the lane's written events"
-  report.expectEqual(2, stack.row(for: fixture.volumeLane)?.eventCount ?? 0, cppID: drawerAutomationLabelsID,
-                         what: "a row counts the lane's written events")
 
 S012 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "a lane the document never wrote counts no event"
-  report.expectEqual(0, stack.row(for: fixture.modulationLane)?.eventCount ?? 0, cppID: drawerAutomationLabelsID,
-                         what: "a lane the document never wrote counts no event")
 
 S013 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "a ready stack shows every row"
-  report.expectEqual(AutomationCatalog.count, stack.visibleRowCount, cppID: drawerAutomationLabelsID,
-                         what: "a ready stack shows every row")
 
 S014 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the lane count sums the written events, Tempo included"
-  report.expectEqual(4, stack.laneCount, cppID: drawerAutomationLabelsID,
-                         what: "the lane count sums the written events, Tempo included")
 
 S015 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the selector's counts follow the catalog order, Tempo first"
-  report.expectEqual([1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], stack.eventCounts(track: 0),
-                         cppID: drawerAutomationLabelsID,
-                         what: "the selector's counts follow the catalog order, Tempo first")
 
 S016 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "without a track only the Tempo row is visible"
-  report.expectEqual(1, hidden.visibleRowCount, cppID: drawerAutomationLabelsID,
-                         what: "without a track only the Tempo row is visible")
 
 S017 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "without a track the selector counts only Tempo"
-  report.expectEqual([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hidden.eventCounts(track: 0),
-                         cppID: drawerAutomationLabelsID,
-                         what: "without a track the selector counts only Tempo")
 
 S018 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "an active selection publishes its tick range"
-  report.expectEqual(range, stack.activeTickRange, cppID: drawerAutomationRowsID,
-                         what: "an active selection publishes its tick range")
 
 S019 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a covered lane with events inside the range carries both indicators"
-  report.expect(panRow?.coversNodes == true && panRow?.coversLane == true
-                        && panRow?.selectionHasEvents == true,
-                    cppID: drawerAutomationRowsID,
-                    message: "a covered lane with events inside the range carries both indicators")
 
 S020 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "an uncovered lane carries no scope indicator"
-  report.expect(volumeRow?.coversNodes == false && volumeRow?.selectionHasEvents == false,
-                    cppID: drawerAutomationRowsID, message: "an uncovered lane carries no scope indicator")
 
 S021 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the selected parameters are the covered lanes with events"
-  report.expectEqual([fixture.panLane, .tempo], stack.selectedParameters(track: 0), cppID: drawerAutomationRowsID,
-                         what: "the selected parameters are the covered lanes with events")
 
 S022 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "scope coverage alone never marks a row selected"
-  report.expect(empty.row(for: fixture.panLane)?.coversNodes == true
-                        && empty.row(for: fixture.panLane)?.selectionHasEvents == false,
-                    cppID: drawerAutomationRowsID, message: "scope coverage alone never marks a row selected")
 
 S023 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a covered but empty range selects no parameter"
-  report.expectEqual([AutomationParameter](), empty.selectedParameters(track: 0), cppID: drawerAutomationRowsID,
-                         what: "a covered but empty range selects no parameter")
 
 S024 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a track-scoped selection covers the selected track's lanes"
-  report.expect(trackScoped.covers(fixture.panLane, usedTracks: [0]), cppID: drawerAutomationRowsID,
-                    message: "a track-scoped selection covers the selected track's lanes")
 
 S025 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a track-scoped selection leaves another track's lanes alone"
-  report.expect(!trackScoped.covers(.controlChange(track: 1, controller: TimeDefaults.ccPan),
-                                        usedTracks: [0, 1]),
-                    cppID: drawerAutomationRowsID,
-                    message: "a track-scoped selection leaves another track's lanes alone")
 
 S026 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "Tempo is covered when the whole used set is selected"
-  report.expect(trackScoped.coversTempo(usedTracks: [0]), cppID: drawerAutomationRowsID,
-                    message: "Tempo is covered when the whole used set is selected")
 
 S027 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "Tempo is uncovered when part of the used set is selected"
-  report.expect(!trackScoped.coversTempo(usedTracks: [0, 1]), cppID: drawerAutomationRowsID,
-                    message: "Tempo is uncovered when part of the used set is selected")
 
 S028 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a zero-width range is no selection"
-  report.expect(!AutomationTimeSelection(range: TimeRange(startTick: 20, endTick: 20),
-                                             scope: .lanes).isActive,
-                    cppID: drawerAutomationRowsID, message: "a zero-width range is no selection")
 
 S029 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the page publishes the selected inactive parameters"
-  report.expectEqual([fixture.panLane, .tempo], fixture.page.selectedParameters, cppID: drawerAutomationRowsID,
-                         what: "the page publishes the selected inactive parameters")
 
 S030 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the active parameter is not the selected one"
-  report.expectEqual(fixture.volumeLane, fixture.page.activeParameter, cppID: drawerAutomationRowsID,
-                         what: "the active parameter is not the selected one")
 
 S031 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "a covered lane with events pins as a ghost"
-  report.expect(fixture.page.toggleGhostParameter(index: panIndex), cppID: drawerAutomationRowsID,
-                    message: "a covered lane with events pins as a ghost")
 
 S032 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the ghost label names the curve and its event count"
-  report.expectEqual(["Pan (PAN) · 2 Events"], fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
-                         what: "the ghost label names the curve and its event count")
 
 S033 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "the pin toggles off again"
-  report.expect(fixture.page.toggleGhostParameter(index: panIndex), cppID: drawerAutomationRowsID,
-                    message: "the pin toggles off again")
 
 S034 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "unpinning drops the ghost label"
-  report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
-                         what: "unpinning drops the ghost label")
-
-Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
-src/checks/automation/AutomationPageChecks.swift:402
-  report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

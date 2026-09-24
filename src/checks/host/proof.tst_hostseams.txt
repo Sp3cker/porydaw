@@ -6,108 +6,25 @@ Original SHA-256: 2d0d99c86a6373c9d97b973ef41ea654cbe0bd22e9e6ecb02e454047c6004a
 Swift counterpart: none identified
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
-Status and evidence
-The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. No Swift counterpart was identified for this deleted host suite. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Nothing here is marked MATCHED or PARTIAL; unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove any Swift replacement.
 
-Dispositions and no-ingress evidence
 NATIVE is no longer used: every site that observed a native-window, embedding, delivery, framebuffer, settings, popup, or harness obligation is RETIRED-REPRESENTATION, because the mechanism that carried it is gone (this C++ file was deleted at 31ea635f, appears in no CMake target, and checkcatalog.cpp registers no host entry; re-verified 2026-09-24). GAP sites are behavior assertions whose Swift owners exist but whose original predicates have no executed Swift equivalent; each mapping names the owner verified under src/swift/app. The Reference revision and Original SHA-256 below were re-verified against each other (git show <revision>:<path> | shasum -a 256) before any retirement claim.
 
-Verification
 Command: deno task verify:qml-roll --filter swiftroll-window
 Result: PASS 1/1 (quoted post-merge fc39ba34 result; lane not re-run here). The lane close handshake (bootstrap.hostClosing() then bootstrap.acknowledgeSceneRemoval(), forwarding to ApplicationSession.hostClosing()/acknowledgeGridDetached()) executes the Swift close path named in the RETIRED-REPRESENTATION mappings. swiftcore/shell lanes are not cited: no site maps to their predicates.
 Command: deno task proof check
 Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity.
 
-Execution ownership
-The deleted host harness has no Swift entry point and no paired fixture. The Swift close path named in the RETIRED-REPRESENTATION mappings (ApplicationSession.hostClosing/acknowledgeGridDetached, ShellPresenter.beginClose/sceneDestroyed) is source-verified under src/swift/app; the session half executes in the swiftroll-window lane close handshake. GAP sites name their Swift owners verified under src/swift/app, with no executed equivalent predicate.
-
-Fixture, sequence and row constraints
-drawerContextTick boundary rows (-1.0, 0.49, 0.5, 0.51 ticks) expand one conversion site into four edge cases. The embedded-window case runs a two-phase sequence (take for embedding, then detach) with detach-count and identity sites per phase; the unhosted-detach case asserts the same obligations after synchronous window destruction.
-Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
-
-
-Original assertion inventory and source sequence
-
 A001 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:41
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired SyntheticHost QWidget harness construction and prepare() guard that staged the SongTabQuickHost embedding; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  #include "checks/fwd.hpp"
-  #include "checks/host/hosttestsupport.h"
-  #include "checks/support/support.h"
-  #include "checks/support/timelinequickcheck.h"
-  #include <memory>
-
-  #include <QPointer>
-  #include <QQuickItem>
-  #include <QQuickWindow>
-  #include <QWidget>
-  #include <QtTest>
-
-  #include "ui/editordrawer/automationcanvas.h"
-  #include "ui/editordrawer/automationpage.h"
-  #include "ui/editordrawer/drawerchrome.h"
-  #include "ui/editordrawer/drawerpage.h"
-  #include "ui/editordrawer/velocityarea/velocityarea.h"
-  #include "ui/editordrawer/voicechangearea/voicechangearea.h"
-  #include "ui/layout.h"
-  #include "ui/songtabquickhost.h"
-  #include "ui/songview.h"
-  #include "ui/songview/quick/timelinequickview.h"
-
-  namespace checks::host {
-  namespace {
-
-  class HostSeamsTest final : public QObject
-  {
-      Q_OBJECT
-    public:
-      HostSeamsTest() = default;
-
-      Q_DISABLE_COPY_MOVE(HostSeamsTest)
-
-    private slots:
-
-      void automationPlotFillsHostViewport()
-      {
-          SyntheticHost host;
-          QString error;
-
-Original expression:
-  QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A002 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:43
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired SongView editorDrawer() QWidget accessor with the SongTabQuickHost embedding; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift EditorDrawerPresenter owns drawer behavior through ApplicationSession/SongTabsController, never through a QWidget handle; Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed; lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-          auto *drawer = host.view().editorDrawer();
-
-Original expression:
-  QVERIFY(drawer)
 
 A003 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:48
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired drawer automation-page QWidget handle with the SongTabQuickHost embedding; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift AutomationPage owns the behavior through ApplicationSession/SongTabsController, never through a QWidget handle; Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed; lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-          AutomationPage *page = drawer->automationPage();
-          host.view().setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-          host.view().setDrawerSectionHeight(EditorDrawerPage::Automations, 180);
-          settle();
-
-Original expression:
-  QVERIFY(page)
 
 A004 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:50
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired automation canvas QWidget handle with the SongTabQuickHost embedding; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift AutomationPage/AutomationScene owns the behavior through ApplicationSession/SongTabsController, never through a QWidget handle; Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed; lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-          auto *canvas = page->canvas();
-
-Original expression:
-  QVERIFY(canvas)
 
 A005 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:53
 Disposition: GAP
@@ -171,18 +88,6 @@ Original expression:
 
 A011 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:69
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired SyntheticHost QWidget harness construction and prepare() guard that staged the SongTabQuickHost embedding; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-      }
-
-      void editorEndpointsUpdateCameraAndResolveGridVoice()
-      {
-          SyntheticHost host(/*includeLongTail=*/true);
-          QString error;
-
-Original expression:
-  QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A012 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:77
 Disposition: GAP
@@ -293,18 +198,6 @@ Original expression:
 
 A023 | editorStateIsCosmeticOnly | src/checks/host/tst_hostseams.cpp:95
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired SyntheticHost QWidget harness construction and prepare() guard that staged the SongTabQuickHost embedding; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-      }
-
-      void editorStateIsCosmeticOnly()
-      {
-          SyntheticHost host;
-          QString error;
-
-Original expression:
-  QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A024 | editorStateIsCosmeticOnly | src/checks/host/tst_hostseams.cpp:107
 Disposition: GAP
@@ -346,18 +239,6 @@ Original expression:
 
 A027 | documentChangedPreservesCosmetics | src/checks/host/tst_hostseams.cpp:116
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired SyntheticHost QWidget harness construction and prepare() guard that staged the SongTabQuickHost embedding; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-      }
-
-      void documentChangedPreservesCosmetics()
-      {
-          SyntheticHost host;
-          QString error;
-
-Original expression:
-  QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A028 | documentChangedPreservesCosmetics | src/checks/host/tst_hostseams.cpp:125
 Disposition: GAP
@@ -378,338 +259,93 @@ Original expression:
 
 A029 | embeddedWindowOwnershipTransfersToTheContainer | src/checks/host/tst_hostseams.cpp:145
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired quick-view handle taken for SongTabQuickHost embedding; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-      }
-
-      // One-way embedding handoff: the host adapter takes the window exactly
-      // once without detaching; an explicit detach while hosted only unbinds
-      // (the transferred window stays alive under its container); destroying
-      // the host destroys the container and the window while the coordinator
-      // is still alive; the coordinator is destroyed last.
-      void embeddedWindowOwnershipTransfersToTheContainer()
-      {
-          QPointer<QQuickWindow> window;
-          QPointer<QQuickItem> root;
-          QPointer<QWidget> container;
-          int detachCount = 0;
-          bool detachWhileWindowValid = false;
-          {
-              SongDocument document;
-              auto view = std::make_unique<SongView>(document);
-              checks::support::bindEditActionsForTest(*view);
-              songview::TimelineQuickView *const quick = view->quickView();
-
-Original expression:
-  QVERIFY(quick)
 
 A030 | embeddedWindowOwnershipTransfersToTheContainer | src/checks/host/tst_hostseams.cpp:147
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired embedded QQuickWindow handle under SongTabQuickHost; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-              window = quick->quickWindow();
-
-Original expression:
-  QVERIFY(window)
 
 A031 | embeddedWindowOwnershipTransfersToTheContainer | src/checks/host/tst_hostseams.cpp:149
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired embedded root QQuickItem handle under SongTabQuickHost; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-              root = quick->rootObject();
-
-Original expression:
-  QVERIFY(root)
 
 A032 | QObject::connect | src/checks/host/tst_hostseams.cpp:165
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired QObject::connect-wired QWidget container for the embedded quick window; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-              // Bounded reentry: a listener may detach again while the borrow is
-              // still live; the nested call must be inert, so the signal fires
-              // exactly once. The detachCount == 1 bound also keeps a pre-fix
-              // coordinator to one nested emission, never unbounded recursion.
-              QObject::connect(quick, &songview::TimelineQuickView::windowAboutToDetach, quick,
-                               [&detachCount, &detachWhileWindowValid, quick] {
-                                   ++detachCount;
-                                   detachWhileWindowValid = quick->quickWindow() != nullptr;
-                                   if (detachCount == 1)
-                                       quick->detachWindow();
-                               });
-              {
-                  QWidget owner;
-                  const SongTabQuickHost adapter(*quick, owner);
-                  container = adapter.container();
-
-Original expression:
-  QVERIFY(container)
 
 A033 | QObject::connect | src/checks/host/tst_hostseams.cpp:166
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired takeWindowForEmbedding() one-way ownership transfer into SongTabQuickHost; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!quick->takeWindowForEmbedding())
 
 A034 | QObject::connect | src/checks/host/tst_hostseams.cpp:167
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired detach-signal count observed before the SongTabQuickHost transfer; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ; // exactly-once, one-way
-
-Original expression:
-  QCOMPARE(detachCount, 0)
 
 A035 | QObject::connect | src/checks/host/tst_hostseams.cpp:168
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired embedded window identity (quickWindow() == window) under SongTabQuickHost; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;                  // the take never detaches
-
-Original expression:
-  QVERIFY(quick->quickWindow() == window)
 
 A036 | QObject::connect | src/checks/host/tst_hostseams.cpp:171
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired detach-signal count observed after SongTabQuickHost container destruction; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;   // identity survives the take
-
-                  quick->detachWindow(); // hosted detach: unbind only, transfer stands
-
-Original expression:
-  QCOMPARE(detachCount, 1)
 
 A037 | QObject::connect | src/checks/host/tst_hostseams.cpp:172
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired detach-while-valid signal observation under SongTabQuickHost; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(detachWhileWindowValid)
 
 A038 | QObject::connect | src/checks/host/tst_hostseams.cpp:173
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired QWidget container window handle after SongTabQuickHost detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ; // emitted while the window was usable
-
-Original expression:
-  QVERIFY(window)
 
 A039 | QObject::connect | src/checks/host/tst_hostseams.cpp:174
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired cleared quick window after SongTabQuickHost detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;                 // transferred window survives the unbind
-
-Original expression:
-  QVERIFY(!quick->quickWindow())
 
 A040 | QObject::connect | src/checks/host/tst_hostseams.cpp:175
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired cleared root object after SongTabQuickHost detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!quick->rootObject())
 
 A041 | QObject::connect | src/checks/host/tst_hostseams.cpp:176
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired cleared popup session after SongTabQuickHost detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!quick->popupSession())
 
 A042 | QObject::connect | src/checks/host/tst_hostseams.cpp:178
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired QPointer QWidget container cleared after SongTabQuickHost detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-              } // host dies: the container (and the window it owns) are destroyed
-
-Original expression:
-  QVERIFY(container.isNull())
 
 A043 | QObject::connect | src/checks/host/tst_hostseams.cpp:179
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired QPointer window cleared after SongTabQuickHost detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(window.isNull())
 
 A044 | QObject::connect | src/checks/host/tst_hostseams.cpp:180
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired QPointer root cleared after SongTabQuickHost detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(root.isNull())
 
 A045 | unhostedDetachEmitsOnceDestroysWindowAndClearsGetters | src/checks/host/tst_hostseams.cpp:195
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired unhosted quick-view handle before detach (no SongTabQuickHost container); deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-              view.reset(); // coordinator destroyed last, after the adapter
-          }
-      }
-
-      // Unhosted teardown: detach emits exactly once while the original window
-      // is still valid, synchronously destroys the owned window and the QML
-      // scene while domain objects (the voice-change area) stay alive, clears
-      // the getters, and repeating it is inert.
-      void unhostedDetachEmitsOnceDestroysWindowAndClearsGetters()
-      {
-          SongDocument document;
-          auto view = std::make_unique<SongView>(document);
-          checks::support::bindEditActionsForTest(*view);
-          songview::TimelineQuickView *const quick = view->quickView();
-
-Original expression:
-  QVERIFY(quick)
 
 A046 | unhostedDetachEmitsOnceDestroysWindowAndClearsGetters | src/checks/host/tst_hostseams.cpp:196
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired unhosted quick root object before detach (no SongTabQuickHost container); deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(quick->rootObject())
 
 A047 | unhostedDetachEmitsOnceDestroysWindowAndClearsGetters | src/checks/host/tst_hostseams.cpp:197
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired unhosted quick window before detach (no SongTabQuickHost container); deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(quick->quickWindow())
 
 A048 | unhostedDetachEmitsOnceDestroysWindowAndClearsGetters | src/checks/host/tst_hostseams.cpp:198
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired unhosted popup session before detach (no SongTabQuickHost container); deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(quick->popupSession())
 
 A049 | unhostedDetachEmitsOnceDestroysWindowAndClearsGetters | src/checks/host/tst_hostseams.cpp:202
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired voice-page QWidget handle surviving the unhosted QWidget-window detach (Swift VoiceChangesPage owns the behavior); deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-          QPointer<QQuickWindow> window = quick->quickWindow();
-          QPointer<QQuickItem> root = quick->rootObject();
-          QPointer<VoiceChangeArea> voice = view->editorDrawer()->voiceChangeArea();
-
-Original expression:
-  QVERIFY(voice)
 
 A050 | QObject::connect | src/checks/host/tst_hostseams.cpp:211
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired detach-signal count after synchronous QWidget-window destruction; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-          int detachCount = 0;
-          bool detachWhileWindowValid = false;
-          QObject::connect(quick, &songview::TimelineQuickView::windowAboutToDetach, quick,
-                           [&detachCount, &detachWhileWindowValid, quick] {
-                               ++detachCount;
-                               detachWhileWindowValid = quick->quickWindow() != nullptr;
-                           });
-          quick->detachWindow();
-
-Original expression:
-  QCOMPARE(detachCount, 1)
 
 A051 | QObject::connect | src/checks/host/tst_hostseams.cpp:212
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired detach-while-valid signal observation in the unhosted QWidget-window phase; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(detachWhileWindowValid)
 
 A052 | QObject::connect | src/checks/host/tst_hostseams.cpp:213
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired QPointer window cleared after the unhosted QWidget-window detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ; // emitted while the window was usable
-
-Original expression:
-  QVERIFY(window.isNull())
 
 A053 | QObject::connect | src/checks/host/tst_hostseams.cpp:214
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired QPointer root cleared after the unhosted QWidget-window detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;        // owned window destroyed synchronously
-
-Original expression:
-  QVERIFY(root.isNull())
 
 A054 | QObject::connect | src/checks/host/tst_hostseams.cpp:215
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired cleared quick window after the unhosted QWidget-window detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;          // QML scene unloaded and destroyed
-
-Original expression:
-  QVERIFY(!quick->quickWindow())
 
 A055 | QObject::connect | src/checks/host/tst_hostseams.cpp:216
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired cleared root object after the unhosted QWidget-window detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!quick->rootObject())
 
 A056 | QObject::connect | src/checks/host/tst_hostseams.cpp:217
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired cleared popup session after the unhosted QWidget-window detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!quick->popupSession())
 
 A057 | QObject::connect | src/checks/host/tst_hostseams.cpp:218
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired voice-page QWidget handle after the unhosted QWidget-window detach (Swift VoiceChangesPage owns the behavior); deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(voice)
 
 A058 | QObject::connect | src/checks/host/tst_hostseams.cpp:220
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: retired detach-signal count unchanged after the repeated unhosted detach; deleted at 31ea635f, in no CMake target, unregistered in checkcatalog.cpp. No Swift ingress: Swift close path is ApplicationSession.hostClosing/acknowledgeGridDetached with ShellPresenter.beginClose/sceneDestroyed (src/swift/app/ApplicationSession.swift, src/swift/app/shell/ShellPresenter.swift); lifecycleTermination tabular coverage lives in src/checks/host/proof.tst_hostintegration.txt, not here.
-Source context since previous assertion:
-  ; // domain outlives the scene and window
-          quick->detachWindow();
-
-Original expression:
-  QCOMPARE(detachCount, 1)
 
 Remaining original source (closing sequence and helper bodies):
   ; // idempotent

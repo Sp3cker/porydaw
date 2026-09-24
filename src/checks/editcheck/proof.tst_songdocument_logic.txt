@@ -14,616 +14,348 @@ Fixture and execution: duplicateNoteFile constructs one format-1 MIDI chunk with
 History caveat: no undo/redo or history-depth predicate is involved; no test-only history accessor. NoteID numeric values are per-document and may repeat between documents; Swift offers no same-instance adoptSmf mutation.
 Registered run path: src/checks/editcheck/NoteChecks.swift :: runNoteEditsSuite -> src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts, swiftcore suite 4 via src/checks/support/corecheck/CoreCheckSupport.swift :: pdcSuiteRun; both Swift counterparts compiled in src/checks/CMakeLists.txt :: swift_core_check. Legacy logic C++ check is absent from active CMake targets and checkcatalog.cpp. Native src/checks/editcheck/tst_scale.cpp was deleted in the gaps-audio-scale lane (deletion certificate in proof.tst_scale.txt); no scalecheck registration remains in src/checks/checkcatalog.cpp.
 
-Original assertion inventory
 No-ingress: the legacy logic file is absent from every current CMake target and unregistered in checkcatalog.cpp (§7). The Swift suite decodes in-memory bytes, never opens QTemporaryDir/QTemporaryFile; its nonthrowing SongDocument(file:) and PlaybackTimeline.build factories have no nullable/error branch. A new SongDocument creates a fresh per-document ID namespace and cannot adopt into the same document through any public API.
-
 
 A001 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:86
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A001 via S001 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:66 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A001, executed by S001. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(porydaw_scale::cScaleCount, int(expectedScales.size()));
+Mapping/reason: S001
 
 A002 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:88
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A002 (RETIRED-REPRESENTATION) via S005 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:68 in this uncompiled and unregistered C++ file (§7); the identical source site is retired in proof.tst_scale.txt A002 (non-optional ScaleID.displayOrder has no null ingress), while the order-content observation executes as S005. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QVERIFY(order != nullptr);
+Mapping/reason: S005
 
 A003 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:90
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A003 via S002 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:70 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A003, executed by S002. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(static_cast<int>(expected.id), index);
+Mapping/reason: S002
 
 A004 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:91
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A004 via S003 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:71 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A004, executed by S003. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(std::strcmp(porydaw_scale::scaleDisplayName(expected.id), expected.name), 0);
+Mapping/reason: S003
 
 A005 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:92
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A005 via S004 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:72 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A005, executed by S004. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(porydaw_scale::scaleMask(expected.id), expected.mask);
+Mapping/reason: S004
 
 A006 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:93
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A006 via S005 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:73 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A006, executed by S005. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(order[index], expected.id);
+Mapping/reason: S005
 
 A007 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_songdocument_logic.cpp:100
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A007 via S006 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:80 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A007, executed by S006. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(porydaw_scale::cRootCount, int(rootNames.size()));
+Mapping/reason: S006
 
 A008 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_songdocument_logic.cpp:102
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A008 via S007 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:82 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A008, executed by S007. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(std::strcmp(porydaw_scale::rootDisplayName(index), rootNames[size_t(index)]), 0);
+Mapping/reason: S007
 
 A009 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_songdocument_logic.cpp:103
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A009 via S008 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:83 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A009, executed by S008. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(porydaw_scale::defaultScale(), porydaw_scale::ScaleId::major);
+Mapping/reason: S008
 
 A010 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_songdocument_logic.cpp:104
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A010 via S009 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:84 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A010, executed by S009. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(porydaw_scale::defaultRoot(), 0);
+Mapping/reason: S009
 
 A011 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:110
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A011 via S010 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:90 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A011, executed by S010. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QVERIFY(isScalePitch(ScaleId::major, 0, 60));
+Mapping/reason: S010
 
 A012 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:111
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A012 via S011 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:91 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A012, executed by S011. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QVERIFY(!isScalePitch(ScaleId::major, 0, 61));
+Mapping/reason: S011
 
 A013 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:112
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A013 via S012 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:92 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A013, executed by S012. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QVERIFY(isScalePitch(ScaleId::major, 2, 62));
+Mapping/reason: S012
 
 A014 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:113
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A014 via S013 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:93 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A014, executed by S013. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QVERIFY(!isScalePitch(ScaleId::major, 2, 60));
+Mapping/reason: S013
 
 A015 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:114
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A015 via S014 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:94 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A015, executed by S014. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(firstScalePitchAbove(ScaleId::major, 0, 61), 62);
+Mapping/reason: S014
 
 A016 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:115
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A016 via S015 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:95 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A016, executed by S015. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(firstScalePitchBelow(ScaleId::major, 0, 61), 60);
+Mapping/reason: S015
 
 A017 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:116
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A017 via S016 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:96 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A017, executed by S016. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(firstScalePitchAbove(ScaleId::major, 0, 127), -1);
+Mapping/reason: S016
 
 A018 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:117
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A018 via S017 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:97 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A018, executed by S017. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(firstScalePitchBelow(ScaleId::major, 0, 0), -1);
+Mapping/reason: S017
 
 A019 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:118
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A019 via S018 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:98 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A019, executed by S018. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(nextScalePitch(ScaleId::major, 0, 60, 1), 62);
+Mapping/reason: S018
 
 A020 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:119
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A020 via S019 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:99 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A020, executed by S019. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(nextScalePitch(ScaleId::major, 0, 62, -1), 60);
+Mapping/reason: S019
 
 A021 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:120
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A021 via S020 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:100 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A021, executed by S020. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(nextScalePitch(ScaleId::major, 0, 60, 3), 65);
+Mapping/reason: S020
 
 A022 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:121
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A022 via S021 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:101 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A022, executed by S021. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(nextScalePitch(ScaleId::major, 0, 67, -3), 62);
+Mapping/reason: S021
 
 A023 | ScaleCheckTest::diatonicDestinations | src/checks/editcheck/tst_songdocument_logic.cpp:169
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A023 via S022 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:149 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A023, executed by S022. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(result, accepted);
+Mapping/reason: S022
 
 A024 | ScaleCheckTest::diatonicDestinations | src/checks/editcheck/tst_songdocument_logic.cpp:170
 Disposition: RETIRED-REPRESENTATION
-Swift: proof.tst_scale.txt A024 via S023 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:150 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A024, executed by S023. This file's copy stays retired with the uncompiled check.
-Original expression:
-  QCOMPARE(
-          QByteArray(reinterpret_cast<const char *>(destination.data()), int(destination.size())),
-          expected);
+Mapping/reason: S023
 
 A025 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:178
 Disposition: RETIRED-REPRESENTATION
-Swift: none; C++ temporary-directory staging retired
-Mapping/reason: QTemporaryDir::isValid tests C++ disk staging only; the uncompiled/unregistered logic check has no current native ingress (§7), while Swift decodes in-memory MIDI and never creates a QTemporaryDir.
-Original expression:
-  QVERIFY(directory.isValid());
 
 A026 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:182
 Disposition: RETIRED-REPRESENTATION
-Swift: none; C++ temporary-file staging retired
-Mapping/reason: QTemporaryFile::open tests C++ disk staging only; the uncompiled/unregistered logic check has no current native ingress (§7), while Swift decodes in-memory MIDI and never opens a QTemporaryFile.
-Original expression:
-  QVERIFY(file.open());
 
 A027 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:183
 Disposition: RETIRED-REPRESENTATION
-Swift: none; C++ temporary-file write retired
-Mapping/reason: QTemporaryFile::write byte count tests C++ disk staging only; the uncompiled/unregistered logic check has no current native ingress (§7), while Swift encodes and decodes in-memory MIDI rather than writing QTemporaryFile bytes.
-Original expression:
-  QCOMPARE(file.write(bytes), qint64(bytes.size()));
 
 A028 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:187
 Disposition: MATCHED
-Swift: S020 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: The same fixture's bytes pass to throwing MidiFile.decode; failure enters S020's report.fail(parsedIdentityID) catch under the original cppID. QTemporaryFile staging itself is retired at A025-A027.
-Original expression:
-  QVERIFY2(SmfFile::readFile(file.fileName(), &parsed, &error), qPrintable(error));
+Mapping: S020
 
 A029 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:188
 Disposition: MATCHED
-Swift: S009 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S009 checks exactly one decoded MIDI chunk for the same duplicate-note fixture, under the original cppID.
-Original expression:
-  QCOMPARE(parsed.tracks.size(), size_t(1));
+Mapping: S009
 
 A030 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:189
 Disposition: MATCHED
-Swift: S010 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S010 checks exactly three decoded events in that chunk, under the original cppID.
-Original expression:
-  QCOMPARE(parsed.tracks.front().events.size(), size_t(3));
+Mapping: S010
 
 A031 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:193
 Disposition: MATCHED
-Swift: S011 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S011 checks isNoteOn on the first decoded duplicate event, under the original cppID.
-Original expression:
-  QVERIFY(first.isNoteOn());
+Mapping: S011
 
 A032 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:194
 Disposition: MATCHED
-Swift: S012 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S012 checks isNoteOn on the second decoded duplicate event, under the original cppID.
-Original expression:
-  QVERIFY(second.isNoteOn());
+Mapping: S012
 
 A033 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:195
 Disposition: MATCHED
-Swift: S013 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S013 checks isNoteEnd on the third decoded event, under the original cppID.
-Original expression:
-  QVERIFY(ordinary.isNoteEnd());
+Mapping: S013
 
 A034 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:196
 Disposition: MATCHED
-Swift: S014 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S014 asserts the first decoded note-on in the original duplicate-note fixture has no assigned ID under the same cppID; cross-fixture S007 corroborates the generic decode property.
-Original expression:
-  QVERIFY(!first.noteId.isAssigned());
+Mapping: S014, S007
 
 A035 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:197
 Disposition: MATCHED
-Swift: S015 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S015 asserts the second decoded note-on in the original duplicate-note fixture has no assigned ID under the same cppID; cross-fixture S007 corroborates the generic decode property.
-Original expression:
-  QVERIFY(!second.noteId.isAssigned());
+Mapping: S015, S007
 
 A036 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:198
 Disposition: MATCHED
-Swift: S016 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S016 checks the decoded third event's noteID is nil or unassigned; unlike S007, it includes the note-end, under the original cppID.
-Original expression:
-  QVERIFY(!ordinary.noteId.isAssigned());
+Mapping: S016, S007
 
 A037 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:201
 Disposition: RETIRED-REPRESENTATION
-Swift: none; Swift timeline construction is non-optional
-Mapping/reason: C++ MidiTimeline::load has a nullable/error branch, but Swift PlaybackTimeline.build(state:sampleRate:) cannot fail or return nil; the uncompiled/unregistered C++ check has no current ingress (§7). Its decoded note-on/note-end projections are asserted by S017-S019 instead.
-Original expression:
-  QVERIFY2(timeline, qPrintable(error));
+Mapping/reason: S017, S018, S019
 
 A038 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:207
 Disposition: MATCHED
-Swift: S018 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S018 checks that both raw, unstamped note-ons remain unassigned in PlaybackTimeline; Swift does not mint IDs in build, under the original cppID.
-Original expression:
-  QVERIFY(!event.noteId.isAssigned());
+Mapping: S018
 
 A039 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:212
 Disposition: MATCHED
-Swift: S017 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S017 checks two timeline note-ons at tick 24 for this decoded fixture, under the original cppID.
-Original expression:
-  QCOMPARE(noteOns, 2);
+Mapping: S017
 
 A040 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:213
 Disposition: MATCHED
-Swift: S019 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S019 checks the tick-48 note-end exists and has an unassigned playback ID, under the original cppID.
-Original expression:
-  QVERIFY(ordinaryUnassigned);
+Mapping: S019
 
 A041 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:222
 Disposition: RETIRED-REPRESENTATION
-Swift: none; Swift SongDocument(file:) is nonthrowing
-Mapping/reason: C++ adoptSmf has a fallible success branch; Swift SongDocument(file:) returns a non-optional document with no failure branch. The C++ check is uncompiled and unregistered (§7); asserting the constructor's input back would not cover this observation.
-Original expression:
-  QVERIFY2(document.adoptSmf(duplicateNoteFile(), song, &error), qPrintable(error));
 
 A042 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:235
 Disposition: MATCHED
-Swift: S021 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S021 checks that initial SongDocument(file:) adoption projects exactly two note-ons from the same duplicate-note fixture, under the original cppID.
-Original expression:
-  QCOMPARE(original.size(), size_t(2));
+Mapping: S021
 
 A043 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:236
 Disposition: MATCHED
-Swift: S021 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S021 directly asserts both original-fixture adopted note-ons have assigned, distinct IDs under the same cppID; cross-fixture S004 corroborates initial adoption.
-Original expression:
-  QVERIFY(original[0].isAssigned());
+Mapping: S021, S004
 
 A044 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:237
 Disposition: MATCHED
-Swift: S021 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S021 directly asserts both original-fixture adopted note-ons have assigned, distinct IDs under the same cppID; cross-fixture S004 corroborates initial adoption.
-Original expression:
-  QVERIFY(original[1].isAssigned());
+Mapping: S021, S004
 
 A045 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:238
 Disposition: MATCHED
-Swift: S021 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S021 directly asserts the original-fixture adopted note-ons are pairwise distinct under the same cppID; cross-fixture S004 corroborates initial adoption.
-Original expression:
-  QVERIFY(original[0] != original[1]);
+Mapping: S021, S004
 
 A046 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:240
 Disposition: RETIRED-REPRESENTATION
-Swift: none; same-instance fallible readoption has no public Swift ingress
-Mapping/reason: C++ document.adoptSmf(document.smf()) mutates the SAME document and can fail; Swift offers only nonthrowing SongDocument(file:) construction of a NEW document, which resets the per-document ID allocator. This C++ check is uncompiled and unregistered (§7); S022-S024 check the surviving new-document observations without claiming same-instance parity.
-Original expression:
-  QVERIFY2(document.adoptSmf(document.smf(), song, &error), qPrintable(error));
+Mapping/reason: S022, S023, S024
 
 A047 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:243
 Disposition: MATCHED
-Swift: S022 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S022 checks three projected IDs after new-document readoption of firstDocument.state.file and a successful addNotes insertion, under the original cppID; same-instance re-adoption is retired at A046.
-Original expression:
-  QCOMPARE(adopted.size(), size_t(3));
+Mapping: S022
 
 A048 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:245
 Disposition: MATCHED
-Swift: S023 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S023 checks all three new-document readopted and inserted IDs are assigned, under the original cppID; cross-document freshness is not inferred.
-Original expression:
-  QVERIFY(id.isAssigned());
+Mapping: S023
 
 A049 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:246
 Disposition: RETIRED-REPRESENTATION
-Swift: none; cross-generation ID freshness requires same-instance re-adoption
-Mapping/reason: C++ compares IDs minted before and after adopting into the SAME document; Swift exposes no such mutation and SongDocument(file:) creates a NEW per-document allocator starting at 1, so numeric IDs can repeat. The uncompiled/unregistered C++ check has no current ingress (§7); S023-S024 prove assignedness and distinctness only within the new document, not freshness against the old one.
-Original expression:
-  QVERIFY(std::find(original.begin(), original.end(), id) == original.end());
+Mapping/reason: S023, S024
 
 A050 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:250
 Disposition: MATCHED
-Swift: S024 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S024 counts distinct IDs against all three new-document readopted and inserted notes; this is pairwise intra-document uniqueness under the original cppID, not cross-instance numeric freshness.
-Original expression:
-  QVERIFY(adopted[left] != adopted[right]);
+Mapping: S024
 
 A051 | NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization | src/checks/editcheck/tst_songdocument_logic.cpp:260
 Disposition: MATCHED
-Swift: S026 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S026 checks NoteID(1).isAssigned under the original cppID.
-Original expression:
-  QVERIFY(first.isAssigned());
+Mapping: S026
 
 A052 | NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization | src/checks/editcheck/tst_songdocument_logic.cpp:261
 Disposition: MATCHED
-Swift: S027 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S027 checks NoteID(2).isAssigned under the original cppID.
-Original expression:
-  QVERIFY(second.isAssigned());
+Mapping: S027
 
 A053 | NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization | src/checks/editcheck/tst_songdocument_logic.cpp:262
 Disposition: MATCHED
-Swift: S028 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S028 checks NoteID(1) and NoteID(2) differ under the original cppID.
-Original expression:
-  QVERIFY(first != second);
+Mapping: S028
 
 A054 | NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization | src/checks/editcheck/tst_songdocument_logic.cpp:265
 Disposition: MATCHED
-Swift: S029 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S029 checks duplicate tick/payload events compare equal after stamping different NoteIDs; MidiEvent.== ignores noteID, under the original cppID.
-Original expression:
-  QVERIFY(file.tracks.front().events[0] == file.tracks.front().events[1]);
+Mapping: S029
 
 A055 | NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization | src/checks/editcheck/tst_songdocument_logic.cpp:266
 Disposition: MATCHED
-Swift: S030 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S030 checks encoded bytes of the stamped fixture exactly equal unstamped baseline bytes; throwing encode failures report through S031 under the original cppID.
-Original expression:
-  QCOMPARE(file.write(), baseline);
+Mapping: S030, S031
 
 A056 | NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds | src/checks/editcheck/tst_songdocument_logic.cpp:275
 Disposition: RETIRED-REPRESENTATION
-Swift: none; Swift timeline construction is non-optional
-Mapping/reason: C++ MidiTimeline::build returns a nullable timeline, while Swift PlaybackTimeline.build(state:sampleRate:) has no failure branch; the uncompiled/unregistered C++ check has no current ingress (§7). S032-S035 instead verify projected note-on and note-end contents.
-Original expression:
-  QVERIFY(timeline);
+Mapping/reason: S032, S033, S034, S035
 
 A057 | NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds | src/checks/editcheck/tst_songdocument_logic.cpp:289
 Disposition: MATCHED
-Swift: S032 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S032 checks two stamped note-ons at tick 24 reach playback, under the original cppID.
-Original expression:
-  QCOMPARE(noteOns, 2);
+Mapping: S032
 
 A058 | NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds | src/checks/editcheck/tst_songdocument_logic.cpp:290
 Disposition: MATCHED
-Swift: S033 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S033 checks NoteID(1) is transported on a tick-24 playback note-on, under the original cppID.
-Original expression:
-  QVERIFY(firstSeen);
+Mapping: S033
 
 A059 | NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds | src/checks/editcheck/tst_songdocument_logic.cpp:291
 Disposition: MATCHED
-Swift: S034 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S034 checks NoteID(2) is transported on a tick-24 playback note-on, under the original cppID.
-Original expression:
-  QVERIFY(secondSeen);
+Mapping: S034
 
 A060 | NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds | src/checks/editcheck/tst_songdocument_logic.cpp:292
 Disposition: MATCHED
-Swift: S035 | src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts
-Mapping/reason: S035 checks the tick-48 note-end exists with unassigned playback identity, under the original cppID.
-Original expression:
-  QVERIFY(ordinaryUnassigned);
+Mapping: S035
 
 Swift assertion predicates
 Every report.expect/expectEqual/fail call in adoptionAndPairing and noteIdentityContracts; identity cppID constants are declared at NoteIdentityChecks.swift.
 
 S001 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "all note-ons projected"
-  report.expectEqual(3, notes.count,
-                         cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
-                         what: "all note-ons projected")
 
 S002 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "first following matching ends pair exactly"
-  report.expectEqual([Tick(8), Tick(6), Tick(0)], notes.map(\.duration),
-                         cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
-                         what: "first following matching ends pair exactly")
 
 S003 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "unterminated note is preserved"
-  report.expect(notes[2].isUnterminated,
-                    cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
-                    message: "unterminated note is preserved")
 
 S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "adoption remints unique document identities"
-  report.expect(notes.allSatisfy { $0.id.isAssigned } && Set(notes.map(\.id)).count == 3,
-                    cppID: "noteidcheck/NoteIdentityCheckTest::adoptedSmfRemintsForeignIds",
-                    message: "adoption remints unique document identities")
 
 S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "typed tempo is removed from raw chunks"
-  report.expect(!document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
-                    cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
-                    message: "typed tempo is removed from raw chunks")
 
 S006 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "valid conductor tempo becomes typed state"
-  report.expectEqual([TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000)],
-                         document.state.tempo,
-                         cppID: "editcheck/EditCheckTest::formatZeroGlobals",
-                         what: "valid conductor tempo becomes typed state")
 
 S007 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "serialized MIDI carries no note identity"
-  report.expect(decoded?.chunks.flatMap(\.events).filter(\.isNoteOn)
-          .allSatisfy { !($0.noteID?.isAssigned ?? false) } == true,
-          cppID: "noteidcheck/NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned",
-          message: "serialized MIDI carries no note identity")
 
 S008 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "note-end status is retained during adoption"
-  report.expect(document.state.file.chunks[1].events[3].status == 0x80,
-                    cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
-                    message: "note-end status is retained during adoption")
 
 S009 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "decoded MIDI retains one chunk"
-  report.expectEqual(1, decoded.chunks.count, cppID: parsedIdentityID,
-                     what: "decoded MIDI retains one chunk")
 
 S010 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "decoded MIDI retains three lifecycle events"
-  report.expectEqual(3, events.count, cppID: parsedIdentityID,
-                     what: "decoded MIDI retains three lifecycle events")
 
 S011 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "first duplicate is a note-on"
-  report.expect(events[0].isNoteOn, cppID: parsedIdentityID,
-                message: "first duplicate is a note-on")
 
 S012 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "second duplicate is a note-on"
-  report.expect(events[1].isNoteOn, cppID: parsedIdentityID,
-                message: "second duplicate is a note-on")
 
 S013 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "third event is a note-end"
-  report.expect(events[2].isNoteEnd, cppID: parsedIdentityID,
-                message: "third event is a note-end")
 
 S014 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "first parsed note-on has no identity"
-  report.expect(!(events[0].noteID?.isAssigned ?? false), cppID: parsedIdentityID,
-                message: "first parsed note-on has no identity")
 
 S015 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "second parsed note-on has no identity"
-  report.expect(!(events[1].noteID?.isAssigned ?? false), cppID: parsedIdentityID,
-                message: "second parsed note-on has no identity")
 
 S016 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "parsed note-end has no identity"
-  report.expect(!(events[2].noteID?.isAssigned ?? false), cppID: parsedIdentityID,
-                message: "parsed note-end has no identity")
 
 S017 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "two raw note-ons reach playback"
-  report.expectEqual(2, rawOns.count, cppID: parsedIdentityID,
-                     what: "two raw note-ons reach playback")
 
 S018 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "raw playback does not mint note-on identities"
-  report.expect(rawOns.allSatisfy { !$0.noteID.isAssigned }, cppID: parsedIdentityID,
-                message: "raw playback does not mint note-on identities")
 
 S019 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "raw playback note-end remains unassigned"
-  report.expect(rawEnds.count == 1 && !rawEnds[0].noteID.isAssigned,
-                cppID: parsedIdentityID, message: "raw playback note-end remains unassigned")
 
 S020 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: function
-  report.fail(parsedIdentityID, "MIDI encode/decode failed: \(error)")
 
 S021 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "initial adoption projects two assigned, distinct note-ons"
-  report.expect(original.count == 2 && original.allSatisfy(\.isAssigned)
-                && Set(original).count == 2, cppID: adoptedIdentityID,
-                message: "initial adoption projects two assigned, distinct note-ons")
 
 S022 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "readoption followed by insertion produces three notes"
-  report.expectEqual(3, ids.count, cppID: adoptedIdentityID,
-                     what: "readoption followed by insertion produces three notes")
 
 S023 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "every readopted and newly inserted identity is assigned"
-  report.expect(ids.allSatisfy(\.isAssigned), cppID: adoptedIdentityID,
-                message: "every readopted and newly inserted identity is assigned")
 
 S024 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "readopted and newly inserted identities are pairwise distinct"
-  report.expectEqual(ids.count, Set(ids).count, cppID: adoptedIdentityID,
-                     what: "readopted and newly inserted identities are pairwise distinct")
 
 S025 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: function
-  report.fail(adoptedIdentityID, "adding a note after readoption failed: \(error)")
 
 S026 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "first synthetic identity is assigned"
-  report.expect(firstID.isAssigned, cppID: equalityIdentityID,
-                message: "first synthetic identity is assigned")
 
 S027 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "second synthetic identity is assigned"
-  report.expect(secondID.isAssigned, cppID: equalityIdentityID,
-                message: "second synthetic identity is assigned")
 
 S028 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "synthetic identities differ"
-  report.expect(firstID != secondID, cppID: equalityIdentityID,
-                message: "synthetic identities differ")
 
 S029 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "otherwise identical MIDI events compare equal despite different IDs"
-  report.expect(stamped.chunks[0].events[0] == stamped.chunks[0].events[1],
-                cppID: equalityIdentityID,
-                message: "otherwise identical MIDI events compare equal despite different IDs")
 
 S030 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "stamped and unstamped MIDI serialize identically"
-  report.expectEqual(try source.encoded(), try stamped.encoded(),
-                     cppID: equalityIdentityID,
-                     what: "stamped and unstamped MIDI serialize identically")
 
 S031 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: function
-  report.fail(equalityIdentityID, "MIDI serialization failed: \(error)")
 
 S032 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "both stamped note-ons reach playback"
-  report.expectEqual(2, stampedOns.count, cppID: timelineIdentityID,
-                     what: "both stamped note-ons reach playback")
 
 S033 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "first stamped identity reaches playback"
-  report.expect(stampedOns.contains { $0.noteID == firstID }, cppID: timelineIdentityID,
-                message: "first stamped identity reaches playback")
 
 S034 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "second stamped identity reaches playback"
-  report.expect(stampedOns.contains { $0.noteID == secondID }, cppID: timelineIdentityID,
-                message: "second stamped identity reaches playback")
 
 S035 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
 Anchor: message "playback note-end stays unassigned"
-  report.expect(stampedEnds.count == 1 && !stampedEnds[0].noteID.isAssigned,
-                cppID: timelineIdentityID, message: "playback note-end stays unassigned")

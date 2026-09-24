@@ -14,685 +14,204 @@ Retirement: 67 original assertion sites, 66 MATCHED and 1 RETIRED-REPRESENTATION
 Fixture and execution: Five original slots cover sweep stepping and ramp finish, trailing held-value restoration, Pan neutral snap, node drag and phantom outcomes, and point-range/pencil replacements. Inline Swift fixtures exercise a 24-tick division lattice, point and held-span replacements, a production empty Modulation lane with engine-default lead-in 0, and a past-last-point lane with a real held value 20. The source-pinned inventory below preserves the original loops, fixture values, and assertion order.
 History caveat: Swift exercises document undo/redo through public history APIs and asserts restored observable state; no test-only history accessors or C++ undo-stack index correspondence is claimed.
 Registered run path: src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks → runProjectSessionSuite → projectSession (swiftcore suite 10 via pdcSuiteRun); gesture core seams also run in eventEdits (suite 6). The Swift counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
-Verification evidence
-2026-09-22 focused Swift runs on the source hashes above:
-deno task verify --filter swiftcore --qt timeEdits eventEdits: exit 0;
-SwiftCoreTest 4 passed, 0 failed. These suites cover adjacent edit seams, not
-the gesture assertions in this file.
-deno task verify --filter swiftcore --qt playback projectSession: exit 0;
-SwiftCoreTest 4 passed, 0 failed. projectSession calls runProjectSessionSuite,
-which calls runAutomationPageChecks and all five paired gesture functions below,
-including the supplemental awaited-history regression. The owning Swift suite
-passed on these hashes; 66 sites are MATCHED and one is
-RETIRED-REPRESENTATION because the production empty-lane pencil restores
-the parameter default 0 where the C++ fixture supplies lead-in 20.
-This is focused Swift evidence, not a whole-tree pass; the last whole-tree run
-was 23/24 because the separate swiftrollgated native Quick-window readiness
-check failed.
-
-Fixture, sequence, data-row and loop inventory
-Each line below is an exact original source anchor. Multiline declarations, helper
-implementations, native event delivery and the complete order remain in the pinned source.
-src/checks/automation/domain/gestures.cpp:43 | for (std::size_t index = 0; index < sweep.points.size(); ++index)
-src/checks/automation/domain/gestures.cpp:54 | for (std::size_t index = 0; index < update.points.size(); ++index)
-src/checks/automation/domain/gestures.cpp:82 | for (int y = body.top(); y < body.bottom() + 1; ++y) {
-src/checks/automation/domain/gestures.cpp:115 | QCOMPARE(finish.release, PointDragRelease::NoOp);
-src/checks/automation/domain/gestures.cpp:122 | gesture.drag.press({100.0, 100.0}, false);
-src/checks/automation/domain/gestures.cpp:124 | QCOMPARE(finish.release, PointDragRelease::NoOp);
-src/checks/automation/domain/gestures.cpp:131 | gesture.drag.press({100.0, 100.0}, true);
-src/checks/automation/domain/gestures.cpp:133 | QCOMPARE(finish.release, PointDragRelease::StationaryDelete);
-src/checks/automation/domain/gestures.cpp:140 | gesture.drag.press({100.0, 100.0}, true);
-src/checks/automation/domain/gestures.cpp:143 | QCOMPARE(unchanged.release, PointDragRelease::Move);
-src/checks/automation/domain/gestures.cpp:148 | QCOMPARE(moved.release, PointDragRelease::Move);
-src/checks/automation/domain/gestures.cpp:158 | gesture.drag.press({100.0, 100.0}, true);
-src/checks/automation/domain/gestures.cpp:161 | QCOMPARE(finish.release, PointDragRelease::Move);
-src/checks/automation/domain/gestures.cpp:177 | gesture.drag.press({100.0, 100.0}, false);
-src/checks/automation/domain/gestures.cpp:183 | QCOMPARE(finish.release, PointDragRelease::Move);
-src/checks/automation/domain/gestures.cpp:191 | gesture.drag.press({100.0, 100.0}, false);
-src/checks/automation/domain/gestures.cpp:248 | // grid step past the release instead of holding 25 to song end.
-
-Original assertion inventory
 
 A001 | AutomationDomainTest::sweepSteppingAndRampFinish | src/checks/automation/domain/gestures.cpp:42
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepSteppingAndRampFinish, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(11, sweep.points.count, cppID: drawerAutomationSweepStepsID,
-                         what: "the sweep steps every lattice tick of the stroke")
-Original expression:
-  QCOMPARE(sweep.points.size(), std::size_t{11})
 
 A002 | AutomationDomainTest::sweepSteppingAndRampFinish | src/checks/automation/domain/gestures.cpp:44
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepSteppingAndRampFinish, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual((0...10).map { "\($0):\($0 * 10)" },
-                         fixture.laneValues(sweep.points), cppID: drawerAutomationSweepStepsID,
-                         what: "each stepped tick interpolates its value across the stroke")
-Original expression:
-  QVERIFY(hasPoint(sweep.points[index], index, int(index) * 10))
 
 A003 | AutomationDomainTest::sweepSteppingAndRampFinish | src/checks/automation/domain/gestures.cpp:52
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepSteppingAndRampFinish, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual("5:50", "\(update.current.tick):\(update.current.value)", cppID: drawerAutomationSweepStepsID,
-                         what: "the stroke's current point is its mapped one")
-Original expression:
-  QVERIFY(hasPoint(update.current, 5, 50))
 
 A004 | AutomationDomainTest::sweepSteppingAndRampFinish | src/checks/automation/domain/gestures.cpp:53
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepSteppingAndRampFinish, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(6, update.points.count, cppID: drawerAutomationSweepStepsID,
-                         what: "the second stroke has all six lattice points")
-Original expression:
-  QCOMPARE(update.points.size(), std::size_t{6})
 
 A005 | AutomationDomainTest::sweepSteppingAndRampFinish | src/checks/automation/domain/gestures.cpp:55
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepSteppingAndRampFinish, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual((0...5).map { "\($0):\($0 * 10)" },
-                         fixture.laneValues(update.points), cppID: drawerAutomationSweepStepsID,
-                         what: "the second stroke interpolates across its own span")
-Original expression:
-  QVERIFY(hasPoint(update.points[index], index, int(index) * 10))
 
 A006 | AutomationDomainTest::sweepSteppingAndRampFinish | src/checks/automation/domain/gestures.cpp:64
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepSteppingAndRampFinish, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(!emptyCompletion.unchanged, cppID: drawerAutomationSweepStepsID,
-                    message: "the empty-lane completion changes the lane")
-Original expression:
-  QVERIFY(!completion.unchanged)
 
 A007 | AutomationDomainTest::sweepSteppingAndRampFinish | src/checks/automation/domain/gestures.cpp:65
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepSteppingAndRampFinish, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(11, emptyCompletion.points.count, cppID: drawerAutomationSweepStepsID,
-                         what: "the completion itself contains eleven points")
-Original expression:
-  QCOMPARE(completion.points.size(), std::size_t{11})
 
 A008 | AutomationDomainTest::sweepSteppingAndRampFinish | src/checks/automation/domain/gestures.cpp:66
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepSteppingAndRampFinish, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(AutomationLanePoint(tick: 0, value: 0), emptyCompletion.points.first,
-                         cppID: drawerAutomationSweepStepsID, what: "the completion starts at the anchor")
-Original expression:
-  QVERIFY(hasPoint(completion.points.front(), 0, 0))
 
 A009 | AutomationDomainTest::sweepSteppingAndRampFinish | src/checks/automation/domain/gestures.cpp:67
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepSteppingAndRampFinish, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(AutomationLanePoint(tick: 10, value: 100), emptyCompletion.points.last,
-                         cppID: drawerAutomationSweepStepsID, what: "the empty lane adds no trailing held point")
-Original expression:
-  QVERIFY(hasPoint(completion.points.back(), 10, 100))
 
 A010 | AutomationDomainTest::panNeutralSnap | src/checks/automation/domain/gestures.cpp:91
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPanNeutralSnap, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration. The guard calls report.fail and returns on the original failure condition; reaching the subsequent assertions establishes the precondition.
-Swift counterpart expression:
-  report.fail(drawerAutomationNeutralSnapID, "the plot contains no pixel inside the neutral snap radius")
-Original expression:
-  QVERIFY(yNear >= 0)
 
 A011 | AutomationDomainTest::panNeutralSnap | src/checks/automation/domain/gestures.cpp:96
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPanNeutralSnap, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(Tick(100), plain.tick, cppID: drawerAutomationNeutralSnapID,
-                         what: "the unsnapped value mapping preserves tick 100")
-Original expression:
-  QCOMPARE(point.tick, uint64_t{100})
 
 A012 | AutomationDomainTest::panNeutralSnap | src/checks/automation/domain/gestures.cpp:97
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPanNeutralSnap, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(valueNear, plain.value, cppID: drawerAutomationNeutralSnapID,
-                         what: "the unsnapped value mapping keeps the near-neutral pixel value")
-Original expression:
-  QCOMPARE(point.value, valueNear)
 
 A013 | AutomationDomainTest::panNeutralSnap | src/checks/automation/domain/gestures.cpp:100
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPanNeutralSnap, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(Tick(100), snapped.tick, cppID: drawerAutomationNeutralSnapID,
-                         what: "neutral snapping preserves tick 100")
-Original expression:
-  QCOMPARE(point.tick, uint64_t{100})
 
 A014 | AutomationDomainTest::panNeutralSnap | src/checks/automation/domain/gestures.cpp:101
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPanNeutralSnap, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(64, snapped.value, cppID: drawerAutomationNeutralSnapID,
-                         what: "the near-neutral pixel snaps to 64")
-Original expression:
-  QCOMPARE(point.value, 64)
 
 A015 | AutomationDomainTest::panNeutralSnap | src/checks/automation/domain/gestures.cpp:107
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPanNeutralSnap, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(AutomationLanePoint(tick: 200, value: 64), exact,
-                         cppID: drawerAutomationNeutralSnapID,
-                         what: "the exact neutral maps to the original tick-200 point")
-Original expression:
-  QVERIFY(hasPoint(point, 200, 64))
 
 A016 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:115
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(AutomationPointRelease.noOp, empty.finish().release, cppID: drawerAutomationNodeDragID,
-                         what: "a gesture with no target finishes as a no-op")
-Original expression:
-  QCOMPARE(finish.release, PointDragRelease::NoOp)
 
 A017 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:116
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(!empty.finish().changed, cppID: drawerAutomationNodeDragID,
-                    message: "an empty gesture reports no change")
-Original expression:
-  QVERIFY(!finish.changed)
 
 A018 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:124
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(AutomationPointRelease.noOp, shiftPress.finish().release, cppID: drawerAutomationNodeDragID,
-                         what: "a Shift-held stationary release is a no-op")
-Original expression:
-  QCOMPARE(finish.release, PointDragRelease::NoOp)
 
 A019 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:125
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(!shiftPress.finish().changed, cppID: drawerAutomationNodeDragID,
-                    message: "a Shift-held stationary release changes nothing")
-Original expression:
-  QVERIFY(!finish.changed)
 
 A020 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:133
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(AutomationPointRelease.stationaryDelete, plainPress.finish().release,
-                         cppID: drawerAutomationNodeDragID, what: "a stationary release without Shift deletes")
-Original expression:
-  QCOMPARE(finish.release, PointDragRelease::StationaryDelete)
 
 A021 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:134
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(!plainPress.finish().changed, cppID: drawerAutomationNodeDragID,
-                    message: "the stationary delete reports no move")
-Original expression:
-  QVERIFY(!finish.changed)
 
 A022 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:143
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(AutomationPointRelease.move, plainPress.finish().release, cppID: drawerAutomationNodeDragID,
-                         what: "a released stroke past the slop is a move")
-Original expression:
-  QCOMPARE(unchanged.release, PointDragRelease::Move)
 
 A023 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:144
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(!plainPress.finish().changed, cppID: drawerAutomationNodeDragID,
-                  message: "a stroke that never moved the node changes nothing")
-Original expression:
-  QVERIFY(!unchanged.changed)
 
 A024 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:148
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(AutomationPointRelease.move, moved.release, cppID: drawerAutomationNodeDragID,
-                         what: "the moved gesture is still a move")
-Original expression:
-  QCOMPARE(moved.release, PointDragRelease::Move)
 
 A025 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:149
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(moved.changed, cppID: drawerAutomationNodeDragID, message: "the moved node reports a change")
-Original expression:
-  QVERIFY(moved.changed)
 
 A026 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:150
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(6, moved.dTick, cppID: drawerAutomationNodeDragID,
-                         what: "the reported delta is the grabbed node's own tick delta")
-Original expression:
-  QCOMPARE(moved.dTick, int64_t{6})
 
 A027 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:161
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(AutomationPointRelease.move, groupFinish.release,
-                         cppID: drawerAutomationNodeDragID, what: "the selection releases as a move")
-Original expression:
-  QCOMPARE(finish.release, PointDragRelease::Move)
 
 A028 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:162
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(groupFinish.changed, cppID: drawerAutomationNodeDragID,
-                    message: "the moved selection reports a change")
-Original expression:
-  QVERIFY(finish.changed)
 
 A029 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:163
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(6, groupFinish.dTick, cppID: drawerAutomationNodeDragID,
-                         what: "the shared delta is the grabbed node's delta")
-Original expression:
-  QCOMPARE(finish.dTick, int64_t{6})
 
 A030 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:164
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(groupFinish.selectionDrag, cppID: drawerAutomationNodeDragID,
-                    message: "the finish reports that the whole selection moved")
-Original expression:
-  QVERIFY(finish.selectionDrag)
 
 A031 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:165
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(["30:70", "54:90"], group.targets.map { "\($0.current.tick):\($0.current.value)" },
-                         cppID: drawerAutomationNodeDragID, what: "every selected node moves by the same delta")
-Original expression:
-  QVERIFY(hasPoint(gesture.points[0].current, 30, 70))
 
 A032 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:166
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(["30:70", "54:90"], group.targets.map { "\($0.current.tick):\($0.current.value)" },
-                         cppID: drawerAutomationNodeDragID, what: "every selected node moves by the same delta")
-Original expression:
-  QVERIFY(hasPoint(gesture.points[1].current, 54, 90))
 
 A033 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:180
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(["0:60", "24:80"], edge.targets.map { "\($0.current.tick):\($0.current.value)" },
-                         cppID: drawerAutomationNodeDragID,
-                         what: "a leftward drag clamps at tick zero without collapsing the group")
-Original expression:
-  QVERIFY(hasPoint(gesture.points[0].current, 0, 60))
 
 A034 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:181
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(["0:60", "24:80"], edge.targets.map { "\($0.current.tick):\($0.current.value)" },
-                         cppID: drawerAutomationNodeDragID,
-                         what: "a leftward drag clamps at tick zero without collapsing the group")
-Original expression:
-  QVERIFY(hasPoint(gesture.points[1].current, 24, 80))
 
 A035 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:183
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(AutomationPointRelease.move, edge.finish().release,
-                         cppID: drawerAutomationNodeDragID, what: "the clamped group releases as a move")
-Original expression:
-  QCOMPARE(finish.release, PointDragRelease::Move)
 
 A036 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:184
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(edge.finish().changed, cppID: drawerAutomationNodeDragID,
-                    message: "the clamped group reports a change")
-Original expression:
-  QVERIFY(finish.changed)
 
 A037 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:185
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(-24, edge.finish().dTick, cppID: drawerAutomationNodeDragID,
-                         what: "the clamped delta is what the finish reports")
-Original expression:
-  QCOMPARE(finish.dTick, int64_t{-24})
 
 A038 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:193
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(AutomationLanePoint(tick: 24, value: 60), phantom.target.current,
-                         cppID: drawerAutomationNodeDragID, what: "a reset restores the phantom's source value")
-Original expression:
-  QVERIFY(hasPoint(gesture.point.current, 24, 60))
 
 A039 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:197
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration. The guard calls report.fail and returns on the original failure condition; reaching the subsequent assertions establishes the precondition.
-Swift counterpart expression:
-  report.fail(drawerAutomationNodeDragID, "the dragged phantom publishes no target")
-Original expression:
-  QVERIFY(moved.has_value())
 
 A040 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:198
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(phantomTarget.original.tick, phantomTarget.current.tick, cppID: drawerAutomationNodeDragID,
-                         what: "a phantom drag never moves in time")
-Original expression:
-  QCOMPARE(moved->original.tick, moved->current.tick)
 
 A041 | AutomationDomainTest::nodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.cpp:199
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(127, phantomTarget.current.value, cppID: drawerAutomationNodeDragID,
-                         what: "a phantom drag clamps into the lane's domain")
-Original expression:
-  QCOMPARE(moved->current.value, 127)
 
 A042 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:208
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(AutomationLaneReplacement.pointRange(
-          originalPointRange, begin: 24, end: 48,
-          points: [AutomationLanePoint(tick: 24, value: 64),
-                   AutomationLanePoint(tick: 48, value: 64)]).unchanged,
-          cppID: drawerAutomationPointRangeID, message: "the original two-point range is unchanged")
-Original expression:
-  QVERIFY(pointRange.replacePointRange(24, 48, {{24, 64}, {48, 64}}).unchanged)
 
 A043 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:209
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(!AutomationLaneReplacement.pointRange(
-          originalPointRange, begin: 24, end: 48,
-          points: [AutomationLanePoint(tick: 24, value: 64)]).unchanged,
-          cppID: drawerAutomationPointRangeID, message: "dropping the original range endpoint changes it")
-Original expression:
-  QVERIFY(!pointRange.replacePointRange(24, 48, {{24, 64}}).unchanged)
 
 A044 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:213
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(!restored.unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "a held-span replacement that differs is a change")
-Original expression:
-  QVERIFY(!restored.unchanged)
 
 A045 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:214
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(["24:80", "48:60"], restored.points.map { "\($0.tick):\($0.value)" },
-                         cppID: drawerAutomationPointRangeID,
-                         what: "the held span closes on the original endpoint's value")
-Original expression:
-  QCOMPARE(restored.points.size(), std::size_t{2})
 
 A046 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:215
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(["24:80", "48:60"], restored.points.map { "\($0.tick):\($0.value)" },
-                         cppID: drawerAutomationPointRangeID,
-                         what: "the held span closes on the original endpoint's value")
-Original expression:
-  QVERIFY(hasPoint(restored.points[0], 24, 80))
 
 A047 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:216
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(["24:80", "48:60"], restored.points.map { "\($0.tick):\($0.value)" },
-                         cppID: drawerAutomationPointRangeID,
-                         what: "the held span closes on the original endpoint's value")
-Original expression:
-  QVERIFY(hasPoint(restored.points[1], 48, 60))
 
 A048 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:221
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID; the empty-lane AutomationPencilTransaction guard reports failure and returns if start fails (same accepted guard pattern as A053). Start success does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0.
-Swift counterpart expression:
-  report.fail(drawerAutomationPointRangeID, "the pencil stroke did not start on an empty lane")
-Original expression:
-  QVERIFY(emptyLaneGesture.has_value())
 
 A049 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:223
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID asserts !stroke.completion().unchanged on the production empty-lane pencil. Whether completion changed does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0.
-Swift counterpart expression:
-  report.expect(!stroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
-                message: "an empty lane's first stroke is a change")
-Original expression:
-  QVERIFY(!emptyCompletion.unchanged)
 
 A050 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:224
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID asserts the exact production pencil completion array [24:80, 48:0], establishing exactly two ordered points. Point count does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0 (exact-array rule, spec §2.1).
-Swift counterpart expression:
-  report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
-                     cppID: drawerAutomationPointRangeID,
-                     what: "the stroke writes its point and restores the lane's held value")
-Original expression:
-  QCOMPARE(emptyCompletion.points.size(), std::size_t{2})
 
 A051 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:225
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID asserts the exact production pencil completion array [24:80, 48:0], establishing that its first point is 24:80. That first point does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0 (exact-array rule, spec §2.1).
-Swift counterpart expression:
-  report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
-                     cppID: drawerAutomationPointRangeID,
-                     what: "the stroke writes its point and restores the lane's held value")
-Original expression:
-  QVERIFY(hasPoint(emptyCompletion.points[0], 24, 80))
 
 A052 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:226
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No public Swift ingress exists for the arbitrary NodePoint{0,20} lead-in injected by C++ AutomationPencilGesture::start at gestures.cpp:219-220 into an empty lane: AutomationPencilTransaction.init?(facts:firstSample:firstCell:clockTicks:) (AutomationDrawingTransactions.swift) takes no lead-in argument; AutomationFrozenFacts.freeze(includingLeadIn:) (AutomationTransactions.swift) reads snapshot.leadInValue, derived from metadata.defaultValue (AutomationLaneProjection.swift). Inventing empty-lane metadata with defaultValue 20 is synthetic-only and prohibited (spec §2.1). The surviving 48:20 held-span completion behavior is asserted via production AutomationPencilTransaction.completion() -> AutomationLaneReplacement.heldSpan (AutomationDrawingTransactions.swift) by gestures.swift on a real past-last lane, and gestures.swift asserts the held-span freeze [24:80,48:20] directly under drawerAutomationPointRangeID. This site's injected empty-lane representation, not its held-span behavior, is retired.
-Swift counterpart expression:
-  report.expectEqual(["24:80", "48:20"], pastLast.laneValues(pastLastStroke.completion().points),
-                     cppID: drawerAutomationPointRangeID,
-                     what: "a stroke past the last point re-anchors that point's value")
-  report.expectEqual([AutomationLanePoint(tick: 24, value: 80),
-                      AutomationLanePoint(tick: 48, value: 20)], leadInCompletion.points,
-                     cppID: drawerAutomationPointRangeID,
-                     what: "the original implicit lead-in is restored at the two-point span end")
-Original expression:
-  QVERIFY(hasPoint(emptyCompletion.points[1], 48, 20))
 
 A053 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:230
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration. The guard calls report.fail and returns on the original failure condition; reaching the subsequent assertions establishes the precondition.
-Swift counterpart expression:
-  report.fail(drawerAutomationPointRangeID, "the pencil stroke did not start past the last point")
-Original expression:
-  QVERIFY(pastLastGesture.has_value())
 
 A054 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:232
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(!pastLastStroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "a stroke past the last point reports a change")
-Original expression:
-  QVERIFY(!pastLastCompletion.unchanged)
 
 A055 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:233
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(["24:80", "48:20"], pastLast.laneValues(pastLastStroke.completion().points),
-                         cppID: drawerAutomationPointRangeID,
-                         what: "a stroke past the last point re-anchors that point's value")
-Original expression:
-  QCOMPARE(pastLastCompletion.points.size(), std::size_t{2})
 
 A056 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:234
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(["24:80", "48:20"], pastLast.laneValues(pastLastStroke.completion().points),
-                         cppID: drawerAutomationPointRangeID,
-                         what: "a stroke past the last point re-anchors that point's value")
-Original expression:
-  QVERIFY(hasPoint(pastLastCompletion.points[0], 24, 80))
 
 A057 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:235
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(["24:80", "48:20"], pastLast.laneValues(pastLastStroke.completion().points),
-                         cppID: drawerAutomationPointRangeID,
-                         what: "a stroke past the last point re-anchors that point's value")
-Original expression:
-  QVERIFY(hasPoint(pastLastCompletion.points[1], 48, 20))
 
 A058 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:238
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(flat.unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "a replacement the lane already holds is unchanged")
-Original expression:
-  QVERIFY(flat.unchanged)
 
 A059 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:239
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(0, flat.points.count, cppID: drawerAutomationPointRangeID,
-                         what: "an unchanged replacement carries no point")
-Original expression:
-  QVERIFY(flat.points.empty())
 
 A060 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:241
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(!deletion.unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "an empty replacement over a covered span deletes it")
-Original expression:
-  QVERIFY(!deletion.unchanged)
 
 A061 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:242
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual(0, deletion.points.count, cppID: drawerAutomationPointRangeID,
-                         what: "the deleting replacement carries no point")
-Original expression:
-  QVERIFY(deletion.points.empty())
 
 A062 | AutomationDomainTest::sweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.cpp:266
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepFinishRestoresTrailingHeldValue, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(dragEdit != nil && !dragEdit!.unchanged, cppID: drawerAutomationSweepTailID,
-                    message: "the drag over a flat lane is a changed span")
-Original expression:
-  QVERIFY(!dragCompletion.unchanged)
 
 A063 | AutomationDomainTest::sweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.cpp:267
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepFinishRestoresTrailingHeldValue, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(dragEdit?.points.contains { $0.tick == 144 && $0.value == 25 } == true,
-                    cppID: drawerAutomationSweepTailID, message: "the stroke's release point is written")
-Original expression:
-  QVERIFY(contains(dragCompletion.points, 144, 25))
 
 A064 | AutomationDomainTest::sweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.cpp:268
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepFinishRestoresTrailingHeldValue, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual("168:85",
-                         "\(dragEdit?.points.last?.tick ?? 0):\(dragEdit?.points.last?.value ?? 0)",
-                         cppID: drawerAutomationSweepTailID,
-                         what: "the tail re-anchors the original held value one step past the release")
-Original expression:
-  QVERIFY(hasPoint(dragCompletion.points.back(), 168, 85))
 
 A065 | AutomationDomainTest::sweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.cpp:277
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepFinishRestoresTrailingHeldValue, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(rampEdit != nil && !rampEdit!.unchanged, cppID: drawerAutomationSweepTailID,
-                    message: "the ramp over a flat lane is a changed span")
-Original expression:
-  QVERIFY(!rampCompletion.unchanged)
 
 A066 | AutomationDomainTest::sweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.cpp:278
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepFinishRestoresTrailingHeldValue, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expect(rampEdit?.points.contains { $0.tick == 144 && $0.value == 25 } == true,
-                    cppID: drawerAutomationSweepTailID, message: "the ramp's release point is written")
-Original expression:
-  QVERIFY(contains(rampCompletion.points, 144, 25))
 
 A067 | AutomationDomainTest::sweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.cpp:279
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationSweepFinishRestoresTrailingHeldValue, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
-Swift counterpart expression:
-  report.expectEqual("168:85",
-                         "\(rampEdit?.points.last?.tick ?? 0):\(rampEdit?.points.last?.value ?? 0)",
-                         cppID: drawerAutomationSweepTailID,
-                         what: "the ramp's tail re-anchors the original held value too")
-Original expression:
-  QVERIFY(hasPoint(rampCompletion.points.back(), 168, 85))
-
-Swift executable assertion index
-Exact per-site counterpart predicates appear above. Additional Swift-only scenarios and
-stronger predicates remain in the paired file and retain their suite execution order.
-
-Supplemental awaited-history regression (not an original assertion)
-src/checks/automation/domain/gestures.swift :: coreAutomationPanUndoRegression
-Two separate Pan writes produce 0:112,12:64,72:15,108:64. AutomationNodeResolver/AutomationCommit move the first value to63. One awaited undo restores all four occurrences; a separate second undo removes the second write. Redo restores the moved state.
-The source values reproduce the production QML undo failure, not new literal
-assertions attributed to the original C++ check. Original trackheaderraster
-asserts cursor/playhead subtitle transitions; original panNeutralSnap asserts
-neutral value mapping. Their original inventories are unchanged.
-AutomationPageChecks.runAutomationPageChecks invokes this async scenario through its suite-owned RunLoop-pumping helper. The Qt Quick test lane must separately await ApplicationSession Tasks
-through its existing RunLoop-pumping history helper; a Qt-only tryCompare does
-not itself demonstrate that the Swift Task has completed.
-The focused projectSession run above includes this awaited-history regression
-on the current paired-file hash. A full swiftcore rerun is not claimed here.
-QML verification is separate: deno task verify:qml --verbose. A model pass does
-not establish Qt-loop Task scheduling or native rendered acceptance.

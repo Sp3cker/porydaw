@@ -8,38 +8,14 @@ Original SHA-256: 20d14a92ec00a9031cfbcd86ec7a65e914dd199a574e6d7c57583ff078f8e7
 Swift counterpart: none identified
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-All 13 sites in this file are GAP: projectEnumerationAndTrackBudgets exercises pure SongRegistry voicegroup/musicPlayer parsing and DecompProject track budgets against a rewritten music_player_table.inc on a copied fixture. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them — feature not yet ported: music-player table budget parsing. The native harness is uncompiled in all CMake targets and unregistered in checkcatalog, so these sites never execute in any lane. The file's helper bodies (copyProject, readFile, writeFile, midiFixture, registeredCount, midiDirectory, defaultCfg, compile, openSong, waitForDialog, closeWorkspace, runOnboardCheck) carry no assertion sites.
 Site tally: 13 sites (13 GAP).
 
-Execution and ownership
-The native harness runOnboardCheck (support.cpp) is the only owner of these checks (QTest::qExec of OnboardingTest), but the file is uncompiled in all CMake targets and unregistered in checkcatalog, so no lane executes it. No Swift entry point executes these checks either; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures: checks/support/songfixture.h (ProjectFixture::copyOf).
 
-Fixture, sequence and row constraints
-No data rows, loops, or branch guards expand these sites beyond a single run: the test rewrites music_player_table.inc with literal, numeric, and unknown-symbol track counts, asserts parsed budgets (BGM 12, SE1 3, SE2 16 via NUM_TRACKS_SE2 - 4, SE3 -1), asserts project.trackBudgetFor fallbacks (12 and 16), then restores the original table. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Verification
 Command: deno task verify --filter onboardcheck --verbose
 Result: pending integrated run.
-No deno lane covers the native QTest harness; the entry point is runOnboardCheck (support.cpp) via QTest::qExec. Native harness results support only retained native obligations, not Swift parity.
 
-Swift sources inspected (SHA-256)
-No same-dir support.swift exists, and no Swift check references this
-file's methods or behavior. Inspected at this revision:
-src/checks/editcheck/EventChecks.swift: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
-(sole Swift file carrying onboardcheck/ cppIDs; all of them name
 OnboardingTest::import* methods, none in this file).
-
-Original assertion inventory and source sequence
 
 A001 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:223
 Disposition: GAP

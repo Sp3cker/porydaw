@@ -7,22 +7,8 @@ Swift counterpart: src/checks/playback/publish.swift
 Deleted in: feature/gaps-audio-scale (staged git rm in this worktree, not yet committed); the deleted check is recoverable with git show f3069ef693542bdb63564b80a29773e2f5b2a360:src/checks/playback/publish.cpp.
 Original digest verification: git show f3069ef693542bdb63564b80a29773e2f5b2a360:src/checks/playback/publish.cpp | shasum -a 256 reproduced Original SHA-256 02acf58c6a31f99f242c500c87c724c75ea85d542a1206e8a09ad6ab675fdb27 before this certificate was written.
 
-Deletion certificate
-The C++ file above was deleted in this lane (staged git rm). This ledger audits its
-parent-revision content, pinned by Reference revision and Original SHA-256, so no
-assertion is dropped during the Swift check migration. Every original QVERIFY2/qFail
-site appears below, including fixture guards and setup rows. MATCHED means a
-corresponding Swift predicate was identified and executes the same observation under
-the original cppID in the frozen snapshot; RETIRED-REPRESENTATION means the observed
-mechanism has no ingress in the Swift path, with that no-ingress proof stated on the
-site. Neither label authorizes whole-case equivalence or a native parity claim, and no
-live native run or C++/Swift differential comparison is claimed: the deleted harness is
-not registered in this checkout.
 
 Retirement: 25 original assertion sites, all terminal (MATCHED 12,
-RETIRED-REPRESENTATION 13). The deleted C++ check is recoverable from Reference
-revision f3069ef693542bdb63564b80a29773e2f5b2a360 and Original SHA-256
-02acf58c6a31f99f242c500c87c724c75ea85d542a1206e8a09ad6ab675fdb27.
 
 Covered native implementation: src/audio/audioengine.h :: AudioEngine loadSong, seek,
 stop, updateTimeline, over src/audio/timeline_handoff.h :: TimelineHandoff. The Swift
@@ -31,29 +17,8 @@ check path instead drives the production AudioRenderEngine
 src/swift/app/audio/AudioTimelineHandoff.swift; no native bridge is exercised by the
 predicates below.
 
-Execution and ownership
-checkControllerPublication (src/checks/playback/publish.swift) and
-checkPublicationRequestContract (publish.swift) are the paired checks for this file;
-they run under swiftcore suite 3 via runAudioControllerChecks
-(src/checks/audio/AudioControllerChecks.swift). The older direct-Sequencer coverage
-checkReplacementRows (publish.swift) still runs from runPlaybackSuite in the same
-suite. Both compile in the swift_core_check target (src/checks/CMakeLists.txt:69-70).
 
-Fixture, sequence and row constraints
-checkPublicationRequestContract uses AudioControllerCheckFixture(silent: true) with the
-in-memory two-track silent timeline from playbackCheckSilentTimeline
-(src/checks/playback/transportfixture.swift); checkControllerPublication uses the
-same fixture non-silent. The covered sequence is five alternating midpoint/zero seek
-publications, a distinct-program replacement carrying a pending midpoint seek, a
-64-publication coalescing burst, a stop-cancels-pending-seek sequence, and a live
-replacement with a shifted tick layout. The production renderer is advanced by explicit
-bounded render calls through AudioRenderEngine; no null device is started and no
-wall-clock scheduling guarantee is claimed. The original 20,000,000 ns publication
-bound is asserted by S003 and S010. Original setup, branch guards and helper
-implementations at the reference revision remain authoritative; this inventory does not
-replace those sources.
 
-Verification
 Command: deno task verify --verbose
 Result: PASS - verify: 6/6 ok (11.75s); run_checks: PASS (all harnesses in 11.75s)
 covering production-startup, audiocheck-backend, vgbankcheck, exportcheck-loop,
@@ -66,246 +31,146 @@ for the frozen snapshot pinned above; no log artifact is claimed by this ledger.
 Swift execution ownership: swiftcore suite 3 -> runPlaybackSuite /
 runAudioControllerChecks -> checkPublicationRequestContract,
 checkControllerPublication, checkReplacementRows.
-This evidence establishes execution of the paired Swift predicates; it does not
-establish whole-case parity, and no live native run is claimed.
 
 
-Counterpart and dependency snapshot (SHA-256)
-src/checks/playback/publish.swift: 9cf64e5a4b6e1e7dd6f9b6244162aaaedd01cbb85674fa35a006e85e8d79f2a4
-src/checks/audio/controllerfixture.swift: 60f6f6e5d489f2781c18bfea29e40cab4b0f56d73885e2e6fbb3dab02769ff4d
-src/checks/playback/transportfixture.swift: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
-src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c
-src/checks/support/corecheck/CoreCheckSupport.swift: 99be72eb74c04654e9d7a742ff35c9f055be6acd8a8e69c950c1d5fa9a30b9ae
-src/checks/CMakeLists.txt: 653f0ab8c782fb659e21d63b0c3569d50952746072133eaef6114f288151eddd
-src/swift/app/audio/AudioTimelineHandoff.swift: 270ca150e27b60fa438f4b9ee7a91b8a84c6aac8ef5b5c940adbb7ebcac3021e
-src/swift/app/audio/AudioRenderEngine.swift: ecd5e5c114cec3013f9589ec4ca18dfd1a03429476ce9291ae80a60e3cf10a78
 
-Inherited native fixture assertions (historical; its harness was deleted in this lane)
 Source: src/checks/playback/tst_transport.cpp, SHA-256
 9ae0f5a1037fd587686246459ae09086ee4c235e27ba5b9a60a391376296570f at the Reference
 revision. Its init:29/init:31 forced-null setup guards and the loadedSong:48
 nullable-return contract are inventoried in the sibling certificate
 playback/proof.tst_transport.txt; they are not execution evidence here and carry no
-Swift parity credit.
-
-Original assertion inventory
 
 A001 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:21
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Original loadedSong returned a nullable shared_ptr from a serialized MIDI load/publication, and that loader has no ingress in the Swift path. Timelines are typed in-memory values built non-optionally (AudioControllerCheckFixture.timeline src/checks/audio/controllerfixture.swift, playbackCheckSilentTimeline src/checks/playback/transportfixture.swift), so no null branch exists; published-value liveness is exercised by S013/S014.
-Original expression:
-  QVERIFY2(first, "first ownership timeline built wrong")
+Mapping/reason: S013, S014
 
 A002 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:24
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Same deleted nullable loader for the active publication; Swift builds the timeline in memory through non-optional PlaybackTimeline.build, so no failure branch exists. The published value is exercised after rapid publication by S013/S014.
-Original expression:
-  QVERIFY2(active, "active ownership timeline built wrong")
+Mapping/reason: S013, S014
 
 A003 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:31
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Same deleted nullable loader for the superseded publication; the Swift path constructs non-optional typed timelines and the superseded-pending reclamation observation itself has no ingress (A006). No file-load branch exists to assert.
-Original expression:
-  QVERIFY2(superseded, "superseded ownership timeline built wrong")
 
 A004 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:36
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Same deleted nullable loader for the latest publication; Swift timelines are non-optional values and the publication liveness this row guarded is exercised by S013/S014.
-Original expression:
-  QVERIFY2(latest, "latest ownership timeline built wrong")
+Mapping/reason: S013, S014
 
 A005 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:38
 Disposition: MATCHED
-Mapping/reason: S013/S014 publish 64 rapid timelines through the production renderer and one callback, then assert the cursor still reads the coalesced pending seek and the callback adopted the newest publication events (src/checks/playback/publish.swift, cppID timelineHandoffOwnership). That is the observable active-snapshot-survives-rapid-publication contract; no weak_ptr expiry or reference count is claimed.
-Original expression:
-  QVERIFY2(!activeLifetime.expired(),
-               "rapid timeline publications released the audio thread's active snapshot")
+Mapping: S013, S014
 
 A006 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:40
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Original weak_ptr::expired() observed cross-thread shared_ptr reclamation of a superseded pending snapshot. No ingress: Swift AudioTimelineHandoff (src/swift/app/audio/AudioTimelineHandoff.swift, SHA-256 270ca150e27b60fa438f4b9ee7a91b8a84c6aac8ef5b5c940adbb7ebcac3021e) allocates and releases raw storage only on the single producer thread, publish() releases superseded storage synchronously before returning, and the callback only exchanges pointers, so no reference-count observation exists. Live-use safety after publish is exercised by S004/S006/S011/S013/S014.
-Original expression:
-  QVERIFY2(supersededLifetime.expired(), "superseded pending timeline remained retained")
+Mapping/reason: S004, S006, S011, S013, S014
 
 A007 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:44
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Same deleted nullable loader for the replacement publication; the Swift replacement is a distinct typed in-memory timeline whose adoption is asserted by S006 and S011. No file-load failure branch exists.
-Original expression:
-  QVERIFY2(replacement, "replacement ownership timeline built wrong")
+Mapping/reason: S006, S011
 
 A008 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:46
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Original weak_ptr::expired() observed reclamation of the replaced active snapshot after callback acquisition. No ingress: Swift AudioTimelineHandoff releases retired storage on the producer thread inside publish()/reset() and the callback only exchanges pointers, so reclamation is not observable from a check. Pointer liveness across publication is exercised by S004/S006/S011/S013/S014.
-Original expression:
-  QVERIFY2(activeLifetime.expired(), "replaced active timeline remained retained")
+Mapping/reason: S004, S006, S011, S013, S014
 
 A009 | TransportTest::seekPublishesWithoutBlocking | src/checks/playback/publish.cpp:54
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Original loadedSong success for the synthesized silent song via serialized MIDI; the Swift path uses an in-memory typed timeline (playbackCheckSilentTimeline src/checks/playback/transportfixture.swift) with no nullable load branch, and its use is asserted by S001/S002.
-Original expression:
-  QVERIFY2(timeline, "synthesized song built wrong")
+Mapping/reason: S001, S002
 
 A010 | TransportTest::seekPublishesWithoutBlocking | src/checks/playback/publish.cpp:55
 Disposition: MATCHED
-Mapping/reason: S002 asserts usedTrackCount==2 on the same two-track silent fixture before the seek sequence.
-Original expression:
-  QVERIFY2(timeline->usedTrackCount == 2, "synthesized song built wrong")
+Mapping: S002
 
 A011 | TransportTest::seekPublishesWithoutBlocking | src/checks/playback/publish.cpp:66
 Disposition: MATCHED
-Mapping/reason: S003 measures each of the original five alternating seek publications and requires every row to complete within 20 ms.
-Original expression:
-  QVERIFY2(slowestSeekNs <= 20'000'000, "seek blocked instead of publishing to the audio thread")
+Mapping: S003
 
 A012 | TransportTest::seekPublishesWithoutBlocking | src/checks/playback/publish.cpp:67
 Disposition: MATCHED
-Mapping/reason: S004 executes the original five alternating seeks through the production AudioRenderEngine and asserts the rendered cursor equals the original midpoint after one callback (src/checks/playback/publish.swift, cppID seekPublishesWithoutBlocking), the same end state the original polled for. Deterministic bounded renders replace qWaitFor polling; the non-blocking publication property is separately asserted by the 20 ms predicates S003/S010, and no null-device scheduling is claimed.
-Original expression:
-  QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() == midSong; }, 2000),
-               "audio thread did not apply the latest seek")
+Mapping: S004, S003, S010
 
 A013 | TransportTest::seekPublishesWithoutBlocking | src/checks/playback/publish.cpp:70
 Disposition: MATCHED
-Mapping/reason: S005 publishes the reset seek(0) and asserts the rendered cursor is zero after one callback (src/checks/playback/publish.swift, cppID seekPublishesWithoutBlocking), the same end state the original polled for. Deterministic bounded renders replace qWaitFor polling; the non-blocking publication property is separately asserted by the 20 ms predicates S003/S010, and no null-device scheduling is claimed.
-Original expression:
-  QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() == 0; }, 2000),
-               "audio thread did not apply the reset seek")
+Mapping: S005, S003, S010
 
 A014 | TransportTest::stopCancelsPendingSeek | src/checks/playback/publish.cpp:79
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Original nullable loadedSong precondition for stopCancelsPendingSeek; AudioControllerCheckFixture builds a non-optional typed timeline (src/checks/audio/controllerfixture.swift), so no failure branch exists. The cursor observations this row guarded are asserted by S007/S008.
-Original expression:
-  QVERIFY2(timeline, "synthesized song built wrong")
+Mapping/reason: S007, S008
 
 A015 | TransportTest::stopCancelsPendingSeek | src/checks/playback/publish.cpp:83
 Disposition: MATCHED
-Mapping/reason: S007 starts the production renderer and asserts a positive cursor after bounded rendering (src/checks/playback/publish.swift, cppID stopCancelsPendingSeek), the same positive-playhead observation the original polled for. Deterministic renders replace the 2000 ms wall-clock poll and no null-device scheduling is claimed.
-Original expression:
-  QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() > 0; }, 2000),
-               "playback did not start for pending-seek cancellation check")
+Mapping: S007
 
 A016 | TransportTest::stopCancelsPendingSeek | src/checks/playback/publish.cpp:87
 Disposition: MATCHED
-Mapping/reason: S008 applies the pending midpoint seek, stops, and asserts the rendered cursor is zero (src/checks/playback/publish.swift, cppID stopCancelsPendingSeek), the same stop-cancels-pending-seek end state the original polled for. Deterministic bounded rendering replaces the wall-clock poll and no null-device scheduling is claimed.
-Original expression:
-  QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() == 0; }, 2000),
-               "Stop did not cancel a pending seek")
+Mapping: S008
 
 A017 | TransportTest::updateTimelineCarriesPendingSeek | src/checks/playback/publish.cpp:97
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Original nullable loader precondition for the first updateTimelineCarriesPendingSeek timeline; the Swift path uses a non-optional typed timeline, so no failure branch exists. The carried-pending-seek observation it guarded is asserted by S006.
-Original expression:
-  QVERIFY2(timeline, "synthesized song built wrong")
+Mapping/reason: S006
 
 A018 | TransportTest::updateTimelineCarriesPendingSeek | src/checks/playback/publish.cpp:103
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Original nullable loader precondition for the distinct-program replacement; Swift builds it in memory (playbackCheckSilentTimeline(program: 1)) with no failure branch, and its adoption plus carried midpoint seek is asserted by S006.
-Original expression:
-  QVERIFY2(replacement, "seek replacement timeline built wrong")
+Mapping/reason: S006
 
 A019 | TransportTest::updateTimelineCarriesPendingSeek | src/checks/playback/publish.cpp:108
 Disposition: MATCHED
-Mapping/reason: S006 publishes a distinct-program replacement over a pending midpoint seek and asserts, under cppID updateTimelineCarriesPendingSeek, that the adopted timeline carries the replacement events and the cursor equals the midpoint (src/checks/playback/publish.swift). The pointer-identity half of the original is a shared_ptr representation detail; the consumer-visible adopted-data plus carried-seek contract is asserted, deterministic rendering replaces the 2000 ms poll, and no null-device scheduling is claimed.
-Original expression:
-  QVERIFY2(QTest::qWaitFor(
-                   [&] {
-                       return engine().timeline() == replacement.get() &&
-                              engine().playheadSamples() == midSong;
-                   },
-                   2000),
-               "updateTimeline dropped a pending seek or retained old data")
+Mapping: S006
 
 A020 | TransportTest::liveTimelineReplacementDoesNotBlock | src/checks/playback/publish.cpp:123
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Original nullable loader precondition for the live-replacement base timeline; the Swift path uses a non-optional in-memory timeline and the live observations it guarded are asserted by S009/S010/S011/S012.
-Original expression:
-  QVERIFY2(timeline, "synthesized song built wrong")
+Mapping/reason: S009, S010, S011, S012
 
 A021 | TransportTest::liveTimelineReplacementDoesNotBlock | src/checks/playback/publish.cpp:129
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Original nullable loader precondition for the live replacement with a distinct event layout; Swift builds it in memory (playbackCheckSilentTimeline(finalTick: 4700)) with no failure branch, and its adoption is asserted by S011.
-Original expression:
-  QVERIFY2(replacement, "live replacement timeline built wrong")
+Mapping/reason: S011
 
 A022 | TransportTest::liveTimelineReplacementDoesNotBlock | src/checks/playback/publish.cpp:132
 Disposition: MATCHED
-Mapping/reason: S009 starts the production renderer and asserts a positive cursor before the live replacement (src/checks/playback/publish.swift, cppID liveTimelineReplacementDoesNotBlock), the same positive-playhead observation the original polled for. Deterministic renders replace the 2000 ms poll and no null-device scheduling is claimed.
-Original expression:
-  QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() > 0; }, 2000),
-               "playback did not start for live timeline replacement")
+Mapping: S009
 
 A023 | TransportTest::liveTimelineReplacementDoesNotBlock | src/checks/playback/publish.cpp:138
 Disposition: MATCHED
-Mapping/reason: S010 measures the production AudioRenderEngine publication call and requires it to complete within the original 20 ms bound.
-Original expression:
-  QVERIFY2(updateTimer.nsecsElapsed() <= 20'000'000,
-               "timeline replacement blocked instead of publishing to the audio thread")
+Mapping: S010
 
 A024 | TransportTest::liveTimelineReplacementDoesNotBlock | src/checks/playback/publish.cpp:140
 Disposition: MATCHED
-Mapping/reason: S011 publishes the live replacement and asserts, under cppID liveTimelineReplacementDoesNotBlock, that the callback adopts the replacement events and the cursor advances past the pre-publish position (src/checks/playback/publish.swift). The pointer-identity half of the original is a shared_ptr representation detail; the adopted-data plus cursor-advance contract is asserted, deterministic rendering replaces the 2000 ms poll, and no null-device scheduling is claimed.
-Original expression:
-  QVERIFY2(QTest::qWaitFor(
-                   [&] {
-                       return engine().timeline() == replacement.get() &&
-                              engine().playheadSamples() > beforeUpdate;
-                   },
-                   2000),
-               "live timeline replacement did not adopt its data source")
+Mapping: S011
 
 A025 | TransportTest::liveTimelineReplacementDoesNotBlock | src/checks/playback/publish.cpp:148
 Disposition: MATCHED
-Mapping/reason: S012 stops after the live replacement and asserts the rendered cursor is zero (src/checks/playback/publish.swift, cppID liveTimelineReplacementDoesNotBlock), the same stop-resets-cursor end state the original polled for. Deterministic bounded rendering replaces the 2000 ms poll and no null-device scheduling is claimed.
-Original expression:
-  QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() == 0; }, 2000),
-               "stop after live timeline replacement did not reset")
-
-Swift predicate index
+Mapping: S012
 
 S001 | checkPublicationRequestContract | src/checks/playback/publish.swift
 Anchor: message "original silent song loads"
-The production renderer reports the original silent song loaded.
 
 S002 | checkPublicationRequestContract | src/checks/playback/publish.swift
 Anchor: message "original two-track fixture"
-The original silent fixture has exactly two used tracks.
 
 S003 | checkPublicationRequestContract | src/checks/playback/publish.swift
 Anchor: message "seek row \(row) publishes within 20 ms"
-Each of five alternating seek publications completes within 20 ms.
 
 S004 | checkPublicationRequestContract | src/checks/playback/publish.swift
 Anchor: message "callback applies latest seek"
-One production render callback applies the latest midpoint seek.
 
 S005 | checkPublicationRequestContract | src/checks/playback/publish.swift
 Anchor: message "callback applies reset seek"
-One production render callback applies the reset seek.
 
 S006 | checkPublicationRequestContract | src/checks/playback/publish.swift
 Anchor: message "distinct program replacement carries pending midpoint seek"
-A distinct program replacement carries the pending midpoint seek.
 
 S007 | checkPublicationRequestContract | src/checks/playback/publish.swift
 Anchor: message "playback starts before stop cancellation"
-The production renderer advances before the pending-seek cancellation case.
 
 S008 | checkPublicationRequestContract | src/checks/playback/publish.swift
 Anchor: message "stop cancels midpoint seek"
-Stop wins over the pending midpoint seek and resets the cursor.
 
 S009 | checkPublicationRequestContract | src/checks/playback/publish.swift
 Anchor: message "playback starts before live edit"
-The production renderer advances before live timeline replacement.
 
 S010 | checkPublicationRequestContract | src/checks/playback/publish.swift
 Anchor: message "live replacement publishes within 20 ms"
-The production live-replacement publication completes within 20 ms.
 
 S011 | checkPublicationRequestContract | src/checks/playback/publish.swift
 Anchor: message "callback adopts live event layout and advances"
-The callback adopts the live replacement events and advances past the prior cursor.
 
 S012 | checkPublicationRequestContract | src/checks/playback/publish.swift
 Anchor: message "stop after live replacement resets cursor"
-Stop after live replacement resets the production renderer cursor.

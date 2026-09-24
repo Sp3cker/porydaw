@@ -7,22 +7,8 @@ Swift counterpart: src/checks/rollcheck/identity.swift
 Additional Swift counterpart: src/checks/rollcheck/presentation.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below. Source context preserves setup and
-guards between assertions verbatim. S identifiers identify exact counterpart
-predicates, listed after the inventory. MATCHED identifies an equivalent Swift
-predicate with execution; PARTIAL a related predicate with an explicit unproved
-condition; NATIVE a retained native fixture/window precondition; GAP an original
-predicate without a matching assertion.
-checkDuplicateNoteIdentity in identity.swift covers duplicate minting, its
-equal-visible distinct identities, the plain active-track header clear, the one-ID
-pitch edit, its undo restoration and the switching-header clear. The
-timelineProjection and viewStateRoundTrip slots have no Swift roll counterpart (an
-unported projection seam and the unmodelled SongView::ViewState).
 Disposition tally: 14 sites: 5 MATCHED, 0 PARTIAL, 6 GAP, 3 NATIVE.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore
 projectSession suite executed runIdentityChecks and the S001-S005 predicates.
@@ -34,175 +20,35 @@ Result: PASS — 11/11 ok (controller-recorded post-change run); no identity sit
 depends on the shell lane. The shell and roll QML runs predate only a
 swiftcore-checks-only commit; no production or QML source changed after them.
 
-Execution and ownership
-runIdentityChecks executes checkDuplicateNoteIdentity from the projectSession Swift
-suite (swiftcore), the only scenario identity.swift registers. The original
 PianoRollTest::timelineProjection and PianoRollTest::viewStateRoundTrip slots have
 no counterpart in the Swift roll lane and stay GAP below. Shared fixture:
 the DocumentSession supplied by the projectSession suite; the original slot seeded
 its own LoadedSong/SongView from the staged project root.
 
-Fixture, sequence and row constraints
-checkDuplicateNoteIdentity adds two equal-visible notes (tick 480, pitch 60,
-duration 24, velocity 100) on the selected track, edits one by ID, undoes it, and
-switches the active track header while both duplicates stay selected. The original
-timelineProjection builds a two-event hand-built MidiTimeline and the original
-viewStateRoundTrip perturbs every retained SongView::ViewState field once. No data
-rows expand sites in this file; the original alternate-track scan is an assertion
-input, not a re-execution.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
-
 A001 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:27
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/identity.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  #include "checks/rollcheck/rollcheck.h"
-  #include "checks/rollcheck/tst_pianoroll.h"
-
-  #include <QQuickWindow>
-  #include <QSize>
-  #include <QtTest>
-
-  #include <algorithm>
-  #include <cmath>
-  #include <memory>
-  #include <utility>
-  #include <vector>
-
-  #include "checks/support/songfixture.h"
-  #include "checks/support/support.h"
-  #include "core/songdocument.h"
-  #include "ui/songview.h"
-  #include "ui/songview/quick/timelineinputitem.h"
-  #include "ui/songview/quick/timelinequickview.h"
-  #include "ui/songviewmodel.h"
-
-  void PianoRollTest::duplicateNoteIdentity()
-  {
-      QString error;
-      const std::unique_ptr<checks::LoadedSong> source =
-          checks::LoadedSong::load(m_project->root(), m_songLabel, error);
-Original expression:
-  QVERIFY2(source, qPrintable(error));
 
 A002 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:32
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/identity.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-      SongDocument projectionDoc;
-      QString projectionError;
-      if (!projectionDoc.load(source->songInfo(), &projectionError)) {
-Original expression:
-  QFAIL("could not load note identity projection fixture");
 
 A003 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:55
 Disposition: MATCHED
-Mapping: S001 (src/checks/rollcheck/identity.swift) mints two equal-visible duplicates (tick 480, pitch 60, duration 24, velocity 100) and asserts both receive distinct assigned IDs with equal visible fields; executed by the swiftcore projectSession suite.
-Source context since previous assertion:
-      }
-
-      const int track = m_fixture->track();
-      const std::vector<DocNote> before = projectionDoc.notesForTrack(track);
-      const SongDocument::NewNote duplicate{480, 60, 24, 100};
-      projectionDoc.addNotes(track, {duplicate, duplicate});
-      const std::vector<DocNote> after = projectionDoc.notesForTrack(track);
-      std::vector<DocNote> duplicates;
-      for (const DocNote &candidate : after) {
-          const bool existed =
-              std::any_of(before.begin(), before.end(), [&](const DocNote &previous) {
-                  return previous.noteId == candidate.noteId;
-              });
-          if (!existed)
-              duplicates.push_back(candidate);
-      }
-      if (duplicates.size() != 2 || !duplicates[0].noteId.isAssigned() ||
-          !duplicates[1].noteId.isAssigned() || duplicates[0].noteId == duplicates[1].noteId ||
-          duplicates[0].tick != duplicates[1].tick ||
-          duplicates[0].duration != duplicates[1].duration ||
-          duplicates[0].key != duplicates[1].key ||
-          duplicates[0].velocity != duplicates[1].velocity) {
-Original expression:
-  QFAIL("document did not mint distinct equal-visible duplicate note IDs");
+Mapping: S001
 
 A004 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:61
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/identity.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-      }
-
-      SongView identityView(projectionDoc);
-      auto identityTimeline = projectionDoc.buildTimeline(48000.0);
-      songview::TimelineQuickView *const identityQuick = identityView.quickView();
-Original expression:
-  QVERIFY(identityQuick && identityQuick->quickWindow());
 
 A005 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:74
 Disposition: MATCHED
-Mapping: S002 (src/checks/rollcheck/identity.swift) selects both duplicates, applies a plain active-track header scope and asserts the note selection becomes empty.
-Source context since previous assertion:
-      identityQuick->quickWindow()->resize(QSize(800, 480));
-      identityView.setSong(identityTimeline.get(), nullptr);
-      checks::support::bindEditActionsForTest(identityView);
-      QObject::connect(&projectionDoc, &SongDocument::documentChanged, &identityView, [&] {
-          auto rebuilt = projectionDoc.buildTimeline(48000.0);
-          identityView.updateSong(rebuilt.get());
-          identityTimeline = std::move(rebuilt);
-      });
-      identityView.selectTrack(track);
-      identityView.selectionModel().setNoteSelection({duplicates[0].noteId, duplicates[1].noteId});
-      identityView.trackHeaderClicked(track, Qt::NoModifier);
-      if (!identityView.selectionModel().noteSelection().empty())
-Original expression:
-  QFAIL("plain click on the active track header did not clear note selection");
+Mapping: S002
 
 A006 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:97
 Disposition: MATCHED
-Mapping: S003 (src/checks/rollcheck/identity.swift) moves only the first duplicate one key up and asserts the moved ID keeps its tick/duration/velocity at the new pitch, the second duplicate is identity-and-value unchanged, and the selected order is exactly the first ID.
-Source context since previous assertion:
-      const DocNote firstBefore = duplicates[0];
-      const DocNote secondBefore = duplicates[1];
-      const auto sameNoteIdentityAndValue = [](const DocNote &lhs, const DocNote &rhs) {
-          return lhs.noteId == rhs.noteId && lhs.engineTrack == rhs.engineTrack &&
-                 lhs.smfTrack == rhs.smfTrack && lhs.tick == rhs.tick &&
-                 lhs.duration == rhs.duration && lhs.key == rhs.key && lhs.velocity == rhs.velocity &&
-                 lhs.channel == rhs.channel;
-      };
-      identityView.selectionModel().setNoteSelection({firstBefore.noteId});
-      projectionDoc.moveNotes({firstBefore}, 0, 1);
-      DocNote firstMoved;
-      DocNote secondUntouched;
-      DocNote expectedMoved = firstBefore;
-      expectedMoved.key++;
-      const bool firstEdit = projectionDoc.findNote(firstBefore.noteId, &firstMoved) &&
-                             sameNoteIdentityAndValue(firstMoved, expectedMoved);
-      const bool secondStable = projectionDoc.findNote(secondBefore.noteId, &secondUntouched) &&
-                                sameNoteIdentityAndValue(secondUntouched, secondBefore);
-      const std::vector<NoteId> &editedSelection = identityView.selectionModel().noteSelection();
-      if (!firstEdit || !secondStable || editedSelection.size() != 1 ||
-          editedSelection.front() != firstBefore.noteId) {
-Original expression:
-  QFAIL("one-ID edit changed the wrong duplicate");
+Mapping: S003
 
 A007 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:109
 Disposition: MATCHED
-Mapping: S004 (src/checks/rollcheck/identity.swift) undoes the one-ID pitch edit and asserts both duplicates regain their full original field set (ID, track, chunk, tick, duration, pitch, velocity, channel) with the first ID still selected.
-Source context since previous assertion:
-      }
-
-      projectionDoc.undoStack()->undo();
-      DocNote firstRestored;
-      DocNote secondRestored;
-      const bool undoRestored = projectionDoc.findNote(firstBefore.noteId, &firstRestored) &&
-                                projectionDoc.findNote(secondBefore.noteId, &secondRestored) &&
-                                sameNoteIdentityAndValue(firstRestored, firstBefore) &&
-                                sameNoteIdentityAndValue(secondRestored, secondBefore);
-      const std::vector<NoteId> &undoSelection = identityView.selectionModel().noteSelection();
-      if (!undoRestored || undoSelection.size() != 1 || undoSelection.front() != firstBefore.noteId) {
-Original expression:
-  QFAIL("one-ID SongView edit did not restore both duplicates on Undo");
+Mapping: S004
 
 A008 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:117
 Disposition: PARTIAL
@@ -369,41 +215,15 @@ controller-recorded). Their presence alone does not close any A entry.
 
 S001 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift
 Anchor: message "equal-visible notes receive distinct assigned IDs"
-Counterpart expression:
-  report.expect(firstID.isAssigned && secondID.isAssigned && firstID != secondID
-      && firstBefore.tick == secondBefore.tick
-      && firstBefore.duration == secondBefore.duration
-      && firstBefore.pitch == secondBefore.pitch
-      && firstBefore.velocity == secondBefore.velocity,
-      cppID: id, message: "equal-visible notes receive distinct assigned IDs")
 
 S002 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift
 Anchor: message "plain active-track header clears note selection"
-Counterpart expression:
-  report.expect(session.selectedNotes.isEmpty, cppID: id,
-                message: "plain active-track header clears note selection")
 
 S003 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift
 Anchor: message "one-ID pitch edit leaves the other duplicate untouched and selected ID stable"
-Counterpart expression:
-  report.expect(session.document.note(firstID).map {
-      $0.id == firstID && $0.tick == firstBefore.tick
-          && $0.pitch == firstBefore.pitch + 1 && $0.duration == firstBefore.duration
-          && $0.velocity == firstBefore.velocity
-  } == true && sameIdentityAndValue(session.document.note(secondID), secondBefore)
-      && session.selectedNoteOrder == [firstID], cppID: id,
-      message: "one-ID pitch edit leaves the other duplicate untouched and selected ID stable")
 
 S004 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift
 Anchor: message "undo restores both duplicate values without replacing their identities"
-Counterpart expression:
-  report.expect(sameIdentityAndValue(session.document.note(firstID), firstBefore)
-      && sameIdentityAndValue(session.document.note(secondID), secondBefore)
-      && session.selectedNoteOrder == [firstID], cppID: id,
-      message: "undo restores both duplicate values without replacing their identities")
 
 S005 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift
 Anchor: message "switching track headers clears duplicate-note selection"
-Counterpart expression:
-  report.expect(session.selectedNotes.isEmpty, cppID: id,
-                message: "switching track headers clears duplicate-note selection")

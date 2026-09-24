@@ -8,38 +8,14 @@ Original SHA-256: e58930fa08408a1f4beb425fb8ce1ed0ef6f5a4ffce2b392161f7c9d2ac6e6
 Swift counterpart: none identified
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-All 88 sites in this file are GAP: newSongRegistration, registrationBackfill, and registrationAliases exercise pure SongRegistry/DecompProject/SongDocument helpers against project files on a copied fixture. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them — feature not yet ported: song registry detail checks (swift-project-store); charmap formatting, corruption healing, alias drift. The native harness is uncompiled in all CMake targets and unregistered in checkcatalog, so these sites never execute in any lane.
 Site tally: 88 sites (88 GAP).
 
-Execution and ownership
-The native harness runOnboardCheck (support.cpp) is the only owner of these checks (QTest::qExec of OnboardingTest), but the file is uncompiled in all CMake targets and unregistered in checkcatalog, so no lane executes it. No Swift entry point executes these checks either; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf) and the file-local songPath/tablePath/songsHeaderPath/define/song helpers, which carry no assertion sites.
 
-Fixture, sequence and row constraints
-newSongRegistration_data expands normal, aligned, heal-songs-h, heal-charmap, and reregister rows; the aligned row rewrites the charmap with aligned columns and re-plans, while the healing rows corrupt songs.h/charmap bytes and assert re-registration restores them. registrationBackfill_data expands charmap and songs.h stripped-line backfills. registrationAliases_data expands complete-alias and drift-heals-first. Reload loops re-resolve the created/registered SongInfo after project.reload(). Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Verification
 Command: deno task verify --filter onboardcheck --verbose
 Result: pending integrated run.
-No deno lane covers the native QTest harness; the entry point is runOnboardCheck (support.cpp) via QTest::qExec. Native harness results support only retained native obligations, not Swift parity.
 
-Swift sources inspected (SHA-256)
-No same-dir registration.swift exists, and no Swift check references this
-file's methods or behavior. Inspected at this revision:
-src/checks/editcheck/EventChecks.swift: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
-(sole Swift file carrying onboardcheck/ cppIDs; all of them name
 OnboardingTest::import* methods, none in this file).
-
-Original assertion inventory and source sequence
 
 A001 | OnboardingTest::newSongRegistration | src/checks/onboardcheck/registration.cpp:50
 Disposition: GAP

@@ -6,161 +6,21 @@ Original SHA-256: 86a016fc4acd1e2ec381c579b815d9883d6e6a6167fd97079564a71f68077c
 Swift counterpart: src/checks/trackheaders/trackheadermenu.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose --qt projectSession -maxwarnings 100000
 Result: PASS (3 passed, 0 failed; PASS IDs renameTargetRowAndScrolledTitleResolve, renameMenuTargetsAndBegins, headerMenuTargetRowResolvesByTrack). Full-suite PASS not claimed (concurrent-slice noise during the run).
 Converted-window command: deno task verify:qml-roll --verbose
 Converted-window result: PASS (lane frozen diagnostic run, 1/1 SwiftRollTrackHeaders); test_headerMenuFrameHasOutsideInputPoint (:213-251) exercises A142-A143. This proof-only pass cites the exercised lines without re-running the suite.
 Verified QML SHA-256: 43eb0128d4e291db0844ec3b9412204bc85411ebfa7e47a259c260edd58e916d
 Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 90f4b3bbdcb88534a16c157d15f36dee7a7497ef86911ca40a93e2adcf9e0c9b (header menu loader :363-405; mount wiring :27/:33-44/:88-94)
-The legacy header/camera/playhead harnesses are not registered in this checkout.
-Their C++ sources are reference inventories only, never current execution evidence.
-
-Execution ownership
-TrackHeadersChecks and TrackHeadersInputChecks call the paired functions in the
-original Swift suite order. headerfixture.swift constructs a real two-track
-DocumentSession (Lead C0/key60/v100/24 ticks and Bass C1/key48/v80/48 ticks);
-headerinputfixture.swift owns pointer probes and document/history baselines.
-Their helper expectations execute on every call and are inventoried below. Caller pin: src/checks/trackheaders/TrackHeadersInputChecks.swift SHA-256 0e30a3e3f6929ae540cf35157403c95f1bf2e25f2d3d908e3a37011a5742abb5 calls headerMenuTargetRowResolvesByTrack at line 20.
-
-Original assertion inventory and source sequence
 
 A001 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:109
 Disposition: MATCHED
-Mapping/reason: headerMenuTargetRowResolvesByTrack resolves the non-leading row from track identity [S045]; the identity-resolved right press selects the target [S046] and the menu action reveals it [S047]; dismiss closes the menu with the document unchanged [S048, S049].
-Source context since previous assertion:
-  // Track-header context menu over the shared Quick canvas session. These
-  // checks drive the real header right-press, click typed rows addressed by
-  // songview::TrackHeaderModel::HeaderMenuAction ids, and follow the two async
-  // transitions (voice picker, in-band rename), so close-before-activate
-  // ordering, guarded stale targets, and the dismissal contracts stay
-  // observable end to end.
-
-  #include "checks/trackheaders/tst_trackheaders.h"
-
-  #include "checks/quickpopupguard.h"
-  #include "checks/voicepickerdriver.h"
-
-  #include <QCoreApplication>
-  #include <QPointer>
-  #include <QQuickItem>
-  #include <QQuickWindow>
-  #include <QSignalSpy>
-  #include <QtTest>
-
-  #include <iterator>
-  #include <optional>
-
-  #include "checks/support/quickframebuffer.h"
-  #include "core/songdocument.h"
-  #include "ui/songtab.h"
-  #include "ui/songview.h"
-  #include "ui/songview/quick/timelineinputitem.h"
-  #include "ui/songview/quick/timelinequickview.h"
-  #include "ui/songview/trackheadermodel.h"
-
-  using HeaderMenuAction = songview::TrackHeaderModel::HeaderMenuAction;
-
-  namespace {
-
-  // One opened header menu: the shared session, its rendered panel's typed row
-  // model, and a diagnostic when the asynchronous open failed.
-  struct HeaderMenu {
-      songview::QuickPopupSession *session = nullptr;
-      songview::QuickMenuModel *model = nullptr;
-      QString diagnostic = QStringLiteral("the header right-press did not open the shared menu");
-  };
-
-  // Right-clicks the row's title through the real canvas window and waits for
-  // the shared session to publish the typed menu panel. Callers address and
-  // click rendered rows rather than activating the model.
-  HeaderMenu openHeaderMenu(TrackHeadersFixture &fx, int row)
-  {
-      HeaderMenu menu;
-      songview::QuickPopupSession *const session = quick_popup::popupSession(fx.view());
-      if (!session || !session->window()) {
-          menu.diagnostic = QStringLiteral("the timeline Quick canvas has no popup session");
-          return menu;
-      }
-      // The isolated band shows two rows; scrolling the target row to the top
-      // keeps the title point inside the live input for every track index.
-      fx.headers().setScrollY(qreal(row * fx.rowHeight()));
-      checks::support::pumpQuick();
-      const std::optional<QPointF> title = fx.titlePoint(row);
-      if (!title) {
-          menu.diagnostic = QStringLiteral("the header row title point is not visible");
-          return menu;
-      }
-      const QPointer<songview::QuickPopupSession> live{session};
-      QTest::mouseClick(session->window(), Qt::RightButton, Qt::NoModifier,
-                        fx.input().mapToScene(*title).toPoint());
-      if (!QTest::qWaitFor([&live] {
-              return live && live->isOpen() && quick_popup::menuPanel(*live) &&
-                     quick_popup::menuModel(*quick_popup::menuPanel(*live)) != nullptr;
-          }))
-          return menu;
-      menu.session = live;
-      menu.model = quick_popup::menuModel(*quick_popup::menuPanel(*live));
-      menu.diagnostic.clear();
-      return menu;
-  }
-
-  // Typed row addressing through the model; commands run through the rendered
-  // surface only.
-  int headerMenuRow(songview::QuickMenuModel &model, HeaderMenuAction action)
-  {
-      return model.rowForId(static_cast<int>(action));
-  }
-
-  // An input-local header point the current menu frame does not cover, so the
-  // dismissal press provably lands on the band rather than the popup surface.
-  std::optional<QPointF> headerPointOutsideMenuFrame(TrackHeadersFixture &fx,
-                                                     const QRectF &frameScene)
-  {
-      for (int row = 0; row < fx.headers().rowCount(); ++row) {
-          for (const qreal xFraction : {0.08, 0.5, 0.92}) {
-              const QPointF local(fx.input().width() * xFraction,
-                                  qreal(row) * fx.rowHeight() + fx.rowHeight() / 2.0);
-              if (!fx.input().bounds().contains(local))
-                  continue;
-              if (!frameScene.contains(fx.input().mapToScene(local)))
-                  return local;
-          }
-      }
-      return std::nullopt;
-  }
-
-  } // namespace
-
-  void TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite()
-  {
-      TrackHeadersFixture &fx = fixture();
-      SongDocument &doc = fx.tab().document();
-      const std::optional<int> row = fx.rowForTrack(fx.sourceTrack());
-Original expression:
-  QVERIFY(row)
+Mapping: S045, S046, S047, S048, S049
 
 A002 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:113
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): primary differs from the voice track before the press. [S001]
-Source context since previous assertion:
-  ;
-      // Prove right-press selection changes the primary track, not merely
-      // preserves a track that was already selected.
-      fx.view().selectTrack(fx.selectionTrack());
-Original expression:
-  QVERIFY(fx.view().selectionModel().primaryTrack() != fx.sourceTrack())
+Mapping: S001
 
 A003 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:119
 Disposition: GAP
@@ -177,94 +37,39 @@ Original expression:
 
 A004 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:122
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([1, 2, 3, 4, 5], menuItems action ids): the menu session opens with all five actions. [S002]
-Source context since previous assertion:
-  ;
-
-      const HeaderMenu opened = openHeaderMenu(fx, *row);
-Original expression:
-  QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
+Mapping: S002
 
 A005 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:125
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): right press selects the source track. [S001]
-Source context since previous assertion:
-  ;
-      // The right-press selects its header before the menu opens and the
-      // selection survives an ordinary dismissal.
-Original expression:
-  QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.sourceTrack())
+Mapping: S001
 
 A006 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:133
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([1, 2, 3, 4, 5], ...): five menu actions exist. [S002]
-Source context since previous assertion:
-  ;
-
-      // Availability and typed addressing stay pinned; wording is incidental.
-      static constexpr HeaderMenuAction kMenuActions[] = {
-          HeaderMenuAction::ChangeVoice, HeaderMenuAction::ShowVoiceInVoicegroup,
-          HeaderMenuAction::RenameTrack, HeaderMenuAction::DuplicateTrack,
-          HeaderMenuAction::DeleteTrack,
-      };
-Original expression:
-  static_assert(std::size(kMenuActions) == 5)
+Mapping: S002
 
 A007 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:134
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([1, 2, 3, 4, 5], (0..<h.menuItems.count).map actionId): menu row count is five. [S002]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(opened.model->rowCount(), 5)
+Mapping: S002
 
 A008 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:137
 Disposition: MATCHED
-Mapping/reason: menuItems[$0] enumeration: every action row exists. [S002]
-Source context since previous assertion:
-  ;
-      for (int i = 0; i < opened.model->rowCount(); ++i) {
-          const songview::QuickMenuItem *const item = opened.model->itemAt(i);
-Original expression:
-  QVERIFY(item)
+Mapping: S002
 
 A009 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:138
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([1, 2, 3, 4, 5], actionIds): each item id matches its action. [S002]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(item->id, static_cast<int>(kMenuActions[i]))
+Mapping: S002
 
 A010 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:139
 Disposition: MATCHED
-Mapping/reason: actionId ordering in the enumerated menu items equals the row order. [S002]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(opened.model->rowForId(item->id), i)
+Mapping: S002
 
 A011 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:142
 Disposition: MATCHED
-Mapping/reason: report.expect(allSatisfy enabled) below capacity and report.expectEqual([4], disabled ids) at capacity. [S003, S009]
-Source context since previous assertion:
-  ;
-          const bool expectedEnabled =
-              kMenuActions[i] != HeaderMenuAction::DuplicateTrack || doc.canAddTrack();
-Original expression:
-  QCOMPARE(item->enabled, expectedEnabled)
+Mapping: S003, S009
 
 A012 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:147
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen): dismiss closes the menu; the Escape key route itself remains a native obligation. [S004]
-Source context since previous assertion:
-  ;
-      }
-
-      QTest::keyClick(opened.session->window(), Qt::Key_Escape);
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(!opened.session->isOpen(), "Escape did not dismiss the header menu")
+Mapping: S004
 
 A013 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:148
 Disposition: PARTIAL
@@ -277,70 +82,29 @@ Original expression:
 
 A014 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:150
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(state, document.state): menu open/dismiss writes nothing. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.smf().write(), before)
 
 A015 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:151
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(history, document.history.currentIdentity): history unchanged. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), undo)
 
 A016 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:152
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): dismiss retains the selection. [S005]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.sourceTrack())
+Mapping: S005
 
 A017 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:157
 Disposition: MATCHED
-Mapping/reason: report.fail guard plus report.expectEqual(16, usedTrackCount): the capacity fixture fills all track slots. [S006, S007]
-Source context since previous assertion:
-  ;
-
-      // At track capacity the Duplicate row renders disabled: a real click on
-      // the disabled row neither dispatches nor dismisses.
-      while (doc.canAddTrack()) {
-Original expression:
-  QVERIFY2(doc.duplicateTrack(0) >= 0, "the capacity fixture could not fill the track slots")
+Mapping: S006, S007
 
 A018 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:160
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(16, h.rows.count): capacity removes the add row. [S008]
-Source context since previous assertion:
-  ;
-      }
-      QCoreApplication::processEvents();
-Original expression:
-  QTRY_COMPARE(fx.headers().rowCount(), doc.engineTrackCount())
+Mapping: S008
 
 A019 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:162
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([4], disabled action ids): the capacity menu session opens. [S009]
-Source context since previous assertion:
-  ;
-      const HeaderMenu capacity = openHeaderMenu(fx, *row);
-Original expression:
-  QVERIFY2(capacity.session, qUtf8Printable(capacity.diagnostic))
+Mapping: S009
 
 A020 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:166
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([4], (0..<h.menuItems.count).filter { !enabled }): only Duplicate is disabled at capacity. [S009]
-Source context since previous assertion:
-  ;
-      const int duplicateRow = headerMenuRow(*capacity.model, HeaderMenuAction::DuplicateTrack);
-      const songview::QuickMenuItem *const duplicateItem =
-          duplicateRow >= 0 ? capacity.model->itemAt(duplicateRow) : nullptr;
-Original expression:
-  QVERIFY2(duplicateItem && !duplicateItem->enabled,
-               "Duplicate track stayed enabled at track capacity")
+Mapping: S009
 
 A021 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:170
 Disposition: GAP
@@ -355,54 +119,21 @@ Original expression:
 
 A022 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:173
 Disposition: MATCHED
-Mapping/reason: report.expect(h.menuOpen): disabled duplicate neither dispatches nor dismisses. [S010]
-Source context since previous assertion:
-  ;
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(capacity.session->isOpen(),
-               "a click on the disabled Duplicate row dismissed the menu")
+Mapping: S010
 
 A023 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:175
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(history, document.history.currentIdentity): disabled action writes no history. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), capacityUndo)
 
 A024 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:176
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(state, document.state): disabled action writes nothing. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.smf().write(), capacityBytes)
 
 A025 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:179
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen): dismiss closes the capacity menu; the Escape key route itself remains a native obligation. [S011]
-Source context since previous assertion:
-  ;
-      QTest::keyClick(capacity.session->window(), Qt::Key_Escape);
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(!capacity.session->isOpen(), "Escape did not dismiss the header menu at capacity")
+Mapping: S011
 
 A026 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:187
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(1, fx.session.selectedTrack): the voice row exists and right press selects it. [S013]
-Source context since previous assertion:
-  ;
-  }
-
-  void TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses()
-  {
-      TrackHeadersFixture &fx = fixture();
-      SongDocument &doc = fx.tab().document();
-      const std::optional<int> row = fx.rowForTrack(fx.voiceTrack());
-Original expression:
-  QVERIFY(row)
+Mapping: S013
 
 A027 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:193
 Disposition: GAP
@@ -419,21 +150,10 @@ Original expression:
 
 A028 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:196
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-
-      const HeaderMenu opened = openHeaderMenu(fx, *row);
-Original expression:
-  QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A029 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:197
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(1, fx.session.selectedTrack): right press selects the voice track. [S013]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.voiceTrack())
+Mapping: S013
 
 A030 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:198
 Disposition: GAP
@@ -459,11 +179,6 @@ Original expression:
 
 A032 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:206
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(revision, document.revision): opening the picker writes nothing. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.revision(), revision)
 
 A033 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:210
 Disposition: PARTIAL
@@ -498,11 +213,6 @@ Original expression:
 
 A036 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:217
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(revision, document.revision): picker cancellation writes nothing. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.revision(), revision)
 
 A037 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:218
 Disposition: PARTIAL
@@ -522,43 +232,17 @@ Original expression:
 
 A039 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:221
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(revision, document.revision): cancelled picker writes nothing. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-      checks::support::pumpQuick();
-Original expression:
-  QCOMPARE(doc.revision(), revision)
 
 A040 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:222
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(history, document.history.currentIdentity): cancelled picker leaves history unchanged. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), undo)
 
 A041 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:223
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(1, fx.session.selectedTrack): cancelled picker retains the voice track selection. [S015]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.voiceTrack())
+Mapping: S015
 
 A042 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:231
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == 0): the source row exists and rename replaces the closed menu. [S019]
-Source context since previous assertion:
-  ;
-  }
-
-  void TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor()
-  {
-      TrackHeadersFixture &fx = fixture();
-      SongDocument &doc = fx.tab().document();
-      const std::optional<int> row = fx.rowForTrack(fx.sourceTrack());
-Original expression:
-  QVERIFY(row)
+Mapping: S019
 
 A043 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:238
 Disposition: GAP
@@ -576,13 +260,6 @@ Original expression:
 
 A044 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:241
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-
-      const HeaderMenu opened = openHeaderMenu(fx, *row);
-Original expression:
-  QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A045 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:242
 Disposition: GAP
@@ -596,22 +273,11 @@ Original expression:
 
 A046 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:248
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == 0): rename editor replaces closed menu synchronously. [S019]
-Source context since previous assertion:
-  ;
-      // Rename begins synchronously once the menu closed, adopting the existing
-      // in-band editor; no queued stash may reopen it after a cancellation.
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(!opened.session->isOpen(), "the Rename track pick left the header menu open")
+Mapping: S019
 
 A047 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:249
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == 0): renamingTrack targets the source track. [S019]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fx.headers().renamingTrack(), fx.sourceTrack())
+Mapping: S019
 
 A048 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:250
 Disposition: GAP
@@ -631,30 +297,13 @@ Original expression:
 
 A050 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:252
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(revision, document.revision): opening the editor writes nothing. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.revision(), revision)
 
 A051 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:256
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(-1, h.renamingTrack): cancelled editor cannot reopen or commit. [S021]
-Source context since previous assertion:
-  ;
-
-      QTest::keyClick(&fx.window(), Qt::Key_Escape);
-      checks::support::pumpQuick();
-Original expression:
-  QCOMPARE(fx.headers().renamingTrack(), -1)
+Mapping: S021
 
 A052 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:257
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(state, document.state): cancelled rename keeps the original name. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.trackName(fx.sourceTrack()), original)
 
 A053 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:258
 Disposition: GAP
@@ -666,28 +315,13 @@ Original expression:
 
 A054 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:259
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(revision, document.revision): cancelled rename writes nothing. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.revision(), revision)
 
 A055 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:260
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(history, document.history.currentIdentity): cancelled rename leaves history unchanged. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), undo)
 
 A056 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:262
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(-1, h.renamingTrack): the cancelled editor stays closed. [S021]
-Source context since previous assertion:
-  ;
-      checks::support::pumpQuick();
-Original expression:
-  QCOMPARE(fx.headers().renamingTrack(), -1)
+Mapping: S021
 
 A057 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:263
 Disposition: GAP
@@ -699,38 +333,14 @@ Original expression:
 
 A058 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:271
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(3, fx.trackRows.count): duplicate succeeds, proving canAddTrack held. [S027]
-Source context since previous assertion:
-  ;
-  }
-
-  void TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete()
-  {
-      TrackHeadersFixture &fx = fixture();
-      SongDocument &doc = fx.tab().document();
-      const quick_popup::PromptGuard guard(fx.view());
-Original expression:
-  QVERIFY(doc.canAddTrack())
+Mapping: S027
 
 A059 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:275
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([1], reveals): the voice row exists and reveal addresses it. [S023]
-Source context since previous assertion:
-  ;
-
-      // Show voice in voicegroup reveals the header's program without a write.
-      const std::optional<int> voiceRow = fx.rowForTrack(fx.voiceTrack());
-Original expression:
-  QVERIFY(voiceRow)
+Mapping: S023
 
 A060 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:277
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-      const HeaderMenu voiceMenu = openHeaderMenu(fx, *voiceRow);
-Original expression:
-  QVERIFY2(voiceMenu.session, qUtf8Printable(voiceMenu.diagnostic))
 
 A061 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:281
 Disposition: GAP
@@ -748,44 +358,21 @@ Original expression:
 
 A062 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:286
 Disposition: MATCHED
-Mapping/reason: report.expect(h?.menuOpen == false) inside the reveal callback: menu closes before reveal. [S022]
-Source context since previous assertion:
-  ;
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(!voiceMenu.session->isOpen(), "the Show voice pick left the header menu open")
+Mapping: S022
 
 A063 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:287
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([1], reveals): reveal fires exactly once for the requested track. [S023]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(reveal.count(), 1)
+Mapping: S023
 
 A064 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:288
 Disposition: MATCHED
-Mapping/reason: report.expectEqual([42], revealedPrograms): track-addressed request resolves the current voice program. [S024]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(reveal.at(0).at(0).toInt(), fx.view().currentProgram(fx.voiceTrack()))
+Mapping: S024
 
 A065 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:289
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(revision, document.revision): menu reveal writes nothing. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.revision(), beforeReveal)
 
 A066 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:290
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(history, document.history.currentIdentity): reveal leaves history unchanged. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), undoBeforeReveal)
 
 A067 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:291
 Disposition: PARTIAL
@@ -798,36 +385,14 @@ Original expression:
 
 A068 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:297
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(notes, fx.document.notes(in: 2)...): the source row exists and its content is copied. [S028]
-Source context since previous assertion:
-  ;
-
-      // Duplicate runs the real queued command: one command, one engine slot,
-      // and undo restores the song bytes.
-      const std::optional<int> sourceRow = fx.rowForTrack(fx.sourceTrack());
-Original expression:
-  QVERIFY(sourceRow)
+Mapping: S028
 
 A069 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:299
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-      const HeaderMenu duplicateMenu = openHeaderMenu(fx, *sourceRow);
-Original expression:
-  QVERIFY2(duplicateMenu.session, qUtf8Printable(duplicateMenu.diagnostic))
 
 A070 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:304
 Disposition: MATCHED
-Mapping/reason: report.expect(!notes.isEmpty): the duplicate fixture track carries content to copy. [S025]
-Source context since previous assertion:
-  ;
-      const QByteArray beforeDuplicate = doc.smf().write();
-      const int undoBeforeDuplicate = doc.undoStack()->index();
-      const int tracksBefore = doc.engineTrackCount();
-      const std::vector<DocNote> sourceNotes = doc.notesForTrack(fx.sourceTrack());
-Original expression:
-  QVERIFY2(!sourceNotes.empty(), "the duplicate fixture track carried no content to copy")
+Mapping: S025
 
 A071 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:305
 Disposition: GAP
@@ -842,12 +407,7 @@ Original expression:
 
 A072 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:310
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen): duplicate closes the menu. [S026]
-Source context since previous assertion:
-  ;
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(!duplicateMenu.session->isOpen(), "the Duplicate pick left the header menu open")
+Mapping: S026
 
 A073 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:311
 Disposition: PARTIAL
@@ -860,116 +420,54 @@ Original expression:
 
 A074 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:313
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(baseline.revision + 1, fx.document.revision): duplicate is one edit. [S029]
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_COMPARE(doc.undoStack()->index(), undoBeforeDuplicate + 1)
+Mapping: S029
 
 A075 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:314
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(3, fx.trackRows.count): duplicate adds one track. [S027]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.engineTrackCount(), tracksBefore + 1)
+Mapping: S027
 
 A076 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:317
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(notes, fx.document.notes(in: 2)...): copied note count matches. [S028]
-Source context since previous assertion:
-  ;
-      // The copy carries the targeted track's content, not a fresh empty slot.
-      const std::vector<DocNote> copiedNotes = doc.notesForTrack(tracksBefore);
-Original expression:
-  QCOMPARE(copiedNotes.size(), sourceNotes.size())
+Mapping: S028
 
 A077 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:319
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(notes, ...): copied tick matches. [S028]
-Source context since previous assertion:
-  ;
-      for (size_t i = 0; i < copiedNotes.size(); ++i) {
-Original expression:
-  QCOMPARE(copiedNotes[i].tick, sourceNotes[i].tick)
+Mapping: S028
 
 A078 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:320
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(notes, ...): copied key matches. [S028]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(copiedNotes[i].key, sourceNotes[i].key)
+Mapping: S028
 
 A079 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:321
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(notes, ...): copied duration matches. [S028]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(copiedNotes[i].duration, sourceNotes[i].duration)
+Mapping: S028
 
 A080 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:322
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(notes, ...): copied velocity matches. [S028]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(copiedNotes[i].velocity, sourceNotes[i].velocity)
+Mapping: S028
 
 A081 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:324
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(baseline.revision + 1, fx.document.revision): duplicate changes the document. [S029]
-Source context since previous assertion:
-  ;
-      }
-Original expression:
-  QVERIFY(doc.smf().write() != beforeDuplicate)
+Mapping: S029
 
 A082 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:326
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(baseline.state, fx.document.state): one undo removes the duplicate. [S031]
-Source context since previous assertion:
-  ;
-      doc.undoStack()->undo();
-Original expression:
-  QTRY_COMPARE(doc.smf().write(), beforeDuplicate)
+Mapping: S031
 
 A083 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:327
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(baseline.state, fx.document.state): undo restores the original track count. [S031]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.engineTrackCount(), tracksBefore)
+Mapping: S031
 
 A084 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:328
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(baseline.state, fx.document.state): the source track row is restored. [S031]
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_VERIFY(fx.rowForTrack(fx.sourceTrack()).has_value())
+Mapping: S031
 
 A085 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:332
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen): the selection row exists and delete closes the menu. [S032]
-Source context since previous assertion:
-  ;
-
-      // Delete drops the selected track's records; undo restores bytes and row.
-      const std::optional<int> selectionRow = fx.rowForTrack(fx.selectionTrack());
-Original expression:
-  QVERIFY(selectionRow)
+Mapping: S032
 
 A086 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:334
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-      const HeaderMenu deleteMenu = openHeaderMenu(fx, *selectionRow);
-Original expression:
-  QVERIFY2(deleteMenu.session, qUtf8Printable(deleteMenu.diagnostic))
 
 A087 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:337
 Disposition: GAP
@@ -986,12 +484,7 @@ Original expression:
 
 A088 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:342
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen): delete closes the menu. [S032]
-Source context since previous assertion:
-  ;
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(!deleteMenu.session->isOpen(), "the Delete pick left the header menu open")
+Mapping: S032
 
 A089 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:343
 Disposition: PARTIAL
@@ -1004,67 +497,31 @@ Original expression:
 
 A090 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:345
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(beforeDelete + 1, fx.document.revision): delete is one edit. [S033]
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_COMPARE(doc.undoStack()->index(), undoBeforeDelete + 1)
+Mapping: S033
 
 A091 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:346
 Disposition: MATCHED
-Mapping/reason: fx.expectRows names ["Lead"]: deletion removes exactly one track. [S032, headerfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.engineTrackCount(), tracksBefore - 1)
+Mapping: S032
 
 A092 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:347
 Disposition: MATCHED
-Mapping/reason: fx.expectRows names ["Lead"]: the deleted track's row is gone. [S032, headerfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_VERIFY(!fx.rowForTrack(fx.selectionTrack()).has_value())
+Mapping: S032
 
 A093 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:349
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(baseline.state, fx.document.state): undo restores deleted music. [S035]
-Source context since previous assertion:
-  ;
-      doc.undoStack()->undo();
-Original expression:
-  QTRY_COMPARE(doc.smf().write(), beforeDelete)
+Mapping: S035
 
 A094 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:350
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(baseline.state, fx.document.state): undo restores the track count. [S035]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.engineTrackCount(), tracksBefore)
+Mapping: S035
 
 A095 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:351
 Disposition: MATCHED
-Mapping/reason: fx.expectRows names ["Lead", "Bass"]: the deleted track's row returns. [S035, headerfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_VERIFY(fx.rowForTrack(fx.selectionTrack()).has_value())
+Mapping: S035
 
 A096 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:359
 Disposition: MATCHED
-Mapping/reason: report.expect(fx.document.moveTrack(0, to: 1)): the voice row exists and remaps. [S036]
-Source context since previous assertion:
-  ;
-  }
-
-  void TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite()
-  {
-      TrackHeadersFixture &fx = fixture();
-      SongDocument &doc = fx.tab().document();
-      const std::optional<int> voiceRow = fx.rowForTrack(fx.voiceTrack());
-Original expression:
-  QVERIFY(voiceRow)
+Mapping: S036
 
 A097 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:364
 Disposition: GAP
@@ -1080,34 +537,14 @@ Original expression:
 
 A098 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:370
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-
-      // A structural remap after the open cancels the menu synchronously
-      // through the model's transient-state teardown: no focus theft into the
-      // menu content, no rename, no picker, and exactly the move's write.
-      const HeaderMenu opened = openHeaderMenu(fx, *voiceRow);
-Original expression:
-  QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A099 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:372
 Disposition: MATCHED
-Mapping/reason: report.expect(fx.document.moveTrack(0, to: 1)): open menu target remaps. [S036]
-Source context since previous assertion:
-  ;
-      const int undo = doc.undoStack()->index();
-Original expression:
-  QVERIFY(doc.moveTrack(0, 1))
+Mapping: S036
 
 A100 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:373
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == -1): structural remap cancels the menu. [S037]
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_VERIFY2(!opened.session->isOpen(),
-                   "a structural remap did not cancel the open header menu")
+Mapping: S037
 
 A101 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:377
 Disposition: PARTIAL
@@ -1132,81 +569,30 @@ Original expression:
 
 A103 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:382
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == -1): remap cancels without starting the editor. [S037]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fx.headers().renamingTrack(), -1)
+Mapping: S037
 
 A104 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:383
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(0, pickers): late stale action cannot open the picker. [S038]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!static_cast<bool>(checks::voicepicker::active(fx.view())))
+Mapping: S038
 
 A105 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:384
 Disposition: MATCHED
-Mapping/reason: report.expect(fx.document.moveTrack(0, to: 1)) plus remapped baseline history: exactly the move's write. [S036, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), undo + 1)
+Mapping: S036
 
 A106 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:394
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == -1): the stale row existed and its menu was cancelled. [S037]
-Source context since previous assertion:
-  ;
-
-      // A queued pick that has not executed when the engine remaps must never
-      // reinterpret its raw track index. The hook is connected after the host's
-      // own activated handler (made at open time), so the real row click queues
-      // the mutation first and this synchronous move lands before the event
-      // loop delivers it. The move-only bytes are captured inside the emission,
-      // before any queued command could fire, so the final byte equality cannot
-      // absorb a misfired mutation.
-      const std::optional<int> staleRow = fx.rowForTrack(fx.voiceTrack());
-Original expression:
-  QVERIFY(staleRow)
+Mapping: S037
 
 A107 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:401
 Disposition: MATCHED
-Mapping/reason: report.expect(fx.document.moveTrack(0, to: 1)): the fixture has a second track for the remap. [S036]
-Source context since previous assertion:
-  ;
-      // Remap real fixture-derived indices: the voice track is the queued
-      // mutation's target and the destination is a genuinely different track.
-      const int victim = fx.voiceTrack();
-      int destination = fx.sourceTrack();
-      if (destination == victim)
-          destination = victim == 0 ? 1 : 0;
-Original expression:
-  QVERIFY2(destination != victim && destination >= 0 && destination < doc.engineTrackCount(),
-               "the fixture needs a second track for the remap")
+Mapping: S036
 
 A108 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:404
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the stale menu session opens. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-      const HeaderMenu stale = openHeaderMenu(fx, *staleRow);
-Original expression:
-  QVERIFY2(stale.session, qUtf8Printable(stale.diagnostic))
 
 A109 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:410
 Disposition: MATCHED
-Mapping/reason: report.expect(fx.document.moveTrack(0, to: 1)): the remap lands before the stale action. [S036]
-Source context since previous assertion:
-  ;
-      QByteArray afterRemap;
-      const int staleUndo = doc.undoStack()->index();
-      QObject::connect(
-          stale.model, &songview::QuickMenuModel::activated, stale.model,
-          [&](int) {
-Original expression:
-  QVERIFY(doc.moveTrack(victim, destination))
+Mapping: S036
 
 A110 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:414
 Disposition: GAP
@@ -1223,133 +609,47 @@ Original expression:
 
 A111 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:417
 Disposition: MATCHED
-Mapping/reason: remapped HeaderDocumentBaseline captures post-move state; expectUnchanged proves the stale action added nothing. [S036, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!afterRemap.isEmpty())
+Mapping: S036
 
 A112 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:419
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(0, pickers): the stale Change voice action cannot open the picker. [S038]
-Source context since previous assertion:
-  ;
-      checks::support::pumpQuick();
-Original expression:
-  QVERIFY(!static_cast<bool>(checks::voicepicker::active(fx.view())))
+Mapping: S038
 
 A113 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:420
 Disposition: MATCHED
-Mapping/reason: remapped baseline history identity: only the move's write is recorded. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), staleUndo + 1)
 
 A114 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:421
 Disposition: MATCHED
-Mapping/reason: remapped baseline state equality: the document equals the post-remap bytes. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.smf().write(), afterRemap)
 
 A115 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:422
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == -1): no editor survives the remap. [S037]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fx.headers().renamingTrack(), -1)
+Mapping: S037
 
 A116 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:426
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(5, h.menuItems.count): the fresh row exists and renders the menu. [S039]
-Source context since previous assertion:
-  ;
-
-      // Cancellation leaves the host usable: a fresh open renders the menu.
-      const std::optional<int> freshRow = fx.rowForTrack(fx.sourceTrack());
-Original expression:
-  QVERIFY(freshRow)
+Mapping: S039
 
 A117 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:428
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the fresh menu session opens. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-      const HeaderMenu fresh = openHeaderMenu(fx, *freshRow);
-Original expression:
-  QVERIFY2(fresh.session, qUtf8Printable(fresh.diagnostic))
 
 A118 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:429
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(5, h.menuItems.count): fresh menu remains usable after remap. [S039]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fresh.model->rowCount(), 5)
+Mapping: S039
 
 A119 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:437
 Disposition: MATCHED
-Mapping/reason: report.expect(fx.document.moveTrack(1, to: 0)): the voice row exists and remaps. [S040]
-Source context since previous assertion:
-  ;
-  }
-
-  void TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap()
-  {
-      TrackHeadersFixture &fx = fixture();
-      SongDocument &doc = fx.tab().document();
-      const std::optional<int> voiceRow = fx.rowForTrack(fx.voiceTrack());
-Original expression:
-  QVERIFY(voiceRow)
+Mapping: S040
 
 A120 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:447
 Disposition: MATCHED
-Mapping/reason: report.expect(fx.document.moveTrack(1, to: 0)): the fixture has a second track for the remap. [S040]
-Source context since previous assertion:
-  ;
-      const quick_popup::PromptGuard guard(fx.view());
-      const int tracks = doc.engineTrackCount();
-      const QString voiceName = doc.trackName(fx.voiceTrack());
-      // Remap real fixture-derived indices: the voice track is the queued
-      // mutation's target and the destination is a genuinely different track.
-      const int victim = fx.voiceTrack();
-      int destination = fx.sourceTrack();
-      if (destination == victim)
-          destination = victim == 0 ? 1 : 0;
-Original expression:
-  QVERIFY2(destination != victim && destination >= 0 && destination < doc.engineTrackCount(),
-               "the fixture needs a second track for the remap")
+Mapping: S040
 
 A121 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:456
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the delete menu session opens. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-
-      // A Delete queued by a real row click, remapped before the queued command
-      // executes, is dropped by the execution-time identity check: the raw
-      // index never deletes the track that slid into the slot. Each hook is
-      // one-shot because the persistent model would otherwise deliver an older
-      // observer's remap again on a later menu's activation.
-      const HeaderMenu deleteMenu = openHeaderMenu(fx, *voiceRow);
-Original expression:
-  QVERIFY2(deleteMenu.session, qUtf8Printable(deleteMenu.diagnostic))
 
 A122 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:462
 Disposition: MATCHED
-Mapping/reason: report.expect(fx.document.moveTrack(1, to: 0)): remap precedes delayed activation. [S040]
-Source context since previous assertion:
-  ;
-      QByteArray afterRemap;
-      const int deleteUndo = doc.undoStack()->index();
-      QObject::connect(
-          deleteMenu.model, &songview::QuickMenuModel::activated, deleteMenu.model,
-          [&](int) {
-Original expression:
-  QVERIFY(doc.moveTrack(victim, destination))
+Mapping: S040
 
 A123 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:466
 Disposition: GAP
@@ -1367,86 +667,36 @@ Original expression:
 
 A124 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:470
 Disposition: MATCHED
-Mapping/reason: remapped HeaderDocumentBaseline captures post-move state before the delayed action. [S040, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!afterRemap.isEmpty())
+Mapping: S040
 
 A125 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:472
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen): the stale menu stays closed. [S041]
-Source context since previous assertion:
-  ;
-      checks::support::pumpQuick();
-Original expression:
-  QVERIFY(!deleteMenu.session->isOpen())
+Mapping: S041
 
 A126 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:473
 Disposition: MATCHED
-Mapping/reason: remapped baseline state equality: the delayed delete cannot change the track count. [S040, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.engineTrackCount(), tracks)
+Mapping: S040
 
 A127 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:474
 Disposition: MATCHED
-Mapping/reason: remapped baseline history identity: only the move's write is recorded. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), deleteUndo + 1)
 
 A128 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:475
 Disposition: MATCHED
-Mapping/reason: remapped baseline state equality: the document equals the post-remap bytes. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.smf().write(), afterRemap)
 
 A129 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:476
 Disposition: MATCHED
-Mapping/reason: remapped baseline state equality: the destination track keeps the voice name. [S040, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.trackName(destination), voiceName)
+Mapping: S040
 
 A130 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:481
 Disposition: MATCHED
-Mapping/reason: report.expect(fx.document.moveTrack(1, to: 0)): the duplicate row exists after remap. [S040]
-Source context since previous assertion:
-  ;
-
-      // A Duplicate queued across the same window drops instead of copying the
-      // track that slid into the raw slot.
-      const std::optional<int> duplicateRow = fx.rowForTrack(destination);
-Original expression:
-  QVERIFY(duplicateRow)
+Mapping: S040
 
 A131 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:483
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the duplicate menu session opens. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-      const HeaderMenu duplicateMenu = openHeaderMenu(fx, *duplicateRow);
-Original expression:
-  QVERIFY2(duplicateMenu.session, qUtf8Printable(duplicateMenu.diagnostic))
 
 A132 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:489
 Disposition: MATCHED
-Mapping/reason: report.expect(fx.document.moveTrack(1, to: 0)): remap precedes the delayed duplicate. [S040]
-Source context since previous assertion:
-  ;
-      QByteArray duplicateAfterRemap;
-      const int duplicateUndo = doc.undoStack()->index();
-      QObject::connect(
-          duplicateMenu.model, &songview::QuickMenuModel::activated, duplicateMenu.model,
-          [&](int) {
-Original expression:
-  QVERIFY(doc.moveTrack(destination, victim))
+Mapping: S040
 
 A133 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:493
 Disposition: GAP
@@ -1464,59 +714,25 @@ Original expression:
 
 A134 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:497
 Disposition: MATCHED
-Mapping/reason: remapped HeaderDocumentBaseline captures post-move state before the delayed action. [S040, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!duplicateAfterRemap.isEmpty())
+Mapping: S040
 
 A135 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:499
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen): the stale menu stays closed. [S041]
-Source context since previous assertion:
-  ;
-      checks::support::pumpQuick();
-Original expression:
-  QVERIFY(!duplicateMenu.session->isOpen())
+Mapping: S041
 
 A136 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:500
 Disposition: MATCHED
-Mapping/reason: remapped baseline state equality: the delayed duplicate cannot change the track count. [S040, headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.engineTrackCount(), tracks)
+Mapping: S040
 
 A137 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:501
 Disposition: MATCHED
-Mapping/reason: remapped baseline history identity: only the move's write is recorded. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), duplicateUndo + 1)
 
 A138 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:502
 Disposition: MATCHED
-Mapping/reason: remapped baseline state equality: the document equals the post-remap bytes. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.smf().write(), duplicateAfterRemap)
 
 A139 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:510
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen): the source row exists and outside press dismisses. [S042]
-Source context since previous assertion:
-  ;
-  }
-
-  void TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough()
-  {
-      TrackHeadersFixture &fx = fixture();
-      SongDocument &doc = fx.tab().document();
-      const std::optional<int> row = fx.rowForTrack(fx.sourceTrack());
-Original expression:
-  QVERIFY(row)
+Mapping: S042
 
 A140 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:516
 Disposition: GAP
@@ -1533,46 +749,18 @@ Original expression:
 
 A141 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:519
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-
-      const HeaderMenu opened = openHeaderMenu(fx, *row);
-Original expression:
-  QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A142 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:521
 Disposition: MATCHED
-Mapping/reason: Converted-window test_headerMenuFrameHasOutsideInputPoint renders the typed panel through the mounted header menu loader and resolves its outside boundary frame: rowObjectNamePrefix is headerMenuRow_ [S050], the quickMenuFrame child resolves [S051] and is verified non-null, visible and sized [S052, S053].
-Source context since previous assertion:
-  ;
-      QQuickItem *const frame = quick_popup::menuFrame(*opened.session);
-Original expression:
-  QVERIFY2(frame, "the header menu rendered no outside boundary frame")
+Mapping: S050, S051, S052, S053
 
 A143 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:524
 Disposition: MATCHED
-Mapping/reason: Converted-window test_headerMenuFrameHasOutsideInputPoint replays the outside-point scan (rows times 0.08/0.5/0.92 fractions with input-bounds and frame-scene exclusion, the converted headerPointOutsideMenuFrame) [S054] and verifies an outside point inside the live input exists [S055].
-Source context since previous assertion:
-  ;
-      const QRectF frameScene = frame->mapRectToScene(frame->boundingRect());
-      const std::optional<QPointF> outside = headerPointOutsideMenuFrame(fx, frameScene);
-Original expression:
-  QVERIFY2(outside, "no header point outside the menu frame stayed inside the live input")
+Mapping: S054, S055
 
 A144 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:531
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen): outside button dismisses without reopening. [S042]
-Source context since previous assertion:
-  ;
-      const QPoint outsideScene = fx.input().mapToScene(*outside).toPoint();
-
-      // An outside left press dismisses through the frame: no selection change,
-      // no document effect, and no new menu.
-      QTest::mouseClick(opened.session->window(), Qt::LeftButton, Qt::NoModifier, outsideScene);
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(!opened.session->isOpen(), "an outside press did not dismiss the header menu")
+Mapping: S042
 
 A145 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:533
 Disposition: GAP
@@ -1586,27 +774,13 @@ Original expression:
 
 A146 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:535
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): outside press never clicks through to selection. [S043]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.sourceTrack())
+Mapping: S043
 
 A147 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:536
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(state, document.state): outside dismissal writes nothing. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.smf().write(), before)
 
 A148 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:537
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(history, document.history.currentIdentity): history unchanged. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), undo)
 
 A149 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:538
 Disposition: PARTIAL
@@ -1619,25 +793,10 @@ Original expression:
 
 A150 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:544
 Disposition: MATCHED
-Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the reopened menu session opens. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-
-      // An outside right press dismisses too; its paired release is swallowed
-      // by the session instead of clicking through to the band.
-      const HeaderMenu reopened = openHeaderMenu(fx, *row);
-Original expression:
-  QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic))
 
 A151 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:547
 Disposition: MATCHED
-Mapping/reason: report.expect(!h.menuOpen): outside right press dismisses without reopening. [S042]
-Source context since previous assertion:
-  ;
-      QTest::mousePress(reopened.session->window(), Qt::RightButton, Qt::NoModifier, outsideScene);
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(!reopened.session->isOpen(), "an outside right press did not dismiss the menu")
+Mapping: S042
 
 A152 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:551
 Disposition: GAP
@@ -1653,27 +812,13 @@ Original expression:
 
 A153 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:553
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): outside right press never clicks through. [S043]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.sourceTrack())
+Mapping: S043
 
 A154 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:554
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(state, document.state): outside dismissal writes nothing. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.smf().write(), before)
 
 A155 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:555
 Disposition: MATCHED
-Mapping/reason: report.expectEqual(history, document.history.currentIdentity): history unchanged. [headerinputfixture.swift]
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(doc.undoStack()->index(), undo)
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -1684,307 +829,165 @@ Swift assertion predicates
 
 S001 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "right press selects target"
-  report.expectEqual(0, fx.session.selectedTrack, cppID: id, what: "right press selects target")
 
 S002 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "menu exposes all five typed actions in order"
-  report.expectEqual([1, 2, 3, 4, 5], (0..<h.menuItems.count).map { h.menuItems[$0].actionId },
-                         cppID: id, what: "menu exposes all five typed actions in order")
 
 S003 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "all actions are available below capacity"
-  report.expect((0..<h.menuItems.count).allSatisfy { h.menuItems[$0].enabled },
-                    cppID: id, message: "all actions are available below capacity")
 
 S004 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "dismiss closes menu"
-  report.expect(!h.menuOpen, cppID: id, message: "dismiss closes menu")
 
 S005 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "dismiss retains selected target"
-  report.expectEqual(0, fx.session.selectedTrack, cppID: id, what: "dismiss retains selected target")
 
 S006 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: function
-  report.fail(id, "could not fill engine track capacity")
 
 S007 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "fixture reaches sixteen-track capacity"
-  report.expectEqual(16, fx.document.engineTracks.usedTrackCount, cppID: id,
-                         what: "fixture reaches sixteen-track capacity")
 
 S008 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "capacity removes add row"
-  report.expectEqual(16, h.rows.count, cppID: id, what: "capacity removes add row")
 
 S009 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "only duplicate is disabled at capacity"
-  report.expectEqual([4], (0..<h.menuItems.count).filter { !h.menuItems[$0].enabled }
-          .map { h.menuItems[$0].actionId }, cppID: id, what: "only duplicate is disabled at capacity")
 
 S010 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "disabled duplicate neither dispatches nor dismisses"
-  report.expect(h.menuOpen, cppID: id, message: "disabled duplicate neither dispatches nor dismisses")
 
 S011 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "dismiss closes the capacity menu"
-  report.expect(!h.menuOpen, cppID: id, message: "dismiss closes the capacity menu")
 
 S012 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "menu closes before picker request"
-  report.expect(h?.menuOpen == false, cppID: id, message: "menu closes before picker request")
 
 S013 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "right press selects the voice track"
-  report.expectEqual(1, fx.session.selectedTrack, cppID: id,
-                         what: "right press selects the voice track")
 
 S014 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "change voice requests selected track picker"
-  report.expectEqual([1], requests, cppID: id, what: "change voice requests selected track picker")
 
 S015 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "cancelled picker retains the voice track selection"
-  report.expectEqual(1, fx.session.selectedTrack, cppID: id,
-                         what: "cancelled picker retains the voice track selection")
 
 S016 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "accepted picker edits captured track program"
-  report.expectEqual([127], fx.document.lanePoints(track: 1, lane: .voice).map(\.value),
-                         cppID: id, what: "accepted picker edits captured track program")
 
 S017 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "voice edit leaves other track untouched"
-  report.expectEqual([0], fx.document.lanePoints(track: 0, lane: .voice).map(\.value),
-                         cppID: id, what: "voice edit leaves other track untouched")
 
 S018 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "voice acceptance creates one edit"
-  report.expectEqual(baseline.revision + 1, fx.document.revision, cppID: id,
-                         what: "voice acceptance creates one edit")
 
 S019 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "rename editor replaces closed menu synchronously"
-  report.expect(!h.menuOpen && h.renamingTrack == 0, cppID: id,
-                    message: "rename editor replaces closed menu synchronously")
 
 S020 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "editor starts with editable track name"
-  report.expectEqual("Lead", h.renameDraft, cppID: id, what: "editor starts with editable track name")
 
 S021 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "cancelled editor cannot reopen or commit"
-  report.expectEqual(-1, h.renamingTrack, cppID: id, what: "cancelled editor cannot reopen or commit")
 
 S022 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "menu closes before reveal"
-  report.expect(h?.menuOpen == false, cppID: id, message: "menu closes before reveal")
 
 S023 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "reveal addresses requested track"
-  report.expectEqual([1], reveals, cppID: id, what: "reveal addresses requested track")
 
 S024 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "track-addressed menu request resolves to current voice program"
-  report.expectEqual([42], revealedPrograms, cppID: id,
-                         what: "track-addressed menu request resolves to current voice program")
 
 S025 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "the duplicate fixture track carries content to copy"
-  report.expect(!notes.isEmpty, cppID: id,
-                    message: "the duplicate fixture track carries content to copy")
 
 S026 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "duplicate closes menu"
-  report.expect(!h.menuOpen, cppID: id, message: "duplicate closes menu")
 
 S027 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "duplicate adds one track"
-  report.expectEqual(3, fx.trackRows.count, cppID: id, what: "duplicate adds one track")
 
 S028 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "duplicate copies content rather than creating an empty slot"
-  report.expectEqual(notes, fx.document.notes(in: 2).map {
-          "\($0.tick):\($0.pitch):\($0.duration):\($0.velocity)"
-      }, cppID: id, what: "duplicate copies content rather than creating an empty slot")
 
 S029 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "duplicate is one edit"
-  report.expectEqual(baseline.revision + 1, fx.document.revision, cppID: id,
-                         what: "duplicate is one edit")
 
 S030 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "duplicate undo succeeds"
-  report.expect(fx.document.history.undoDocument(), cppID: id, message: "duplicate undo succeeds")
 
 S031 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "one undo removes duplicate"
-  report.expectEqual(baseline.state, fx.document.state, cppID: id, what: "one undo removes duplicate")
 
 S032 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "delete closes menu"
-  report.expect(!h.menuOpen, cppID: id, message: "delete closes menu")
 
 S033 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "delete is one edit"
-  report.expectEqual(beforeDelete + 1, fx.document.revision, cppID: id, what: "delete is one edit")
 
 S034 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "delete undo succeeds"
-  report.expect(fx.document.history.undoDocument(), cppID: id, message: "delete undo succeeds")
 
 S035 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "undo restores deleted music"
-  report.expectEqual(baseline.state, fx.document.state, cppID: id, what: "undo restores deleted music")
 
 S036 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "open menu target remaps"
-  report.expect(fx.document.moveTrack(0, to: 1), cppID: id, message: "open menu target remaps")
 
 S037 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "structural remap cancels menu without starting editor"
-  report.expect(!h.menuOpen && h.renamingTrack == -1, cppID: id,
-                    message: "structural remap cancels menu without starting editor")
 
 S038 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "late stale action cannot open picker"
-  report.expectEqual(0, pickers, cppID: id, what: "late stale action cannot open picker")
 
 S039 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "fresh menu remains usable after remap"
-  report.expectEqual(5, h.menuItems.count, cppID: id, what: "fresh menu remains usable after remap")
 
 S040 | headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "action \(action): remap precedes delayed activation"
-  report.expect(fx.document.moveTrack(1, to: 0), cppID: id,
-                        message: "action \(action): remap precedes delayed activation")
 
 S041 | headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "action \(action): stale menu stays closed"
-  report.expect(!h.menuOpen, cppID: id, message: "action \(action): stale menu stays closed")
 
 S042 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "outside button \(button) dismisses without reopening"
-  report.expect(!h.menuOpen, cppID: id, message: "outside button \(button) dismisses without reopening")
 
 S043 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "outside button \(button) never clicks through to selection"
-  report.expectEqual(0, fx.session.selectedTrack, cppID: id,
-                             what: "outside button \(button) never clicks through to selection")
 
 S044 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "outside button \(button) never reveals a voice"
-  report.expectEqual(0, reveals, cppID: id, what: "outside button \(button) never reveals a voice")
 
 S045 | headerMenuTargetRowResolvesByTrack | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "non-leading header row resolves from track identity"
-  report.expect(row != 0 && h.rows[row].track == target, cppID: id,
-                  message: "non-leading header row resolves from track identity")
 
 S046 | headerMenuTargetRowResolvesByTrack | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "right press selects identity-resolved target"
-  report.expectEqual(target, fx.session.selectedTrack, cppID: id,
-                       what: "right press selects identity-resolved target")
 
 S047 | headerMenuTargetRowResolvesByTrack | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "menu target resolves to identity-resolved track"
-  report.expectEqual([target], revealed, cppID: id,
-                       what: "menu target resolves to identity-resolved track")
 
 S048 | headerMenuTargetRowResolvesByTrack | src/checks/trackheaders/trackheadermenu.swift
 Anchor: message "dismiss closes target menu"
-  report.expect(!h.menuOpen, cppID: id, message: "dismiss closes target menu")
 
 S049 | headerMenuTargetRowResolvesByTrack | src/checks/trackheaders/trackheadermenu.swift
 Anchor: function
-  baseline.expectUnchanged(report, fx.document, cppID: id, phase: "identity menu open and dismiss")
-
-S050-S055 index the converted-window predicates of src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_headerMenuFrameHasOutsideInputPoint, exercised by the frozen converted-window run pinned below. QML expressions quoted verbatim.
 
 S050 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: message "headerMenuRow_"
-  compare(panel.rowObjectNamePrefix, "headerMenuRow_")
 
 S051 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: message "quickMenuFrame"
-  var frame = findChild(panel, "quickMenuFrame")
 
 S052 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(frame !== null)
 
 S053 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: message " menuOpen="
-  tryVerify(function() { return frame.visible && frame.width > 0 && frame.height > 0 },
-                    5000, "visible=" + frame.visible + " width=" + frame.width
-                          + " height=" + frame.height + " count=" + panel.rowCount
-                          + " menuOpen=" + h.menuOpen)
 
 S054 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: message "timelineTrackHeaderRows" #2
-  var outside = null
-  for (var row = 0; row < item("timelineTrackHeaderRows").count && !outside; ++row) {
-      for (var fraction of [0.08, 0.5, 0.92]) {
-          var px = input.width * fraction
-          var py = row * h.rowHeight + h.rowHeight / 2 - h.scrollY
-          if (px < 0 || px >= input.width || py < 0 || py >= input.height)
-              continue
-          var scene = input.mapToItem(null, px, py)
-          var corner = frame.mapToItem(null, 0, 0)
-          if (scene.x < corner.x || scene.x >= corner.x + frame.width
-                  || scene.y < corner.y || scene.y >= corner.y + frame.height) {
-              outside = { x: px, y: py }
-              break
-          }
-      }
-  }
 
 S055 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: function
-  verify(outside !== null)
-
-Shared helper: src/checks/trackheaders/headerfixture.swift
-SHA-256: 1d65a6a2db64757829d2635c69dcd83dae2a29ebaaad129db1ed325fe66ab491
-src/checks/trackheaders/headerfixture.swift:64
-  report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
-                        cppID: trackHeadersReorderID, message: "\(label): header accepts press")
-src/checks/trackheaders/headerfixture.swift:66
-  report.expect(headers.updatePointer(x: x, y: dropY, modifiers: 0),
-                        cppID: trackHeadersReorderID, message: "\(label): header accepts drag")
-src/checks/trackheaders/headerfixture.swift:68
-  report.expect(headers.endPointer(x: x, y: dropY, button: 1, modifiers: 0),
-                        cppID: trackHeadersReorderID, message: "\(label): header accepts release")
-src/checks/trackheaders/headerfixture.swift:73
-  report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
-                             what: "\(phase): rows follow engine track order")
-src/checks/trackheaders/headerfixture.swift:76
-  report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
-                             what: "\(phase): rows display ordered numbered track names")
-src/checks/trackheaders/headerfixture.swift:78
-  report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
-                             what: "\(phase): one row per track plus add-track row")
-src/checks/trackheaders/headerfixture.swift:81
-  report.expectEqual([names.count], addRows, cppID: cppID,
-                             what: "\(phase): add-track row remains last")
-
-Shared helper: src/checks/trackheaders/headerinputfixture.swift
-SHA-256: 3c5d2bdfd003b1564928b17990288debd27810525485463027fd19d950d7ec40
-src/checks/trackheaders/headerinputfixture.swift:28
-  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
-                        cppID: cppID, message: "\(probe) row \(row) accepts press")
-src/checks/trackheaders/headerinputfixture.swift:30
-  report.expect(headers.endPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
-                        cppID: cppID, message: "\(probe) row \(row) accepts release")
-src/checks/trackheaders/headerinputfixture.swift:36
-  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 2, modifiers: 0),
-                        cppID: cppID, message: "right press is handled")
-src/checks/trackheaders/headerinputfixture.swift:38
-  report.expect(headers.menuOpen, cppID: cppID, message: "right press opens header menu")
-src/checks/trackheaders/headerinputfixture.swift:64
-  report.expectEqual(state, document.state, cppID: cppID, what: "\(phase): song unchanged")
-src/checks/trackheaders/headerinputfixture.swift:65
-  report.expectEqual(revision, document.revision, cppID: cppID,
-                             what: "\(phase): no document write")
-src/checks/trackheaders/headerinputfixture.swift:67
-  report.expectEqual(history, document.history.currentIdentity, cppID: cppID,
-                             what: "\(phase): history unchanged")

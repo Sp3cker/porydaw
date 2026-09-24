@@ -9,54 +9,19 @@ Additional Swift counterpart: src/checks/automation/presentation/painting.swift
 Additional Swift counterpart: src/checks/automation/automationmenus.swift
 Additional Swift counterpart: src/checks/rollcheck/static/camera.swift
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; the context inventory below records its rows, loops and fixtures.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-Unresolved entries remain work.
 
-Execution and ownership
-The original swiftcore suite entrypoints invoke these paired functions in their original
-order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
-VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
-Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
-Verification evidence
 Command: deno task verify --filter swiftcore --verbose. Result: build: ok (0.13s); ok:
 swiftcore (9.85s) — ********* Finished testing of SwiftCoreTest *********; verify: 1/14 ok
 (9.87s, 13 skipped); run_checks: PASS (all harnesses in 9.87s). The controller ran it in
 this worktree on HEAD 19aca868 plus the uncommitted automationcanvasediting.swift,
-AutomationPageChecks.swift, automationpointmenus.swift and automationtaptempo.swift edits,
-and supplied the banner; the ledger agent did not run it. That snapshot is the one pinned
-above. The legacy automation C++ harness is retired, so this file is an
-assertion-obligation inventory, never current execution evidence for the C++ original.
 Converted-window command: deno task verify:qml --verbose.
 drawerAutomationViewStatePreservation (automationcanvaslayout.swift) is registered by
 runAutomationPageChecks at AutomationPageChecks.swift and executes under cppID
 automation/AutomationEditingTest::viewStateSwitchPreservesAutomationState (its
 detach/attach block) and cppID
 automation/AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState (its
-EditorDrawerPresenter resize block).
 Disposition tally: MATCHED 22, PARTIAL 37, GAP 7, NATIVE 62 (128 sites).
-
-Fixture, sequence, data-row and loop inventory
-Each line below is an exact original source anchor. Multiline declarations, helper
-implementations, native event delivery and the complete order remain in the pinned source.
-src/checks/automation/automationcanvaslayout.cpp:57 | for (int index = 0; index < page.canvas()->parameterLabels().size(); ++index) {
-src/checks/automation/automationcanvaslayout.cpp:113 | for (const int height : {minimumHeight, drawer->maximumSectionHeight()}) {
-src/checks/automation/automationcanvaslayout.cpp:146 | for (int index = 0; index < canvas->parameterLabels().size(); ++index) {
-src/checks/automation/automationcanvaslayout.cpp:207 | for (int index = 0; index < canvas->parameterLabels().size(); ++index) {
-src/checks/automation/automationcanvaslayout.cpp:236 | mouseMove(*m_automationInput, firstMove);
-src/checks/automation/automationcanvaslayout.cpp:238 | mouseMove(*m_automationInput, secondMove);
-src/checks/automation/automationcanvaslayout.cpp:248 | QTest::addColumn<bool>("directSelectionTransition");
-src/checks/automation/automationcanvaslayout.cpp:249 | QTest::newRow("production-route") << false;
-src/checks/automation/automationcanvaslayout.cpp:267 | mouseMove(*m_automationInput, moved);
-
-Original assertion inventory
 
 A001 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:46
 Disposition: GAP
@@ -158,9 +123,6 @@ Original expression:
 
 A017 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:86
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationcanvaslayout.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(quickScene)
 
 A018 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:87
 Disposition: GAP
@@ -176,9 +138,6 @@ Original expression:
 
 A020 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:96
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationcanvaslayout.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(drawer)
 
 A021 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:97
 Disposition: GAP
@@ -188,15 +147,9 @@ Original expression:
 
 A022 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:99
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationcanvaslayout.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(root)
 
 A023 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:102
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationcanvaslayout.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(scroller)
 
 A024 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:103
 Disposition: GAP
@@ -331,21 +284,15 @@ Original expression:
 
 A045 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:159
 Disposition: MATCHED
-Mapping/reason: S034 asserts the page's active parameter is the lane the production activation route selects, the same activation the original performs through a rendered tab. [S034]
-Original expression:
-  QVERIFY(activateParameter(*row))
+Mapping: S034
 
 A046 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:160
 Disposition: MATCHED
-Mapping/reason: S034 asserts the activated lane becomes the page's active parameter after the switch; the original reads the same active index. [S034]
-Original expression:
-  QCOMPARE(canvas->activeParameter(), index)
+Mapping: S034
 
 A047 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:162
 Disposition: MATCHED
-Mapping/reason: S035 asserts a mid-gesture parameter switch writes nothing (document/history snapshot equality), the same no-mutation observable the original reads as frozenDocumentState(). [S035]
-Original expression:
-  QVERIFY(frozenDocumentState() == frozen)
+Mapping: S035
 
 A048 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:163
 Disposition: PARTIAL
@@ -367,15 +314,9 @@ Original expression:
 
 A051 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:178
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationcanvaslayout.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(root)
 
 A052 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:181
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationcanvaslayout.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(gutter)
 
 A053 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:187
 Disposition: GAP
@@ -403,9 +344,6 @@ Original expression:
 
 A057 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:194
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationcanvaslayout.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(quickWindow)
 
 A058 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:195
 Disposition: GAP
@@ -470,9 +408,7 @@ Original expression:
 
 A068 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:210
 Disposition: MATCHED
-Mapping/reason: S034 asserts the page's active parameter is the lane the production activation route selects, the same activation the original performs through a rendered tab. [S034]
-Original expression:
-  QVERIFY(activateParameter(*row))
+Mapping: S034
 
 A069 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:214
 Disposition: GAP
@@ -512,9 +448,7 @@ Original expression:
 
 A075 | AutomationEditingTest::middleMousePanSurvivesRefresh | src/checks/automation/automationcanvaslayout.cpp:242
 Disposition: MATCHED
-Mapping/reason: S026 asserts the pan scrolls the shared camera by the pointer's 48 px travel (scrollBefore + 48), the same camera displacement the original reads as a 48 px displayX delta. [S026]
-Original expression:
-  QVERIFY(qAbs((before - after) - 48.0) < 0.5)
+Mapping: S026
 
 A076 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:255
 Disposition: PARTIAL
@@ -542,9 +476,7 @@ Original expression:
 
 A080 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:275
 Disposition: MATCHED
-Mapping/reason: S034 asserts the mid-pan switch rebuilds the page's active parameter to the switched lane, the same rebuild the original reads as a valid new row handle. [S034]
-Original expression:
-  QTRY_VERIFY(findRow(newPan).valid())
+Mapping: S034
 
 A081 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:276
 Disposition: PARTIAL
@@ -560,9 +492,7 @@ Original expression:
 
 A083 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:278
 Disposition: MATCHED
-Mapping/reason: S035 asserts the mid-pan switch writes nothing (document/history snapshot equality), the same frozenDocumentState() observable. [S035]
-Original expression:
-  QVERIFY(frozenDocumentState() == frozen)
+Mapping: S035
 
 A084 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:281
 Disposition: PARTIAL
@@ -578,9 +508,7 @@ Original expression:
 
 A086 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:283
 Disposition: MATCHED
-Mapping/reason: S036 asserts releasing after the switch commits nothing (document/history snapshot equality), the same frozenDocumentState() observable. [S036]
-Original expression:
-  QVERIFY(frozenDocumentState() == frozen)
+Mapping: S036
 
 A087 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:290
 Disposition: PARTIAL
@@ -590,9 +518,7 @@ Original expression:
 
 A088 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:301
 Disposition: MATCHED
-Mapping/reason: S034 asserts the page's active parameter becomes the lane the production activation route selects, the same activation the original performs on the empty LFO lane. [S034]
-Original expression:
-  QVERIFY(activateParameter(lfo))
+Mapping: S034
 
 A089 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:303
 Disposition: PARTIAL
@@ -608,9 +534,7 @@ Original expression:
 
 A091 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:306
 Disposition: MATCHED
-Mapping/reason: S035 asserts a parameter switch writes nothing (document/history snapshot equality including revision, identity and canUndo/canRedo), the same frozenDocumentState() observable. [S035]
-Original expression:
-  QVERIFY(frozenDocumentState() == frozen)
+Mapping: S035
 
 A092 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:307
 Disposition: PARTIAL
@@ -680,15 +604,11 @@ Original expression:
 
 A103 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:340
 Disposition: MATCHED
-Mapping/reason: S043 (the active parameter survives the page switch) and S044 (the lane range survives) assert the members the original's automation block carries, at the same sequence point: the lane takes its 0-64 range, the page is detached and re-attached, and nothing is written. The switch is performed as page detach/attach rather than a drawer page change. [S043][S044]
-Original expression:
-  QVERIFY(whileVelocity.automation == beforeSwitch.automation)
+Mapping: S043, S044
 
 A104 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:341
 Disposition: MATCHED
-Mapping/reason: S044 asserts the lane's applied 0-64 range survives the page switch (page.scaleLabels.first?.value == 64), the lane-ranges member the original compares. [S044]
-Original expression:
-  QVERIFY(whileVelocity.laneRanges == beforeSwitch.laneRanges)
+Mapping: S044
 
 A105 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:342
 Disposition: PARTIAL
@@ -698,21 +618,15 @@ Original expression:
 
 A106 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:343
 Disposition: MATCHED
-Mapping/reason: S043 asserts the active parameter survives the page switch (the activated volume lane stays page.activeParameter after detach/attach). [S043]
-Original expression:
-  QCOMPARE(m_page->canvas()->activeParameter(), activeBefore)
+Mapping: S043
 
 A107 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:344
 Disposition: MATCHED
-Mapping/reason: S045 asserts a page switch writes nothing: document revision, history identity and history availability stay equal across the detach/attach. The original's SMF byte comparison is C++ serialization representation. [S045]
-Original expression:
-  QVERIFY(frozenDocumentState() == frozen)
+Mapping: S045
 
 A108 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:345
 Disposition: MATCHED
-Mapping/reason: S046 asserts a page switch moves no cursor (fixture.session.editCursor unchanged across detach/attach). [S046]
-Original expression:
-  QCOMPARE(view.editCursorTick(), cursorBefore)
+Mapping: S046
 
 A109 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:350
 Disposition: GAP
@@ -722,21 +636,15 @@ Original expression:
 
 A110 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:351
 Disposition: MATCHED
-Mapping/reason: S044 asserts the lane's applied 0-64 range survives the page switch, and S047 asserts the untouched tempo stream survives it too. [S044][S047]
-Original expression:
-  QCOMPARE(view.editorViewState().laneRanges.at(bendRange), uint8_t{64})
+Mapping: S044, S047
 
 A111 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:352
 Disposition: MATCHED
-Mapping/reason: S045 asserts the page switch writes nothing (document revision, history identity and availability equality), the same frozen document the original compares after switching back. [S045]
-Original expression:
-  QVERIFY(frozenDocumentState() == frozen)
+Mapping: S045
 
 A112 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:353
 Disposition: MATCHED
-Mapping/reason: S046 asserts the page switch moves no cursor, the same cursor the original compares after switching back. [S046]
-Original expression:
-  QCOMPARE(view.editCursorTick(), cursorBefore)
+Mapping: S046
 
 A113 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:360
 Disposition: PARTIAL
@@ -752,15 +660,11 @@ Original expression:
 
 A115 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:372
 Disposition: MATCHED
-Mapping/reason: S041 asserts the production grid wheel route raises pixelsPerBeat for a wheel delta while preserving the anchor tick in one publication, the same camera zoom the original's automation-input wheel observes. [S041]
-Original expression:
-  QVERIFY(view.camera().pxPerBeat() > zoomBefore)
+Mapping: S041
 
 A116 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:373
 Disposition: MATCHED
-Mapping/reason: S041 asserts the anchor's tickAtContentX is unchanged (tolerance 1e-7) across the wheel zoom, the same anchoring the original reads within 0.001 ticks. [S041]
-Original expression:
-  QVERIFY(std::abs(view.camera().tickAtContentX(anchor.x()) - tickBefore) < 0.001)
+Mapping: S041
 
 A117 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:375
 Disposition: GAP
@@ -824,321 +728,158 @@ Original expression:
 
 A127 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:395
 Disposition: MATCHED
-Mapping/reason: S048 asserts a section resize writes nothing (EditorDrawerPresenter configureLayout -> setSectionBodyHeight -> applyResize -> endResize leaves the document snapshot equal) and S050 asserts the tempo stream is untouched. [S048][S050]
-Original expression:
-  QVERIFY(frozenDocumentState() == frozen)
+Mapping: S048, S050
 
 A128 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:396
 Disposition: MATCHED
-Mapping/reason: S049 asserts a section resize moves no cursor (fixture.session.editCursor unchanged across the presenter's resize sequence). [S049]
-Original expression:
-  QCOMPARE(view.editCursorTick(), cursorBefore)
-
-Swift executable assertion index
-The S entries are exact predicates already called by the suite. Their presence alone
-does not close any A entry. Preserve their surrounding setup and order in the paired source.
+Mapping: S049
 
 S001 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the requested automation height never falls under the minimum"
-Swift expression:
-  report.expect(policy.preferredBodyHeight(200, metrics) >= metrics.minimumBody, cppID: drawerAutomationLayoutID,
-                    message: "the requested automation height never falls under the minimum")
 
 S002 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the requested automation height keeps the piano-roll reserve"
-Swift expression:
-  report.expect(policy.preferredBodyHeight(1000, metrics)
-                        <= metrics.maximumDefaultBodyHeight(hostHeight: 1000),
-                    cppID: drawerAutomationLayoutID,
-                    message: "the requested automation height keeps the piano-roll reserve")
 
 S003 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the requested height is a fifth of the host inside those bounds"
-Swift expression:
-  report.expectEqual(200, policy.preferredBodyHeight(1000, metrics), cppID: drawerAutomationLayoutID,
-                         what: "the requested height is a fifth of the host inside those bounds")
 
 S004 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "automation declares no page maximum"
-Swift expression:
-  report.expect(policy.maximumBodyHeight == nil, cppID: drawerAutomationLayoutID,
-                    message: "automation declares no page maximum")
 
 S005 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the hit radius is the font-relative production value"
-Swift expression:
-  report.expectEqual(8.0, fixture.page.geometry.pointHitRadius, cppID: drawerAutomationLayoutID,
-                         what: "the hit radius is the font-relative production value")
 
 S006 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the neutral snap radius is the font-relative production value"
-Swift expression:
-  report.expectEqual(9.0, fixture.page.geometry.neutralSnapRadius, cppID: drawerAutomationLayoutID,
-                         what: "the neutral snap radius is the font-relative production value")
 
 S007 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the drag activation distance is the font-relative value"
-Swift expression:
-  report.expectEqual(5.0, fixture.page.geometry.nodeDragActivationDistance, cppID: drawerAutomationLayoutID,
-                         what: "the drag activation distance is the font-relative value")
 
 S008 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the value axis is padded by the marker's painted extent"
-Swift expression:
-  report.expectEqual(5.0, fixture.page.geometry.valuePlotPadding, cppID: drawerAutomationLayoutID,
-                         what: "the value axis is padded by the marker's painted extent")
 
 S009 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a press inside the hit radius takes the node"
-Swift expression:
-  report.expect(lane.hitTest(x: node.x + 4, y: node.y + 4,
-                                 radius: fixture.page.geometry.pointHitRadius) != nil,
-                    cppID: drawerAutomationLayoutID, message: "a press inside the hit radius takes the node")
 
 S010 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a press beyond the hit radius takes no node"
-Swift expression:
-  report.expect(lane.hitTest(x: node.x + 9, y: node.y + 9,
-                                 radius: fixture.page.geometry.pointHitRadius) == nil,
-                    cppID: drawerAutomationLayoutID, message: "a press beyond the hit radius takes no node")
 
 S011 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the nearest node wins the hit"
-Swift expression:
-  report.expectEqual(node.tick, lane.hitTest(x: node.x + 1, y: node.y,
-                                                 radius: fixture.page.geometry.pointHitRadius)?.tick
-                             ?? 0,
-                         cppID: drawerAutomationLayoutID, what: "the nearest node wins the hit")
 
 S012 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a cell is half-open and inside the song"
-Swift expression:
-  report.expect(cell.tickBegin < cell.tickEnd && cell.tickEnd <= fixture.songEndTick,
-                    cppID: drawerAutomationLayoutID, message: "a cell is half-open and inside the song")
 
 S013 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a cell contains its own begin"
-Swift expression:
-  report.expect(cell.contains(Double(cell.tickBegin)), cppID: drawerAutomationLayoutID,
-                    message: "a cell contains its own begin")
 
 S014 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a cell excludes its own end"
-Swift expression:
-  report.expect(!cell.contains(Double(cell.tickEnd)), cppID: drawerAutomationLayoutID,
-                    message: "a cell excludes its own end")
 
 S015 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the song's end belongs to the cell that ends there"
-Swift expression:
-  report.expectEqual(fixture.songEndTick, endCell.tickEnd, cppID: drawerAutomationLayoutID,
-                         what: "the song's end belongs to the cell that ends there")
 
 S016 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a forward walk starts at the origin's own cell"
-Swift expression:
-  report.expect(forward.count >= 2 && forward.first?.contains(0) == true, cppID: drawerAutomationLayoutID,
-                    message: "a forward walk starts at the origin's own cell")
 
 S017 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a forward walk ends at the pointer's cell"
-Swift expression:
-  report.expectEqual(projection.cell(atRawTick: 30).tickBegin, forward.last?.tickBegin ?? 0,
-                         cppID: drawerAutomationLayoutID, what: "a forward walk ends at the pointer's cell")
 
 S018 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a backward walk starts at the pointer's own cell"
-Swift expression:
-  report.expectEqual(forward.last?.tickBegin, backward.first?.tickBegin, cppID: drawerAutomationLayoutID,
-                         what: "a backward walk starts at the pointer's own cell")
 
 S019 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a degenerate walk reports its own cell once"
-Swift expression:
-  report.expectEqual(1, degenerate.count, cppID: drawerAutomationLayoutID,
-                         what: "a degenerate walk reports its own cell once")
 
 S020 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a degenerate walk stays in the pointer's cell"
-Swift expression:
-  report.expectEqual(projection.cell(atRawTick: 0).tickBegin, degenerate[0].tickBegin,
-                         cppID: drawerAutomationLayoutID, what: "a degenerate walk stays in the pointer's cell")
 
 S021 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a middle press starts the pan"
-Swift expression:
-  report.expect(page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle),
-                    cppID: id, message: "a middle press starts the pan")
 
 S022 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the page publishes the live pan"
-Swift expression:
-  report.expect(page.isPanning, cppID: id, message: "the page publishes the live pan")
 
 S023 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the pan publishes the closed hand"
-Swift expression:
-  report.expectEqual(AutomationCursorKind.closedHand.rawValue, page.cursorKind, cppID: id,
-                     what: "the pan publishes the closed hand")
 
 S024 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "starting a pan mutates nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                     what: "starting a pan mutates nothing")
 
 S025 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "starting a pan parks no cursor"
-Swift expression:
-  report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
-                     what: "starting a pan parks no cursor")
 
 S026 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the pan scrolls the shared camera by the travel"
-Swift expression:
-  report.expectEqual(scrollBefore + 48, fixture.session.camera.snapshot.scrollX, cppID: id,
-                     what: "the pan scrolls the shared camera by the travel")
 
 S027 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "panning mutates nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                     what: "panning mutates nothing")
 
 S028 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "releasing ends the pan"
-Swift expression:
-  report.expect(!page.isPanning, cppID: id, message: "releasing ends the pan")
 
 S029 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the released pan leaves document and history untouched"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                     what: "the released pan leaves document and history untouched")
 
 S030 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the released pan leaves the cursor where it was"
-Swift expression:
-  report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
-                     what: "the released pan leaves the cursor where it was")
 
 S031 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: function
-Swift expression:
-  _ = page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle)
 
 S032 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a second pan starts"
-Swift expression:
-  report.expect(page.isPanning, cppID: switchID, message: "a second pan starts")
 
 S033 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "switching parameters ends the pan"
-Swift expression:
-  report.expect(!page.isPanning, cppID: switchID,
-                message: "switching parameters ends the pan")
 
 S034 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the switch rebuilds the active parameter"
-Swift expression:
-  report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: switchID,
-                     what: "the switch rebuilds the active parameter")
 
 S035 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "switching mid-pan writes nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: switchID,
-                     what: "switching mid-pan writes nothing")
 
 S036 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "releasing after the switch commits nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: switchID,
-                     what: "releasing after the switch commits nothing")
 
 S037 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the row stack carries one row per catalog parameter"
-Swift expression:
-  report.expectEqual(AutomationCatalog.count, stack.rows.count, cppID: drawerAutomationLabelsID,
-                         what: "the row stack carries one row per catalog parameter")
 
 S038 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
 Anchor: message "the Tempo row leads the stack"
-Swift expression:
-  report.expectEqual(AutomationParameter.tempo, stack.rows[0].parameter, cppID: drawerAutomationLabelsID,
-                         what: "the Tempo row leads the stack")
 
 S039 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift
 Anchor: message "the selected range rescales the lane to 64"
-Swift expression:
-  report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
-                     what: "the selected range rescales the lane to 64")
 
 S040 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the press parks the edit cursor at the snapped tick"
-Swift expression:
-  report.expectEqual(snapped, empty.session.editCursor, cppID: drawerAutomationCancelID,
-                     what: "the press parks the edit cursor at the snapped tick")
 
 S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "phase \(phase.rawValue) performs one anchored time zoom publication"
-Swift expression:
-  report.expect(
-      after.pixelsPerBeat > before.pixelsPerBeat
-          && gridCameraNear(session.camera.tickAtContentX(anchorX), anchorTick, tolerance: 1e-7)
-          && counters.camera == publications + 1,
-      cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")
 
 S042 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the lane takes the 0-64 range"
-Swift expression:
-  report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
-                    cppID: id, message: "the lane takes the 0-64 range")
 
 S043 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the active parameter survives a page switch"
-Swift expression:
-  report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: id,
-                     what: "the active parameter survives a page switch")
 
 S044 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the lane range survives a page switch"
-Swift expression:
-  report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
-                     what: "the lane range survives a page switch")
 
 S045 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a page switch writes nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: id,
-                     what: "a page switch writes nothing")
 
 S046 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a page switch moves no cursor"
-Swift expression:
-  report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
-                     what: "a page switch moves no cursor")
 
 S047 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "the untouched stream survives a page switch"
-Swift expression:
-  report.expectEqual(["0:120", "384:140"], fixture.tempoValues, cppID: id,
-                     what: "the untouched stream survives a page switch")
 
 S048 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a section resize writes nothing"
-Swift expression:
-  report.expectEqual(resizeBefore, fixture.snapshot, cppID: resizeID,
-                     what: "a section resize writes nothing")
 
 S049 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a section resize moves no cursor"
-Swift expression:
-  report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: resizeID,
-                     what: "a section resize moves no cursor")
 
 S050 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a section resize leaves the streams alone"
-Swift expression:
-  report.expectEqual(["0:120", "384:140"], fixture.tempoValues, cppID: resizeID,
-                     what: "a section resize leaves the streams alone")

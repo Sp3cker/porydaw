@@ -10,28 +10,9 @@ Swift counterpart: src/checks/workspace/session_io.swift
 Swift counterpart: src/checks/workspace/session_playback.swift
 Swift counterpart: src/checks/workspace/session_save.swift
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies an equivalent Swift predicate that would execute;
-PARTIAL identifies a related Swift predicate with an explicit unproved condition;
-GAP identifies an original predicate without an established equivalent;
-NATIVE identifies an observation only a native window/rendering/harness run can establish.
-65 assertion sites across snapshot publication, FIFO order, failed-open retention, catalog preemption, song-chain staging, and voicegroup load/preview paths. Same-labelled Swift predicates cover detached-open composition and retention plus reopen timing only; no site is marked MATCHED.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
-
-Execution and ownership
-runProjectSessionSuite (SessionChecks.swift) owns the paired Swift predicates via ProjectService/DocumentSession against the staged swiftcore-session-test project (stageTestProject, mus_session_test labels). The C++ ProjectIoFixture async deque (submit/waitFor/resultCount) and the loadSong/songChainAt helpers are C++-only.
-
-Fixture, sequence and row constraints
-songChains_openReloadStageTag_data expands over open/reload/private-load entries; FIFO order and catalog-preemption counts depend on exact submit/waitFor cardinalities (+4, +3, +2, +1).
-
-Original assertion inventory
 
 A001 | ProjectIoFlowTest::init | src/checks/project/ioflow.cpp:49
 Disposition: GAP
@@ -816,72 +797,36 @@ Swift assertion predicates
 
 S001 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
 Anchor: message "published project snapshot survives source registry replacement"
-  report.expectEqual("mus_session_test", detached.source.label,
-                             cppID: "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
-                             what: "published project snapshot survives source registry replacement")
 
 S002 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
 Anchor: message "failed replacement open retains the worker's prior project"
-  report.expectEqual("mus_session_test", retained.source.label,
-                                 cppID: "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
-                                 what: "failed replacement open retains the worker's prior project")
 
 S003 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
 Anchor: message "DocumentSession adopts the requested song source"
-  report.expectEqual("mus_session_test", session.document.source.label,
-                             cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
-                             what: "DocumentSession adopts the requested song source")
 
 S004 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "immutable playback publication callback received updated timeline"
-  report.expect(lastPublishedTimeline != nil,
-                    cppID: "project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths",
-                    message: "immutable playback publication callback received updated timeline")
 
 S005 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "state factory projection computes exact 19200 samples for edited tempo"
-  report.expectEqual(UInt64(19_200), editedSampleAt24,
-                         cppID: "project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
-                         what: "state factory projection computes exact 19200 samples for edited tempo")
 
 S006 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "48-clock conversion quantizes the 13-tick gate to 12 ticks"
-  report.expectEqual(UInt64(48_000), noteOffSample(extendedTimeline, key: 64),
-                         cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
-                         what: "48-clock conversion quantizes the 13-tick gate to 12 ticks")
 
 S007 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "extended clocks change an observable note-release sample"
-  report.expect(defaultClock64 != noteOffSample(extendedTimeline, key: 64),
-                    cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
-                    message: "extended clocks change an observable note-release sample")
 
 S008 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "exact gate preserves the 25-tick release instead of LUT bucket 24"
-  report.expectEqual(UInt64(20_000), configuredGate60,
-                         cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
-                         what: "exact gate preserves the 25-tick release instead of LUT bucket 24")
 
 S009 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "exact gate changes an observable note-release sample"
-  report.expect(defaultGate60 != configuredGate60,
-                    cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
-                    message: "exact gate changes an observable note-release sample")
 
 S010 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "reopen reproduces settings-sensitive note-release timing"
-  report.expectEqual(preSaveGate60, noteOffSample(reopened.timeline, key: 60),
-                             cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
-                             what: "reopen reproduces settings-sensitive note-release timing")
 
 S011 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "exact-gate setting survives save/reopen"
-  report.expectEqual(preSaveConfig.exactGate, reopenedConfig.exactGate,
-                             cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
-                             what: "exact-gate setting survives save/reopen")
 
 S012 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "extended-clock setting survives save/reopen"
-  report.expectEqual(preSaveConfig.extendedClocks, reopenedConfig.extendedClocks,
-                             cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
-                             what: "extended-clock setting survives save/reopen")

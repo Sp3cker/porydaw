@@ -6,26 +6,7 @@ Original SHA-256: e9083e9d41a8aa34a5e93d88056383343f408d7d473c49b66eab0aa964969b
 Swift counterpart: src/checks/rollcheck/note_commands.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact counterpart predicates, listed after the inventory.
-MATCHED identifies equivalent Swift predicates executed by the swiftcore suite.
-PARTIAL identifies related counterpart predicates with an explicit unproved condition.
-NATIVE identifies retained native popup-window/menu obligations; it does not establish
-coverage of the converted Swift surface.
-GAP identifies an original predicate without a replacement assertion.
-runNoteCommandChecks executes the nine command scenarios in note_commands.swift against
-NoteCommandFixture, growToThreeCells, PianoGrid.performCommand and EditorCommandRouter.
-The Swift predicates cover the seeded-note, copy, split-fragment, join-survivor,
-no-op-byte and fixture-unwind observables. Sites whose original expression asserts an
-exact undo index/count stay PARTIAL because the Swift predicate proves the history
-identity and bytes instead. The native note-menu session (open, typed row, real row
-click, close) stays NATIVE. Disposition tally: 64 sites: 50 MATCHED, 9 PARTIAL, 1 GAP,
-4 NATIVE.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore
 projectSession suite executed runNoteCommandChecks and the S001-S056 predicates.
@@ -37,176 +18,17 @@ Result: PASS — 11/11 ok (controller-recorded post-change run); no note-command
 depends on the shell lane. The shell and roll QML runs predate only a
 swiftcore-checks-only commit; no production or QML source changed after them.
 
-Execution and ownership
-runNoteCommandChecks in src/checks/rollcheck/note_commands.swift runs nine command
-scenarios through NoteCommandFixture, PianoGrid.performCommand and EditorCommandRouter
-(for the time-selection precedence scenario) in the projectSession Swift suite. The
-retired gated C++ routing checks are dead citations and are no longer indexed. The Swift
-popup scenario invokes the command handler directly rather than opening and clicking a
-native menu, so the menu-session sites stay NATIVE.
-
-Fixture, sequence and row constraints
-keyboardNoteCommandPopupActivation expands over three data rows (duplicate/split/join); per-fragment and per-offset loops re-execute split sites; every slot unwinds through the unwindTo helper (A001) to its local SMF baseline. keyboardNoteCommandPopupActivation_data carries no assertions.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
-
 A001 | ? | src/checks/rollcheck/note_commands.cpp:85
 Disposition: MATCHED
-Mapping: S003 (src/checks/rollcheck/note_commands.swift) drains NoteCommandFixture back to the original identity and asserts the encoded document bytes equal the captured originals — the helper unwindTo's restored-bytes guard.
-Source context since previous assertion:
-  #include "checks/rollcheck/tst_pianoroll.h"
-
-  #include "checks/quickpopupguard.h"
-  #include "checks/rollcheck/rollcheck.h"
-  #include "checks/support/eventsynth.h"
-  #include "core/smf.h"
-  #include "core/songdocument.h"
-
-  #include "ui/songview.h"
-  #include "ui/songview/pianoroll.h"
-  #include "ui/songview/quick/quickmenumodel.h"
-  #include "ui/songview/quick/timelinequickview.h"
-
-  #include <QByteArray>
-  #include <QCoreApplication>
-  #include <QEvent>
-  #include <QPointer>
-  #include <QQuickItem>
-  #include <QQuickWindow>
-  #include <QtTest>
-
-  #include <algorithm>
-  #include <optional>
-  #include <vector>
-
-  using namespace checks::rollcheck;
-
-  namespace {
-
-  struct NoteMenuSession {
-      songview::QuickPopupSession *session = nullptr;
-      songview::QuickMenuModel *model = nullptr;
-      QString diagnostic = QStringLiteral("the note menu did not open");
-  };
-
-  NoteMenuSession openNoteMenu(PianoRollFixture &check, const Cell &cell)
-  {
-      NoteMenuSession menu;
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      checks::events::sendMouse(roll, QEvent::MouseButtonPress, cell.center, Qt::RightButton,
-                                Qt::RightButton, Qt::NoModifier);
-      checks::events::sendMouse(roll, QEvent::MouseButtonRelease, cell.center, Qt::RightButton,
-                                Qt::NoButton, Qt::NoModifier);
-      const QPointer<songview::QuickPopupSession> live(quick_popup::popupSession(view));
-      if (!QTest::qWaitFor([&live] {
-              return live && live->isOpen() && quick_popup::menuPanel(*live) &&
-                     quick_popup::menuModel(*quick_popup::menuPanel(*live)) != nullptr;
-          })) {
-          menu.diagnostic = QStringLiteral("the note right-click did not open the note menu");
-          return menu;
-      }
-      menu.session = live;
-      menu.model = quick_popup::menuModel(*quick_popup::menuPanel(*live));
-      menu.diagnostic.clear();
-      return menu;
-  }
-
-  int noteRow(songview::QuickMenuModel &model, songview::pianoroll_detail::NoteMenuAction action)
-  {
-      return model.rowForId(int(action));
-  }
-
-  void sendCommandKey(songview::TimelineInputItem &roll, int key)
-  {
-      sendKeyStroke(roll, key, Qt::ControlModifier, false);
-  }
-
-  int freeKeyAt(SongDocument &doc, int track, Tick tick)
-  {
-      int key = 12;
-      while (key < 128) {
-          DocNote existing;
-          if (!doc.findNote(track, tick, uint8_t(key), &existing))
-              break;
-          ++key;
-      }
-      return key;
-  }
-
-  void unwindTo(SongDocument &doc, int undo, const QByteArray &before)
-  {
-      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), before);
+Mapping: S003
 
 A002 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:128
 Disposition: MATCHED
-Mapping: S001 (note_commands.swift) fails the scenario when the free grid-aligned seed note cannot be created (withNoteCommandFixture guard), the Swift form of the seed precondition.
-Source context since previous assertion:
-  }
-
-  // Snap-aligned seeds may start mid-grid-cell; align before growing to three cells.
-  std::optional<DocNote> gridAlignedThreeCells(PianoRollFixture &check, const ResizeFixture &seed,
-                                               QString *diagnostic)
-  {
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      const int track = check.track();
-      const Cell &d = seed.cell;
-      DocNote source;
-      if (!doc.findNote(track, d.tick, uint8_t(d.key), &source)) {
-          *diagnostic = QStringLiteral("the grid-aligned split seed was not found");
-          return std::nullopt;
-      }
-      const Tick grid = view.grid().gridTicksAt(d.tick);
-      if (source.duration != grid) {
-          *diagnostic = QStringLiteral("the split seed is not one visible grid cell");
-          return std::nullopt;
-      }
-      const songview::Grid::Segment segment = view.grid().segmentAt(d.tick);
-      const Tick start =
-          Tick(uint64_t(segment.start) + (uint64_t(d.tick) - segment.start) / grid * grid);
-      if (start != d.tick && (doc.moveNotes({source}, int64_t(start) - int64_t(d.tick), 0),
-                              !doc.findNote(track, start, uint8_t(d.key), &source))) {
-          *diagnostic = QStringLiteral("the split seed did not move onto a grid line");
-          return std::nullopt;
-      }
-      doc.resizeNotes({source}, int64_t(3 * grid) - int64_t(source.duration));
-      if (!doc.findNote(track, start, uint8_t(d.key), &source) || source.duration != 3 * grid) {
-          *diagnostic = QStringLiteral("the split seed did not grow to three grid cells");
-          return std::nullopt;
-      }
-      return source;
-  }
-
-  } // namespace
-
-  void PianoRollTest::keyboardDuplicateNotes()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S001
 
 A003 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:137
 Disposition: MATCHED
-Mapping: S004 (note_commands.swift) asserts the duplicate-notes seed note is present at the fixture tick/pitch.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const int track = check.track();
-      const Cell &d = seed->cell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      DocNote source;
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &source),
-               "duplicate-notes seed note was not found");
+Mapping: S004
 
 A004 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:143
 Disposition: PARTIAL
@@ -224,12 +46,7 @@ Original expression:
 
 A005 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:148
 Disposition: MATCHED
-Mapping: S006 (note_commands.swift) asserts the duplicate selects only its copy.
-Source context since previous assertion:
-      const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
-Original expression:
-  QVERIFY2(selection.size() == 1 && selection.front() == copy.noteId,
-               "Ctrl+D did not reselect the duplicated copy");
+Mapping: S006
 
 A006 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:150
 Disposition: GAP
@@ -242,34 +59,11 @@ Original expression:
 
 A007 | PianoRollTest::keyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.cpp:159
 Disposition: MATCHED
-Mapping: S007 (note_commands.swift) asserts the duplicate-precedence seed note is present.
-Source context since previous assertion:
-      unwindTo(doc, undo, before);
-  }
-
-  void PianoRollTest::keyboardDuplicatePrefersTimeSelection()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S007
 
 A008 | PianoRollTest::keyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.cpp:169
 Disposition: MATCHED
-Mapping: S007 (note_commands.swift) asserts the duplicate-precedence seed note is present.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const int track = check.track();
-      const Cell &d = seed->cell;
-      const Tick snapCell = seed->snapCell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      DocNote source;
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &source),
-               "duplicate-precedence seed note was not found");
+Mapping: S007
 
 A009 | PianoRollTest::keyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.cpp:179
 Disposition: PARTIAL
@@ -293,33 +87,11 @@ Original expression:
 
 A010 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:192
 Disposition: MATCHED
-Mapping: S010 (note_commands.swift) asserts the grown split seed spans three grid cells at the fixture tick (growToThreeCells).
-Source context since previous assertion:
-      unwindTo(doc, undo, before);
-  }
-
-  void PianoRollTest::keyboardSplitNotesGrid()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S010
 
 A011 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:202
 Disposition: MATCHED
-Mapping: S010 (note_commands.swift) asserts the aligned three-cell split seed exists (the growToThreeCells guard fails otherwise, note_commands.swift).
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const int track = check.track();
-      const uint8_t key = uint8_t(seed->cell.key);
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      QString seedDiagnostic;
-      const std::optional<DocNote> alignedSeed = gridAlignedThreeCells(check, *seed, &seedDiagnostic);
-Original expression:
-  QVERIFY2(alignedSeed.has_value(), qUtf8Printable(seedDiagnostic));
+Mapping: S010
 
 A012 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:210
 Disposition: PARTIAL
@@ -341,51 +113,19 @@ Original expression:
 
 A013 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:216
 Disposition: MATCHED
-Mapping: S012 (note_commands.swift) asserts the split reselects exactly its three fragments.
-Source context since previous assertion:
-      const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
-Original expression:
-  QVERIFY2(selection.size() == 3, "Ctrl+E did not reselect every split piece");
+Mapping: S012
 
 A014 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:218
 Disposition: MATCHED
-Mapping: S013 (note_commands.swift) asserts every selected fragment lies inside the source span.
-Source context since previous assertion:
-      for (NoteId id : selection) {
-Original expression:
-  QVERIFY2(doc.findNote(id, &piece) && piece.tick >= start && piece.tick < start + 3 * grid,
-                   "the split selection contains a note outside the fragments");
+Mapping: S013
 
 A015 | PianoRollTest::keyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.cpp:228
 Disposition: MATCHED
-Mapping: S015 (note_commands.swift) asserts the split-cursor seed note is present.
-Source context since previous assertion:
-      }
-      unwindTo(doc, undo, before);
-  }
-
-  void PianoRollTest::keyboardSplitAtEditCursor()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S015
 
 A016 | PianoRollTest::keyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.cpp:237
 Disposition: MATCHED
-Mapping: S015 (note_commands.swift) asserts the split-cursor seed note is present.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const int track = check.track();
-      const Cell &d = seed->cell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      DocNote source;
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &source),
-               "split-cursor seed note was not found");
+Mapping: S015
 
 A017 | PianoRollTest::keyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.cpp:244
 Disposition: PARTIAL
@@ -406,17 +146,7 @@ Original expression:
 
 A018 | PianoRollTest::keyboardSplitNoop | src/checks/rollcheck/note_commands.cpp:257
 Disposition: MATCHED
-Mapping: S001 (note_commands.swift) fails the scenario when the free grid-aligned seed note cannot be created, the Swift form of the no-op-split seed precondition.
-Source context since previous assertion:
-      unwindTo(doc, undo, before);
-  }
-
-  void PianoRollTest::keyboardSplitNoop()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S001
 
 A019 | PianoRollTest::keyboardSplitNoop | src/checks/rollcheck/note_commands.cpp:269
 Disposition: PARTIAL
@@ -438,50 +168,19 @@ Original expression:
 
 A020 | PianoRollTest::keyboardSplitNoop | src/checks/rollcheck/note_commands.cpp:270
 Disposition: MATCHED
-Mapping: S019 (note_commands.swift) asserts the no-op split leaves the encoded document bytes unchanged and the selection empty.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QCOMPARE(doc.smf().write(), before);
+Mapping: S019
 
 A021 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:277
 Disposition: MATCHED
-Mapping: S001 (note_commands.swift) fails the scenario when the free grid-aligned join seed cannot be created.
-Source context since previous assertion:
-  }
-
-  void PianoRollTest::keyboardJoinNotes()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S001
 
 A022 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:286
 Disposition: MATCHED
-Mapping: S020 (note_commands.swift) asserts the join seed note is present.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const int track = check.track();
-      const Cell &d = seed->cell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      DocNote first;
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &first), "join seed note was not found");
+Mapping: S020
 
 A023 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:290
 Disposition: MATCHED
-Mapping: S021 (note_commands.swift) fails the scenario when the second join note does not land at its tick.
-Source context since previous assertion:
-      const Tick secondTick = d.tick + 2 * first.duration;
-      doc.addNotes(track, {{secondTick, uint8_t(d.key), first.duration, first.velocity}});
-      DocNote second;
-Original expression:
-  QVERIFY2(doc.findNote(track, secondTick, uint8_t(d.key), &second),
-               "the second join note did not land");
+Mapping: S021
 
 A024 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:296
 Disposition: PARTIAL
@@ -499,104 +198,35 @@ Original expression:
 
 A025 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:300
 Disposition: MATCHED
-Mapping: S023 (note_commands.swift) asserts the join removed its second note.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(!doc.findNote(track, secondTick, uint8_t(d.key), &joined),
-               "Ctrl+J left the second note behind");
+Mapping: S023
 
 A026 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:303
 Disposition: MATCHED
-Mapping: S024 (note_commands.swift) asserts the join selects only the joined note.
-Source context since previous assertion:
-      const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
-Original expression:
-  QVERIFY2(selection.size() == 1 && selection.front() == joined.noteId,
-               "Ctrl+J did not reselect the joined note");
+Mapping: S024
 
 A027 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:313
 Disposition: MATCHED
-Mapping: S001 (note_commands.swift) fails the scenario when the free grid-aligned mixed-join seed cannot be created.
-Source context since previous assertion:
-      unwindTo(doc, undo, before);
-  }
-
-  // Joining one pitch must preserve other selected groups' identities and open ends.
-  void PianoRollTest::keyboardJoinMixedSpread()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S001
 
 A028 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:324
 Disposition: MATCHED
-Mapping: S001 (note_commands.swift) fails the scenario when the free grid-aligned mixed-join seed cannot be created, the Swift form of the seed precondition.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const int track = check.track();
-      const Cell &d = seed->cell;
-      const Tick grid = uint32_t(d.dur);
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-
-      DocNote first;
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &first),
-               "the mixed-join seed note was not found");
+Mapping: S001
 
 A029 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:329
 Disposition: MATCHED
-Mapping: S026 (note_commands.swift) fails the scenario when the mixed-join pair partner does not land, the Swift form of the partner-landing precondition.
-Source context since previous assertion:
-      const Tick pairEndTick = d.tick + 2 * grid;
-      doc.addNotes(track, {{pairEndTick, uint8_t(d.key), grid, 44}});
-      DocNote second;
-Original expression:
-  QVERIFY2(doc.findNote(track, pairEndTick, uint8_t(d.key), &second),
-               "the mixed-join pair partner did not land");
+Mapping: S026
 
 A030 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:336
 Disposition: MATCHED
-Mapping: S026 (note_commands.swift) fails the scenario when the mixed-join singleton does not land, the Swift form of the singleton-landing precondition.
-Source context since previous assertion:
-      const Tick singletonTick = d.tick + grid;
-      const uint8_t singletonKey = uint8_t(d.key == 24 ? 25 : 24);
-      doc.addNote(track, singletonTick, singletonKey, grid, 55);
-      DocNote singleton;
-Original expression:
-  QVERIFY2(doc.findNote(track, singletonTick, singletonKey, &singleton),
-               "the mixed-join singleton did not land");
+Mapping: S026
 
 A031 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:342
 Disposition: MATCHED
-Mapping: S027 (note_commands.swift) fails the scenario when no free pitch exists for the unterminated join group.
-Source context since previous assertion:
-      // A raw note-on detects accidental end synthesis when rebuilding skipped groups.
-      const Tick openTick = d.tick + 8 * grid;
-      const int openKeyInt = freeKeyAt(doc, track, openTick);
-Original expression:
-  QVERIFY2(openKeyInt < 128, "no free pitch for the unterminated join group");
+Mapping: S027
 
 A032 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:352
 Disposition: MATCHED
-Mapping: S028 (note_commands.swift) fails the scenario when the unterminated join group does not land as an unterminated note with the assigned ID.
-Source context since previous assertion:
-      const uint8_t openKey = uint8_t(openKeyInt);
-      const uint8_t openChannel = doc.channelFor(track);
-      SmfEvent openOn;
-      openOn.tick = openTick;
-      openOn.status = uint8_t(0x90 | openChannel);
-      openOn.data0 = openKey;
-      openOn.data1 = 66;
-      doc.insertRawEvent(doc.smfTrackFor(track), openOn);
-      DocNote open;
-Original expression:
-  QVERIFY2(doc.findNote(track, openTick, openKey, &open) && open.unterminated(),
-               "the unterminated join group did not land");
+Mapping: S028
 
 A033 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:361
 Disposition: PARTIAL
@@ -616,102 +246,35 @@ Original expression:
 
 A034 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:365
 Disposition: MATCHED
-Mapping: S030 (note_commands.swift) asserts the mixed join removed the same-key partner.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(!doc.findNote(track, pairEndTick, uint8_t(d.key), &joined),
-               "Ctrl+J left the pair partner behind");
+Mapping: S030
 
 A035 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:368
 Disposition: MATCHED
-Mapping: S031 (note_commands.swift) asserts the other-pitch singleton keeps its identity, tick, duration and velocity.
-Source context since previous assertion:
-      DocNote singletonAfter;
-Original expression:
-  QVERIFY2(doc.findNote(track, singletonTick, singletonKey, &singletonAfter) &&
-                   singletonAfter.noteId == singleton.noteId &&
-                   singletonAfter.duration == singleton.duration &&
-                   singletonAfter.velocity == singleton.velocity,
-               "Ctrl+J changed the different-key singleton or lost its identity");
+Mapping: S031
 
 A036 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:374
 Disposition: MATCHED
-Mapping: S032 (note_commands.swift) asserts the mixed join does not synthesize an end for the unterminated note.
-Source context since previous assertion:
-      DocNote openAfter;
-Original expression:
-  QVERIFY2(doc.findNote(track, openTick, openKey, &openAfter) && openAfter.unterminated(),
-               "Ctrl+J synthesized a note end for the unterminated singleton");
+Mapping: S032
 
 A037 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:377
 Disposition: MATCHED
-Mapping: S033 (note_commands.swift) asserts the join selects the joined and surviving notes (three IDs).
-Source context since previous assertion:
-      const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
-Original expression:
-  QVERIFY2(selection.size() == 3 &&
-                   std::find(selection.begin(), selection.end(), joined.noteId) != selection.end(),
-               "Ctrl+J did not reselect the joined and surviving notes");
+Mapping: S033
 
 A038 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:389
 Disposition: MATCHED
-Mapping: S035 (note_commands.swift) fails the scenario when the combined-split seed does not grow to three cells.
-Source context since previous assertion:
-      unwindTo(doc, undo, before);
-  }
-
-  // Both split arms share one undo; only selected-source fragments inherit selection.
-  void PianoRollTest::keyboardSplitSelectedPlusCursorStraddler()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S035
 
 A039 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:400
 Disposition: MATCHED
-Mapping: S035 (note_commands.swift) fails the scenario when the aligned three-cell combined-split seed is unavailable.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const int track = check.track();
-      const Cell &d = seed->cell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-
-      QString seedDiagnostic;
-      const std::optional<DocNote> alignedSeed = gridAlignedThreeCells(check, *seed, &seedDiagnostic);
-Original expression:
-  QVERIFY2(alignedSeed.has_value(), qUtf8Printable(seedDiagnostic));
+Mapping: S035
 
 A040 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:408
 Disposition: MATCHED
-Mapping: S036 (note_commands.swift) fails the scenario when the cursor straddler does not land.
-Source context since previous assertion:
-      const DocNote &source = *alignedSeed;
-      const Tick start = source.tick;
-      const Tick grid = view.grid().gridTicksAt(start);
-      const Tick straddlerTick = start + 12 * grid;
-      const uint8_t straddlerKey = uint8_t(d.key == 24 ? 25 : 24);
-      doc.addNote(track, straddlerTick, straddlerKey, uint32_t(2 * grid), 90);
-      DocNote straddler;
-Original expression:
-  QVERIFY2(doc.findNote(track, straddlerTick, straddlerKey, &straddler),
-               "the cursor straddler did not land");
+Mapping: S036
 
 A041 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:415
 Disposition: MATCHED
-Mapping: S036 (note_commands.swift) fails the scenario when the bystander note does not land.
-Source context since previous assertion:
-      const Tick bystanderTick = straddlerTick + 5 * grid;
-      const uint8_t bystanderKey = uint8_t(d.key == 30 ? 31 : 30);
-      doc.addNote(track, bystanderTick, bystanderKey, grid, 82);
-      DocNote bystander;
-Original expression:
-  QVERIFY2(doc.findNote(track, bystanderTick, bystanderKey, &bystander),
-               "the untouched bystander note did not land");
+Mapping: S036
 
 A042 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:426
 Disposition: PARTIAL
@@ -731,134 +294,43 @@ Original expression:
 
 A043 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:429
 Disposition: MATCHED
-Mapping: S038 (note_commands.swift) asserts each source fragment is split along every grid line with duration grid.
-Source context since previous assertion:
-      for (int offset = 0; offset < 3; ++offset) {
-Original expression:
-  QVERIFY2(doc.findNote(track, start + offset * grid, uint8_t(d.key), &piece) &&
-                       piece.duration == grid,
-                   "Ctrl+E did not split the selected source along its grid lines");
+Mapping: S038
 
 A044 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:433
 Disposition: MATCHED
-Mapping: S039 (note_commands.swift) asserts the straddler's left half stays in place with duration grid.
-Source context since previous assertion:
-      }
-Original expression:
-  QVERIFY2(doc.findNote(track, straddlerTick, straddlerKey, &piece) && piece.duration == grid,
-               "Ctrl+E did not keep the straddler's left half in place");
+Mapping: S039
 
 A045 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:435
 Disposition: MATCHED
-Mapping: S040 (note_commands.swift) asserts the straddler splits at the edit cursor.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(doc.findNote(track, cursorTick, straddlerKey, &piece) && piece.duration == grid,
-               "Ctrl+E did not split the straddler at the edit cursor");
+Mapping: S040
 
 A046 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:438
 Disposition: MATCHED
-Mapping: S041 (note_commands.swift) asserts only the source fragments plus the bystander remain selected (four IDs).
-Source context since previous assertion:
-      const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
-Original expression:
-  QVERIFY2(selection.size() == 4 &&
-                   std::find(selection.begin(), selection.end(), bystander.noteId) != selection.end(),
-               "Ctrl+E did not keep exactly the source fragments plus the bystander selected");
+Mapping: S041
 
 A047 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:444
 Disposition: MATCHED
-Mapping: S042 (note_commands.swift) asserts every selected non-bystander note is a source fragment inside the source span.
-Source context since previous assertion:
-      for (NoteId id : selection) {
-          if (id == bystander.noteId)
-              continue;
-Original expression:
-  QVERIFY2(doc.findNote(id, &piece) && piece.key == uint8_t(d.key) && piece.tick >= start &&
-                       piece.tick < start + 3 * grid,
-                   "the combined-split selection contains a note outside the source fragments");
+Mapping: S042
 
 A048 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:449
 Disposition: MATCHED
-Mapping: S043 (note_commands.swift) asserts the also-selected bystander keeps its identity, tick, duration and velocity.
-Source context since previous assertion:
-      }
-      DocNote untouched;
-Original expression:
-  QVERIFY2(doc.findNote(track, bystanderTick, bystanderKey, &untouched) &&
-                   untouched.noteId == bystander.noteId && untouched.duration == grid &&
-                   untouched.velocity == 82,
-               "Ctrl+E disturbed the also-selected bystander note");
+Mapping: S043
 
 A049 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:472
 Disposition: MATCHED
-Mapping: S001 (note_commands.swift) fails the scenario when the free grid-aligned popup-activation seed cannot be created for each command row.
-Source context since previous assertion:
-      unwindTo(doc, undo, before);
-  }
-
-  void PianoRollTest::keyboardNoteCommandPopupActivation_data()
-  {
-      QTest::addColumn<int>("action");
-
-      QTest::newRow("duplicate") << int(songview::pianoroll_detail::NoteMenuAction::Duplicate);
-      QTest::newRow("split") << int(songview::pianoroll_detail::NoteMenuAction::Split);
-      QTest::newRow("join") << int(songview::pianoroll_detail::NoteMenuAction::Join);
-  }
-
-  void PianoRollTest::keyboardNoteCommandPopupActivation()
-  {
-      QFETCH(int, action);
-      const auto command = songview::pianoroll_detail::NoteMenuAction(action);
-
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Mapping: S001
 
 A050 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:484
 Disposition: MATCHED
-Mapping: S001 (note_commands.swift) fails the scenario when the popup-activation seed note cannot be created.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      const int track = check.track();
-      const Cell &d = seed->cell;
-      const quick_popup::PromptGuard guard(view);
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-
-      QString seedDiagnostic;
-      // Keep the playhead past the fixtures to isolate selected-note splitting.
-      DocNote source;
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &source),
-               "the popup-activation seed note was not found");
+Mapping: S001
 
 A051 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:491
 Disposition: MATCHED
-Mapping: S046 (note_commands.swift) fails the scenario when the popup split seed does not grow to three cells.
-Source context since previous assertion:
-      const Tick grid = view.grid().gridTicksAt(d.tick);
-      const Tick secondTick = d.tick + 2 * grid;
-      if (command == songview::pianoroll_detail::NoteMenuAction::Split) {
-          const std::optional<DocNote> alignedSeed =
-              gridAlignedThreeCells(check, *seed, &seedDiagnostic);
-Original expression:
-  QVERIFY2(alignedSeed.has_value(), qUtf8Printable(seedDiagnostic));
+Mapping: S046
 
 A052 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:496
 Disposition: MATCHED
-Mapping: S047 (note_commands.swift) fails the scenario when the popup-join partner does not land.
-Source context since previous assertion:
-          source = *alignedSeed;
-      } else if (command == songview::pianoroll_detail::NoteMenuAction::Join) {
-          doc.addNotes(track, {{secondTick, uint8_t(d.key), grid, source.velocity}});
-          DocNote partner;
-Original expression:
-  QVERIFY2(doc.findNote(track, secondTick, uint8_t(d.key), &partner),
-                   "the popup-join partner did not land");
+Mapping: S047
 
 A053 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:505
 Disposition: GAP
@@ -902,71 +374,31 @@ Original expression:
 
 A057 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:517
 Disposition: MATCHED
-Mapping: S048 (note_commands.swift) asserts the Duplicate command creates a same-length copy one span later (menu rows and keyboard commands share PianoGrid.performCommand).
-Source context since previous assertion:
-      DocNote observed;
-      if (command == songview::pianoroll_detail::NoteMenuAction::Duplicate) {
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick + source.duration, uint8_t(d.key), &observed) &&
-                       observed.duration == source.duration,
-                   "the Duplicate row did not duplicate the selected note one span later");
+Mapping: S048
 
 A058 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:521
 Disposition: MATCHED
-Mapping: S049 (note_commands.swift) asserts the Duplicate command selects its copy.
-Source context since previous assertion:
-          const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
-Original expression:
-  QVERIFY2(selection.size() == 1 && selection.front() == observed.noteId,
-                   "the Duplicate row did not reselect the copy");
+Mapping: S049
 
 A059 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:526
 Disposition: MATCHED
-Mapping: S050 (note_commands.swift) asserts the Split command yields a grid-length piece for each offset.
-Source context since previous assertion:
-      } else if (command == songview::pianoroll_detail::NoteMenuAction::Split) {
-          const Tick start = source.tick;
-          for (int offset = 0; offset < 3; ++offset) {
-Original expression:
-  QVERIFY2(doc.findNote(track, start + offset * grid, uint8_t(d.key), &observed) &&
-                           observed.duration == grid,
-                       "the Split row did not split the note into grid pieces");
+Mapping: S050
 
 A060 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:531
 Disposition: MATCHED
-Mapping: S051 (note_commands.swift) asserts the Split command selects all three pieces.
-Source context since previous assertion:
-          }
-          const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
-Original expression:
-  QVERIFY2(selection.size() == 3, "the Split row did not keep every piece selected");
+Mapping: S051
 
 A061 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:533
 Disposition: MATCHED
-Mapping: S052 (note_commands.swift) asserts the Join command spans the same-key pair into three grid cells.
-Source context since previous assertion:
-      } else {
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &observed) &&
-                       observed.duration == 3 * grid,
-                   "the Join row did not join the same-key pair into one span");
+Mapping: S052
 
 A062 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:536
 Disposition: MATCHED
-Mapping: S053 (note_commands.swift) asserts the Join command removes its partner.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(!doc.findNote(track, secondTick, uint8_t(d.key), &observed),
-                   "the Join row left the second note behind");
+Mapping: S053
 
 A063 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:539
 Disposition: MATCHED
-Mapping: S054 (note_commands.swift) asserts the Join command selects only the merged note.
-Source context since previous assertion:
-          const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
-Original expression:
-  QVERIFY2(selection.size() == 1, "the Join row did not leave only the joined note selected");
+Mapping: S054
 
 A064 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:541
 Disposition: PARTIAL
@@ -988,311 +420,168 @@ swiftcore --verbose, PASS 1/14 ok, controller-recorded).
 
 S001 | withNoteCommandFixture fixture guard | src/checks/rollcheck/note_commands.swift
 Anchor: function
-  report.fail(id, "could not seed a free grid-aligned note")
 
 S002 | expectOneUndo | src/checks/rollcheck/note_commands.swift
 Anchor: message "one undo reverses the command"
-  report.expect(document.history.undoDocument(), cppID: id,
-                message: "one undo reverses the command")
-  report.expect((try? document.state.file.encoded()) == baselineBytes &&
-                    document.history.currentIdentity == baselineIdentity,
-                cppID: id, message: "one undo restores the exact pre-command document")
 
 S003 | restore | src/checks/rollcheck/note_commands.swift
 Anchor: message "fixture unwinds to the exact original MIDI bytes"
-  report.expect((try? document.state.file.encoded()) == originalBytes &&
-                    document.history.currentIdentity == originalIdentity,
-                cppID: id, message: "fixture unwinds to the exact original MIDI bytes")
 
 S004 | checkKeyboardDuplicateNotes | src/checks/rollcheck/note_commands.swift
 Anchor: message "the duplicate-notes seed is present"
-  report.expect(fixture.note(at: fixture.tick)?.id == source.id,
-                cppID: id, message: "the duplicate-notes seed is present")
 
 S005 | checkKeyboardDuplicateNotes | src/checks/rollcheck/note_commands.swift
 Anchor: message "duplicate creates one equal-length copy one span later"
-  report.expect(document.history.currentIdentity != before &&
-                    copy?.duration == source.duration && copy?.id != source.id,
-                cppID: id, message: "duplicate creates one equal-length copy one span later")
 
 S006 | checkKeyboardDuplicateNotes | src/checks/rollcheck/note_commands.swift
 Anchor: message "duplicate selects only its copy"
-  report.expect(copy.map { session.selectedNoteOrder == [$0.id] } == true,
-                cppID: id, message: "duplicate selects only its copy")
 
 S007 | checkKeyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.swift
 Anchor: message "the duplicate-precedence seed is present"
-  report.expect(fixture.note(at: source.tick)?.id == source.id, cppID: id,
-                message: "the duplicate-precedence seed is present")
 
 S008 | checkKeyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.swift
 Anchor: message "active time range owns duplicate and advances the cursor"
-  report.expect(session.document.history.currentIdentity != before &&
-                    page.selection?.range == TimeRange(
-                        startTick: source.tick + fixture.step,
-                        endTick: source.tick + 2 * fixture.step) &&
-                    copy != nil && session.editCursor == source.tick + 2 * fixture.step,
-                cppID: id, message: "active time range owns duplicate and advances the cursor")
 
 S009 | checkKeyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.swift
 Anchor: message "time-range duplication leaves the note selection on its source"
-  report.expect(session.selectedNoteOrder == [source.id], cppID: id,
-                message: "time-range duplication leaves the note selection on its source")
 
 S010 | checkKeyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift
 Anchor: message "the split seed spans three grid cells"
-  report.expect(source.tick == fixture.tick && source.duration == 3 * fixture.step,
-                cppID: id, message: "the split seed spans three grid cells")
 
 S011 | checkKeyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift
 Anchor: message "split commits three grid-length fragments"
-  report.expect(session.document.history.currentIdentity != before &&
-                    pieces.count == 3 && pieces.allSatisfy { $0.duration == fixture.step },
-                cppID: id, message: "split commits three grid-length fragments")
 
 S012 | checkKeyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift
 Anchor: message "split reselects exactly its three fragments"
-  report.expect(session.selectedNoteOrder.count == 3 &&
-                    Set(session.selectedNoteOrder) == Set(pieces.map(\.id)),
-                cppID: id, message: "split reselects exactly its three fragments")
 
 S013 | checkKeyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift
 Anchor: message "selected fragment lies inside the source span"
-  report.expect(session.document.note(selected).map {
-      $0.tick >= fixture.tick && $0.tick < fixture.tick + 3 * fixture.step
-  } == true, cppID: id, message: "selected fragment lies inside the source span")
 
 S014 | checkKeyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift
 Anchor: message "one undo restores the three-cell source"
-  report.expect(session.document.history.undoDocument() &&
-                    (try? session.document.state.file.encoded()) == original &&
-                    session.document.history.currentIdentity == before,
-                cppID: id, message: "one undo restores the three-cell source")
 
 S015 | checkKeyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.swift
 Anchor: message "the split-cursor seed is present"
-  report.expect(fixture.note(at: source.tick)?.id == source.id,
-                cppID: id, message: "the split-cursor seed is present")
 
 S016 | checkKeyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.swift
 Anchor: message "unselected note splits at the edit cursor"
-  report.expect(session.document.history.currentIdentity != before &&
-                    fixture.note(at: source.tick)?.duration == cursor - source.tick &&
-                    fixture.note(at: cursor)?.duration ==
-                        source.duration - (cursor - source.tick),
-                cppID: id, message: "unselected note splits at the edit cursor")
 
 S017 | checkKeyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.swift
 Anchor: message "cursor-split fragments remain unselected"
-  report.expect(session.selectedNoteOrder.isEmpty, cppID: id,
-                message: "cursor-split fragments remain unselected")
 
 S018 | checkKeyboardSplitNoop | src/checks/rollcheck/note_commands.swift
 Anchor: message "split outside every note records no undo entry"
-  report.expect(document.history.currentIdentity == identity, cppID: id,
-                message: "split outside every note records no undo entry")
 
 S019 | checkKeyboardSplitNoop | src/checks/rollcheck/note_commands.swift
 Anchor: message "no-op split leaves notes and selection untouched"
-  report.expect((try? document.state.file.encoded()) == before &&
-                    session.selectedNoteOrder.isEmpty,
-                cppID: id, message: "no-op split leaves notes and selection untouched")
 
 S020 | checkKeyboardJoinNotes | src/checks/rollcheck/note_commands.swift
 Anchor: message "the join seed is present"
-  report.expect(fixture.note(at: source.tick)?.id == source.id,
-                cppID: id, message: "the join seed is present")
 
 S021 | checkKeyboardJoinNotes | src/checks/rollcheck/note_commands.swift
 Anchor: function
-  report.fail(id, "the second join note did not land")
 
 S022 | checkKeyboardJoinNotes | src/checks/rollcheck/note_commands.swift
 Anchor: message "join commits one span across the same-key pair"
-  report.expect(session.document.history.currentIdentity != before &&
-                    joined?.duration == (secondTick - source.tick) + source.duration,
-                cppID: id, message: "join commits one span across the same-key pair")
 
 S023 | checkKeyboardJoinNotes | src/checks/rollcheck/note_commands.swift
 Anchor: message "join removes its second note"
-  report.expect(fixture.note(at: secondTick) == nil, cppID: id,
-                message: "join removes its second note")
 
 S024 | checkKeyboardJoinNotes | src/checks/rollcheck/note_commands.swift
 Anchor: message "join selects only the joined note"
-  report.expect(joined.map { session.selectedNoteOrder == [$0.id] } == true,
-                cppID: id, message: "join selects only the joined note")
 
 S025 | checkKeyboardJoinNotes | src/checks/rollcheck/note_commands.swift
 Anchor: message "one undo restores both original notes"
-  report.expect(session.document.history.undoDocument() &&
-                    (try? session.document.state.file.encoded()) == original &&
-                    session.document.history.currentIdentity == before,
-                cppID: id, message: "one undo restores both original notes")
 
 S026 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift
 Anchor: function
-  report.fail(id, "the mixed-join partner or singleton did not land")
 
 S027 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift
 Anchor: function
-  report.fail(id, "no free pitch for the unterminated join group")
 
 S028 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift
 Anchor: function
-  report.fail(id, "the unterminated join group did not land")
 
 S029 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift
 Anchor: message "mixed join preserves first velocity and spans three cells"
-  report.expect(session.document.history.currentIdentity != before &&
-                    joined?.duration == 3 * grid && joined?.velocity == source.velocity,
-                cppID: id, message: "mixed join preserves first velocity and spans three cells")
 
 S030 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift
 Anchor: message "mixed join removes the same-key partner"
-  report.expect(fixture.note(at: pairTick) == nil, cppID: id,
-                message: "mixed join removes the same-key partner")
 
 S031 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift
 Anchor: message "mixed join preserves the other-pitch singleton and identity"
-  report.expect(singletonAfter?.id == singleton.id &&
-                    singletonAfter?.tick == singleton.tick &&
-                    singletonAfter?.duration == singleton.duration &&
-                    singletonAfter?.velocity == singleton.velocity,
-                cppID: id, message: "mixed join preserves the other-pitch singleton and identity")
 
 S032 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift
 Anchor: message "mixed join does not synthesize an open note's end"
-  report.expect(fixture.note(at: openTick, pitch: UInt8(openPitch))?.isUnterminated == true,
-                cppID: id, message: "mixed join does not synthesize an open note's end")
 
 S033 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift
 Anchor: message "mixed join selects the joined and surviving notes"
-  report.expect(joined.map {
-      session.selectedNotes == [singleton.id, open.id, $0.id]
-  } == true && session.selectedNoteOrder.count == 3,
-  cppID: id, message: "mixed join selects the joined and surviving notes")
 
 S034 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift
 Anchor: message "one undo restores every mixed-join group"
-  report.expect(session.document.history.undoDocument() &&
-                    (try? session.document.state.file.encoded()) == original &&
-                    session.document.history.currentIdentity == before,
-                cppID: id, message: "one undo restores every mixed-join group")
 
 S035 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift
 Anchor: function
-  report.fail(id, "the combined-split seed did not grow to three cells")
 
 S036 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift
 Anchor: function
-  report.fail(id, "the cursor straddler or bystander did not land")
 
 S037 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift
 Anchor: message "both split arms commit as one transaction"
-  report.expect(session.document.history.currentIdentity != before, cppID: id,
-                message: "both split arms commit as one transaction")
 
 S038 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift
 Anchor: message "selected source splits along every grid line"
-  report.expect(fixture.note(at: source.tick + Tick(offset) * grid)?.duration == grid,
-                cppID: id, message: "selected source splits along every grid line")
 
 S039 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift
 Anchor: message "straddler's left half stays in place"
-  report.expect(fixture.note(at: straddlerTick, pitch: straddlerPitch)?.duration == grid,
-                cppID: id, message: "straddler's left half stays in place")
 
 S040 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift
 Anchor: message "straddler splits at the cursor"
-  report.expect(fixture.note(at: cursor, pitch: straddlerPitch)?.duration == grid,
-                cppID: id, message: "straddler splits at the cursor")
 
 S041 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift
 Anchor: message "only source fragments and bystander remain selected"
-  report.expect(session.selectedNoteOrder.count == 4 &&
-                    session.selectedNotes == Set(pieces.map(\.id)).union([bystander.id]),
-                cppID: id, message: "only source fragments and bystander remain selected")
 
 S042 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift
 Anchor: message "selected note is a source fragment"
-  report.expect(session.document.note(selected).map {
-      $0.pitch == source.pitch && $0.tick >= source.tick &&
-          $0.tick < source.tick + 3 * grid
-  } == true, cppID: id, message: "selected note is a source fragment")
 
 S043 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift
 Anchor: message "also-selected bystander retains identity and values"
-  report.expect(bystanderAfter?.id == bystander.id &&
-                    bystanderAfter?.tick == bystander.tick &&
-                    bystanderAfter?.duration == grid &&
-                    bystanderAfter?.velocity == 82,
-                cppID: id, message: "also-selected bystander retains identity and values")
 
 S044 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift
 Anchor: message "the original cursor straddler was replaced"
-  report.expect(session.document.note(straddler.id) == nil, cppID: id,
-                message: "the original cursor straddler was replaced")
 
 S045 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift
 Anchor: message "one undo restores both split arms"
-  report.expect(session.document.history.undoDocument() &&
-                    (try? session.document.state.file.encoded()) == original &&
-                    session.document.history.currentIdentity == before,
-                cppID: id, message: "one undo restores both split arms")
 
 S046 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
 Anchor: function
-  report.fail(id, "popup split seed did not grow to three cells")
 
 S047 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
 Anchor: function
-  report.fail(id, "popup-join partner did not land")
 
 S048 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
 Anchor: message "Duplicate row creates a same-length copy one span later"
-  report.expect(copy?.duration == source.duration, cppID: id,
-                message: "Duplicate row creates a same-length copy one span later")
 
 S049 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
 Anchor: message "Duplicate row selects its copy"
-  report.expect(copy.map { session.selectedNoteOrder == [$0.id] } == true,
-                cppID: id, message: "Duplicate row selects its copy")
 
 S050 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
 Anchor: message "Split row yields a grid-length piece"
-  report.expect(fixture.note(at: source.tick + Tick(offset) * grid)?.duration == grid,
-                cppID: id, message: "Split row yields a grid-length piece")
 
 S051 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
 Anchor: message "Split row selects all three pieces"
-  report.expect(session.selectedNoteOrder.count == 3 &&
-                    session.selectedNotes == Set(pieces.map(\.id)),
-                cppID: id, message: "Split row selects all three pieces")
 
 S052 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
 Anchor: message "Join row spans the same-key pair"
-  report.expect(joined?.duration == 3 * grid, cppID: id,
-                message: "Join row spans the same-key pair")
 
 S053 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
 Anchor: message "Join row removes its partner"
-  report.expect(fixture.note(at: secondTick) == nil, cppID: id,
-                message: "Join row removes its partner")
 
 S054 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
 Anchor: message "Join row selects the merged note"
-  report.expect(joined.map { session.selectedNoteOrder == [$0.id] } == true,
-                cppID: id, message: "Join row selects the merged note")
 
 S055 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
 Anchor: message "menu command records a history entry"
-  report.expect(session.document.history.currentIdentity != before,
-                cppID: id, message: "menu command records a history entry")
 
 S056 | checkKeyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift
 Anchor: message "one undo restores the pre-menu document"
-  report.expect(session.document.history.undoDocument() &&
-                    (try? session.document.state.file.encoded()) == original &&
-                    session.document.history.currentIdentity == before,
-                cppID: id, message: "one undo restores the pre-menu document")

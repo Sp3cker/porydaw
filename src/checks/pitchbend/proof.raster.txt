@@ -6,52 +6,14 @@ Original SHA-256: 91c692e0cfb7a0ecc7c797cc397958c954685b30ce3adee78fe8473ae922df
 Swift counterpart: none identified
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-Every site below is GAP under one canonical reason, "feature not yet ported:
-pitch-bend editor": the Swift app has no pitch-bend editor surface (the
-roll.pitch_bend/G keybinding and the EditCommand row are inert registrations)
-and the original native pitch-bend harness is neither built nor registered, so
-no site executes.
-No Swift counterpart covers this suite: src/checks/pitchbend/ holds no .swift
-file; src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not
-Swift; swiftcore/*.swift and automation Swift touch only unrelated parameter
-metadata (e.g. AutomationParameter.pitchBend titles), never the pitch-bend
-editor popup, its graphs, or its controllers. Unsure between PARTIAL and GAP
-resolves to GAP: bookkeeping must not overclaim.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
 
-Execution ownership
-No Swift entry point executes these checks, and no native one either: the T7A
-runtime cutover removed every pitchbend source from src/checks/CMakeLists.txt
-and src/checks/checkcatalog.cpp registers no pitch-bend entry, so no site below
-executes. The original C++ suite entry point
-runPitchBendRasterCheck (PitchBendRasterTest::init/cleanup drive the fixture)
-belongs to that unbuilt harness; the
 PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve
 and PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with
 declarations in src/checks/pitchbend/tst_pitchbendediting.h
 (SHA-256 7580a8bae6dab536e3f3a4ceeb170a23d047ee5cf3459bb5e1584e4b2e64b895).
-
-Fixture, sequence and row constraints
-No QTest data rows in this file; each site executes once per test run.
-Loops over lane points, SMF events, surface pixels, and probe fractions expand
-one site into many runtime checks; undo-index and SMF comparisons pin the
-document state around each gesture. init/setup guards gate every test method.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | PitchBendRasterTest::init | src/checks/pitchbend/raster.cpp:43
 Disposition: GAP
@@ -314,4 +276,3 @@ Remaining original source (closing sequence and helper bodies):
 Swift assertion predicates
 None: no Swift counterpart file carries report.expect*/expectEqual predicates
 for this suite.
-

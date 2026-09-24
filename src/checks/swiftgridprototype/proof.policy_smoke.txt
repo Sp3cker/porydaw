@@ -23,7 +23,6 @@ deno task verify --filter swiftcore --verbose -> verify: 1/6 ok (11.40s, 5 skipp
 Result: swiftcore PASS. No live native policy_smoke run exists or is claimed; the deleted shim neither builds
 nor executes.
 
-Deletion certificate
 Retirement: zero assertion sites; there is nothing to dispose and no disposition to change. This file
 records the sgp_* shim role (thin conversion over the production songview::editCommandPolicy table) and its
 production owners: the canonical Swift table at src/swift/app/commands/EditCommands.swift
@@ -32,621 +31,270 @@ production owners: the canonical Swift table at src/swift/app/commands/EditComma
 execution lived in the likewise-deleted prototype PolicySelftest.swift. No whole-case equivalence, native
 execution or parity claim is made.
 
-Status and evidence
 The deleted policy_smoke.cpp contains zero assertion sites: it is a thin conversion over the production songview::editCommandPolicy table with no QVERIFY/QCOMPARE/QFAIL/require construct. There is nothing to dispose; the two conversion functions are listed below so the shim is not mistaken for dropped coverage. Parity-sweep execution lived in the likewise-deleted prototype PolicySelftest.swift. No S predicate among S001-S086 reads the command-policy table, so the table rows have no Swift predicate in this pairing. Reference inventory only, never current execution evidence.
 Execution boundary: SwiftGridPrototype is retired: its C++ sources were deleted in fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced and no target/registration for this prototype remains.
 
-Execution and ownership
 No execution is paired: the shim converted production table rows and the parity sweep ran in the deleted prototype PolicySelftest.swift. The canonical policy owners are the Swift table and keyboard arbiter checks above, which do not call these sgp_ symbols.
 
-Fixture, sequence and row constraints
-No rows, loops, or guards carry assertions; commandOrdinal ranges over [0, SongView::EditCommand::GridTriplet] by the caller, and the row conversion is a straight field copy.
-Original setup, branch guards, and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Original assertion inventory
 No assertion sites: this file contains no QVERIFY, QVERIFY2, QCOMPARE, QFAIL, QTRY_*, QEXPECT_FAIL, QSKIP, or explicit failure/report call. Forwarded symbols:
 
-  sgp_command_count (no predicate; forwarding shim)
-  sgp_policy_row (no predicate; forwarding shim)
 Straight conversion of songview::editCommandPolicy rows (range/notes/standalone operations, key route, origin and auto-repeat rules, ownership flags, transpose/nudge/row deltas, gesture-survival and terminal flags). No caller among S001-S086 reads these rows.
-
-Remaining original source (full file, verbatim; no assertion tail to split):
-#include "policy_smoke.h"
-
-#include "ui/songview/editactions.h"
-#include "ui/songview/editcommandtable.h"
-
-// Thin conversion over the extracted production table (spec §4): the C ABI
-// answers what songview::editCommandPolicy returns — no logic, no second
-// table. editcommandtable.cpp is compiled into this same target, so the
-// parity sweep reads the exact production rows.
-
-int32_t sgp_command_count(void)
-{
-    return static_cast<int32_t>(SongView::EditCommand::GridTriplet) + 1;
-}
-
-void sgp_policy_row(int32_t commandOrdinal, SGECommandPolicyRow *out)
-{
-    const songview::EditCommandPolicy &policy =
-        songview::editCommandPolicy(static_cast<SongView::EditCommand>(commandOrdinal));
-    out->command = commandOrdinal;
-    out->rangeOperation = static_cast<int32_t>(policy.rangeOperation);
-    out->notesOperation = static_cast<int32_t>(policy.notesOperation);
-    out->standaloneOperation = static_cast<int32_t>(policy.standaloneOperation);
-    out->keyRoute = static_cast<int32_t>(policy.keyRoute);
-    out->originRule = static_cast<int32_t>(policy.originRule);
-    out->autoRepeatRule = static_cast<int32_t>(policy.autoRepeatRule);
-    out->ownershipOnUnavailable = static_cast<int32_t>(policy.ownershipOnUnavailable);
-    out->focusedTextOwnership = static_cast<int32_t>(policy.focusedTextOwnership);
-    out->transposeSemitones = policy.transposeSemitones;
-    out->nudgeDelta = policy.nudgeDelta;
-    out->eventRowDelta = policy.eventRowDelta;
-    out->survivesPointerGesture = policy.survivesPointerGesture ? 1 : 0;
-    out->terminalWhenUnmatched = policy.terminalWhenUnmatched ? 1 : 0;
-}
-
-Swift assertion predicates
 
 S001 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "caller-resolved minimum viewport produces observable camera bounds"
-  report.expect(gridCameraNear(compact.snapshot.viewportWidth, 50) &&
-                gridCameraNear(compact.snapshot.minHScroll, -48) &&
-                gridCameraNear(compact.snapshot.maxHScroll, 0),
-                cppID: cameraTransformID,
-                message: "caller-resolved minimum viewport produces observable camera bounds")
 
 S002 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "tick/content transforms round-trip with a fractional offset"
-  report.expect(gridCameraNear(camera.tickAtContentX(content), 96), cppID: cameraTransformID,
-                message: "tick/content transforms round-trip with a fractional offset")
 
 S003 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "horizontal restoration preserves fractional offsets"
-  report.expect(gridCameraNear(camera.snapshot.scrollX, 10.25), cppID: cameraTransformID,
-                message: "horizontal restoration preserves fractional offsets")
 
 S004 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "display projection snaps to a physical pixel"
-  report.expect(gridCameraNear(camera.displayX(tick: 24, origin: 0.2, dpr: 2), 22),
-                cppID: cameraTransformID, message: "display projection snaps to a physical pixel")
 
 S005 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "horizontal scrolling clamps to production pre-roll"
-  report.expect(gridCameraNear(camera.snapshot.scrollX, -48) && gridCameraNear(camera.snapshot.minHScroll, -48),
-                cppID: cameraTransformID, message: "horizontal scrolling clamps to production pre-roll")
 
 S006 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "bound timeline end reaches the plot origin"
-  report.expect(gridCameraNear(camera.snapshot.scrollX, 640), cppID: cameraTransformID,
-                message: "bound timeline end reaches the plot origin")
 
 S007 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "bound viewport shrink reclamps the changed pre-roll floor"
-  report.expect(gridCameraNear(viewportCamera.snapshot.scrollX, -48),
-                cppID: cameraTransformID,
-                message: "bound viewport shrink reclamps the changed pre-roll floor")
 
 S008 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "bound viewport updates preserve a legal fractional offset"
-  report.expect(gridCameraNear(viewportCamera.snapshot.scrollX, 10.25),
-                cppID: cameraTransformID,
-                message: "bound viewport updates preserve a legal fractional offset")
 
 S009 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "interactive time zoom preserves its tick anchor"
-report.expect(zoom.zoomChanged && zoom.scrollChanged &&
-                  near(camera.tickAtContentX(anchorX), anchoredTick), cppID: cameraZoomID,
-                  message: "interactive time zoom preserves its tick anchor")
 
 S010 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "time zoom reaches its bound when the pointer anchor is unreachable"
-  report.expect(gridCameraNear(clampedTimeZoom.snapshot.scrollX, 64) &&
-                !gridCameraNear(clampedTimeZoom.tickAtContentX(boundedAnchor), tickBeforeBoundedZoom),
-                cppID: cameraZoomID,
-                message: "time zoom reaches its bound when the pointer anchor is unreachable")
 
 S011 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "unanchored restoration keeps valid fractional camera state"
-  report.expect(gridCameraNear(camera.snapshot.pixelsPerBeat, 48) &&
-                gridCameraNear(camera.snapshot.keyHeight, 16) && gridCameraNear(camera.snapshot.scrollX, 10.5) &&
-                gridCameraNear(camera.snapshot.scrollY, 20.25), cppID: cameraZoomID,
-                message: "unanchored restoration keeps valid fractional camera state")
 
 S012 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "restoration sanitizes non-finite transient view-state values independently"
-  report.expect(gridCameraNear(sanitized.snapshot.pixelsPerBeat, 32) &&
-                gridCameraNear(sanitized.snapshot.keyHeight, 12) &&
-                gridCameraNear(sanitized.snapshot.scrollX, 0) && gridCameraNear(sanitized.snapshot.scrollY, 0),
-                cppID: cameraZoomID,
-                message: "restoration sanitizes non-finite transient view-state values independently")
 
 S013 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "content shrink reclamps the horizontal offset"
-  report.expect(gridCameraNear(camera.snapshot.scrollX, 20), cppID: cameraTransformID,
-                message: "content shrink reclamps the horizontal offset")
 
 S014 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "viewport growth reclamps vertical content"
-  report.expect(gridCameraNear(camera.snapshot.viewportWidth, 800) && gridCameraNear(camera.snapshot.scrollY, 0),
-                cppID: cameraTransformID,
-                message: "viewport growth reclamps vertical content")
 
 S015 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "an unbound timeline homes to its lead pad"
-  report.expect(gridCameraNear(camera.snapshot.scrollX, -80), cppID: cameraTransformID,
-                message: "an unbound timeline homes to its lead pad")
 
 S016 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "unbound viewport updates follow the resolved home"
-  report.expect(gridCameraNear(camera.snapshot.scrollX, -100), cppID: cameraTransformID,
-                message: "unbound viewport updates follow the resolved home")
 
 S017 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "chromatic pitch mapping remains bijective across the full MIDI range"
-report.expect(chromatic.visibleRowCount == 128 && (0..<128).allSatisfy { pitch in
-        chromatic.row(forPitch: pitch) == 127 - pitch &&
-            chromatic.visiblePitch(at: 127 - pitch) == pitch
-    }, cppID: cameraPitchID,
-    message: "chromatic pitch mapping remains bijective across the full MIDI range")
 
 S018 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "pitch rows and nearest lookup preserve production ordering"
-report.expect(folded.visiblePitch(at: 0) == 67 && folded.row(forPitch: 60) == 2 &&
-                  folded.row(forPitch: 61) == PitchProjection.hiddenRow &&
-                  folded.nearestVisiblePitch(to: 62) == 60 &&
-                  folded.nearestVisiblePitch(to: 100) == 67 &&
-                  folded.nearestVisiblePitch(to: -5) == 60 &&
-                  emptyProjection.nearestVisiblePitch(to: 60) == nil,
-                  cppID: cameraPitchID,
-                  message: "pitch rows and nearest lookup preserve production ordering")
 
 S019 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "DPR-snapped row and pitch inverses agree"
-report.expect(folded.row(atY: 10, keyHeight: 10, scrollY: 0, dpr: 2) == 1 &&
-                  folded.pitch(atY: 29.75, keyHeight: 10, scrollY: 0, dpr: 2) == 60,
-                  cppID: cameraPitchID, message: "DPR-snapped row and pitch inverses agree")
 
 S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "fractional DPR snapping defines the inverse row boundary"
-  report.expect(gridCameraNear(folded.rowBottom(0, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) ?? -1,
-                     10) &&
-                folded.row(atY: 9.99, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 0 &&
-                folded.row(atY: 10, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 1,
-                cppID: cameraPitchID,
-                message: "fractional DPR snapping defines the inverse row boundary")
 
 S021 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "pitch projection shrink reclamps the vertical offset"
-  report.expect(gridCameraNear(projectedContent.snapshot.scrollY, 15),
-                cppID: cameraPitchID,
-                message: "pitch projection shrink reclamps the vertical offset")
 
 S022 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "vertical bounds derive from projected row height"
-  report.expect(gridCameraNear(pitchCamera.snapshot.maxVScroll, 15), cppID: cameraPitchID,
-                message: "vertical bounds derive from projected row height")
 
 S023 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "pitch zoom preserves its row anchor when bounds permit"
-  report.expect(gridCameraNear(anchoredRow, resultingRow), cppID: cameraZoomID,
-                message: "pitch zoom preserves its row anchor when bounds permit")
 
 S024 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "pitch zoom reaches its bound when the row anchor is unreachable"
-  report.expect(gridCameraNear(clampedPitchZoom.snapshot.scrollY, 0) &&
-                gridCameraNear(clampedPitchZoom.snapshot.maxVScroll, 0) &&
-                !gridCameraNear(rowAfterBoundedZoom, rowBeforeBoundedZoom),
-                cppID: cameraZoomID,
-                message: "pitch zoom reaches its bound when the row anchor is unreachable")
 
 S025 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "key reveal scrolls only enough to show its row"
-report.expect(pitchCamera.ensureKeyVisible(60) && near(pitchCamera.snapshot.scrollY, 15),
-                  cppID: cameraPitchID, message: "key reveal scrolls only enough to show its row")
 
 S026 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "hidden pitches do not move the camera"
-report.expect(!pitchCamera.ensureKeyVisible(61), cppID: cameraPitchID,
-                  message: "hidden pitches do not move the camera")
 
 S027 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "tick reveal uses the production one-third anchor"
-report.expect(reveal.ensureTickVisible(480, dpr: 2) &&
-                  near(reveal.snapshot.scrollX, 573.3333333333),
-                  cppID: cameraTransformID,
-                  message: "tick reveal uses the production one-third anchor")
 
 S028 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "a fitting range on the physical right boundary stays visible"
-report.expect(!reveal.ensureRangeVisible(startTick: 0, endTick: 149,
-                                             preferEnd: false, dpr: 1) &&
-                  near(reveal.snapshot.scrollX, 0), cppID: cameraTransformID,
-                  message: "a fitting range on the physical right boundary stays visible")
 
 S029 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "wide range reveal prefers its requested leading edge"
-report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
-                                            preferEnd: false, dpr: 1) &&
-                  near(reveal.contentX(tick: 240), 0), cppID: cameraTransformID,
-                  message: "wide range reveal prefers its requested leading edge")
 
 S030 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "wide range reveal honors the requested trailing edge"
-report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
-                                            preferEnd: true, dpr: 1) &&
-                  near(reveal.contentX(tick: 480), 199), cppID: cameraTransformID,
-                  message: "wide range reveal honors the requested trailing edge")
 
 S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "phase \(phase.rawValue) performs one anchored time zoom publication"
-report.expect(
-            after.pixelsPerBeat > before.pixelsPerBeat
-                && gridCameraNear(session.camera.tickAtContentX(anchorX), anchorTick, tolerance: 1e-7)
-                && counters.camera == publications + 1,
-            cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")
 
 S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "momentum suppresses time zoom without publishing"
-report.expect(
-        session.camera.snapshot == beforeMomentum && counters.camera == momentumPublications,
-        cppID: gridCameraWheelID, message: "momentum suppresses time zoom without publishing")
 
 S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "pixel deltas receive five-times angle weighting"
-report.expect(
-        gridCameraNear(angleZoom, 35 * pow(1.0015, 120), tolerance: 1e-7)
-            && gridCameraNear(session.camera.snapshot.pixelsPerBeat,
-                    angleZoom * pow(1.0015, 120), tolerance: 1e-7),
-        cppID: gridCameraWheelID, message: "pixel deltas receive five-times angle weighting")
 
 S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "effective angle and pixel zooms each publish once"
-report.expect(
-        counters.camera == 2,
-        cppID: gridCameraWheelID, message: "effective angle and pixel zooms each publish once")
 
 S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "Shift wheel pans by negative selected delta exactly once"
-report.expect(
-        gridCameraNear(session.camera.snapshot.scrollX, 90) && counters.camera == 1,
-        cppID: gridCameraWheelID, message: "Shift wheel pans by negative selected delta exactly once")
 
 S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "Shift pan clamps at minimum and repeated clamped pan is silent"
-report.expect(
-        gridCameraNear(minimumPan.scrollX, minimumPan.minHScroll)
-            && minimumPublications == 1 && counters.camera == minimumPublications,
-        cppID: gridCameraWheelID, message: "Shift pan clamps at minimum and repeated clamped pan is silent")
 
 S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "Shift pan clamps at maximum and repeated clamped pan is silent"
-report.expect(
-        gridCameraNear(maximumPan.scrollX, maximumPan.maxHScroll)
-            && maximumPublications == 1 && counters.camera == maximumPublications,
-        cppID: gridCameraWheelID, message: "Shift pan clamps at maximum and repeated clamped pan is silent")
 
 S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "horizontal-only momentum still pans exactly once"
-report.expect(
-        gridCameraNear(session.camera.snapshot.scrollX, 112) && counters.camera == 1,
-        cppID: gridCameraWheelID, message: "horizontal-only momentum still pans exactly once")
 
 S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "Ctrl wheel performs one row-anchored pitch zoom publication"
-report.expect(
-        pitchAfter.keyHeight > pitchBefore.keyHeight
-            && gridCameraNear((pitchAfter.scrollY + 100) / pitchAfter.keyHeight, pitchRow, tolerance: 1e-7)
-            && counters.camera == 1,
-        cppID: gridCameraWheelID, message: "Ctrl wheel performs one row-anchored pitch zoom publication")
 
 S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "momentum suppresses pitch zoom without publishing"
-report.expect(
-        session.camera.snapshot == pitchMomentum && counters.camera == 0,
-        cppID: gridCameraWheelID, message: "momentum suppresses pitch zoom without publishing")
 
 S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "gutter wheel scrolls by negative half-delta exactly once"
-report.expect(
-        gridCameraNear(session.camera.snapshot.scrollY, gutterBefore + 6) && counters.camera == 1,
-        cppID: gridCameraWheelID, message: "gutter wheel scrolls by negative half-delta exactly once")
 
 S042 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "Ctrl-add of earlier A(v40) retains later B(v90) as first selection"
-report.expect(session.selectedNoteOrder == [b, a]
-        && session.document.note(session.selectedNoteOrder[0])?.velocity == 90,
-        cppID: id, message: "Ctrl-add of earlier A(v40) retains later B(v90) as first selection")
 
 S043 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "deselecting and re-adding appends the note"
-report.expectEqual([a, b], session.selectedNoteOrder, cppID: id,
-                       what: "deselecting and re-adding appends the note")
 
 S044 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "replacement preserves first occurrence and removes duplicates"
-report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
-                       what: "replacement preserves first occurrence and removes duplicates")
 
 S045 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "band keeps press order before newly covered notes"
-report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
-        && session.selectedNotes.contains(c),
-        cppID: id, message: "band keeps press order before newly covered notes")
 
 S046 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "band cancellation restores selection order"
-report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
-                       what: "band cancellation restores selection order")
 
 S047 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "order-only replacement publishes the selection domain"
-report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
-                       what: "order-only replacement publishes the selection domain")
 
 S048 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "order-only replacement and additive selection coalesce"
-report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
-                       what: "order-only replacement and additive selection coalesce")
 
 S049 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "unchanged normalized selection publishes nothing"
-report.expect(publications.isEmpty, cppID: id,
-                  message: "unchanged normalized selection publishes nothing")
 
 S050 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "selection gestures never mutate document or history"
-report.expect(session.document.revision == revision
-        && session.document.history.currentIdentity == history
-        && session.document.isDirty == dirty,
-        cppID: id, message: "selection gestures never mutate document or history")
 
 S051 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "deletion prunes membership and preserves survivor order"
-report.expect(session.selectedNoteOrder == [c, a] && session.selectedNotes == Set([c, a]),
-                  cppID: id, message: "deletion prunes membership and preserves survivor order")
 
 S052 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "viewport dimensions are pushed into the session camera"
-report.expect(
-        gridCameraNear(first.viewportWidth, 640) && gridCameraNear(first.rollHeight, 320),
-        cppID: viewportID, message: "viewport dimensions are pushed into the session camera")
 
 S053 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "camera bounds derive from viewport, document extent, and projection"
-report.expect(
-        gridCameraNear(first.minHScroll, expectedMin)
-            && gridCameraNear(first.maxHScroll,
-                    Double(session.timeline.lengthTicks) * first.pixelsPerTick)
-            && gridCameraNear(first.maxVScroll, expectedMaxV),
-        cppID: viewportID, message: "camera bounds derive from viewport, document extent, and projection")
 
 S054 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "first viewport push homes vertically within camera bounds"
-report.expect(
-        first.scrollY >= 0 && first.scrollY <= first.maxVScroll,
-        cppID: viewportID, message: "first viewport push homes vertically within camera bounds")
 
 S055 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "published scales equal the session camera snapshot"
-report.expect(
-        gridCameraNear(grid.beatWidth, first.pixelsPerBeat) && gridCameraNear(grid.rowHeight, first.keyHeight),
-        cppID: viewportID, message: "published scales equal the session camera snapshot")
 
 S056 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "identical viewport push preserves fractional offsets and publishes nothing"
-report.expect(
-        session.camera.snapshot == fractional && counters.camera == 0,
-        cppID: viewportID, message: "identical viewport push preserves fractional offsets and publishes nothing")
 
 S057 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "roll-height increase reclamps vertical scroll"
-report.expect(
-        tallViewport.maxVScroll < shortHeight.maxVScroll
-            && gridCameraNear(tallViewport.scrollY, tallViewport.maxVScroll),
-        cppID: viewportID, message: "roll-height increase reclamps vertical scroll")
 
 S058 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "double-font push applies the rounded font-relative defaults"
-report.expect(
-        gridCameraNear(doubled.pixelsPerBeat, 69) && gridCameraNear(doubled.keyHeight, 26),
-        cppID: viewportID, message: "double-font push applies the rounded font-relative defaults")
 
 S059 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "font push back restores the exact earlier scale"
-report.expect(
-        gridCameraNear(restored.pixelsPerBeat, 35) && gridCameraNear(restored.keyHeight, 13),
-        cppID: viewportID, message: "font push back restores the exact earlier scale")
 
 S060 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "each effective font push publishes exactly once"
-report.expect(
-        counters.camera == 2,
-        cppID: viewportID, message: "each effective font push publishes exactly once")
 
 S061 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "pushed font defines time and key-height minimums"
-report.expect(
-        gridCameraNear(fontMinimum.pixelsPerBeat, 9) && gridCameraNear(fontMinimum.keyHeight, 9),
-        cppID: viewportID, message: "pushed font defines time and key-height minimums")
 
 S062 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "pushed font defines time and key-height maximums"
-report.expect(
-        gridCameraNear(fontMaximum.pixelsPerBeat, 1_387) && gridCameraNear(fontMaximum.keyHeight, 69),
-        cppID: viewportID, message: "pushed font defines time and key-height maximums")
 
 S063 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "document shrink privately reconciles extent and reclamps horizontal scroll"
-report.expect(
-        farID != nil && expandedLength > originalLength
-            && session.timeline.lengthTicks < expandedLength
-            && gridCameraNear(shrunk.scrollX, shrunk.maxHScroll),
-        cppID: viewportID, message: "document shrink privately reconciles extent and reclamps horizontal scroll")
 
 S064 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "generated time marks stay inside the one-viewport culling window"
-report.expect(
-        !markXs.isEmpty && markXs.allSatisfy { $0 >= -cullingWidth - 2 && $0 <= 2 * cullingWidth + 2 },
-        cppID: projectionID, message: "generated time marks stay inside the one-viewport culling window")
 
 S065 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "generated time marks cover the visible plot"
-report.expect(
-        (markXs.min() ?? 1) <= 0 && (markXs.max() ?? -1) >= cullingWidth,
-        cppID: projectionID, message: "generated time marks cover the visible plot")
 
 S066 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "camera movement does not alter noteSummary document state"
-report.expect(
-        grid.noteSummary == summaryBeforeCameraMove,
-        cppID: projectionID, message: "camera movement does not alter noteSummary document state")
 
 S067 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "known note rectangle equals the camera projection"
-report.expect(
-        projected,
-        cppID: projectionID, message: "known note rectangle equals the camera projection")
 
 S068 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "pre-roll mask presence follows the projected tick-zero position"
-report.expect(
-        maskCount == (zeroX > 0 ? 1 : 0),
-        cppID: projectionID, message: "pre-roll mask presence follows the projected tick-zero position")
 
 S069 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "beginPointer selects the note under the projected rectangle"
-report.expect(
-        session.selectedNotes.contains(originalNote.id),
-        cppID: projectionID, message: "beginPointer selects the note under the projected rectangle")
 
 S070 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "one-cell drag publishes the snapped tick and pitch preview"
-report.expect(
-        previewRect.map {
-            gridCameraNear($0.x, session.camera.displayX(
-                tick: Double(expectedTick), origin: 0, dpr: grid.devicePixelRatio))
-                && gridCameraNear($0.y, expectedPreviewY + 1 / grid.devicePixelRatio)
-        } ?? false,
-        cppID: projectionID, message: "one-cell drag publishes the snapped tick and pitch preview")
 
 S071 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "endPointer commits one revision at the snapped tick and pitch"
-report.expect(
-        session.document.revision == originalRevision + 1
-            && moved.map { Int($0.tick) == expectedTick && Int($0.pitch) == expectedPitch } == true,
-        cppID: projectionID, message: "endPointer commits one revision at the snapped tick and pitch")
 
 S072 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "draw drag on an empty row adds one snapped note"
-report.expect(
-        session.document.revision == drawRevision + 1
-            && created.map { Int($0.tick) == drawTick && Int($0.pitch) == drawPitch } == true,
-        cppID: projectionID, message: "draw drag on an empty row adds one snapped note")
 
 S073 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "right-drag band selects exactly the visible intersecting notes"
-report.expect(
-        session.selectedNotes == visibleIDs,
-        cppID: projectionID, message: "right-drag band selects exactly the visible intersecting notes")
 
 S074 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "inputCancelled discards an active gesture without document mutation"
-report.expect(
-        session.document.revision == cancelRevision
-            && session.document.notes(in: grid.trackIndex).count == cancelCount,
-        cppID: projectionID, message: "inputCancelled discards an active gesture without document mutation")
 
 S075 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "Escape discards an active gesture without document mutation"
-report.expect(
-        session.document.revision == cancelRevision
-            && session.document.notes(in: grid.trackIndex).count == cancelCount,
-        cppID: projectionID, message: "Escape discards an active gesture without document mutation")
 
 S076 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "press outside projected pitch rows is rejected"
-report.expect(
-        session.document.revision == cancelRevision,
-        cppID: projectionID, message: "press outside projected pitch rows is rejected")
 
 S077 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "ensureTickVisible uses the reveal fraction in one publication"
-report.expect(
-        counters.camera == before + 1
-            && gridCameraNear(tickReveal.scrollX, expectedTickReveal),
-        cppID: isolationID, message: "ensureTickVisible uses the reveal fraction in one publication")
 
 S078 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "preferEnd true aligns an oversized range to the right edge"
-report.expect(
-        counters.camera == before + 1
-            && gridCameraNear(
-                endReveal.scrollX,
-                endReveal.maxHScroll - endReveal.viewportWidth
-                    + 1 / grid.devicePixelRatio),
-        cppID: isolationID, message: "preferEnd true aligns an oversized range to the right edge")
 
 S079 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "preferEnd false aligns an oversized range to its start"
-report.expect(
-        counters.camera == before + 1 && gridCameraNear(startReveal.scrollX, 0),
-        cppID: isolationID, message: "preferEnd false aligns an oversized range to its start")
 
 S080 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "ensureKeyVisible aligns the bottom pitch at the viewport edge"
-report.expect(
-        counters.camera == before + 1
-            && gridCameraNear(keyReveal.scrollY, keyReveal.maxVScroll),
-        cppID: isolationID, message: "ensureKeyVisible aligns the bottom pitch at the viewport edge")
 
 S081 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "presenter scroll values track the revealed session camera"
-report.expect(
-        gridCameraNear(grid.cameraScrollX, session.camera.snapshot.scrollX)
-            && gridCameraNear(grid.cameraScrollY, session.camera.snapshot.scrollY),
-        cppID: isolationID, message: "presenter scroll values track the revealed session camera")
 
 S082 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "redundant, non-finite, hidden, and already-visible navigation is silent"
-report.expect(
-        counters.camera == before,
-        cppID: isolationID, message: "redundant, non-finite, hidden, and already-visible navigation is silent")
 
 S083 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "direct edit-cursor change neither moves camera nor republishes presenter cursor"
-report.expect(
-        session.camera.snapshot == published && grid.editCursorTick == Int(cursor),
-        cppID: isolationID, message: "direct edit-cursor change neither moves camera nor republishes presenter cursor")
 
 S084 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "camera navigation is isolated from document, playback, dirty state, and history"
-report.expect(
-        counters.document == 0 && counters.playback == 0 && counters.cursor == 1
-            && session.document.revision == revision && session.document.isDirty == dirty
-            && session.document.history.canUndo == canUndo
-            && session.document.history.canRedo == canRedo,
-        cppID: isolationID, message: "camera navigation is isolated from document, playback, dirty state, and history")
 
 S085 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "committed document edit performs no standalone camera publication"
-report.expect(
-        inserted?.count == 1 && counters.camera == 0,
-        cppID: isolationID, message: "committed document edit performs no standalone camera publication")
 
 S086 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "one edit publishes one coherent playback and document refresh after reconciliation"
-report.expect(
-        counters.playback == 1 && counters.document == 1 && counters.coherentDocumentCallback,
-        cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
-
-Shared helper:
-No shared Swift fixture file carrying report.expect*/expectEqual calls was identified for this pairing: camera.swift is self-contained (Foundation+PorydawApp) and EditorGridCameraChecks.swift builds its DocumentSession inline (fixture-guard report.fail calls at EditorGridCameraChecks.swift:78,88,322,393,533 are guard aborts, not predicates). The expectEqual helper itself lives in src/checks/support/corecheck/CoreCheckSupport.swift (SHA-256: d4419a4b2e15d1291d435c2e410d3b2f8357a875f9cb27751e01ef1d01beaf65) as a definition, not a call site:
-    func expectEqual<T: Equatable>(_ expected: T, _ actual: T, cppID: String,
-                                    what: String) {
-        if expected == actual {
-            pass(cppID, row: what)
-        } else {
-            fail(cppID, "\(what): expected=\(expected) actual=\(actual)")
-        }
-    }

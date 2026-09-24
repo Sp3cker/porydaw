@@ -6,54 +6,9 @@ Original SHA-256: abf46ceceb9c32a53043fc6bff7f71eb62d9f747dc6674c3e3fdcf55ad3057
 Swift counterpart: src/checks/polyphony/PolyphonyPanelChecks.swift and src/checks/editorqml/tst_ShellPolyphony.qml (not yet executed)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site in polyphonypanel.cpp appears below: 32 sites
-across five panel slots. The QSignalSpy construction is fixture setup, not a
-site; its QVERIFY(isValid) is inventoried. The screenshot-save QVERIFYs are
-conditional on m_screenshotPath but remain sites. Loop bodies reuse their
-sites: the logCapIs500 burst loop feeds the single A023 site. The Swift presenter check covers snapshot formatting, ring rebasing, the
-500-row cap and event jumps; the mounted shell QML case captures geometry
-against the native visual fixtures. A014 and A019 are PARTIAL pending
-orchestrator execution. Remaining GAP rows have not been individually
-reconciled; QWidget-internal observations need representation decisions.
-MATCHED means a corresponding Swift predicate was identified and executed;
-PARTIAL means a related check exists but differs in a stated way; GAP means an
-equivalent Swift assertion is not established; NATIVE observes native
-window/rendering/harness state a presenter-level Swift check cannot establish.
-Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
-Verification
 Command: deno task verify --filter polycheck --verbose
 Result: pending integrated run.
-
-Execution and ownership
-The native panel harness is not built: the T7A runtime cutover removed
-polyphony/polyphonypanel.cpp from src/checks/CMakeLists.txt and
-src/checks/checkcatalog.cpp registers no polycheck entry, so runPolyCheck never
-runs. polyphony/polyphonyengine.swift is the only compiled polyphony source; it
-executes under swiftcore (PlaybackChecks.swift) and is inventoried separately:
-it covers engine counters and the ring, not this panel. Originally PanelFixture
-builds a signature timeline (division 24 at 48 kHz, tempo plus time-signature
-events, one program-0 note on key 60) and a PolyphonyPanel sized 380x760 with
-track name "Brass" on track 2 and voice name "voice_piano" on voice 5. No
-Swift entry point executes these panel checks; no Swift counterpart file was
-identified.
-
-Fixture, sequence and row constraints
-richSnapshot replays three ring events (stolen key 60 by track 4 at tick 96,
-tail-cut key 72 at tick 216, live dropped key 67) with steal/tailCut/drop
-counters, invert set, and two PCM channel states. resetRebasesLog replaces
-that with a single dropped event at tick 48. logCapIs500 starts from one
-dropped event then applies ten 60-event bursts against the ring capacity and
-requires the 500-row cap. responsiveLayout settles the shown panel, then
-walks 180x980 (stacked), 900x600 (wide) and 380x240/380x980 geometries with
-QTRY polling; screenshot saves execute only when m_screenshotPath is set.
-No data rows expand these sites.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory
 
 A001 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:133
 Disposition: GAP
@@ -519,4 +474,3 @@ Remaining original source (closing sequence and helper bodies):
   }
 
   } // namespace checks
-

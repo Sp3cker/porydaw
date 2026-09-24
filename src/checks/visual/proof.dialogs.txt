@@ -6,34 +6,10 @@ Original SHA-256: 83b7c5889b8c614092920dd3054fe74bc478aa8fb3c4ddcce7dd515cc2c242
 Swift counterpart: none identified
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
 This file: 27 assertion sites: 24 GAP, 3 RETIRED-REPRESENTATION. Dispositions tally: 24 GAP, 3 RETIRED-REPRESENTATION. The settings/theme/sample-editor/Sf2ZonePicker/wizard widget-chrome and pixel-baseline sites are GAP, features not yet ported whose frozen QWidget PNGs have no converted-window owner; only the QSettings isolate (A002) and the two sample-WAV fixture imports (A010/A013) stay RETIRED-REPRESENTATION. The five wizard currentId page-flow GAPs (A018/A020/A022/A024/A026) are unchanged.
 
-Verification
 Command: deno task verify --filter visual --verbose
 Result: pending integrated run.
-The visual-* harnesses compare against frozen baselines under
-src/checks/fixtures/visual; the harness sources are uncompiled in all CMake
-targets, their runVisual*Check entry points have zero callsites, and they are
-unregistered in src/checks/checkcatalog.cpp and in every Swift lane.
-
-Execution ownership
-runVisualDialogsCheck QTest::qExec's VisualDialogsTest as "visual-dialogs". initTestCase isolates QSettings; cleanup restores the vanilla theme. Every scenario constructs the real dialog (SettingsDialog, ThemeDialog + ThemeController, SampleEditorDialog, Sf2ZonePicker, NewSongWizard) with deterministic fixtures, shows it non-modally via showSettled, and freezes it through compareShown (compareWidget). No Swift entry point executes these captures.
-
-Fixture, sequence and row constraints
-No _data rows. Settings scenarios run an engine-tab -> song-tab sequence with parkFocus between grabs. Fixed sizes are pinned pre-show (560x580 settings, 900x640 editor, 720x480 picker, sizeHint-expanded wizard) so baselines never depend on the recording monitor. Focus is parked on a tab bar or button so no blinking caret lands in any grab. The import SMF (conductor tempo + two note tracks) and the six-zone parsed-font stand-in are fixed content; nothing exec()s a modal loop, opens a file dialog, or starts audio.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | compareShown (helper) | src/checks/visual/dialogs.cpp:248
 Disposition: GAP
@@ -291,228 +267,6 @@ Original expression:
 
 A002 | VisualDialogsTest::initTestCase | src/checks/visual/dialogs.cpp:466
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Isolated QSettings directory; native harness precondition so theme state never leaks.
-Source context since previous assertion:
-
-  }
-
-  // Finds the field widget a QFormLayout places beside the row whose label
-  // reads `labelText` (mnemonic '&' stripped). Null when no row matches.
-  QWidget *formField(QWidget &container, const QString &labelText)
-  {
-      const QString wanted = QString(labelText).remove(QLatin1Char('&'));
-      for (QFormLayout *form : container.findChildren<QFormLayout *>()) {
-          for (int row = 0; row < form->rowCount(); ++row) {
-              QLayoutItem *labelItem = form->itemAt(row, QFormLayout::LabelRole);
-              auto *label = labelItem ? qobject_cast<QLabel *>(labelItem->widget()) : nullptr;
-              if (!label || label->text().remove(QLatin1Char('&')) != wanted)
-                  continue;
-              QLayoutItem *fieldItem = form->itemAt(row, QFormLayout::FieldRole);
-              return fieldItem ? fieldItem->widget() : nullptr;
-          }
-      }
-      return nullptr;
-  }
-
-  // Appends the rendered region of a form field identified by its row label;
-  // false when the row or its field is absent or renders nothing.
-  bool appendFieldRegion(QList<checks::visual::Region> &regions, const QString &name, QWidget &root,
-                         QWidget &container, const QString &labelText)
-  {
-      return appendRequiredRegion(regions, name, root, formField(container, labelText));
-  }
-
-  // Appends the rendered region of a checkbox identified by its text; false
-  // when absent or invisible.
-  bool appendCheckRegion(QList<checks::visual::Region> &regions, const QString &name, QWidget &root,
-                         QWidget &container, const QString &text)
-  {
-      for (QCheckBox *box : container.findChildren<QCheckBox *>())
-          if (box->text() == text)
-              return appendRequiredRegion(regions, name, root, box);
-      return false;
-  }
-
-  // Settings dialog chrome plus the visible tab's fields. Engine tab pins
-  // polyphony/mixer/rate/filter/defaults; song tab pins voicegroup/volume/
-  // reverb/priority and the three flag checkboxes. Fields on the hidden tab
-  // are never pinned; a required field that renders nothing fails setup.
-  bool settingsRegions(QDialog &dialog, QList<checks::visual::Region> &regions)
-  {
-      auto *tabs = dialog.findChild<QTabWidget *>();
-      if (!appendRequiredRegion(regions, QStringLiteral("tabs"), dialog, tabs) ||
-          !appendRequiredRegion(regions, QStringLiteral("tab-bar"), dialog,
-                                dialog.findChild<QTabBar *>()) ||
-          !appendRequiredRegion(regions, QStringLiteral("button-box"), dialog,
-                                dialog.findChild<QDialogButtonBox *>()))
-          return false;
-      QWidget *page = tabs->currentWidget();
-      if (!page)
-          return false;
-      if (tabs->currentIndex() == 0) {
-          QPushButton *restore = nullptr;
-          for (QPushButton *button : page->findChildren<QPushButton *>())
-              if (button->text() == QStringLiteral("Restore Defaults"))
-                  restore = button;
-          return appendFieldRegion(regions, QStringLiteral("engine.polyphony"), dialog, *page,
-                                   QStringLiteral("&PCM polyphony:")) &&
-                 appendFieldRegion(regions, QStringLiteral("engine.mixer"), dialog, *page,
-                                   QStringLiteral("PCM &mixer:")) &&
-                 appendFieldRegion(regions, QStringLiteral("engine.mix-rate"), dialog, *page,
-                                   QStringLiteral("PCM &mix rate:")) &&
-                 appendCheckRegion(regions, QStringLiteral("engine.analog-filter"), dialog, *page,
-                                   QStringLiteral("GBA analog output filter (low-pass)")) &&
-                 appendRequiredRegion(regions, QStringLiteral("engine.restore-defaults"), dialog,
-                                      restore);
-      }
-      return appendFieldRegion(regions, QStringLiteral("song.voicegroup"), dialog, *page,
-                               QStringLiteral("&Voicegroup:")) &&
-             appendFieldRegion(regions, QStringLiteral("song.volume"), dialog, *page,
-                               QStringLiteral("&Master volume (-V):")) &&
-             appendFieldRegion(regions, QStringLiteral("song.reverb"), dialog, *page,
-                               QStringLiteral("&Reverb (-R):")) &&
-             appendFieldRegion(regions, QStringLiteral("song.priority"), dialog, *page,
-                               QStringLiteral("&Priority (-P):")) &&
-             appendCheckRegion(regions, QStringLiteral("song.exact-gate"), dialog, *page,
-                               QStringLiteral("Exact gate time (-E)")) &&
-             appendCheckRegion(regions, QStringLiteral("song.extended-clocks"), dialog, *page,
-                               QStringLiteral("48 clocks per beat (-X)")) &&
-             appendCheckRegion(regions, QStringLiteral("song.no-compression"), dialog, *page,
-                               QStringLiteral("Disable compression (-N)"));
-  }
-
-  // Semantic subregions inside the sample editor: the waveform surface, its
-  // painted handle glyphs, the seam inset, the splitter, and the named control
-  // rows. Geometry mirrors WaveformView::paintEvent: each handle is a 7x8 grip
-  // (top edge for crop, bottom edge for loop) plus a 1px full-height marker
-  // line, and the seam overlay is the fixed 228x56 inset at the top-right.
-  bool sampleEditorRegions(SampleEditorDialog &dialog, QList<checks::visual::Region> &regions)
-  {
-      WaveformView *wave = dialog.waveform();
-      if (!wave)
-          return false;
-      if (!appendRequiredRegion(regions, QStringLiteral("waveform"), dialog, wave))
-          return false;
-      const QRect waveBounds = childRegion(QStringLiteral("waveform"), dialog, *wave).bounds;
-      const auto handle = [&dialog, wave, waveBounds](const QString &name, WaveformView::Handle h) {
-          const int hx = wave->mapTo(&dialog, wave->handlePoint(h)).x();
-          const int waveTop = waveBounds.top();
-          const int waveH = wave->height();
-          const bool loop = h == WaveformView::LoopStartHandle || h == WaveformView::LoopEndHandle;
-          const bool leftGrip =
-              h == WaveformView::CropStartHandle || h == WaveformView::LoopStartHandle;
-          const int gy = loop ? waveTop + waveH - 8 : waveTop;
-          const QRect grip(leftGrip ? hx : hx - 6, gy, 7, 8);
-          const QRect marker(hx, waveTop, 1, waveH);
-          return checks::visual::Region{name, (grip | marker) & waveBounds};
-      };
-      regions.append(handle(QStringLiteral("waveform.crop-start"), WaveformView::CropStartHandle));
-      regions.append(handle(QStringLiteral("waveform.crop-end"), WaveformView::CropEndHandle));
-      regions.append(handle(QStringLiteral("waveform.loop-start"), WaveformView::LoopStartHandle));
-      regions.append(handle(QStringLiteral("waveform.loop-end"), WaveformView::LoopEndHandle));
-      regions.append({QStringLiteral("waveform.seam"),
-                      QRect(waveBounds.topLeft() + QPoint(wave->width() - 236, 6), QSize(228, 56)) &
-                          waveBounds});
-
-      if (!appendRequiredRegion(regions, QStringLiteral("splitter"), dialog,
-                                dialog.findChild<QSplitter *>(QStringLiteral("sampleSplit"))) ||
-          !appendRequiredRegion(regions, QStringLiteral("button-box"), dialog,
-                                dialog.findChild<QDialogButtonBox *>()))
-          return false;
-      for (const char *name : {"sampleNameEdit", "sampleLoopOn", "sampleLoopBody", "sampleSeamBadge",
-                               "sampleBaseKey", "sampleAuditionPlay", "sampleRateCombo",
-                               "sampleFineTune", "sampleNormalizeMode", "sampleAddButton"})
-          if (!appendNamedRegion(regions, QString::fromLatin1(name), dialog,
-                                 QString::fromLatin1(name)))
-              return false;
-      return true;
-  }
-
-  bool zonePickerRegions(QDialog &dialog, QList<checks::visual::Region> &regions)
-  {
-      if (!appendNamedRegion(regions, QStringLiteral("search"), dialog,
-                             QStringLiteral("sf2SearchEdit")))
-          return false;
-      auto *tree = dialog.findChild<QTreeWidget *>(QStringLiteral("sf2ZoneTree"));
-      if (!tree)
-          return false;
-      if (!appendRequiredRegion(regions, QStringLiteral("zone-tree"), dialog, tree))
-          return false;
-      const QRect viewportBounds = childRegion(QStringLiteral("zone-tree"), dialog, *tree).bounds;
-      const auto itemRegion = [&dialog, tree, viewportBounds](const QString &name,
-                                                              QTreeWidgetItem *item) {
-          const QRect rect = tree->visualItemRect(item);
-          return checks::visual::Region{
-              name,
-              QRect(tree->viewport()->mapTo(&dialog, rect.topLeft()), rect.size()) & viewportBounds};
-      };
-      QTreeWidgetItem *group = tree->topLevelItem(0);
-      if (!group || group->childCount() == 0)
-          return false;
-      regions.append(itemRegion(QStringLiteral("zone-tree.group-row"), group));
-      regions.append(itemRegion(QStringLiteral("zone-tree.zone-row"), group->child(0)));
-      return appendNamedRegion(regions, QStringLiteral("button-box"), dialog,
-                               QStringLiteral("sf2ButtonBox"));
-  }
-
-  // Wizard chrome: current page area plus the button row, so page geometry and
-  // navigation buttons are pinned independently of page content.
-  bool wizardRegions(QWizard &wizard, QList<checks::visual::Region> &regions)
-  {
-      if (!appendRequiredRegion(regions, QStringLiteral("page"), wizard, wizard.currentPage()))
-          return false;
-      const struct {
-          QWizard::WizardButton button;
-          const char *name;
-      } buttons[] = {{QWizard::BackButton, "button-back"},
-                     {QWizard::NextButton, "button-next"},
-                     {QWizard::FinishButton, "button-finish"},
-                     {QWizard::CancelButton, "button-cancel"}};
-      for (const auto &entry : buttons)
-          if (QWidget *button = wizard.button(entry.button))
-              if (button->isVisible() &&
-                  !appendRequiredRegion(regions, QString::fromLatin1(entry.name), wizard, button))
-                  return false;
-      return true;
-  }
-
-  } // namespace
-
-  class VisualDialogsTest final : public QObject
-  {
-      Q_OBJECT
-      Q_DISABLE_COPY_MOVE(VisualDialogsTest)
-
-    public:
-      VisualDialogsTest() = default;
-
-    private slots:
-      void initTestCase();
-      void cleanup();
-
-      void settingsDialogVanilla();
-      void settingsDialogDark();
-      void themeDialog();
-      void sampleEditorVanilla();
-      void sampleEditorDark();
-      void sf2ZonePicker();
-      void newSongWizardPages();
-      void midiImportWizardPages();
-
-    private:
-      QApplication *app() const;
-      QTemporaryDir m_settingsDirectory;
-  };
-
-  QApplication *VisualDialogsTest::app() const
-  {
-      return qobject_cast<QApplication *>(QCoreApplication::instance());
-  }
-
-  void VisualDialogsTest::initTestCase()
-  {
-Original expression:
-  QVERIFY2(m_settingsDirectory.isValid(), "could not create isolated QSettings directory");
 
 A003 | VisualDialogsTest::settingsDialogVanilla | src/checks/visual/dialogs.cpp:485
 Disposition: GAP
@@ -650,21 +404,6 @@ Original expression:
 
 A010 | VisualDialogsTest::sampleEditorVanilla | src/checks/visual/dialogs.cpp:560
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Prepared sample WAV imports for the vanilla editor fixture; native dialog fixture precondition.
-Source context since previous assertion:
-
-      compareShown(QStringLiteral("theme/dialog-vanilla"), dialog, regions);
-  }
-
-  void VisualDialogsTest::sampleEditorVanilla()
-  {
-      themes::apply(*app(), themes::vanilla());
-      ImportedSample prepared;
-      QString error;
-Original expression:
-  QVERIFY2(importAudioBytes(samplecheck::preparedSampleWav(),
-                                QStringLiteral("fix/prepared_tone.wav"), &prepared, &error),
-               qPrintable(error));
 
 A011 | VisualDialogsTest::sampleEditorVanilla | src/checks/visual/dialogs.cpp:565
 Disposition: GAP
@@ -690,21 +429,6 @@ Original expression:
 
 A013 | VisualDialogsTest::sampleEditorDark | src/checks/visual/dialogs.cpp:579
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Prepared sample WAV imports for the dark editor fixture; native dialog fixture precondition.
-Source context since previous assertion:
-
-      compareShown(QStringLiteral("sample-editor/dialog-vanilla"), dialog, regions);
-  }
-
-  void VisualDialogsTest::sampleEditorDark()
-  {
-      themes::apply(*app(), themes::darkNeutralHigh());
-      ImportedSample prepared;
-      QString error;
-Original expression:
-  QVERIFY2(importAudioBytes(samplecheck::preparedSampleWav(),
-                                QStringLiteral("fix/prepared_tone.wav"), &prepared, &error),
-               qPrintable(error));
 
 A014 | VisualDialogsTest::sampleEditorDark | src/checks/visual/dialogs.cpp:584
 Disposition: GAP

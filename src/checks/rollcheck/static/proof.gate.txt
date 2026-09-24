@@ -10,35 +10,7 @@ Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
 Additional Swift counterpart: src/checks/workspace/session_playback.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition;
-every PARTIAL site below names the exact related predicate with its file:line and
-states the condition that remains unproved.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-Only the ready roll-wheel movement A068 is MATCHED: S042
-(src/checks/rollcheck/static/gate.swift) checks the ready presenter's zoom
-after the original wheel delta and anchor, and the mounted QML roll-wheel case
-(src/checks/rollqml/tst_SwiftRollWindowing.qml) verifies the visible zoom
-change and its restoration. The MIDI-only loading stage gate is not represented by
-the Swift presenter, so the gated holds A028, A038 and A066 stay PARTIAL against
-the ready-path wheel predicates S031/S032, and the gated/ready scrollbar-wheel
-sites A037, A061 and A063 stay PARTIAL against the ready-path pan and clamp
-predicates S035/S038/S005/S006. The edit-cursor sites A025 and A033 stay GAP: no
-executing predicate reads a MIDI-only gated tab cursor. Fixture creation,
-readiness, surface enablement/visibility/presence, control-text sync, native event
-delivery, and tooltip hover geometry (including the A076-A082 blockers) remain
-NATIVE. The S001-S041 trailer is re-anchored to the final
-src/checks/rollcheck/static/camera.swift lines and quotes its current predicate
-expressions, which call gridCameraNear.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS; 1/14 ok (controller run recorded before this ledger edit; the edit changes no Swift source).
 Command: deno task verify:qml-roll --verbose
@@ -46,37 +18,8 @@ Result: PASS; 1/1 ok (controller run recorded before this ledger edit; the edit 
 Command: deno task verify:shell --verbose
 Result: PASS; 11/11 ok (controller run recorded before this ledger edit; the edit changes no shell source).
 Verified Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808 (camera.swift)
-Verified ready-wheel Swift SHA-256: f848be0e07c37edd0f644d93a836391c1e59f540fa088cd96b3e229cd12718f2 (gate.swift)
 Verified QML SHA-256: e7f78598b6eefcfa4b2e120273fe74c89b3b2a13ad78d286d0dbba11c6478da0 (tst_SwiftRollWindowing.qml)
 Narrow form used while iterating: deno task verify --filter swiftcore --qt projectSession.
-The legacy header/camera/playhead harnesses are not registered in this checkout.
-Their C++ sources are reference inventories only, never current execution evidence.
-
-Execution and ownership
-runEditorCameraChecks and checkGridCameraWheel execute the 41 camera
-predicates below in suite 10. runGateChecks executes S042 on the same ready
-session, and tst_SwiftRollWindowing.qml sends a wheel to the mounted
-roll input and observes the resulting time zoom. No Swift function executes
-the MIDI-only gate slots. The original slots run under PianoRollStaticTest on
-the GateFixture (static/fixtures.h, fixtures.cpp): a deliberately local
-loading-stage SongTab
-with roll/ruler/scrollbar/controls/division/feel/tooltip/ruler/headers/event-list/drawer
-surfaces. File-local helpers stage readiness (bindMidiStage, bindVoicegroup),
-deliver native events (sendRulerClick, sendScrollbarWheel, sendRollWheel), and
-read native surface state (controlsMatchRuler, allFixedSurfacesEnabled,
-gridControlState, unchangedGridControlState).
-
-Fixture, sequence and row constraints
-tooltipFloatsBelowRuler_data expands the tooltip slot into division/feel rows.
-Every slot gates on fixture.create, then layers bindMidiStage/bindVoicegroup
-readiness. Gated-vs-ready pairs replay the same native event (ruler click,
-scrollbar wheel, roll wheel) and compare editCursorTick, camera scrollX or
-pxPerBeat, and the gesture-active flag across the transition. Tooltip delivery
-waits through QTest::qWaitFor on per-control visibility, enablement, size, and
-scene guards before hover/leave sequences assert floating geometry below the
-ruler row.
-
-Original assertion inventory and source sequence
 
 A001 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:197
 Disposition: GAP
@@ -323,19 +266,9 @@ Original expression:
 
 A007 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:203
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(fixture.eventListController())
 
 A008 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:204
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(fixture.drawer())
 
 A009 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:205
 Disposition: GAP
@@ -387,28 +320,9 @@ Original expression:
 
 A015 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:214
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      auto *const quick = fixture.view()->findChild<songview::TimelineQuickView *>(
-          QStringLiteral("timelineQuickCanvas"));
-      QQuickItem *const root = quick ? quick->rootObject() : nullptr;
-Original expression:
-  QVERIFY(root)
 
 A016 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:221
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-      auto *const verticalScrollbar =
-          root->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollBar"));
-      auto *const otherEvents =
-          root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineOtherEventsInput"));
-      auto *const eventListInput =
-          root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineEventListInput"));
-Original expression:
-  QVERIFY(verticalScrollbar)
 
 A017 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:222
 Disposition: GAP
@@ -444,11 +358,6 @@ Original expression:
 
 A021 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:226
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(eventListInput)
 
 A022 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:227
 Disposition: GAP
@@ -524,17 +433,6 @@ Original expression:
 
 A029 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:256
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-  }
-
-  void PianoRollStaticTest::midiStageStaysGated()
-  {
-      GateFixture fixture;
-      QString error;
-Original expression:
-  QVERIFY2(fixture.create(error), qPrintable(error))
 
 A030 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:257
 Disposition: GAP
@@ -554,11 +452,6 @@ Original expression:
 
 A032 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:259
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(fixture.view()->timeline())
 
 A033 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:260
 Disposition: GAP
@@ -670,17 +563,6 @@ Original expression:
 
 A045 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:290
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-  }
-
-  void PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness()
-  {
-      GateFixture fixture;
-      QString error;
-Original expression:
-  QVERIFY2(fixture.create(error), qPrintable(error))
 
 A046 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:291
 Disposition: GAP
@@ -701,11 +583,6 @@ Original expression:
 
 A048 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:294
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(bindVoicegroup(fixture))
 
 A049 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:295
 Disposition: GAP
@@ -733,25 +610,9 @@ Original expression:
 
 A052 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:304
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-  }
-
-  void PianoRollStaticTest::gatedAndReadyRulerScrub()
-  {
-      GateFixture fixture;
-      QString error;
-Original expression:
-  QVERIFY2(fixture.create(error), qPrintable(error))
 
 A053 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:305
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
 
 A054 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:308
 Disposition: GAP
@@ -773,11 +634,6 @@ Original expression:
 
 A056 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:310
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(bindVoicegroup(fixture))
 
 A057 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:313
 Disposition: GAP
@@ -799,25 +655,9 @@ Original expression:
 
 A059 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:321
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-  }
-
-  void PianoRollStaticTest::gatedAndReadyScrollbarWheel()
-  {
-      GateFixture fixture;
-      QString error;
-Original expression:
-  QVERIFY2(fixture.create(error), qPrintable(error))
 
 A060 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:322
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
 
 A061 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:325
 Disposition: PARTIAL
@@ -831,11 +671,6 @@ Original expression:
 
 A062 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:326
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(bindVoicegroup(fixture))
 
 A063 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:329
 Disposition: PARTIAL
@@ -849,25 +684,9 @@ Original expression:
 
 A064 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:336
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-  }
-
-  void PianoRollStaticTest::gatedAndReadyRollZoom()
-  {
-      GateFixture fixture;
-      QString error;
-Original expression:
-  QVERIFY2(fixture.create(error), qPrintable(error))
 
 A065 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:337
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
 
 A066 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:340
 Disposition: PARTIAL
@@ -881,21 +700,10 @@ Original expression:
 
 A067 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:341
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(bindVoicegroup(fixture))
 
 A068 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:344
 Disposition: MATCHED
-Mapping: S042 (src/checks/rollcheck/static/gate.swift) asserts ready time zoom increases after a +120 angle-delta wheel at (80, 100); the converted case src/checks/rollqml/tst_SwiftRollWindowing.qml sends that wheel and the opposite -120 wheel to the mounted roll input and verifies the visible time zoom changes and restores. The MIDI-only gated hold A066 remains PARTIAL.
-Source context since previous assertion:
-  ;
-      const double ready = fixture.view()->camera().pxPerBeat();
-      sendRollWheel(*fixture.rollInput());
-Original expression:
-  QVERIFY(!qFuzzyCompare(fixture.view()->camera().pxPerBeat(), ready))
+Mapping: S042
 
 A069 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:359
 Disposition: GAP
@@ -921,19 +729,9 @@ Original expression:
 
 A070 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:360
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
 
 A071 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:361
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(bindVoicegroup(fixture))
 
 A072 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:390
 Disposition: GAP
@@ -1159,270 +957,126 @@ Swift assertion predicates
 
 S001 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "caller-resolved minimum viewport produces observable camera bounds"
-  report.expect(gridCameraNear(compact.snapshot.viewportWidth, 50) &&
-                    gridCameraNear(compact.snapshot.minHScroll, -48) &&
-                    gridCameraNear(compact.snapshot.maxHScroll, 0),
-                    cppID: cameraTransformID,
-                    message: "caller-resolved minimum viewport produces observable camera bounds")
 
 S002 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "tick/content transforms round-trip with a fractional offset"
-  report.expect(gridCameraNear(camera.tickAtContentX(content), 96), cppID: cameraTransformID,
-                    message: "tick/content transforms round-trip with a fractional offset")
 
 S003 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "horizontal restoration preserves fractional offsets"
-  report.expect(gridCameraNear(camera.snapshot.scrollX, 10.25), cppID: cameraTransformID,
-                    message: "horizontal restoration preserves fractional offsets")
 
 S004 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "display projection snaps to a physical pixel"
-  report.expect(gridCameraNear(camera.displayX(tick: 24, origin: 0.2, dpr: 2), 22),
-                    cppID: cameraTransformID, message: "display projection snaps to a physical pixel")
 
 S005 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "horizontal scrolling clamps to production pre-roll"
-  report.expect(gridCameraNear(camera.snapshot.scrollX, -48) && gridCameraNear(camera.snapshot.minHScroll, -48),
-                    cppID: cameraTransformID, message: "horizontal scrolling clamps to production pre-roll")
 
 S006 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "bound timeline end reaches the plot origin"
-  report.expect(gridCameraNear(camera.snapshot.scrollX, 640), cppID: cameraTransformID,
-                    message: "bound timeline end reaches the plot origin")
 
 S007 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "bound viewport shrink reclamps the changed pre-roll floor"
-  report.expect(gridCameraNear(viewportCamera.snapshot.scrollX, -48),
-                    cppID: cameraTransformID,
-                    message: "bound viewport shrink reclamps the changed pre-roll floor")
 
 S008 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "bound viewport updates preserve a legal fractional offset"
-  report.expect(gridCameraNear(viewportCamera.snapshot.scrollX, 10.25),
-                    cppID: cameraTransformID,
-                    message: "bound viewport updates preserve a legal fractional offset")
 
 S009 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "interactive time zoom preserves its tick anchor"
-  report.expect(zoom.zoomChanged && zoom.scrollChanged &&
-                    gridCameraNear(camera.tickAtContentX(anchorX), anchoredTick), cppID: cameraZoomID,
-                    message: "interactive time zoom preserves its tick anchor")
 
 S010 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "time zoom reaches its bound when the pointer anchor is unreachable"
-  report.expect(gridCameraNear(clampedTimeZoom.snapshot.scrollX, 64) &&
-                    !gridCameraNear(clampedTimeZoom.tickAtContentX(boundedAnchor), tickBeforeBoundedZoom),
-                    cppID: cameraZoomID,
-                    message: "time zoom reaches its bound when the pointer anchor is unreachable")
 
 S011 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "unanchored restoration keeps valid fractional camera state"
-  report.expect(gridCameraNear(camera.snapshot.pixelsPerBeat, 48) &&
-                    gridCameraNear(camera.snapshot.keyHeight, 16) && gridCameraNear(camera.snapshot.scrollX, 10.5) &&
-                    gridCameraNear(camera.snapshot.scrollY, 20.25), cppID: cameraZoomID,
-                    message: "unanchored restoration keeps valid fractional camera state")
 
 S012 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "restoration sanitizes non-finite transient view-state values independently"
-  report.expect(gridCameraNear(sanitized.snapshot.pixelsPerBeat, 32) &&
-                    gridCameraNear(sanitized.snapshot.keyHeight, 12) &&
-                    gridCameraNear(sanitized.snapshot.scrollX, 0) && gridCameraNear(sanitized.snapshot.scrollY, 0),
-                    cppID: cameraZoomID,
-                    message: "restoration sanitizes non-finite transient view-state values independently")
 
 S013 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "content shrink reclamps the horizontal offset"
-  report.expect(gridCameraNear(camera.snapshot.scrollX, 20), cppID: cameraTransformID,
-                    message: "content shrink reclamps the horizontal offset")
 
 S014 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "viewport growth reclamps vertical content"
-  report.expect(gridCameraNear(camera.snapshot.viewportWidth, 800) && gridCameraNear(camera.snapshot.scrollY, 0),
-                    cppID: cameraTransformID,
-                    message: "viewport growth reclamps vertical content")
 
 S015 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "an unbound timeline homes to its lead pad"
-  report.expect(gridCameraNear(camera.snapshot.scrollX, -80), cppID: cameraTransformID,
-                    message: "an unbound timeline homes to its lead pad")
 
 S016 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "unbound viewport updates follow the resolved home"
-  report.expect(gridCameraNear(camera.snapshot.scrollX, -100), cppID: cameraTransformID,
-                    message: "unbound viewport updates follow the resolved home")
 
 S017 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "chromatic pitch mapping remains bijective across the full MIDI range"
-  report.expect(chromatic.visibleRowCount == 128 && (0..<128).allSatisfy { pitch in
-          chromatic.row(forPitch: pitch) == 127 - pitch &&
-              chromatic.visiblePitch(at: 127 - pitch) == pitch
-      }, cppID: cameraPitchID,
-      message: "chromatic pitch mapping remains bijective across the full MIDI range")
 
 S018 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "pitch rows and nearest lookup preserve production ordering"
-  report.expect(folded.visiblePitch(at: 0) == 67 && folded.row(forPitch: 60) == 2 &&
-                    folded.row(forPitch: 61) == PitchProjection.hiddenRow &&
-                    folded.nearestVisiblePitch(to: 62) == 60 &&
-                    folded.nearestVisiblePitch(to: 100) == 67 &&
-                    folded.nearestVisiblePitch(to: -5) == 60 &&
-                    emptyProjection.nearestVisiblePitch(to: 60) == nil,
-                    cppID: cameraPitchID,
-                    message: "pitch rows and nearest lookup preserve production ordering")
 
 S019 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "DPR-snapped row and pitch inverses agree"
-  report.expect(folded.row(atY: 10, keyHeight: 10, scrollY: 0, dpr: 2) == 1 &&
-                    folded.pitch(atY: 29.75, keyHeight: 10, scrollY: 0, dpr: 2) == 60,
-                    cppID: cameraPitchID, message: "DPR-snapped row and pitch inverses agree")
 
 S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "fractional DPR snapping defines the inverse row boundary"
-  report.expect(gridCameraNear(folded.rowBottom(0, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) ?? -1,
-                         10) &&
-                    folded.row(atY: 9.99, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 0 &&
-                    folded.row(atY: 10, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 1,
-                    cppID: cameraPitchID,
-                    message: "fractional DPR snapping defines the inverse row boundary")
 
 S021 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "pitch projection shrink reclamps the vertical offset"
-  report.expect(gridCameraNear(projectedContent.snapshot.scrollY, 15),
-                    cppID: cameraPitchID,
-                    message: "pitch projection shrink reclamps the vertical offset")
 
 S022 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "vertical bounds derive from projected row height"
-  report.expect(gridCameraNear(pitchCamera.snapshot.maxVScroll, 15), cppID: cameraPitchID,
-                    message: "vertical bounds derive from projected row height")
 
 S023 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "pitch zoom preserves its row anchor when bounds permit"
-  report.expect(gridCameraNear(anchoredRow, resultingRow), cppID: cameraZoomID,
-                    message: "pitch zoom preserves its row anchor when bounds permit")
 
 S024 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "pitch zoom reaches its bound when the row anchor is unreachable"
-  report.expect(gridCameraNear(clampedPitchZoom.snapshot.scrollY, 0) &&
-                    gridCameraNear(clampedPitchZoom.snapshot.maxVScroll, 0) &&
-                    !gridCameraNear(rowAfterBoundedZoom, rowBeforeBoundedZoom),
-                    cppID: cameraZoomID,
-                    message: "pitch zoom reaches its bound when the row anchor is unreachable")
 
 S025 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "key reveal scrolls only enough to show its row"
-  report.expect(pitchCamera.ensureKeyVisible(60) && gridCameraNear(pitchCamera.snapshot.scrollY, 15),
-                    cppID: cameraPitchID, message: "key reveal scrolls only enough to show its row")
 
 S026 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "hidden pitches do not move the camera"
-  report.expect(!pitchCamera.ensureKeyVisible(61), cppID: cameraPitchID,
-                    message: "hidden pitches do not move the camera")
 
 S027 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "tick reveal uses the production one-third anchor"
-  report.expect(reveal.ensureTickVisible(480, dpr: 2) &&
-                    gridCameraNear(reveal.snapshot.scrollX, 573.3333333333),
-                    cppID: cameraTransformID,
-                    message: "tick reveal uses the production one-third anchor")
 
 S028 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "a fitting range on the physical right boundary stays visible"
-  report.expect(!reveal.ensureRangeVisible(startTick: 0, endTick: 149,
-                                               preferEnd: false, dpr: 1) &&
-                    gridCameraNear(reveal.snapshot.scrollX, 0), cppID: cameraTransformID,
-                    message: "a fitting range on the physical right boundary stays visible")
 
 S029 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "wide range reveal prefers its requested leading edge"
-  report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
-                                              preferEnd: false, dpr: 1) &&
-                    gridCameraNear(reveal.contentX(tick: 240), 0), cppID: cameraTransformID,
-                    message: "wide range reveal prefers its requested leading edge")
 
 S030 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
 Anchor: message "wide range reveal honors the requested trailing edge"
-  report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
-                                              preferEnd: true, dpr: 1) &&
-                    gridCameraNear(reveal.contentX(tick: 480), 199), cppID: cameraTransformID,
-                    message: "wide range reveal honors the requested trailing edge")
 
 S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "phase \(phase.rawValue) performs one anchored time zoom publication"
-  report.expect(
-              after.pixelsPerBeat > before.pixelsPerBeat
-                  && gridCameraNear(session.camera.tickAtContentX(anchorX), anchorTick, tolerance: 1e-7)
-                  && counters.camera == publications + 1,
-              cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")
 
 S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "momentum suppresses time zoom without publishing"
-  report.expect(
-          session.camera.snapshot == beforeMomentum && counters.camera == momentumPublications,
-          cppID: gridCameraWheelID, message: "momentum suppresses time zoom without publishing")
 
 S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "pixel deltas receive five-times angle weighting"
-  report.expect(
-          gridCameraNear(angleZoom, 35 * pow(1.0015, 120), tolerance: 1e-7)
-              && gridCameraNear(session.camera.snapshot.pixelsPerBeat,
-                      angleZoom * pow(1.0015, 120), tolerance: 1e-7),
-          cppID: gridCameraWheelID, message: "pixel deltas receive five-times angle weighting")
 
 S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "effective angle and pixel zooms each publish once"
-  report.expect(
-          counters.camera == 2,
-          cppID: gridCameraWheelID, message: "effective angle and pixel zooms each publish once")
 
 S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "Shift wheel pans by negative selected delta exactly once"
-  report.expect(
-          gridCameraNear(session.camera.snapshot.scrollX, 90) && counters.camera == 1,
-          cppID: gridCameraWheelID, message: "Shift wheel pans by negative selected delta exactly once")
 
 S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "Shift pan clamps at minimum and repeated clamped pan is silent"
-  report.expect(
-          gridCameraNear(minimumPan.scrollX, minimumPan.minHScroll)
-              && minimumPublications == 1 && counters.camera == minimumPublications,
-          cppID: gridCameraWheelID, message: "Shift pan clamps at minimum and repeated clamped pan is silent")
 
 S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "Shift pan clamps at maximum and repeated clamped pan is silent"
-  report.expect(
-          gridCameraNear(maximumPan.scrollX, maximumPan.maxHScroll)
-              && maximumPublications == 1 && counters.camera == maximumPublications,
-          cppID: gridCameraWheelID, message: "Shift pan clamps at maximum and repeated clamped pan is silent")
 
 S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "horizontal-only momentum still pans exactly once"
-  report.expect(
-          gridCameraNear(session.camera.snapshot.scrollX, 112) && counters.camera == 1,
-          cppID: gridCameraWheelID, message: "horizontal-only momentum still pans exactly once")
 
 S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "Ctrl wheel performs one row-anchored pitch zoom publication"
-  report.expect(
-          pitchAfter.keyHeight > pitchBefore.keyHeight
-              && gridCameraNear((pitchAfter.scrollY + 100) / pitchAfter.keyHeight, pitchRow, tolerance: 1e-7)
-              && counters.camera == 1,
-          cppID: gridCameraWheelID, message: "Ctrl wheel performs one row-anchored pitch zoom publication")
 
 S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "momentum suppresses pitch zoom without publishing"
-  report.expect(
-          session.camera.snapshot == pitchMomentum && counters.camera == 0,
-          cppID: gridCameraWheelID, message: "momentum suppresses pitch zoom without publishing")
 
 S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "gutter wheel scrolls by negative half-delta exactly once"
-  report.expect(
-          gridCameraNear(session.camera.snapshot.scrollY, gutterBefore + 6) && counters.camera == 1,
-          cppID: gridCameraWheelID, message: "gutter wheel scrolls by negative half-delta exactly once")
 
 S042 | checkReadyRollZoom | src/checks/rollcheck/static/gate.swift
 Anchor: message "a roll wheel at (80, 100) changes time zoom on a ready song"
-  report.expect(session.camera.snapshot.pixelsPerBeat > readyZoom,
-                cppID: "swiftcore/PianoRollStaticTest::gatedAndReadyRollZoom",
-                message: "a roll wheel at (80, 100) changes time zoom on a ready song")

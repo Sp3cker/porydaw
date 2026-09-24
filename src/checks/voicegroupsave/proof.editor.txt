@@ -5,96 +5,15 @@ Original: src/checks/voicegroupsave/editor.cpp
 Original SHA-256: 6186ed3eb7032d96a8a5c7afab089f76bfeb7462898e5d245e49364cd81ca4b7
 Swift counterpart: none identified
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below (32 sites). Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-MATCHED means a corresponding Swift predicate was identified and executed;
-PARTIAL means a related check exists but differs in a stated way;
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of a converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-No Swift counterpart was identified for this file, so every site below is GAP:
-no equivalent Swift assertion is established, and each original predicate and
-its setup remain an open obligation. None of these labels authorizes deletion
-or claims whole-case equivalence.
 
-Verification
 Command: deno task verify --filter voicegroup-save --verbose
 Result: pending integrated run.
-The "voicegroup-save" filter selects the retained native harness; it provides
-no Swift parity evidence.
-
-Execution ownership
-The retained native harness owns this file. runVoicegroupSaveCheck in
-src/checks/voicegroupsave/fixture.cpp constructs VoicegroupSaveTest and qExecs
-it under the "voicegroup-save" application id; init()/cleanup() bracket every
-test method. releaseEditorUsesBankUndoPipeline (plus its _data row factory), blankTemplateMaterializesUndoably, dockMinimumWidthIsFamilyInvariant, and adsrFieldSpaceTogglesTransport execute the checks inventoried below.
-Shared per-test state (m_window, m_document, m_tab, m_browser, m_dsSlot,
-m_originalVoice, m_homeId/m_homeArg, voicegroup/MIDI baselines, save receipts)
-is built by VoicegroupSaveTest::openSong with VoicegroupBrowserDriver and the
-song/project fixtures declared in src/checks/voicegroupsave/tst_voicegroupsave.h.
-No Swift entry point executes these checks; there are no S entries and no
-shared-helper expects for this file.
-
-Fixture, sequence and row constraints
-releaseEditorUsesBankUndoPipeline_data publishes four rows (set-value, drag-up, drag-down, precision-drag) that reuse every site of releaseEditorUsesBankUndoPipeline: the set-value row drives spin->setValue directly while the drag rows first settle a release-100 baseline and synthesize press/move/release mouse events on the release field, with the browser minimum-size-hint comparison guarding the drag path only. No other data rows, loops, or branch guards expand these sites; blank-template undo/redo, dock-width family switching, and the ADSR focus/space/transport sequence each execute once per run.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:36
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: The C++ DragSpinBox pointer has no QML object counterpart; VoiceEditor.qml owns a Qt Quick SpinBox and tst_ShellVoicegroup.qml exercises its edited release value.
-Source context since previous assertion:
-#include "checks/voicegroupsave/tst_voicegroupsave.h"
-
-#include <QCoreApplication>
-#include <QLineEdit>
-#include <QtTest>
-
-#include "checks/support/eventsynth.h"
-#include "checks/support/voicegroupbrowserdriver.h"
-#include "mainwindow.h"
-#include "ui/dragspinbox.h"
-#include "ui/songtab.h"
-#include "ui/workspaceui.h"
-
-namespace checks {
-
-void VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline_data()
-{
-    QTest::addColumn<int>("pixelsUp");
-    QTest::addColumn<Qt::KeyboardModifiers>("modifiers");
-    QTest::addColumn<int>("expected");
-    QTest::newRow("set-value") << 0 << Qt::KeyboardModifiers(Qt::NoModifier) << -1;
-    QTest::newRow("drag-up") << 12 << Qt::KeyboardModifiers(Qt::NoModifier) << 106;
-    QTest::newRow("drag-down") << -12 << Qt::KeyboardModifiers(Qt::NoModifier) << 94;
-    QTest::newRow("precision-drag") << 20 << Qt::KeyboardModifiers(Qt::ShiftModifier) << 104;
-}
-
-void VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline()
-{
-    QFETCH(int, pixelsUp);
-    QFETCH(Qt::KeyboardModifiers, modifiers);
-    QFETCH(int, expected);
-
-    m_browser->selectSlot(m_dsSlot);
-    DragSpinBox *const spin = m_browser->releaseSpinBox();
-    QLineEdit *const field = m_browser->releaseField();
-
-Original expression:
-QVERIFY(spin)
 
 A002 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:37
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: QML Qt Quick SpinBox has no inspectable QWidget QLineEdit pointer; release edits are asserted at the published bank state instead.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY(field)
 
 A003 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:45
 Disposition: GAP
@@ -119,35 +38,9 @@ QVERIFY2(settle([this] {
 
 A004 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:59
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: The DragSpinBox child QLineEdit and its mouse-press focus state are retired QWidget internals; the QML editor uses a Qt Quick SpinBox.
-Source context since previous assertion:
-;
-        const QPoint start = field->rect().center();
-        const int direction = pixelsUp > 0 ? 1 : -1;
-        const QPoint activated = start - QPoint(0, direction * 3);
-        const QPoint finish = activated - QPoint(0, pixelsUp);
-        const QSize minimumBefore = m_browser->browserMinimumSizeHint();
-        field->clearFocus();
-        events::sendMouse(*field, QEvent::MouseButtonPress, QPointF(start), Qt::LeftButton,
-                          Qt::LeftButton, modifiers);
-
-Original expression:
-QVERIFY(!field->hasFocus())
 
 A005 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:66
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: QWidget browserMinimumSizeHint during a DragSpinBox gesture has no Qt Quick equivalent; the QML pane geometry is compared with the widget reference profile instead.
-Source context since previous assertion:
-;
-        events::sendMouse(*field, QEvent::MouseMove, QPointF(activated), Qt::NoButton,
-                          Qt::LeftButton, modifiers);
-        events::sendMouse(*field, QEvent::MouseMove, QPointF(finish), Qt::NoButton, Qt::LeftButton,
-                          modifiers);
-        events::sendMouse(*field, QEvent::MouseButtonRelease, QPointF(finish), Qt::LeftButton,
-                          Qt::NoButton, modifiers);
-
-Original expression:
-QCOMPARE(m_browser->browserMinimumSizeHint(), minimumBefore)
 
 A006 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:68
 Disposition: PARTIAL

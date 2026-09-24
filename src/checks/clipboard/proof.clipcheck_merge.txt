@@ -7,107 +7,20 @@ Swift counterpart: src/checks/editcheck/TimeChecks.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellClipboard.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below (42 sites across four test methods),
-including fixture guards. Source context preserves setup, rows, loops, and
-guards between assertions verbatim. S identifiers identify exact Swift
-predicates, listed after the inventory.
-MATCHED identifies an equivalent Swift predicate asserting the same value or
-fact under the same cppID; the lane execution result is recorded under Verification.
-PARTIAL identifies a related Swift predicate with an explicit unproved
-condition (usually the native view/undo-stack observable versus the Swift
-model's equivalent).
-NATIVE identifies retained native-rig obligations a model-level Swift check
-cannot establish.
-GAP identifies an original predicate without a replacement assertion.
-RETIRED-REPRESENTATION identifies a retired fixture-setup observation with no ingress in the Swift path; the resulting layout is pinned by the cited MATCHED predicates.
-Shell supplement lines name the separate shell lane
-(src/checks/editorqml/tst_ShellClipboard.qml :: test_roundTripReplacement,
-entry shell-clipboard) where real key and pointer input exercises the same
-clipboard command; they are recorded beside the affected site as supplementary
-evidence and never counted as that site's replacement predicate, so no native
-key-delivery, cursor or clipboard round-trip site is reclassified by them.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS ("verify: 1/6 ok (10.82s, 5 skipped)"; "run_checks: PASS";
 rerun by this ledger pass on the frozen tree).
 Command: deno task verify:shell --filter shell-clipboard --verbose
 Result: PASS ("verify: 1/11 ok (1.56s, 10 skipped)"; "run_checks: PASS"
 including the invalid-MIME paste guard and the new Delete/Cut/expanding-paste tests; rerun by this ledger pass on the frozen tree).
-The hashes above pin the tree these mappings were written against.
-
-Execution ownership
-runTimeEditsSuite calls runClipboardEditingSuite, which calls
-crossTpbClipboardPaste (covers crossTpbNotePaste paste semantics),
-timeRangeClipboardMerge (covers mergeTimeRangeAndUndo, including the S009
-explicit post-undo note/lane/tempo restoration predicate) and
-emptyAndTiledClipboardPaste (covers emptyLaneMergeIsNoop, including the S010
-preserved note/volume predicate and the S011 at-tip history-depth predicate,
-and tiledTimePasteUndoesOneTileAtATime). The rescaleProbe sameClip site is
-covered from runClipboardCodecSuite's down-scaling predicate, which pins the
-identical half-up/last-wins values. The copy-failure report.fail guards abort
-the section instead of asserting. Native key delivery, the live QClipboard
-round trip, native view selection and editCursorTick have no Swift core
-predicates; Swift history-entry deltas cover model-level undo behavior, not the
-native QUndoStack object itself. S012 records the shell lane
-(src/checks/editorqml/tst_ShellClipboard.qml :: test_roundTripReplacement,
-GridInputClipProbe over the production clipboard boundary) whose real
-Copy/Paste/Undo/Redo key sequences exercise the same commands; the per-site
-shell supplement lines cite it. src/checks/automation/automationclipboard.swift was
-searched: it asserts automation-drawer lane clipboard under
-drawerAutomationRangeID, a different surface, and is not cited below.
-
-Fixture, sequence and row constraints
-crossTpbNotePaste copies at 24 TPQN and pastes into a 48-division rig at edit
-cursor 24. mergeTimeRangeAndUndo pins the 48-to-24 rescale rule on a probe clip
-before writing a 48-TPB clip to the system clipboard and pasting at cursor 24.
-emptyLaneMergeIsNoop pastes an empty volume-lane clip at cursor 120 and
-requires no undo entry. tiledTimePasteUndoesOneTileAtATime pastes a span-96
-tile twice and undoes one tile at a time. No _data rows and no loops expand
-sites in this file; every site executes once per method run.
-
-Original assertion inventory and source sequence
 
 A001 | ClipCheckTest::crossTpbNotePaste | src/checks/clipboard/clipcheck_merge.cpp:25
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_merge.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  #include "checks/clipboard/clipcheck_test.h"
-
-  #include <QtTest>
-
-  #include "core/songdocument.h"
-  #include "ui/songview.h"
-  #include <memory>
-
-  #include "ui/songview/clip.h"
-  #include "ui/songview/clipmime.h"
-
-  namespace checks::clipboard {
-
-  namespace {
-
-  constexpr uint8_t kCcModulation = 0x01;
-  constexpr uint8_t kCcVolume = 0x07;
-
-  } // namespace
-
-  void ClipCheckTest::crossTpbNotePaste()
-  {
-      QString error;
-      std::unique_ptr<ClipTabRig> source = ClipTabRig::create(24, error);
-Original expression:
-  QVERIFY2(source, qPrintable(error));
 
 A002 | ClipCheckTest::crossTpbNotePaste | src/checks/clipboard/clipcheck_merge.cpp:26
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress fixture setup: the fallible C++ guard addTrack(0)->0 has no Swift ingress — clipboardDocument() builds the identical one-track layout in memory via non-throwing MidiFile chunk construction (TimeChecks.swift). The resulting layout is pinned by MATCHED S013 (copy yields a clip) and S001 (rescaled paste layout with one history entry); no production track-creation predicate was added to the clipboard suite.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(source->document().addTrack(0), 0);
+Mapping/reason: S013, S001
 
 A003 | ClipCheckTest::crossTpbNotePaste | src/checks/clipboard/clipcheck_merge.cpp:29
 Disposition: GAP
@@ -120,36 +33,18 @@ Original expression:
 
 A004 | ClipCheckTest::crossTpbNotePaste | src/checks/clipboard/clipcheck_merge.cpp:30
 Disposition: MATCHED
-Mapping/reason: S013 (TimeChecks.swift) asserts production ClipboardSemantics.copyNotes yields a clip before TPQN rescaling. Shell supplement: tst_ShellClipboard.qml reads the native clipboard bytes back after a real Copy key, covering the live QClipboard round trip.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(clipcheck_support::checkClipboardClip().has_value());
+Mapping: S013
 
 A005 | ClipCheckTest::crossTpbNotePaste | src/checks/clipboard/clipcheck_merge.cpp:33
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_merge.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-  std::unique_ptr<ClipTabRig> target = ClipTabRig::create(48, error);
-Original expression:
-  QVERIFY2(target, qPrintable(error));
 
 A006 | ClipCheckTest::crossTpbNotePaste | src/checks/clipboard/clipcheck_merge.cpp:34
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress fixture setup: the constructed-document division guard has no Swift ingress — clipboardDocument(division: 48) takes the timebase as a non-throwing constructor argument (TimeChecks.swift). The 48-TPB timebase is pinned by MATCHED S001, which rescales the 24-TPB copy onto it and asserts the identical rescaled layout.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(target->document().smf().division, uint16_t{48});
+Mapping/reason: S001
 
 A007 | ClipCheckTest::crossTpbNotePaste | src/checks/clipboard/clipcheck_merge.cpp:35
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress fixture setup: the fallible C++ guard addTrack(0)->0 has no Swift ingress; see A002. The resulting one-track destination is pinned by MATCHED S001 (forward ["0:70:24:90", "24:60:48:100"] with nextCursor 72).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(target->document().addTrack(0), 0);
+Mapping/reason: S001
 
 A008 | ClipCheckTest::crossTpbNotePaste | src/checks/clipboard/clipcheck_merge.cpp:40
 Disposition: GAP
@@ -164,20 +59,11 @@ Original expression:
 
 A009 | ClipCheckTest::crossTpbNotePaste | src/checks/clipboard/clipcheck_merge.cpp:41
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift) asserts the identical rescaled layout ["0:70:24:90", "24:60:48:100"] via clipboardNoteShape.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY((notesOf(target->document(), 0) ==
-           std::vector<NoteSpec>{{0, 70, 24, 90}, {24, 60, 48, 100}}));
+Mapping: S001
 
 A010 | ClipCheckTest::crossTpbNotePaste | src/checks/clipboard/clipcheck_merge.cpp:43
 Disposition: MATCHED
-Mapping/reason: S006 (TimeChecks.swift) asserts production paste adds exactly one Swift history entry.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(target->document().undoStack()->count(), undoCountBefore + 1);
+Mapping: S006
 
 A011 | ClipCheckTest::crossTpbNotePaste | src/checks/clipboard/clipcheck_merge.cpp:44
 Disposition: PARTIAL
@@ -189,45 +75,14 @@ Original expression:
 
 A012 | ClipCheckTest::mergeTimeRangeAndUndo | src/checks/clipboard/clipcheck_merge.cpp:61
 Disposition: MATCHED
-Mapping/reason: S005 (TimeChecks.swift) pins the identical 48-to-24 half-up/last-wins probe values (tracks, lanes, tempo).
-Source context since previous assertion:
-  ;
-  }
-
-  void ClipCheckTest::mergeTimeRangeAndUndo()
-  {
-      // Pin the same half-up/last-wins conversion rule the merge consumes before
-      // asserting its document effect, so a scaling regression diagnoses locally.
-      songview::Clip roundingProbe;
-      roundingProbe.span = 1;
-      roundingProbe.tracks = {{2, {{1, 60, 1, 100}, {3, 61, 0, 80}}}};
-      roundingProbe.lanes = {{2, kCcVolume, {{2, 20}, {1, 10}, {3, 30}}}};
-      roundingProbe.tempo = {{2, 500000}, {1, 600000}, {3, 700000}};
-      songview::Clip scaledProbe;
-      scaledProbe.span = 1;
-      scaledProbe.tracks = {{2, {{1, 60, 1, 100}, {2, 61, 0, 80}}}};
-      scaledProbe.lanes = {{2, kCcVolume, {{1, 10}, {2, 30}}}};
-      scaledProbe.tempo = {{1, 600000}, {2, 700000}};
-Original expression:
-  QVERIFY(clipcheck_support::sameClip(songview::rescaleClip(roundingProbe, 48, 24), scaledProbe));
+Mapping: S005
 
 A013 | ClipCheckTest::mergeTimeRangeAndUndo | src/checks/clipboard/clipcheck_merge.cpp:65
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_merge.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-  QString error;
-  std::unique_ptr<ClipTabRig> rig = ClipTabRig::create(24, error);
-Original expression:
-  QVERIFY2(rig, qPrintable(error));
 
 A014 | ClipCheckTest::mergeTimeRangeAndUndo | src/checks/clipboard/clipcheck_merge.cpp:66
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress fixture setup: the fallible C++ guard addTrack(0)->0 has no Swift ingress; see A002. The resulting one-track layout, including its lanes and tempo, is pinned by MATCHED S002 (merge) and S009 (explicit post-undo restoration).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(rig->document().addTrack(0), 0);
+Mapping/reason: S002, S009
 
 A015 | ClipCheckTest::mergeTimeRangeAndUndo | src/checks/clipboard/clipcheck_merge.cpp:82
 Disposition: GAP
@@ -253,30 +108,15 @@ Original expression:
 
 A016 | ClipCheckTest::mergeTimeRangeAndUndo | src/checks/clipboard/clipcheck_merge.cpp:83
 Disposition: MATCHED
-Mapping/reason: S002 (TimeChecks.swift) merged asserts the identical note layout ["24:60:12:120", "36:60:12:100", "48:64:24:100"] via clipboardNoteShape.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY((notesOf(rig->document(), 0) ==
-           std::vector<NoteSpec>{{24, 60, 12, 120}, {36, 60, 12, 100}, {48, 64, 24, 100}}));
+Mapping: S002
 
 A017 | ClipCheckTest::mergeTimeRangeAndUndo | src/checks/clipboard/clipcheck_merge.cpp:85
 Disposition: MATCHED
-Mapping/reason: S002 (TimeChecks.swift) merged asserts the identical modulation lane ["36:120", "60:70", "96:40"].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY((lanesOf(rig->document(), 0, kCcModulation) ==
-           std::vector<LaneSpec>{{36, 120}, {60, 70}, {96, 40}}));
+Mapping: S002
 
 A018 | ClipCheckTest::mergeTimeRangeAndUndo | src/checks/clipboard/clipcheck_merge.cpp:87
 Disposition: MATCHED
-Mapping/reason: S002 (TimeChecks.swift) merged asserts the identical tempo ["0:500000", "25:400000", "60:700000"].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY((tempoOf(rig->document()) ==
-           std::vector<TempoSpec>{{0, 500000}, {25, 400000}, {60, 700000}}));
+Mapping: S002
 
 A019 | ClipCheckTest::mergeTimeRangeAndUndo | src/checks/clipboard/clipcheck_merge.cpp:89
 Disposition: GAP
@@ -296,61 +136,26 @@ Original expression:
 
 A021 | ClipCheckTest::mergeTimeRangeAndUndo | src/checks/clipboard/clipcheck_merge.cpp:91
 Disposition: MATCHED
-Mapping/reason: S007 (TimeChecks.swift) asserts the exact one-entry Swift history delta for the range merge.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(rig->document().undoStack()->count(), undoBeforeMerge + 1);
+Mapping: S007
 
 A022 | ClipCheckTest::mergeTimeRangeAndUndo | src/checks/clipboard/clipcheck_merge.cpp:94
 Disposition: MATCHED
-Mapping/reason: S009 (TimeChecks.swift) asserts after the merge undo notes ["24:60:24:100", "48:64:24:100"] via clipboardNoteShape.
-Source context since previous assertion:
-
-  rig->document().undoStack()->undo();
-Original expression:
-  QVERIFY((notesOf(rig->document(), 0) ==
-           std::vector<NoteSpec>{{24, 60, 24, 100}, {48, 64, 24, 100}}));
+Mapping: S009
 
 A023 | ClipCheckTest::mergeTimeRangeAndUndo | src/checks/clipboard/clipcheck_merge.cpp:96
 Disposition: MATCHED
-Mapping/reason: S009 (TimeChecks.swift) asserts after the merge undo the modulation lane ["36:40", "60:70", "96:40"].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY((lanesOf(rig->document(), 0, kCcModulation) ==
-           std::vector<LaneSpec>{{36, 40}, {60, 70}, {96, 40}}));
+Mapping: S009
 
 A024 | ClipCheckTest::mergeTimeRangeAndUndo | src/checks/clipboard/clipcheck_merge.cpp:98
 Disposition: MATCHED
-Mapping/reason: S009 (TimeChecks.swift) asserts after the merge undo the tempo ["0:500000", "25:600000", "60:700000"].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY((tempoOf(rig->document()) ==
-           std::vector<TempoSpec>{{0, 500000}, {25, 600000}, {60, 700000}}));
+Mapping: S009
 
 A025 | ClipCheckTest::emptyLaneMergeIsNoop | src/checks/clipboard/clipcheck_merge.cpp:106
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_merge.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-  }
-
-  void ClipCheckTest::emptyLaneMergeIsNoop()
-  {
-      QString error;
-      std::unique_ptr<ClipTabRig> rig = ClipTabRig::create(24, error);
-Original expression:
-  QVERIFY2(rig, qPrintable(error));
 
 A026 | ClipCheckTest::emptyLaneMergeIsNoop | src/checks/clipboard/clipcheck_merge.cpp:107
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress fixture setup: the fallible C++ guard addTrack(0)->0 has no Swift ingress; see A002. The resulting one-track layout, including its volume point, is pinned by MATCHED S010 (note and lane preserved), S011 (no history entry) and S003 (nil result with unchanged bytes and identity).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(rig->document().addTrack(0), 0);
+Mapping/reason: S010, S011, S003
 
 A027 | ClipCheckTest::emptyLaneMergeIsNoop | src/checks/clipboard/clipcheck_merge.cpp:118
 Disposition: GAP
@@ -371,27 +176,15 @@ Original expression:
 
 A028 | ClipCheckTest::emptyLaneMergeIsNoop | src/checks/clipboard/clipcheck_merge.cpp:119
 Disposition: MATCHED
-Mapping/reason: S010 (TimeChecks.swift) asserts the empty paste leaves notes(in: 0) == ["24:62:24:100"].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY((notesOf(rig->document(), 0) == std::vector<NoteSpec>{{24, 62, 24, 100}}));
+Mapping: S010
 
 A029 | ClipCheckTest::emptyLaneMergeIsNoop | src/checks/clipboard/clipcheck_merge.cpp:120
 Disposition: MATCHED
-Mapping/reason: S010 (TimeChecks.swift) asserts the empty paste leaves the volume lane ["144:90"] untouched.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY((lanesOf(rig->document(), 0, kCcVolume) == std::vector<LaneSpec>{{144, 90}}));
+Mapping: S010
 
 A030 | ClipCheckTest::emptyLaneMergeIsNoop | src/checks/clipboard/clipcheck_merge.cpp:121
 Disposition: MATCHED
-Mapping/reason: S011 (TimeChecks.swift) asserts the at-tip history depth captured at TimeChecks.swift is unchanged by the empty paste, the public-API replacement for QUndoStack::count().
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(rig->document().undoStack()->count(), undoBefore);
+Mapping: S011
 
 A031 | ClipCheckTest::emptyLaneMergeIsNoop | src/checks/clipboard/clipcheck_merge.cpp:122
 Disposition: GAP
@@ -403,25 +196,10 @@ Original expression:
 
 A032 | ClipCheckTest::tiledTimePasteUndoesOneTileAtATime | src/checks/clipboard/clipcheck_merge.cpp:129
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_merge.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-  ;
-  }
-
-  void ClipCheckTest::tiledTimePasteUndoesOneTileAtATime()
-  {
-      QString error;
-      std::unique_ptr<ClipTabRig> rig = ClipTabRig::create(24, error);
-Original expression:
-  QVERIFY2(rig, qPrintable(error));
 
 A033 | ClipCheckTest::tiledTimePasteUndoesOneTileAtATime | src/checks/clipboard/clipcheck_merge.cpp:130
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress fixture setup: the fallible C++ guard addTrack(0)->0 has no Swift ingress; see A002. The resulting empty one-track layout is pinned by MATCHED S004 (tile layouts, nextCursors 96/192 and per-tile undos) with S008 (two history entries).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(rig->document().addTrack(0), 0);
+Mapping/reason: S004, S008
 
 A034 | ClipCheckTest::tiledTimePasteUndoesOneTileAtATime | src/checks/clipboard/clipcheck_merge.cpp:139
 Disposition: GAP
@@ -440,11 +218,7 @@ Original expression:
 
 A035 | ClipCheckTest::tiledTimePasteUndoesOneTileAtATime | src/checks/clipboard/clipcheck_merge.cpp:140
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift) firstUndo restores ["0:60:24:100"], which is exactly the post-first-paste state asserted here.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY((notesOf(rig->document(), 0) == std::vector<NoteSpec>{{0, 60, 24, 100}}));
+Mapping: S004
 
 A036 | ClipCheckTest::tiledTimePasteUndoesOneTileAtATime | src/checks/clipboard/clipcheck_merge.cpp:141
 Disposition: PARTIAL
@@ -464,12 +238,7 @@ Original expression:
 
 A038 | ClipCheckTest::tiledTimePasteUndoesOneTileAtATime | src/checks/clipboard/clipcheck_merge.cpp:143
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift) asserts the identical two-tile layout ["0:60:24:100", "96:60:24:100"].
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY((notesOf(rig->document(), 0) ==
-           std::vector<NoteSpec>{{0, 60, 24, 100}, {96, 60, 24, 100}}));
+Mapping: S004
 
 A039 | ClipCheckTest::tiledTimePasteUndoesOneTileAtATime | src/checks/clipboard/clipcheck_merge.cpp:145
 Disposition: PARTIAL
@@ -481,28 +250,15 @@ Original expression:
 
 A040 | ClipCheckTest::tiledTimePasteUndoesOneTileAtATime | src/checks/clipboard/clipcheck_merge.cpp:146
 Disposition: MATCHED
-Mapping/reason: S008 (TimeChecks.swift) asserts two sequential tile undos, each restoring the preceding state, and exactly two history entries.
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(rig->document().undoStack()->count(), undoBefore + 2);
+Mapping: S008
 
 A041 | ClipCheckTest::tiledTimePasteUndoesOneTileAtATime | src/checks/clipboard/clipcheck_merge.cpp:149
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift) firstUndo asserts notes == ["0:60:24:100"] after one undo.
-Source context since previous assertion:
-
-  rig->document().undoStack()->undo();
-Original expression:
-  QVERIFY((notesOf(rig->document(), 0) == std::vector<NoteSpec>{{0, 60, 24, 100}}));
+Mapping: S004
 
 A042 | ClipCheckTest::tiledTimePasteUndoesOneTileAtATime | src/checks/clipboard/clipcheck_merge.cpp:151
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift) secondUndo asserts notes are empty after the second undo.
-Source context since previous assertion:
-  rig->document().undoStack()->undo();
-Original expression:
-  QVERIFY(notesOf(rig->document(), 0).empty());
+Mapping: S004
 
 Remaining original source (closing sequence and helper bodies):
   }
@@ -513,109 +269,42 @@ Swift assertion predicates
 
 S001 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift
 Anchor: message "TPQN rescaling feeds production note paste and records one reversible edit"
-  report.expect(forward == ["0:70:24:90", "24:60:48:100"] &&
-          result?.nextCursor == 72 && undone,
-          cppID: "clipcheck/ClipCheckTest::crossTpbNotePaste",
-          message: "TPQN rescaling feeds production note paste and records one reversible edit")
 
 S002 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift
 Anchor: message "one production range merge applies last-wins exact-tick lane and tempo replacement and undoes atomically"
-  merged (TimeChecks.swift:1442-1448) = document.notes(in: 0).map(clipboardNoteShape) ==
-          ["24:60:12:120", "36:60:12:100", "48:64:24:100"] &&
-      document.lanePoints(track: 0, lane: .controller(1)).map(coreTimePointShape) ==
-          ["36:120", "60:70", "96:40"] &&
-      document.state.tempo.map { "\($0.tick):\($0.microsecondsPerQuarterNote)" } ==
-          ["0:500000", "25:400000", "60:700000"] && result?.nextCursor == 48
-  report.expect(merged && oneUndo,
-          cppID: "clipcheck/ClipCheckTest::mergeTimeRangeAndUndo",
-          message: "one production range merge applies last-wins exact-tick lane and tempo replacement and undoes atomically")
 
 S003 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift
 Anchor: message "an empty lane merge returns no cursor and changes neither document nor history"
-  report.expect(emptyResult == nil && coreTimeBytes(emptyDocument) == emptyBefore &&
-          emptyDocument.history.currentIdentity == emptyIdentity,
-          cppID: "clipcheck/ClipCheckTest::emptyLaneMergeIsNoop",
-          message: "an empty lane merge returns no cursor and changes neither document nor history")
 
 S004 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift
 Anchor: message "time paste advances by span and each tile is one undo entry"
-  report.expect(forward == ["0:60:24:100", "96:60:24:100"] &&
-          first?.nextCursor == 96 && second?.nextCursor == 192 && firstUndo && secondUndo,
-          cppID: "clipcheck/ClipCheckTest::tiledTimePasteUndoesOneTileAtATime",
-          message: "time paste advances by span and each tile is one undo entry")
+
 S005 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
 Anchor: message "half-up down-scaled clip with stable last-wins collisions"
-  report.expectEqual(
-          downExpected,
-          ClipboardCodec.rescale(downInput, sourceTicksPerBeat: 48, destinationTicksPerBeat: 24),
-          cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[down_48_to_24_round_up_last_wins]",
-          what: "half-up down-scaled clip with stable last-wins collisions")
+
 S006 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift
 Anchor: message "track-expanding paste adds exactly one history entry"
-  report.expectEqual(1, undoDelta,
-          cppID: "clipcheck/ClipCheckTest::crossTpbNotePaste",
-          what: "TPQN-scaled note paste adds exactly one history entry")
 
 S007 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift
 Anchor: message "range merge adds exactly one history entry"
-  report.expectEqual(1, mergeHistoryDelta,
-          cppID: "clipcheck/ClipCheckTest::mergeTimeRangeAndUndo",
-          what: "range merge adds exactly one history entry")
 
 S008 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift
 Anchor: message "two tiled pastes add exactly two history entries"
-  report.expectEqual(2, (firstUndo ? 1 : 0) + (secondUndo ? 1 : 0),
-          cppID: "clipcheck/ClipCheckTest::tiledTimePasteUndoesOneTileAtATime",
-          what: "two tiled pastes add exactly two history entries")
 
 S009 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift
 Anchor: message "undo explicitly restores both notes, all modulation points and all tempo points"
-  report.expect(document.notes(in: 0).map(clipboardNoteShape) ==
-                    ["24:60:24:100", "48:64:24:100"] &&
-                document.lanePoints(track: 0, lane: .controller(1))
-                    .map(coreTimePointShape) == ["36:40", "60:70", "96:40"] &&
-                document.state.tempo.map {
-                    "\($0.tick):\($0.microsecondsPerQuarterNote)"
-                } == ["0:500000", "25:600000", "60:700000"],
-                cppID: "clipcheck/ClipCheckTest::mergeTimeRangeAndUndo",
-                message: "undo explicitly restores both notes, all modulation points and all tempo points")
 
 S010 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift
 Anchor: message "empty lane paste preserves the existing note and volume point"
-  report.expect(emptyDocument.notes(in: 0).map(clipboardNoteShape) == ["24:62:24:100"] &&
-                emptyDocument.lanePoints(track: 0, lane: .controller(7))
-                    .map(coreTimePointShape) == ["144:90"],
-                cppID: "clipcheck/ClipCheckTest::emptyLaneMergeIsNoop",
-                message: "empty lane paste preserves the existing note and volume point")
 
 S011 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift
 Anchor: message "empty lane paste adds no history entry"
-  report.expect(emptyHistoryDepth != nil &&
-                (try? coreEditHistoryCountAtTip(
-                    emptyDocument, report: report,
-                    cppID: "clipcheck/ClipCheckTest::emptyLaneMergeIsNoop")) == emptyHistoryDepth,
-                cppID: "clipcheck/ClipCheckTest::emptyLaneMergeIsNoop",
-                message: "empty lane paste adds no history entry")
-  emptyHistoryDepth is captured at TimeChecks.swift:1478-1479 before the empty paste,
-  so the comparison is an at-tip depth no-op, not a revision assertion.
 
 S012 | ShellClipboard::test_roundTripReplacement (shell lane, supplementary) | src/checks/editorqml/tst_ShellClipboard.qml
 Anchor: function
-  real keySequence(StandardKey.Copy) at :210 with the native clipboard bytes read back
-  through GridInputClipProbe at :211-239; real keySequence(StandardKey.Paste) and
-  committed cursor at :256-268; real Undo/Redo at :275-299; replacement-surface Paste
-  at :416-437; invalid-MIME Paste guard at :444-452; empty-clip Paste no-op (notes,
-  cursor, dirty state) at :459-464; span-96 tile pastes and cursors at :492-500 and
-  :501-509 with tiled Undos at :510-524; note Delete/Cut keys at :528-632 (two
-  pointer-selected notes removed, decodable cut payload, Undo, staged-cursor Paste);
-  track-expanding range paste at :635-702 (staged outer track, real Paste, expansion
-  and Undo retraction). Cited only as a shell supplement; it does not convert a site.
 
 S013 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift
 Anchor: message "source note copy yields a clip before TPQN rescaling"
-  report.expect(copiedOptional != nil,
-          cppID: "clipcheck/ClipCheckTest::crossTpbNotePaste",
-          message: "source note copy yields a clip before TPQN rescaling")
 
 Shared helpers
 All Swift helpers executing these checks (clipboardDocument, clipboardUndoEntryDelta,

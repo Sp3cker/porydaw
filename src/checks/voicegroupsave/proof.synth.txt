@@ -6,44 +6,10 @@ Original SHA-256: 1ec6f97e682d2012325782b9f9dbb405970e109cbe08bd23d9f96a7fe37290
 Swift counterpart: src/checks/projectstore/ProjectStoreSaveChecks.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellVoicegroup.qml
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below (42 sites). Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-MATCHED means a corresponding Swift predicate was identified and executed;
-PARTIAL means a related check exists but differs in a stated way;
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of a converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-Selected Swift store and mounted-editor predicates cover synth minting,
-persisted catalog inclusion, and undo of the saved voice. Native catalog
-widgets, visibility and other unmapped conditions remain GAP or PARTIAL;
-no whole-case parity is claimed.
 
-Verification
 Command: deno task verify --filter projectstore-checks --verbose;
 deno task verify:shell --filter shell-voicegroup --verbose.
 Result: PASS for both focused runs; retained native checks are not
-Swift parity evidence.
-
-Execution ownership
-The retained native harness owns this file. runVoicegroupSaveCheck in
-src/checks/voicegroupsave/fixture.cpp constructs VoicegroupSaveTest and qExecs
-it under the "voicegroup-save" application id; init()/cleanup() bracket every
-test method. synthDefinitionsStayMemoryOnlyUntilSave execute the checks inventoried below.
-Shared per-test state (m_window, m_document, m_tab, m_browser, m_dsSlot,
-m_originalVoice, m_homeId/m_homeArg, voicegroup/MIDI baselines, save receipts)
-is built by VoicegroupSaveTest::openSong with VoicegroupBrowserDriver and the
-song/project fixtures declared in src/checks/voicegroupsave/tst_voicegroupsave.h.
-Swift store and mounted-editor predicates are listed below as S entries;
-unmapped native widget conditions remain open.
-
-Fixture, sequence and row constraints
-No data rows expand these sites. The four-entry Param script loop (baseDuty, dutyStep, modDepth, phase) reuses its two per-iteration sites (parameter field presence, param-named definition settle) once per parameter. The macro/stub setup, catalog refreshes, saw/pulse waveform flips, and the two undo chains (waveform flips, then the full synth edit) each execute once per run in the order sequenced below.
-Original setup, branch guards and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory and source sequence
 
 A001 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:25
 Disposition: GAP
@@ -336,19 +302,7 @@ QVERIFY(readFileBytes(synthPath).contains(wanted.toUtf8() + "::"))
 
 A023 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:122
 Disposition: MATCHED
-Mapping/reason: S003 asserts the synth assembly include is present exactly once in sound_data.s after save.
-Source context since previous assertion:
-;
-    bool wired = false;
-    for (const QString &directory :
-         {m_project->root() + QStringLiteral("/data"), m_project->root()}) {
-        QDirIterator files(directory, {QStringLiteral("*.s")}, QDir::Files);
-        while (files.hasNext() && !wired)
-            wired = readFileBytes(files.next()).contains("direct_sound_synth_data.inc");
-    }
-
-Original expression:
-QVERIFY(wired)
+Mapping: S003
 
 A024 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:123
 Disposition: GAP
@@ -371,16 +325,7 @@ QVERIFY2(refreshCatalog(), "saved synth catalog refresh did not settle")
 
 A026 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:126
 Disposition: MATCHED
-Mapping/reason: S002 asserts a freshly reopened project catalog finds the saved minted synth descriptor by symbol.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(settle([this, &wanted] {
-                 return m_window->m_workspace->projectState().catalog.synths.find(wanted) !=
-                        nullptr;
-             }),
-             "saved synth definition did not enter the published catalog")
+Mapping: S002
 
 A027 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:131
 Disposition: GAP
@@ -497,13 +442,7 @@ QVERIFY2(settle([this, before] { return m_document->undoStack()->index() == befo
 
 A037 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:165
 Disposition: MATCHED
-Mapping/reason: S007 asserts mounted undo restores the saved pulse symbol and waveform after the synth wave edit.
-Source context since previous assertion:
-;
-    }
-
-Original expression:
-QCOMPARE(m_browser->selectedBankView()->slotViews.at(synthSlot).voice->symbol, wanted)
+Mapping: S007
 
 A038 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:171
 Disposition: GAP
@@ -568,41 +507,21 @@ Swift assertion predicates
 
 S001 | runProjectStoreSaveSuite | src/checks/projectstore/ProjectStoreSaveChecks.swift
 Anchor: message "S07" #3
-            saveExpect("S07", symbol == same && !FileManager.default.fileExists(atPath: synthFile.path),
-                       report, "mint deduplicates in memory and writes no file before save")
 
 S002 | runProjectStoreSaveSuite | src/checks/projectstore/ProjectStoreSaveChecks.swift
 Anchor: message "S08" #4
-                saveExpect("S08", !clean.dirty && clean.slotViews[0].voice?.symbol == symbol &&
-                           fresh.slotViews[0].voice?.symbol == symbol &&
-                           catalog.find(symbol) == descriptor, report,
-                           "saved minted synth survives a fresh project load")
 
 S003 | runProjectStoreSaveSuite | src/checks/projectstore/ProjectStoreSaveChecks.swift
 Anchor: message "S09" #4
-            saveExpect("S09", soundData.contains(".include \"sound/direct_sound_synth_data.inc\"") &&
-                       soundData.components(separatedBy: "direct_sound_synth_data.inc").count == 2,
-                       report, "synth definitions are assembled exactly once")
 
 S004 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "synth type creates an unsaved bank edit"
-        verify(waitForNative(function() { return draft.isSynth && controller.bankDirty },
-                             15000), "synth type creates an unsaved bank edit")
 
 S005 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "uncommitted synth does not masquerade as a saved definition"
-        verify(controller.synthCatalogChoices().indexOf(pulse) < 0,
-               "uncommitted synth does not masquerade as a saved definition")
 
 S006 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "save persists synth and refreshes catalog: "
-        verify(waitForNative(function() {
-            return (!controller.bankDirty && controller.synthCatalogChoices().includes(pulse))
-                   || app.lastSaveError.length > 0
-        }, 15000), "save persists synth and refreshes catalog: " + app.lastSaveError)
 
 S007 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "undo restores saved pulse voice"
-        verify(waitForNative(function() {
-            return draft.symbol === pulse && draft.waveform === 0
-        }, 15000), "undo restores saved pulse voice")

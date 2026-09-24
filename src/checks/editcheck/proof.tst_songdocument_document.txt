@@ -20,2917 +20,1591 @@ Fixture and execution: Synthetic twoTrackFile is a division-24 SMF with a conduc
 History caveat: Swift observes at-tip undo depth with coreEditHistoryCountAtTip via public undo/redo traversal, checking replay count, restored state and identity; document.revision tracks committed edits/replays and never substitutes for history depth. No test-only history accessor.
 Registered run path: src/checks/editcheck/NoteChecks.swift :: runNoteEditsSuite -> documentEditContracts (suite 4), runDocumentHistorySuite -> documentHistoryContracts (suite 5); src/checks/editcheck/EventChecks.swift :: runEventEditsSuite -> documentTrackContracts (suite 6), via src/checks/support/corecheck/CoreCheckSupport.swift :: pdcSuiteRun / pdc_suite_run; DocumentEditChecks.swift, DocumentHistoryChecks.swift, DocumentTrackChecks.swift and their callers compiled in src/checks/CMakeLists.txt :: swift_core_check. Legacy C++ editcheck source is absent from the active checkcatalog/CMake run.
 
-
-Original assertion inventory
-
 A001 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:50
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentLoadPublicationContract
-Mapping/reason: C++ fixture.stage is fallible disk staging; Swift SongDocument(file:) constructs in memory without a stage/load failure branch or post-construction load ingress (spec §2.1/§7).
-Original expression:
-  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("publication")),
-           qPrintable(fixture.error));
 
 A002 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:52
 Disposition: MATCHED
-Swift: S073 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentLoadPublicationContract
-Mapping/reason: S073 checks the freshly constructed document's revision equals one under documentLoadPublication.
-Original expression:
-  QCOMPARE(fixture.document.revision(), uint64_t(1));
+Mapping: S073
 
 A003 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:53
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentLoadPublicationContract
-Mapping/reason: C++ fixture.stage emits remap then changed while pre-load Qt spies are attached; Swift SongDocument(file:) finishes before onChange can be attached and exposes no post-construction load, so that load-time observer protocol has no Swift ingress (spec §7).
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("remap"), QStringLiteral("changed")}));
 
 A004 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:54
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentLoadPublicationContract
-Mapping/reason: C++ fixture.stage exposes both load-time signal revisions to pre-load spies; Swift SongDocument(file:) completes before onChange attachment with no later load ingress, so neither signal-revision sequence can be observed (spec §7).
-Original expression:
-  QVERIFY((revisions == std::vector<uint64_t>{1, 1}));
 
 A005 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:55
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentLoadPublicationContract
-Mapping/reason: C++ fixture.stage emits exactly one remap to a pre-load spy; Swift SongDocument(file:) completes before onChange attachment and has no post-construction load ingress (spec §7).
-Original expression:
-  QCOMPARE(remaps.size(), size_t(1));
 
 A006 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:56
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentLoadPublicationContract
-Mapping/reason: C++ load-time remap carries an empty SMF map; Swift SongDocument(file:) has no observer attachable before construction or post-construction load ingress (spec §7), not an asserted empty callback.
-Original expression:
-  QVERIFY(remaps.front().smfTrackMap.empty());
 
 A007 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:57
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentLoadPublicationContract
-Mapping/reason: C++ load-time remap carries an empty engine map; Swift SongDocument(file:) has no observer attachable before construction or post-construction load ingress (spec §7).
-Original expression:
-  QVERIFY(remaps.front().engineTrackMap.empty());
 
 A008 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:58
 Disposition: MATCHED
-Swift: S074 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentLoadPublicationContract
-Mapping/reason: S074 directly asserts the three MIDI chunks of the constructed document under documentLoadPublication; the C++ load remap reports this same count.
-Original expression:
-  QCOMPARE(remaps.front().newSmfTrackCount, 3);
+Mapping: S074
 
 A009 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:59
 Disposition: MATCHED
-Swift: S075 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentLoadPublicationContract
-Mapping/reason: S075 directly asserts two projected engine tracks of the constructed document under documentLoadPublication; the C++ remap reports this same count.
-Original expression:
-  QCOMPARE(remaps.front().newEngineTrackCount, 2);
+Mapping: S075
 
 A010 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:65
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentEditChecks.swift :: documentTempoEmptyContract
-Mapping/reason: C++ fixture.stage requires a fallible disk-backed staging load; Swift SongDocument(file:) constructs in memory without that failure branch or staging ingress (spec §2.1/§7).
-Original expression:
-  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("tempo-empty")),
-           qPrintable(fixture.error));
 
 A011 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:68
 Disposition: MATCHED
-Swift: S046 | src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: Swift S046 asserts empty typed tempo in live state under the same cppID.
-Original expression:
-  QVERIFY(document.tempoPoints().empty());
+Mapping: S046
 
 A012 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:70
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentEditChecks.swift :: documentTempoEmptyContract
-Mapping/reason: The C++ buildTimeline pointer is nullable, but Swift PlaybackTimeline.build returns a non-optional value with no null failure branch; its actual tempo projection is separately asserted by S076-S078 (spec §2.1/§4).
-Original expression:
-  QVERIFY(timeline);
+Mapping/reason: S076, S077, S078
 
 A013 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:71
 Disposition: MATCHED
-Swift: S076 | src/checks/editcheck/DocumentEditChecks.swift :: documentTempoEmptyContract
-Mapping/reason: S076 asserts one default playback tempo on the empty-tempo fixture under documentTempoEmpty.
-Original expression:
-  QCOMPARE(timeline->tempoMap.size(), size_t(1));
+Mapping: S076
 
 A014 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:72
 Disposition: MATCHED
-Swift: S077 | src/checks/editcheck/DocumentEditChecks.swift :: documentTempoEmptyContract
-Mapping/reason: S077 asserts the default playback tempo starts at tick zero under documentTempoEmpty.
-Original expression:
-  QCOMPARE(timeline->tempoMap.front().tick, uint64_t(0));
+Mapping: S077
 
 A015 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:73
 Disposition: MATCHED
-Swift: S078 | src/checks/editcheck/DocumentEditChecks.swift :: documentTempoEmptyContract
-Mapping/reason: S078 asserts the default playback tempo is 120 BPM under documentTempoEmpty.
-Original expression:
-  QCOMPARE(timeline->tempoMap.front().bpm, 120.0);
+Mapping: S078
 
 A016 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:77
 Disposition: MATCHED
-Swift: S079 | src/checks/editcheck/DocumentEditChecks.swift :: documentTempoEmptyContract
-Mapping/reason: S079 asserts the typed tempo list is empty after adding and removing the only tempo point under documentTempoEmpty.
-Original expression:
-  QVERIFY(document.tempoPoints().empty());
+Mapping: S079
 
 A017 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:79
 Disposition: MATCHED
-Swift: S080 | src/checks/editcheck/DocumentEditChecks.swift :: documentTempoEmptyContract
-Mapping/reason: S080 asserts one undo restores exactly the removed tick-24 150-BPM tempo point under documentTempoEmpty.
-Original expression:
-  QVERIFY((document.tempoPoints() == std::vector<TempoPoint>{point}));
+Mapping: S080
 
 A018 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:81
 Disposition: MATCHED
-Swift: S081 | src/checks/editcheck/DocumentEditChecks.swift :: documentTempoEmptyContract
-Mapping/reason: S081 asserts redo restores an empty typed tempo list on the same fixture.
-Original expression:
-  QVERIFY(document.tempoPoints().empty());
+Mapping: S081
 
 A019 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:84
 Disposition: MATCHED
-Swift: S082 | src/checks/editcheck/DocumentEditChecks.swift :: documentTempoEmptyContract
-Mapping/reason: S082's throwing captureSave on this tempo-edited document reaches a report.fail catch on failure; C++ file save likewise checks the fallible save of the same fixture.
-Original expression:
-  QVERIFY2(document.save(&error), qPrintable(error));
+Mapping: S082
 
 A020 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:85
 Disposition: MATCHED
-Swift: S082 | src/checks/editcheck/DocumentEditChecks.swift :: documentTempoEmptyContract
-Mapping/reason: S082 immediately decodes the bytes returned by the throwing captureSave, with decoding failures reported under documentTempoEmpty; the saved MIDI bytes are actually parsed rather than trusting in-memory state.
-Original expression:
-  QVERIFY2(SmfFile::readFile(fixture.song.midPath, &saved, &error), qPrintable(error));
+Mapping: S082
 
 A021 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:88
 Disposition: MATCHED
-Swift: S083 | src/checks/editcheck/DocumentEditChecks.swift :: documentTempoEmptyContract
-Mapping/reason: S083 inspects every event in every decoded saved MIDI chunk and excludes all 0x51 tempo meta events.
-Original expression:
-  QVERIFY(!isTempoMeta(event));
+Mapping: S083
 
 A022 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:103
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: C++ fixture.stage checks fallible disk-backed staging; Swift SongDocument(file:) constructs this fixture in memory and exposes neither stage failure branch nor load ingress (spec §2.1/§7).
-Original expression:
-  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("velocity")), qPrintable(fixture.error));
 
 A023 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:106
 Disposition: MATCHED
-Swift: S084 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S084 fails the original cppID unless the velocity fixture projects exactly two notes.
-Original expression:
-  QCOMPARE(notes.size(), size_t(2));
+Mapping: S084
 
 A024 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:107
 Disposition: MATCHED
-Swift: S084 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S084 checks all projected note IDs are assigned before exercising the batch.
-Original expression:
-  QVERIFY(notes[0].noteId.isAssigned());
+Mapping: S084
 
 A025 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:108
 Disposition: MATCHED
-Swift: S084 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S084 checks both projected note IDs are assigned before exercising the batch.
-Original expression:
-  QVERIFY(notes[1].noteId.isAssigned());
+Mapping: S084
 
 A026 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:109
 Disposition: MATCHED
-Swift: S084 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S084 checks the two assigned fixture note IDs are distinct.
-Original expression:
-  QVERIFY(notes[0].noteId != notes[1].noteId);
+Mapping: S084
 
 A027 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:116
 Disposition: MATCHED
-Swift: S085 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S085 asserts the optional velocity-batch result equals the next revision, which fails for nil and executes under the original cppID.
-Original expression:
-  QVERIFY(result);
+Mapping: S085
 
 A028 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:117
 Disposition: MATCHED
-Swift: S085 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S085 checks the returned batch revision equals before + 1.
-Original expression:
-  QCOMPARE(*result, before + 1);
+Mapping: S085
 
 A029 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:118
 Disposition: MATCHED
-Swift: S086 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S086 directly checks document.revision advances exactly once on the batch, independently of its optional return.
-Original expression:
-  QCOMPARE(document.revision(), before + 1);
+Mapping: S086
 
 A030 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:119
 Disposition: MATCHED
-Swift: S087 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S087 uses coreEditHistoryCountAtTip before/after the batch to assert exactly one additional undo entry; revision is not used as depth.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), undoCount + 1);
+Mapping: S087
 
 A031 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:122
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: C++ findNote writes a mutable DocNote handle through an out-parameter; Swift document.note(id) returns an optional value and has no output-handle lookup ingress (spec §7). S088 asserts the actual velocity.
-Original expression:
-  QVERIFY(document.findNote(notes[0].noteId, &first));
+Mapping/reason: S088
 
 A032 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:123
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: C++ findNote writes a mutable DocNote handle through an out-parameter; Swift document.note(id) returns an optional value and has no output-handle lookup ingress (spec §7). S088 asserts the actual velocity.
-Original expression:
-  QVERIFY(document.findNote(notes[1].noteId, &second));
+Mapping/reason: S088
 
 A033 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:124
 Disposition: MATCHED
-Swift: S088 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S088 reads the first note by ID and checks last-write-wins velocity 99 on this exact batch.
-Original expression:
-  QCOMPARE(first.velocity, uint8_t(99));
+Mapping: S088
 
 A034 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:125
 Disposition: MATCHED
-Swift: S088 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S088 reads the second note by ID and checks clamped velocity 127 on this exact batch.
-Original expression:
-  QCOMPARE(second.velocity, uint8_t(127));
+Mapping: S088
 
 A035 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:126
 Disposition: MATCHED
-Swift: S089 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S089 checks one published DocumentChange with no trackRemap on the velocity batch; Swift has one change callback, not separate Qt signal ordering.
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+Mapping: S089
 
 A036 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:127
 Disposition: MATCHED
-Swift: S089 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S089 checks the published batch change carries nil trackRemap.
-Original expression:
-  QVERIFY(remaps.empty());
+Mapping: S089
 
 A037 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:131
 Disposition: MATCHED
-Swift: S090 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S090 checks that velocity undo advances the actual document revision once.
-Original expression:
-  QCOMPARE(document.revision(), changed + 1);
+Mapping: S090
 
 A038 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:132
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: C++ findNote refreshes an out-parameter DocNote handle after undo; Swift document.note(id) reads a value without mutable-handle lookup ingress (spec §7). S091 tests restoration.
-Original expression:
-  QVERIFY(document.findNote(notes[0].noteId, &first));
+Mapping/reason: S091
 
 A039 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:133
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: C++ findNote refreshes an out-parameter DocNote handle after undo; Swift document.note(id) reads a value without mutable-handle lookup ingress (spec §7). S091 tests restoration.
-Original expression:
-  QVERIFY(document.findNote(notes[1].noteId, &second));
+Mapping/reason: S091
 
 A040 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:134
 Disposition: MATCHED
-Swift: S091 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S091 checks the first note by ID returns to velocity 100 after undo.
-Original expression:
-  QCOMPARE(first.velocity, uint8_t(100));
+Mapping: S091
 
 A041 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:135
 Disposition: MATCHED
-Swift: S091 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S091 checks the second note by ID returns to velocity 90 after the same undo.
-Original expression:
-  QCOMPARE(second.velocity, uint8_t(90));
+Mapping: S091
 
 A042 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:136
 Disposition: MATCHED
-Swift: S092 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S092 checks exactly one additional change with nil remap on velocity undo.
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+Mapping: S092
 
 A043 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:140
 Disposition: MATCHED
-Swift: S093 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S093 directly checks redo increments document.revision once.
-Original expression:
-  QCOMPARE(document.revision(), undone + 1);
+Mapping: S093
 
 A044 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:141
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: C++ findNote repopulates an out-parameter DocNote handle on redo; Swift document.note(id) provides only a value read, with no handle lookup ingress (spec §7). S094 checks redo state.
-Original expression:
-  QVERIFY(document.findNote(notes[0].noteId, &first));
+Mapping/reason: S094
 
 A045 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:142
 Disposition: MATCHED
-Swift: S094 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S094 checks first note 99 and second note 127 by ID after redo.
-Original expression:
-  QCOMPARE(first.velocity, uint8_t(99));
+Mapping: S094
 
 A046 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:147
 Disposition: MATCHED
-Swift: S095 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S095 compares the optional floor-edit result with lowerBefore + 1 and fails on nil.
-Original expression:
-  QVERIFY(lower);
+Mapping: S095
 
 A047 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:148
 Disposition: MATCHED
-Swift: S095 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S095 checks the floor edit returns exactly the next revision.
-Original expression:
-  QCOMPARE(*lower, lowerBefore + 1);
+Mapping: S095
 
 A048 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:149
 Disposition: MATCHED
-Swift: S096 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S096 directly checks the floor edit advances document.revision once.
-Original expression:
-  QCOMPARE(document.revision(), lowerBefore + 1);
+Mapping: S096
 
 A049 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:150
 Disposition: MATCHED
-Swift: S099 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S099 traverses public history at the tip before/after floor edit and checks the total grew by exactly one.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), lowerUndo + 1);
+Mapping: S099
 
 A050 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:151
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: C++ findNote refreshes a mutable DocNote out-parameter after the floor edit; Swift document.note(id) has no handle lookup ingress (spec §7). S097 checks its value.
-Original expression:
-  QVERIFY(document.findNote(first.noteId, &first));
+Mapping/reason: S097
 
 A051 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:152
 Disposition: MATCHED
-Swift: S097 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S097 checks explicit zero setVelocities clamps the first note to one.
-Original expression:
-  QCOMPARE(first.velocity, uint8_t(1));
+Mapping: S097
 
 A052 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:153
 Disposition: MATCHED
-Swift: S098 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityAtomicContract
-Mapping/reason: S098 checks one additional DocumentChange and nil trackRemap on the floor edit.
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+Mapping: S098
 
 A053 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:162
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityRejectsContract
-Mapping/reason: C++ fixture.stage checks fallible disk-backed staging; Swift SongDocument(file:) constructs in memory without a staging/load failure branch (spec §2.1/§7).
-Original expression:
-  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("velocity-rejects")),
-           qPrintable(fixture.error));
 
 A054 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:170
 Disposition: MATCHED
-Swift: S031 | src/checks/editcheck/NoteChecks.swift :: velocityEditing
-Mapping/reason: Swift S031 asserts a stale single-entry velocity revision rejects without mutation under the same cppID.
-Original expression:
-  QVERIFY(!document.setNotesVelocities(revision - 1, {{notes[0].noteId, 42}}));
+Mapping: S031
 
 A055 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:171
 Disposition: MATCHED
-Swift: S100 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityRejectsContract
-Mapping/reason: S100 asserts a stale two-note setVelocities request rejects as nil on this fixture under documentVelocityRejects.
-Original expression:
-  QVERIFY(
-          !document.setNotesVelocities(revision - 1, {{notes[0].noteId, 42}, {notes[1].noteId, 77}}));
+Mapping: S100
 
 A056 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:173
 Disposition: MATCHED
-Swift: S101 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityRejectsContract
-Mapping/reason: S101 checks an invalid NoteID participant rejects the whole two-note velocity batch under the original cppID; the previous S033 belonged to a different cppID.
-Original expression:
-  QVERIFY(!document.setNotesVelocities(revision, {{notes[0].noteId, 42}, {NoteId{}, 77}}));
+Mapping: S101, S033
 
 A057 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:176
 Disposition: MATCHED
-Swift: S102 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityRejectsContract
-Mapping/reason: S102 asserts a same-value velocity request returns the current, non-nil revision.
-Original expression:
-  QVERIFY(result);
+Mapping: S102
 
 A058 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:177
 Disposition: MATCHED
-Swift: S102 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityRejectsContract
-Mapping/reason: S102 asserts the returned same-value result equals the pre-call revision.
-Original expression:
-  QCOMPARE(*result, revision);
+Mapping: S102
 
 A059 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:178
 Disposition: MATCHED
-Swift: S103 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityRejectsContract
-Mapping/reason: S103 compares MIDI bytes before and after stale, invalid and same-value edits.
-Original expression:
-  QCOMPARE(document.smf().write(), bytes);
+Mapping: S103
 
 A060 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:179
 Disposition: MATCHED
-Swift: S104 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityRejectsContract
-Mapping/reason: S104 compares the document revision before and after all rejected and same-value edits.
-Original expression:
-  QCOMPARE(document.revision(), revision);
+Mapping: S104
 
 A061 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:180
 Disposition: MATCHED
-Swift: S106 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityRejectsContract
-Mapping/reason: S106 checks unchanged undo history count by coreEditHistoryCountAtTip traversal under the original cppID; revision is not a history depth proxy.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), undoCount);
+Mapping: S106
 
 A062 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:181
 Disposition: MATCHED
-Swift: S105 | src/checks/editcheck/DocumentEditChecks.swift :: documentVelocityRejectsContract
-Mapping/reason: S105 asserts the onChange callback count remains zero after all rejected and same-value edits.
-Original expression:
-  QCOMPARE(changedCount, 0);
+Mapping: S105
 
 A063 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:187
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentEditChecks.swift :: documentDuplicateIdentitiesContract
-Mapping/reason: C++ fixture.stage checks fallible disk-backed staging; Swift SongDocument(file:) constructs this fixture in memory without staging failure or post-construction load ingress (spec §2.1/§7).
-Original expression:
-  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("duplicate-identities")),
-           qPrintable(fixture.error));
 
 A064 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:192
 Disposition: MATCHED
-Swift: S107 | src/checks/editcheck/DocumentEditChecks.swift :: documentDuplicateIdentitiesContract
-Mapping/reason: S107 requires duplicateTrack(0) to return a non-nil track index on the same two-note fixture and fails the original cppID otherwise.
-Original expression:
-  QVERIFY(copy >= 0);
+Mapping: S107
 
 A065 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:194
 Disposition: MATCHED
-Swift: S108 | src/checks/editcheck/DocumentEditChecks.swift :: documentDuplicateIdentitiesContract
-Mapping/reason: S108 compares source and copied two-note counts.
-Original expression:
-  QCOMPARE(copied.size(), source.size());
+Mapping: S108
 
 A066 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:196
 Disposition: MATCHED
-Swift: S109 | src/checks/editcheck/DocumentEditChecks.swift :: documentDuplicateIdentitiesContract
-Mapping/reason: S109 checks per-pair tick equality for all copied notes.
-Original expression:
-  QCOMPARE(copied[index].tick, source[index].tick);
+Mapping: S109
 
 A067 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:197
 Disposition: MATCHED
-Swift: S109 | src/checks/editcheck/DocumentEditChecks.swift :: documentDuplicateIdentitiesContract
-Mapping/reason: S109 checks per-pair pitch equality for all copied notes.
-Original expression:
-  QCOMPARE(copied[index].key, source[index].key);
+Mapping: S109
 
 A068 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:198
 Disposition: MATCHED
-Swift: S109 | src/checks/editcheck/DocumentEditChecks.swift :: documentDuplicateIdentitiesContract
-Mapping/reason: S109 checks per-pair duration equality for all copied notes.
-Original expression:
-  QCOMPARE(copied[index].duration, source[index].duration);
+Mapping: S109
 
 A069 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:199
 Disposition: MATCHED
-Swift: S109 | src/checks/editcheck/DocumentEditChecks.swift :: documentDuplicateIdentitiesContract
-Mapping/reason: S109 checks per-pair velocity equality for all copied notes.
-Original expression:
-  QCOMPARE(copied[index].velocity, source[index].velocity);
+Mapping: S109
 
 A070 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:201
 Disposition: MATCHED
-Swift: S110 | src/checks/editcheck/DocumentEditChecks.swift :: documentDuplicateIdentitiesContract
-Mapping/reason: S110 checks every copied note has an assigned ID distinct from every source note, rather than the old one-note S055 citation.
-Original expression:
-  QVERIFY(copied[index].noteId != original.noteId);
+Mapping: S110, S055
 
 A071 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:207
 Disposition: MATCHED
-Swift: S111 | src/checks/editcheck/DocumentEditChecks.swift :: documentDuplicateIdentitiesContract
-Mapping/reason: S111 asserts redo restores the exact copied note count after duplication undo and redo.
-Original expression:
-  QCOMPARE(redone.size(), minted.size());
+Mapping: S111
 
 A072 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:209
 Disposition: MATCHED
-Swift: S112 | src/checks/editcheck/DocumentEditChecks.swift :: documentDuplicateIdentitiesContract
-Mapping/reason: S112 asserts the ordered redone NoteIDs exactly equal the identities minted at duplication.
-Original expression:
-  QCOMPARE(redone[index].noteId, minted[index].noteId);
+Mapping: S112
 
 A073 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:224
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: C++ fixture.stage checks fallible disk-backed staging; Swift SongDocument(file:) constructs in memory with no stage failure branch or post-construction load ingress (spec §2.1/§7).
-Original expression:
-  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("remaps")), qPrintable(fixture.error));
 
 A074 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:237
 Disposition: MATCHED
-Swift: S113 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S113 directly checks moveTrack(0,to:1) succeeds on the same three-chunk/two-engine-track fixture under documentRemapsAndRaw.
-Original expression:
-  QVERIFY(document.moveTrack(0, 1));
+Mapping: S113
 
 A075 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:238
 Disposition: MATCHED
-Swift: S114 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S114 calls expectRemap for move; S129 checks one DocumentChange with exact [0,2,1]/[1,0] maps and resulting 3/2 counts.
-Original expression:
-  QVERIFY(expectRemap({0, 2, 1}, {1, 0}, 3, 2));
+Mapping: S114, S129
 
 A076 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:242
 Disposition: MATCHED
-Swift: S115 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S115 checks undo of move emits one change with exact inverse [0,2,1]/[1,0] maps and 3/2 counts via S129.
-Original expression:
-  QVERIFY(expectRemap({0, 2, 1}, {1, 0}, 3, 2));
+Mapping: S115, S129
 
 A077 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:246
 Disposition: MATCHED
-Swift: S116 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S116 checks redo of move emits one change with exact forward [0,2,1]/[1,0] maps and 3/2 counts via S129.
-Original expression:
-  QVERIFY(expectRemap({0, 2, 1}, {1, 0}, 3, 2));
+Mapping: S116, S129
 
 A078 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:249
 Disposition: MATCHED
-Swift: S117 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S117 directly checks addTrack(voice:3) returns engine slot 2 under documentRemapsAndRaw, unlike old S048's other cppID.
-Original expression:
-  QCOMPARE(document.addTrack(3), 2);
+Mapping: S117, S048
 
 A079 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:250
 Disposition: MATCHED
-Swift: S118 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S118 checks add publishes one change with exact [0,1,2]/[0,1] maps and 4/3 resulting counts via S129.
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2}, {0, 1}, 4, 3));
+Mapping: S118, S129
 
 A080 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:254
 Disposition: MATCHED
-Swift: S119 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S119 checks add undo publishes one change with exact [0,1,2,nil]/[0,1,nil] maps and 3/2 counts via S129.
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2, -1}, {0, 1, -1}, 3, 2));
+Mapping: S119, S129
 
 A081 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:258
 Disposition: MATCHED
-Swift: S120 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S120 checks add redo publishes one change with exact [0,1,2]/[0,1] maps and 4/3 counts via S129.
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2}, {0, 1}, 4, 3));
+Mapping: S120, S129
 
 A082 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:262
 Disposition: MATCHED
-Swift: S121 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S121 checks delete publishes one change with exact [0,1,2,nil]/[0,1,nil] maps and 3/2 counts via S129.
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2, -1}, {0, 1, -1}, 3, 2));
+Mapping: S121, S129
 
 A083 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:266
 Disposition: MATCHED
-Swift: S122 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S122 checks delete undo publishes one change with exact [0,1,2]/[0,1] maps and 4/3 counts via S129.
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2}, {0, 1}, 4, 3));
+Mapping: S122, S129
 
 A084 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:270
 Disposition: MATCHED
-Swift: S123 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S123 checks delete redo publishes one change with exact [0,1,2,nil]/[0,1,nil] maps and 3/2 counts via S129.
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2, -1}, {0, 1, -1}, 3, 2));
+Mapping: S123, S129
 
 A085 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:273
 Disposition: MATCHED
-Swift: S124 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S124 directly checks duplicateTrack(0) returns engine slot 2 in the same remap sequence.
-Original expression:
-  QCOMPARE(document.duplicateTrack(0), 2);
+Mapping: S124
 
 A086 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:274
 Disposition: MATCHED
-Swift: S125 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S125 checks duplicate publishes one change with exact [0,1,2]/[0,1] maps and 4/3 counts via S129.
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2}, {0, 1}, 4, 3));
+Mapping: S125, S129
 
 A087 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:278
 Disposition: MATCHED
-Swift: S126 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S126 checks duplicate undo publishes one change with exact [0,1,2,nil]/[0,1,nil] maps and 3/2 counts via S129.
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2, -1}, {0, 1, -1}, 3, 2));
+Mapping: S126, S129
 
 A088 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:282
 Disposition: MATCHED
-Swift: S127 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S127 checks duplicate redo publishes one change with exact [0,1,2]/[0,1] maps and 4/3 counts via S129.
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2}, {0, 1}, 4, 3));
+Mapping: S127, S129
 
 A089 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:286
 Disposition: MATCHED
-Swift: S128 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S128 checks one published DocumentChange after inserting conductor meta text, with nil remap under documentRemapsAndRaw.
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+Mapping: S128
 
 A090 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:287
 Disposition: MATCHED
-Swift: S128 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S128 checks nil trackRemap for the same meta insertion; no track-remap event was published.
-Original expression:
-  QVERIFY(remaps.empty());
+Mapping: S128
 
 A091 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:291
 Disposition: RETIRED-REPRESENTATION
-Swift: src/swift/core/EventEditing.swift :: insertRawEvent
-Mapping/reason: C++ conductor program insertion dynamically promotes conductor into an engine track; Swift insertRawEvent never remaps engine tracks and only explicit track operations remap, so that promotion has no Swift ingress (spec §7).
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2, 3}, {1, 2, 3}, 4, 4));
 
 A092 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:295
 Disposition: RETIRED-REPRESENTATION
-Swift: src/swift/core/EventEditing.swift :: insertRawEvent
-Mapping/reason: Swift insertRawEvent cannot dynamically promote a conductor into an engine track; there is no promotion entry to undo and explicit track operations alone remap (spec §7).
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2, 3}, {-1, 0, 1, 2}, 4, 3));
 
 A093 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:299
 Disposition: RETIRED-REPRESENTATION
-Swift: src/swift/core/EventEditing.swift :: insertRawEvent
-Mapping/reason: Swift insertRawEvent cannot dynamically promote a conductor into an engine track; there is no promotion entry to redo and explicit track operations alone remap (spec §7).
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2, 3}, {1, 2, 3}, 4, 4));
 
 A094 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:306
 Disposition: RETIRED-REPRESENTATION
-Swift: src/swift/core/EventEditing.swift :: insertRawEvent
-Mapping/reason: The C++ programIndex scan identifies a conductor program that dynamically promoted an engine track; Swift insertRawEvent never remaps on raw insertion, so the promotion/demotion lookup protocol has no ingress (spec §7).
-Original expression:
-  QVERIFY(programIndex != SIZE_MAX);
 
 A095 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:310
 Disposition: RETIRED-REPRESENTATION
-Swift: src/swift/core/EventEditing.swift :: insertRawEvent
-Mapping/reason: C++ conductor program deletion dynamically demotes an engine track; Swift raw edits never remap and only explicit track operations change track identities (spec §7).
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2, 3}, {-1, 0, 1, 2}, 4, 3));
 
 A096 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:314
 Disposition: RETIRED-REPRESENTATION
-Swift: src/swift/core/EventEditing.swift :: insertRawEvent
-Mapping/reason: Swift raw-event deletion cannot dynamically demote a conductor engine track; its undo cannot republish a promotion remap (spec §7).
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2, 3}, {1, 2, 3}, 4, 4));
 
 A097 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:318
 Disposition: RETIRED-REPRESENTATION
-Swift: src/swift/core/EventEditing.swift :: insertRawEvent
-Mapping/reason: Swift raw-event deletion cannot dynamically demote a conductor engine track; its redo cannot republish a demotion remap (spec §7).
-Original expression:
-  QVERIFY(expectRemap({0, 1, 2, 3}, {-1, 0, 1, 2}, 4, 3));
 
 A098 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:321
 Disposition: MATCHED
-Swift: S130 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S130 directly asserts the same-slot move returns false under documentRemapsAndRaw after clearing the prior meta insertion change.
-Original expression:
-  QVERIFY(!document.moveTrack(0, 0));
+Mapping: S130
 
 A099 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:322
 Disposition: MATCHED
-Swift: S131 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S131 directly checks revision is unchanged by the rejected same-slot track move under documentRemapsAndRaw.
-Original expression:
-  QCOMPARE(document.revision(), revision);
+Mapping: S131
 
 A100 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:323
 Disposition: MATCHED
-Swift: S132 | src/checks/editcheck/DocumentTrackChecks.swift :: trackRemapPublicationContract
-Mapping/reason: S132 directly asserts no DocumentChange callback after clearing prior changes and attempting the same-slot move.
-Original expression:
-  QVERIFY(order.empty());
+Mapping: S132
 
 A101 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:329
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentSavedIdentityContract
-Mapping/reason: C++ fixture.stage checks fallible disk-backed staging; Swift SongDocument(file:) constructs in memory without a staging failure branch or post-construction load ingress (spec §2.1/§7).
-Original expression:
-  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("saved")), qPrintable(fixture.error));
 
 A102 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:332
 Disposition: MATCHED
-Swift: S133 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentSavedIdentityContract
-Mapping/reason: S133 checks didSave of the captured current identity makes this document clean under documentSavedIdentity.
-Original expression:
-  QVERIFY(!document.isDirty());
+Mapping: S133
 
 A103 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:335
 Disposition: MATCHED
-Swift: S134 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentSavedIdentityContract
-Mapping/reason: S134 checks the tick-96 tempo edit dirties the saved identity under the original cppID.
-Original expression:
-  QVERIFY(document.isDirty());
+Mapping: S134
 
 A104 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:336
 Disposition: MATCHED
-Swift: S135 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentSavedIdentityContract
-Mapping/reason: S135 compares both captured MIDI bytes and document identity against the saved snapshot after the tempo edit, asserting changed document state.
-Original expression:
-  QVERIFY(document.captureSaveSnapshot().documentState != saved.documentState);
+Mapping: S135
 
 A105 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:338
 Disposition: MATCHED
-Swift: S136 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentSavedIdentityContract
-Mapping/reason: S136 asserts undo of the tempo edit returns exactly to the saved clean identity under documentSavedIdentity.
-Original expression:
-  QVERIFY(!document.isDirty());
+Mapping: S136
 
 A106 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:340
 Disposition: MATCHED
-Swift: S137 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentSavedIdentityContract
-Mapping/reason: S137 asserts redo past the initial save point is dirty.
-Original expression:
-  QVERIFY(document.isDirty());
+Mapping: S137
 
 A107 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:343
 Disposition: MATCHED
-Swift: S138 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentSavedIdentityContract
-Mapping/reason: S138 asserts undo away from the new save point is dirty.
-Original expression:
-  QVERIFY(document.isDirty());
+Mapping: S138
 
 A108 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:345
 Disposition: MATCHED
-Swift: S139 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentSavedIdentityContract
-Mapping/reason: S139 asserts redo to the new save point restores clean identity.
-Original expression:
-  QVERIFY(!document.isDirty());
+Mapping: S139
 
 A109 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:367
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: C++ makeDocument verifies fallible disk/staging construction; Swift SongDocument(file:) constructs the fixture in memory with no equivalent failure branch or post-construction load ingress (spec §2.1/§7).
-Original expression:
-  QVERIFY(fixture);
 
 A110 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:376
 Disposition: MATCHED
-Swift: S140 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S140 directly asserts the ownership fixture's source track is on channel one.
-Original expression:
-  QCOMPARE(document.channelFor(0), uint8_t(1));
+Mapping: S140
 
 A111 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:377
 Disposition: MATCHED
-Swift: S141 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S141 asserts only one owned note projects from channel one; the foreign channel note is not projected.
-Original expression:
-  QCOMPARE(notes.size(), size_t(1));
+Mapping: S141
 
 A112 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:378
 Disposition: MATCHED
-Swift: S142 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S142 asserts the projected source note starts at tick zero.
-Original expression:
-  QCOMPARE(notes.front().tick, uint64_t(0));
+Mapping: S142
 
 A113 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:379
 Disposition: MATCHED
-Swift: S142 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S142 asserts the source note pitch is 60 on this exact ownership fixture.
-Original expression:
-  QCOMPARE(notes.front().key, uint8_t(60));
+Mapping: S142
 
 A114 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:380
 Disposition: MATCHED
-Swift: S142 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S142 asserts the source note's duration is 24 ticks.
-Original expression:
-  QCOMPARE(notes.front().duration, uint32_t(24));
+Mapping: S142
 
 A115 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:381
 Disposition: MATCHED
-Swift: S142 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S142 asserts the source note velocity is 100.
-Original expression:
-  QCOMPARE(notes.front().velocity, uint8_t(100));
+Mapping: S142
 
 A116 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:382
 Disposition: MATCHED
-Swift: S143 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S143 checks sourceNote.id.isAssigned under documentDuplicationOwnership while verifying the duplicated note; absence fails.
-Original expression:
-  QVERIFY(notes.front().noteId.isAssigned());
+Mapping: S143
 
 A117 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:383
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: C++ assigned a NoteId to a foreign-channel raw SmfEvent; Swift raw MidiEvent.noteID is not a routed document NoteID and NoteID only belongs to projected Notes, so raw foreign-ID tracking has no ingress (spec §7).
-Original expression:
-  QVERIFY(foreign.noteId.isAssigned());
 
 A118 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:384
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: C++ compares foreign raw-event NoteId with projected note identity; Swift only assigns document NoteIDs to projected Notes, so no foreign raw-event ID exists to compare (spec §7).
-Original expression:
-  QVERIFY(foreign.noteId != notes.front().noteId);
 
 A119 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:385
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: C++ findNote fills a mutable DocNote out-parameter for visible note; Swift document.note(id) returns a value and has no DocNote-handle lookup ingress (spec §7). S152 verifies owned note retrieval after redo.
-Original expression:
-  QVERIFY(document.findNote(notes.front().noteId, &visible));
+Mapping/reason: S152
 
 A120 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:386
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: C++ findNote rejects a raw foreign-channel event's NoteId through a DocNote out-parameter; Swift does not assign document NoteIDs to foreign raw events and has no DocNote-handle lookup ingress (spec §7).
-Original expression:
-  QVERIFY(!document.findNote(foreign.noteId, &hidden));
 
 A121 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:388
 Disposition: MATCHED
-Swift: S144 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S144 requires duplicateTrack(0) to return non-nil on the ownership fixture, failing the original cppID otherwise.
-Original expression:
-  QVERIFY(copy >= 0);
+Mapping: S144
 
 A122 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:389
 Disposition: MATCHED
-Swift: S145 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S145 checks the duplicated track receives the lowest free channel, zero.
-Original expression:
-  QCOMPARE(document.channelFor(copy), uint8_t(0));
+Mapping: S145
 
 A123 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:391
 Disposition: MATCHED
-Swift: S146 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S146 checks the duplicated track projects exactly one note.
-Original expression:
-  QCOMPARE(copied.size(), size_t(1));
+Mapping: S146
 
 A124 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:392
 Disposition: MATCHED
-Swift: S143 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S143 checks copied tick equals the owned source note's tick.
-Original expression:
-  QCOMPARE(copied.front().tick, notes.front().tick);
+Mapping: S143
 
 A125 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:393
 Disposition: MATCHED
-Swift: S143 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S143 checks copied pitch equals the owned source note's pitch.
-Original expression:
-  QCOMPARE(copied.front().key, notes.front().key);
+Mapping: S143
 
 A126 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:394
 Disposition: MATCHED
-Swift: S143 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S143 checks copied duration equals the owned source note's duration.
-Original expression:
-  QCOMPARE(copied.front().duration, notes.front().duration);
+Mapping: S143
 
 A127 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:395
 Disposition: MATCHED
-Swift: S143 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S143 checks copied velocity equals the owned source note's velocity.
-Original expression:
-  QCOMPARE(copied.front().velocity, notes.front().velocity);
+Mapping: S143
 
 A128 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:396
 Disposition: MATCHED
-Swift: S143 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S143 checks the copied note has a distinct NoteID from the owned source under documentDuplicationOwnership; prior S055 belonged to another cppID.
-Original expression:
-  QVERIFY(copied.front().noteId != notes.front().noteId);
+Mapping: S143, S055
 
 A129 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:397
 Disposition: MATCHED
-Swift: S147 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S147 asserts exactly one DocumentChange callback for the duplication.
-Original expression:
-  QCOMPARE(remaps.size(), size_t(1));
+Mapping: S147
 
 A130 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:398
 Disposition: MATCHED
-Swift: S148 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S148 checks the exact 16-entry chunk identity map; all 16 entries are asserted by equality, not only array length.
-Original expression:
-  QCOMPARE(remaps.front().smfTrackMap.size(), size_t(16));
+Mapping: S148
 
 A131 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:399
 Disposition: MATCHED
-Swift: S148 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S148 checks the exact 15-entry engine-track identity map, including its length.
-Original expression:
-  QCOMPARE(remaps.front().engineTrackMap.size(), size_t(15));
+Mapping: S148
 
 A132 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:400
 Disposition: MATCHED
-Swift: S148 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S148 checks duplication publishes newChunkCount 17 in the exact remap.
-Original expression:
-  QCOMPARE(remaps.front().newSmfTrackCount, 17);
+Mapping: S148
 
 A133 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:401
 Disposition: MATCHED
-Swift: S148 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S148 checks duplication publishes newEngineTrackCount 16 in the exact remap.
-Original expression:
-  QCOMPARE(remaps.front().newEngineTrackCount, 16);
+Mapping: S148
 
 A134 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:403
 Disposition: MATCHED
-Swift: S148 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S148 compares every source chunk mapping 0 through 15 against its original index.
-Original expression:
-  QCOMPARE(remaps.front().smfTrackMap[size_t(index)], index);
+Mapping: S148
 
 A135 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:405
 Disposition: MATCHED
-Swift: S148 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S148 compares every source engine mapping 0 through 14 against its original index.
-Original expression:
-  QCOMPARE(remaps.front().engineTrackMap[size_t(index)], index);
+Mapping: S148
 
 A136 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:407
 Disposition: MATCHED
-Swift: S149 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S149 asserts the copied raw chunk has exactly three channel events and no global events.
-Original expression:
-  QCOMPARE(events.size(), size_t(3));
+Mapping: S149
 
 A137 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:408
 Disposition: MATCHED
-Swift: S149 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S149 checks the copied program event has channel zero and program seven.
-Original expression:
-  QCOMPARE(events[0], songdocument_test::channel(0xC0, 0, 7, 0));
+Mapping: S149
 
 A138 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:409
 Disposition: MATCHED
-Swift: S149 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S149 checks the copied channel-zero note-on at tick zero, pitch 60 and velocity 100.
-Original expression:
-  QCOMPARE(events[1], songdocument_test::channel(0x90, 0, 60, 100));
+Mapping: S149
 
 A139 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:410
 Disposition: MATCHED
-Swift: S149 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S149 checks the copied channel-zero note-off at tick 24 for pitch 60.
-Original expression:
-  QCOMPARE(events[2], songdocument_test::channel(0x80, 24, 60, 0));
+Mapping: S149
 
 A140 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:411
 Disposition: MATCHED
-Swift: S150 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S150 compares used engine-track count to the configured track budget after duplication.
-Original expression:
-  QCOMPARE(document.engineTrackCount(), track_limits::kHardwareCapacity);
+Mapping: S150
 
 A141 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:412
 Disposition: MATCHED
-Swift: S151 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S151 checks canAddTrack is false at the track budget and both addTrack and duplicateTrack fail.
-Original expression:
-  QVERIFY(!document.canAddTrack());
+Mapping: S151
 
 A142 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:413
 Disposition: MATCHED
-Swift: S151 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S151 directly asserts duplicateTrack(0) returns nil when all hardware channels are occupied.
-Original expression:
-  QCOMPARE(document.duplicateTrack(0), -1);
+Mapping: S151
 
 A143 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:418
 Disposition: MATCHED
-Swift: S152 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S152 reads the minted copied NoteID after duplication undo and redo; nil retrieval fails its expected tick comparison.
-Original expression:
-  QVERIFY(document.findNote(copiedId, &redone));
+Mapping: S152
 
 A144 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:419
 Disposition: MATCHED
-Swift: S152 | src/checks/editcheck/DocumentTrackChecks.swift :: documentDuplicationOwnershipContract
-Mapping/reason: S152 compares the redone copied note tick to the original owned note tick using the minted ID.
-Original expression:
-  QCOMPARE(redone.tick, notes.front().tick);
+Mapping: S152
 
 A145 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:441
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: The fallible C++ SyntheticDocument::stage disk/staging ingress is absent from the in-memory non-throwing SongDocument(file:) API; no Swift production ingress exposes that staging failure. The dedicated contract asserts the surviving original globals in A146.
-Original expression:
-  QVERIFY(fixture);
 
 A146 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:461
 Disposition: MATCHED
-Swift: S153 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A146 directly evaluates the entire globalsOriginal conjunction on the literal original two-track fixture before edits: typed tempo/signature, loop boundaries, and all-chunk raw meta counts.
-Original expression:
-  QVERIFY(globalsOriginal());
 
 A147 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:463
 Disposition: MATCHED
-Swift: S154 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A147 guards duplicateTrack(0) success on the original globals fixture; the non-optional copy is a valid engine slot returned by the edit.
-Original expression:
-  QVERIFY(copy >= 0);
 
 A148 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:464
 Disposition: MATCHED
-Swift: S155 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A148 asserts the duplicated track is assigned channel 2 on the original two-channel globals fixture.
-Original expression:
-  QCOMPARE(document.channelFor(copy), uint8_t(2));
 
 A149 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:466
 Disposition: MATCHED
-Swift: S156 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A149 directly asserts exactly three raw events in the original fixture clone, excluding any conductor or annotation metas.
-Original expression:
-  QCOMPARE(events.size(), size_t(3));
 
 A150 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:467
 Disposition: MATCHED
-Swift: S157 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A150 compares clone event zero with the exact channel-2 program-6 event at tick zero.
-Original expression:
-  QCOMPARE(events[0], songdocument_test::channel(0xC2, 0, 6, 0));
 
 A151 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:468
 Disposition: MATCHED
-Swift: S158 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A151 compares clone event one with the exact channel-2 note-on key 60 velocity 100 at tick zero.
-Original expression:
-  QCOMPARE(events[1], songdocument_test::channel(0x92, 0, 60, 100));
 
 A152 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:469
 Disposition: MATCHED
-Swift: S159 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A152 compares clone event two with the exact channel-2 note-off key 60 velocity zero at tick 24.
-Original expression:
-  QCOMPARE(events[2], songdocument_test::channel(0x82, 24, 60, 0));
 
 A153 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:470
 Disposition: MATCHED
-Swift: S160 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A153 evaluates the complete original globalsOriginal conjunction immediately after duplicating the original fixture track.
-Original expression:
-  QVERIFY(globalsOriginal());
 
 A154 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:471
 Disposition: MATCHED
-Swift: S161 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A154 directly guards moveTrack(copy, to: 0) success on the original globals fixture before inspecting post-move globals.
-Original expression:
-  QVERIFY(document.moveTrack(copy, 0));
 
 A155 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:472
 Disposition: MATCHED
-Swift: S162 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A155 evaluates the complete original globalsOriginal conjunction immediately after moving the duplicate to slot zero.
-Original expression:
-  QVERIFY(globalsOriginal());
 
 A156 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:474
 Disposition: MATCHED
-Swift: S163 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A156 evaluates the complete original globalsOriginal conjunction immediately after deleting the moved duplicate.
-Original expression:
-  QVERIFY(globalsOriginal());
 
 A157 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:477
 Disposition: MATCHED
-Swift: S164 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A157 guards each of three undo successes and evaluates the complete original globalsOriginal conjunction independently after each step.
-Original expression:
-  QVERIFY(globalsOriginal());
 
 A158 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:481
 Disposition: MATCHED
-Swift: S165 | src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
-Mapping/reason: A158 guards each of three redo successes and evaluates the complete original globalsOriginal conjunction independently after each step.
-Original expression:
-  QVERIFY(globalsOriginal());
 
 A159 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:495
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: C++ makeDocument checks fallible disk/staging construction; Swift SongDocument(file:) constructs in memory with no corresponding failure branch or post-construction load ingress (spec §2.1/§7).
-Original expression:
-  QVERIFY(fixture);
 
 A160 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:499
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: C++ findNote fills a mutable DocNote out-parameter by tick/pitch; Swift document.notes(in:) selects a value by pitch without an output-handle lookup ingress (spec §7). S166 tests both notes' actual classification.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 60, &first));
+Mapping/reason: S166
 
 A161 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:500
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: C++ findNote fills a mutable DocNote out-parameter by tick/pitch; Swift document.notes(in:) selects a value by pitch without an output-handle lookup ingress (spec §7). S166 tests both notes' actual classification.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 61, &second));
+Mapping/reason: S166
 
 A162 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:501
 Disposition: MATCHED
-Swift: S166 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S166 checks first original pitch-60 note is unterminated.
-Original expression:
-  QVERIFY(first.unterminated());
+Mapping: S166
 
 A163 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:502
 Disposition: MATCHED
-Swift: S166 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S166 checks second original pitch-61 note is unterminated.
-Original expression:
-  QVERIFY(second.unterminated());
+Mapping: S166
 
 A164 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:507
 Disposition: MATCHED
-Swift: S169 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S169 checks first crossing move adds one entry by public at-tip history traversal, not by revision.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), before + 1);
+Mapping: S169
 
 A165 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:508
 Disposition: MATCHED
-Swift: S167 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S167 checks document.revision advances exactly once for first crossing move.
-Original expression:
-  QCOMPARE(document.revision(), initial + 1);
+Mapping: S167
 
 A166 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:509
 Disposition: MATCHED
-Swift: S168 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S168 reads first original NoteID after the first pitch crossing; nil lookup fails.
-Original expression:
-  QVERIFY(document.findNote(firstId, &first));
+Mapping: S168
 
 A167 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:510
 Disposition: MATCHED
-Swift: S168 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S168 reads second original NoteID after the first pitch crossing; nil lookup fails.
-Original expression:
-  QVERIFY(document.findNote(secondId, &second));
+Mapping: S168
 
 A168 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:511
 Disposition: MATCHED
-Swift: S168 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S168 requires first original NoteID to retain pitch 61 at the first crossing.
-Original expression:
-  QCOMPARE(first.key, uint8_t(61));
+Mapping: S168
 
 A169 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:512
 Disposition: MATCHED
-Swift: S168 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S168 requires second original NoteID to remain pitch 61 at the first crossing.
-Original expression:
-  QCOMPARE(second.key, uint8_t(61));
+Mapping: S168
 
 A170 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:515
 Disposition: MATCHED
-Swift: S172 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S172 checks second crossing move adds a second undo entry by coreEditHistoryCountAtTip traversal, not by revision.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), before + 2);
+Mapping: S172
 
 A171 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:516
 Disposition: MATCHED
-Swift: S170 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S170 directly checks the second crossing move advances document.revision once.
-Original expression:
-  QCOMPARE(document.revision(), secondRevision + 1);
+Mapping: S170
 
 A172 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:517
 Disposition: MATCHED
-Swift: S171 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S171 reads original first NoteID after the second crossing move; nil lookup fails.
-Original expression:
-  QVERIFY(document.findNote(firstId, &first));
+Mapping: S171
 
 A173 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:518
 Disposition: MATCHED
-Swift: S171 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S171 reads original second NoteID after the second crossing move; nil lookup fails.
-Original expression:
-  QVERIFY(document.findNote(secondId, &second));
+Mapping: S171
 
 A174 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:519
 Disposition: MATCHED
-Swift: S171 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S171 requires original first NoteID to remain pitch 61 after the second move.
-Original expression:
-  QCOMPARE(first.key, uint8_t(61));
+Mapping: S171
 
 A175 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:520
 Disposition: MATCHED
-Swift: S171 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S171 requires original second NoteID to move to pitch 60 after the second move.
-Original expression:
-  QCOMPARE(second.key, uint8_t(60));
+Mapping: S171
 
 A176 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:523
 Disposition: MATCHED
-Swift: S173 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S173 checks first crossing undo advances the public document revision once.
-Original expression:
-  QCOMPARE(document.revision(), undo + 1);
+Mapping: S173
 
 A177 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:524
 Disposition: MATCHED
-Swift: S174 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S174 reads original first NoteID after first undo and checks restored intermediate pitch 61.
-Original expression:
-  QVERIFY(document.findNote(firstId, &first));
+Mapping: S174
 
 A178 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:525
 Disposition: MATCHED
-Swift: S174 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S174 reads original second NoteID after first undo and checks restored intermediate pitch 61.
-Original expression:
-  QVERIFY(document.findNote(secondId, &second));
+Mapping: S174
 
 A179 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:526
 Disposition: MATCHED
-Swift: S174 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S174 checks the first note has pitch 61 after first crossing undo.
-Original expression:
-  QCOMPARE(first.key, uint8_t(61));
+Mapping: S174
 
 A180 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:527
 Disposition: MATCHED
-Swift: S174 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S174 checks the second note returns to pitch 61 after first crossing undo.
-Original expression:
-  QCOMPARE(second.key, uint8_t(61));
+Mapping: S174
 
 A181 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:530
 Disposition: MATCHED
-Swift: S175 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S175 checks second crossing undo advances document.revision once.
-Original expression:
-  QCOMPARE(document.revision(), secondUndo + 1);
+Mapping: S175
 
 A182 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:531
 Disposition: MATCHED
-Swift: S176 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S176 reads first original NoteID after the second undo and checks pitch 60.
-Original expression:
-  QVERIFY(document.findNote(firstId, &first));
+Mapping: S176
 
 A183 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:532
 Disposition: MATCHED
-Swift: S176 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S176 reads second original NoteID after the second undo and checks pitch 61.
-Original expression:
-  QVERIFY(document.findNote(secondId, &second));
+Mapping: S176
 
 A184 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:533
 Disposition: MATCHED
-Swift: S176 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S176 checks first note restores original pitch 60 after second crossing undo.
-Original expression:
-  QCOMPARE(first.key, uint8_t(60));
+Mapping: S176
 
 A185 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:534
 Disposition: MATCHED
-Swift: S176 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S176 checks second note restores original pitch 61 after second crossing undo.
-Original expression:
-  QCOMPARE(second.key, uint8_t(61));
+Mapping: S176
 
 A186 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:537
 Disposition: MATCHED
-Swift: S177 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S177 checks first crossing redo advances document.revision once.
-Original expression:
-  QCOMPARE(document.revision(), redo + 1);
+Mapping: S177
 
 A187 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:540
 Disposition: MATCHED
-Swift: S178 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S178 checks second crossing redo advances document.revision once.
-Original expression:
-  QCOMPARE(document.revision(), secondRedo + 1);
+Mapping: S178
 
 A188 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:541
 Disposition: MATCHED
-Swift: S179 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S179 reads original first NoteID after second redo, retaining pitch 61.
-Original expression:
-  QVERIFY(document.findNote(firstId, &first));
+Mapping: S179
 
 A189 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:542
 Disposition: MATCHED
-Swift: S179 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S179 reads original second NoteID after second redo, retaining pitch 60.
-Original expression:
-  QVERIFY(document.findNote(secondId, &second));
+Mapping: S179
 
 A190 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:543
 Disposition: MATCHED
-Swift: S179 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S179 asserts first original NoteID holds crossed pitch 61 after second redo.
-Original expression:
-  QCOMPARE(first.key, uint8_t(61));
+Mapping: S179
 
 A191 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:544
 Disposition: MATCHED
-Swift: S179 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentCrossingIdentitiesContract
-Mapping/reason: S179 asserts second original NoteID holds crossed pitch 60 after second redo.
-Original expression:
-  QCOMPARE(second.key, uint8_t(60));
+Mapping: S179
 
 A192 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:559
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: C++ makeDocument verifies fallible disk/staging construction; Swift SongDocument(file:) constructs in memory without this failure branch or post-construction load ingress (spec §2.1/§7).
-Original expression:
-  QVERIFY(fixture);
 
 A193 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:567
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: C++ findNote populates a mutable DocNote out-parameter by position/pitch; Swift document.notes(in:) returns value Notes with no output-handle lookup ingress (spec §7). S180-S183 test the actual move.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 69, &moving));
+Mapping/reason: S180, S181, S182, S183
 
 A194 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:572
 Disposition: MATCHED
-Swift: S183 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S183 asserts first grouped move adds one undo entry by public coreEditHistoryCountAtTip traversal.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), before + 1);
+Mapping: S183
 
 A195 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:573
 Disposition: MATCHED
-Swift: S180 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S180 checks first move advances document.revision once; revision is not used as history depth.
-Original expression:
-  QCOMPARE(document.revision(), initial + 1);
+Mapping: S180
 
 A196 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:574
 Disposition: MATCHED
-Swift: S181 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S181 checks exactly one DocumentChange publication with the current revision after first grouped move.
-Original expression:
-  QCOMPARE(changeCount, 1);
+Mapping: S181
 
 A197 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:575
 Disposition: MATCHED
-Swift: S182 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S182 checks the first move's actual DocumentChange has nil trackRemap under documentPublicationNetZero, replacing prior unrelated-cppID S041.
-Original expression:
-  QVERIFY(remaps.empty());
+Mapping: S182, S041
 
 A198 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:576
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: C++ findNote populates a mutable DocNote out-parameter by position/pitch after move; Swift document.note(id) reads a value with no handle lookup ingress (spec §7). The pitch-70 result is asserted in DocumentHistoryChecks.swift.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 70, &moving));
 
 A199 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:579
 Disposition: MATCHED
-Swift: S184 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S184 checks inverse grouped move advances the document revision once.
-Original expression:
-  QCOMPARE(document.revision(), inverse + 1);
+Mapping: S184
 
 A200 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:580
 Disposition: MATCHED
-Swift: S185 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S185 checks the inverse move adds exactly one DocumentChange with the current revision.
-Original expression:
-  QCOMPARE(changeCount, 2);
+Mapping: S185
 
 A201 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:581
 Disposition: MATCHED
-Swift: S186 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S186 checks return to origin drops the entry by public coreEditHistoryCountAtTip traversal; revision is not used as depth.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), before);
+Mapping: S186
 
 A202 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:582
 Disposition: MATCHED
-Swift: S187 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S187 checks empty-stack history.canUndo is false after returning to the grouped origin.
-Original expression:
-  QVERIFY(!document.undoStack()->canUndo());
+Mapping: S187
 
 A203 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:583
 Disposition: MATCHED
-Swift: S187 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S187 checks empty-stack history.canRedo is false after returning to the grouped origin.
-Original expression:
-  QVERIFY(!document.undoStack()->canRedo());
+Mapping: S187
 
 A204 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:584
 Disposition: MATCHED
-Swift: S188 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S188 compares exact encoded MIDI bytes with pre-gesture baseline after the inverse move.
-Original expression:
-  QCOMPARE(document.smf().write(), baseline);
+Mapping: S188
 
 A205 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:589
 Disposition: MATCHED
-Swift: S189 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S189 compares encoded MIDI bytes with baseline after rejected empty-stack undo and redo.
-Original expression:
-  QCOMPARE(document.smf().write(), baseline);
+Mapping: S189
 
 A206 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:590
 Disposition: MATCHED
-Swift: S190 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S190 asserts empty-stack undo/redo preserve the frozen public revision.
-Original expression:
-  QCOMPARE(document.revision(), frozenRevision);
+Mapping: S190
 
 A207 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:591
 Disposition: MATCHED
-Swift: S191 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S191 asserts empty-stack undo/redo cause no additional DocumentChange publications.
-Original expression:
-  QCOMPARE(changeCount, frozenChanges);
+Mapping: S191
 
 A208 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:592
 Disposition: MATCHED
-Swift: S191 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentPublicationNetZeroContract
-Mapping/reason: S191 asserts no new DocumentChange after rejected undo/redo, hence no track-remap publication either; the prior moves' changes have nil remap under S182 and DocumentHistoryChecks.swift.
-Original expression:
-  QVERIFY(remaps.empty());
+Mapping: S191, S182
 
 A209 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:607
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: C++ makeDocument verifies fallible disk-backed staging; Swift SongDocument(file:) constructs the literal fixture in memory with no corresponding failure branch or post-construction load ingress (spec §2.1/§7).
-Original expression:
-  QVERIFY(fixture);
 
 A210 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:620
 Disposition: RETIRED-REPRESENTATION
-Swift: src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: C++ findNote fills a mutable DocNote out-parameter by tick/pitch; Swift document.notes(in:) selects a value NoteID with no output-handle lookup ingress (spec §7). S194-S195 assert the actual state.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 69, &moved));
+Mapping/reason: S194, S195
 
 A211 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:626
 Disposition: MATCHED
-Swift: S196 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S196 checks the first grouped move creates exactly one undo entry via coreEditHistoryCountAtTip public traversal.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), countBefore + 1);
+Mapping: S196
 
 A212 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:627
 Disposition: MATCHED
-Swift: S192 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S192 checks each grouped move increments actual document.revision once, including first step; revision is not used as depth.
-Original expression:
-  QCOMPARE(document.revision(), before + 1);
+Mapping: S192
 
 A213 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:628
 Disposition: MATCHED
-Swift: S193 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S193 checks first grouped move publishes one DocumentChange with nil trackRemap under the original cppID.
-Original expression:
-  QVERIFY(remaps.empty());
+Mapping: S193
 
 A214 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:629
 Disposition: MATCHED
-Swift: S193 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S193 checks first grouped move publishes exactly one changed-only callback with current revision and nil remap.
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+Mapping: S193
 
 A215 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:630
 Disposition: MATCHED
-Swift: S194 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S194 checks first grouped move keeps original NoteID at tick zero and pitch 70.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 70, &moved));
+Mapping: S194
 
 A216 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:631
 Disposition: MATCHED
-Swift: S195 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S195 checks first grouped move keeps survivor NoteID at tick two, pitch 70 and duration two.
-Original expression:
-  QVERIFY(document.findNote(0, 2, 70, &survivor));
+Mapping: S195
 
 A217 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:632
 Disposition: MATCHED
-Swift: S195 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S195 checks first grouped move tail-trims survivor duration to two ticks.
-Original expression:
-  QCOMPARE(survivor.duration, uint32_t(2));
+Mapping: S195
 
 A218 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:638
 Disposition: MATCHED
-Swift: S196 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S196 checks the second grouped move retains exactly one undo entry by at-tip history traversal.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), countBefore + 1);
+Mapping: S196
 
 A219 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:639
 Disposition: MATCHED
-Swift: S192 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S192 checks grouped move step two increments document.revision once.
-Original expression:
-  QCOMPARE(document.revision(), before + 1);
+Mapping: S192
 
 A220 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:640
 Disposition: MATCHED
-Swift: S193 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S193 checks grouped move step two publishes nil trackRemap.
-Original expression:
-  QVERIFY(remaps.empty());
+Mapping: S193
 
 A221 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:641
 Disposition: MATCHED
-Swift: S193 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S193 checks grouped move step two publishes exactly one changed-only callback with current revision.
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+Mapping: S193
 
 A222 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:642
 Disposition: MATCHED
-Swift: S194 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S194 checks original moved NoteID at tick zero/pitch 71 on grouped step two.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 71, &moved));
+Mapping: S194
 
 A223 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:643
 Disposition: MATCHED
-Swift: S195 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S195 checks survivor NoteID restores tick zero/pitch 70/duration four on grouped step two.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 70, &survivor));
+Mapping: S195
 
 A224 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:644
 Disposition: MATCHED
-Swift: S195 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S195 checks survivor duration restores to four on grouped step two.
-Original expression:
-  QCOMPARE(survivor.duration, uint32_t(4));
+Mapping: S195
 
 A225 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:650
 Disposition: MATCHED
-Swift: S196 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S196 checks the third grouped move retains exactly one undo entry by at-tip history traversal.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), countBefore + 1);
+Mapping: S196
 
 A226 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:651
 Disposition: MATCHED
-Swift: S192 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S192 checks grouped move step three increments document.revision once.
-Original expression:
-  QCOMPARE(document.revision(), before + 1);
+Mapping: S192
 
 A227 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:652
 Disposition: MATCHED
-Swift: S193 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S193 checks grouped move step three publishes nil trackRemap.
-Original expression:
-  QVERIFY(remaps.empty());
+Mapping: S193
 
 A228 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:653
 Disposition: MATCHED
-Swift: S193 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S193 checks grouped move step three publishes exactly one changed-only callback with current revision.
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+Mapping: S193
 
 A229 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:654
 Disposition: MATCHED
-Swift: S194 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S194 checks original moved NoteID at tick zero/pitch 72 on grouped step three.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 72, &moved));
+Mapping: S194
 
 A230 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:655
 Disposition: MATCHED
-Swift: S195 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S195 checks survivor NoteID at tick zero/pitch 70/duration four on grouped step three.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 70, &survivor));
+Mapping: S195
 
 A231 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:656
 Disposition: MATCHED
-Swift: S195 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S195 checks survivor duration remains four on grouped step three.
-Original expression:
-  QCOMPARE(survivor.duration, uint32_t(4));
+Mapping: S195
 
 A232 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:662
 Disposition: MATCHED
-Swift: S197 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S197 directly checks single undo of all three grouped moves advances document.revision once.
-Original expression:
-  QCOMPARE(document.revision(), before + 1);
+Mapping: S197
 
 A233 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:663
 Disposition: MATCHED
-Swift: S198 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S198 checks grouped undo publishes one DocumentChange with nil trackRemap.
-Original expression:
-  QVERIFY(remaps.empty());
+Mapping: S198
 
 A234 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:664
 Disposition: MATCHED
-Swift: S198 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S198 checks grouped undo publishes exactly one changed-only callback with nil remap.
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+Mapping: S198
 
 A235 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:665
 Disposition: MATCHED
-Swift: S199 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S199 reads original moved NoteID after one grouped undo and checks tick zero/pitch 69.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 69, &moved));
+Mapping: S199
 
 A236 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:666
 Disposition: MATCHED
-Swift: S199 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S199 reads original survivor NoteID after one grouped undo and checks tick zero/pitch 70/duration four.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 70, &survivor));
+Mapping: S199
 
 A237 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:667
 Disposition: MATCHED
-Swift: S199 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S199 checks survivor duration returns to four after the grouped undo.
-Original expression:
-  QCOMPARE(survivor.duration, uint32_t(4));
+Mapping: S199
 
 A238 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:673
 Disposition: MATCHED
-Swift: S200 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S200 directly checks grouped redo advances document.revision once.
-Original expression:
-  QCOMPARE(document.revision(), before + 1);
+Mapping: S200
 
 A239 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:674
 Disposition: MATCHED
-Swift: S201 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S201 checks grouped redo publishes one DocumentChange with nil trackRemap.
-Original expression:
-  QVERIFY(remaps.empty());
+Mapping: S201
 
 A240 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:675
 Disposition: MATCHED
-Swift: S201 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S201 checks grouped redo publishes exactly one changed-only callback.
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+Mapping: S201
 
 A241 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:676
 Disposition: MATCHED
-Swift: S202 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S202 reads original moved NoteID and checks grouped redo restores pitch 72.
-Original expression:
-  QVERIFY(document.findNote(0, 0, 72, &moved));
+Mapping: S202
 
 A242 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:682
 Disposition: MATCHED
-Swift: S203 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S203 directly checks ungrouped fourth move advances document.revision once; DocumentHistoryChecks.swift checks its distinct second undo entry.
-Original expression:
-  QCOMPARE(document.revision(), before + 1);
+Mapping: S203
 
 A243 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:683
 Disposition: MATCHED
-Swift: S204 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S204 checks ungrouped fourth move publishes one DocumentChange with nil trackRemap.
-Original expression:
-  QVERIFY(remaps.empty());
+Mapping: S204
 
 A244 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:684
 Disposition: MATCHED
-Swift: S204 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S204 checks ungrouped fourth move publishes exactly one changed-only callback.
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+Mapping: S204
 
 A245 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:690
 Disposition: MATCHED
-Swift: S205 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S205 directly checks undo of ungrouped fourth move advances document.revision once.
-Original expression:
-  QCOMPARE(document.revision(), before + 1);
+Mapping: S205
 
 A246 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:691
 Disposition: MATCHED
-Swift: S206 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S206 checks undo of fourth move publishes one DocumentChange with nil trackRemap.
-Original expression:
-  QVERIFY(remaps.empty());
+Mapping: S206
 
 A247 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:692
 Disposition: MATCHED
-Swift: S206 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S206 checks undo of fourth move publishes exactly one changed-only callback.
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+Mapping: S206
 
 A248 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:698
 Disposition: MATCHED
-Swift: S207 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S207 directly checks redo of ungrouped fourth move advances document.revision once.
-Original expression:
-  QCOMPARE(document.revision(), before + 1);
+Mapping: S207
 
 A249 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:699
 Disposition: MATCHED
-Swift: S208 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S208 checks redo of fourth move publishes one DocumentChange with nil trackRemap.
-Original expression:
-  QVERIFY(remaps.empty());
+Mapping: S208
 
 A250 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:700
 Disposition: MATCHED
-Swift: S208 | src/checks/editcheck/DocumentHistoryChecks.swift :: documentMergedOverlapContract
-Mapping/reason: S208 checks redo of fourth move publishes exactly one changed-only callback.
-Original expression:
-  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+Mapping: S208
 
 Swift assertion predicates
 Every report.expect/expectEqual/fail call in the mapped Swift functions:
 
 S001 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "all note-ons projected"
-  report.expectEqual(3, notes.count,
-                       cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
-                       what: "all note-ons projected")
 
 S002 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "first following matching ends pair exactly"
-  report.expectEqual([Tick(8), Tick(6), Tick(0)], notes.map(\.duration),
-                       cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
-                       what: "first following matching ends pair exactly")
 
 S003 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "unterminated note is preserved"
-  report.expect(notes[2].isUnterminated,
-                  cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
-                  message: "unterminated note is preserved")
 
 S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "adoption remints unique document identities"
-  report.expect(notes.allSatisfy { $0.id.isAssigned } && Set(notes.map(\.id)).count == 3,
-                  cppID: "noteidcheck/NoteIdentityCheckTest::adoptedSmfRemintsForeignIds",
-                  message: "adoption remints unique document identities")
 
 S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "typed tempo is removed from raw chunks"
-  report.expect(!document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
-                  cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
-                  message: "typed tempo is removed from raw chunks")
 
 S006 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "valid conductor tempo becomes typed state"
-  report.expectEqual([TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000)],
-                       document.state.tempo,
-                       cppID: "editcheck/EditCheckTest::formatZeroGlobals",
-                       what: "valid conductor tempo becomes typed state")
 
 S007 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "serialized MIDI carries no note identity"
-  report.expect(decoded?.chunks.flatMap(\.events).filter(\.isNoteOn)
-        .allSatisfy { !($0.noteID?.isAssigned ?? false) } == true,
-        cppID: "noteidcheck/NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned",
-        message: "serialized MIDI carries no note identity")
 
 S008 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "note-end status is retained during adoption"
-  report.expect(document.state.file.chunks[1].events[3].status == 0x80,
-                  cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
-                  message: "note-end status is retained during adoption")
 
 S009 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift
 Anchor: function
-  report.fail("editcheck/EditCheckTest::noteBatchCollisionRejects",
-                    "overlapping edited participants were accepted")
 
 S010 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift
 Anchor: message "rejected batch leaves revision unchanged"
-  report.expectEqual(initialRevision, document.revision,
-                           cppID: "editcheck/EditCheckTest::noteBatchCollisionRejects",
-                           what: "rejected batch leaves revision unchanged")
 
 S011 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift
 Anchor: function
-  report.fail("editcheck/EditCheckTest::noteBatchCollisionRejects",
-                    "unexpected rejection: \(error)")
 
 S012 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift
 Anchor: message "exact duplicate insertions receive distinct identities"
-  report.expect(duplicateIDs?.count == 2 && duplicateIDs?[0] != duplicateIDs?[1],
-                  cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
-                  message: "exact duplicate insertions receive distinct identities")
 
 S013 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift
 Anchor: message "exact duplicate insertions remain distinct notes"
-  report.expectEqual(2, document.notes(in: 0).filter {
-        $0.tick == 110 && $0.pitch == 61 && $0.duration == 10
-    }.count, cppID: "editcheck/EditCheckTest::noteEditingBatch",
-    what: "exact duplicate insertions remain distinct notes")
 
 S014 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift
 Anchor: message "empty delete is a no-op"
-  report.expectEqual(revisionBeforeNoOp, document.revision,
-                       cppID: "editcheck/EditCheckTest::documentPublicationNetZero",
-                       what: "empty delete is a no-op")
 
 S015 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: function
-  report.fail(noteEditsBasicID, "fixture insertion failed")
 
 S016 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: message "edited note wins and stationary tail survives"
-  report.expectEqual(Tick(2), trimmed?.tick,
-                       cppID: "editcheck/EditCheckTest::noteMoveOverlap",
-                       what: "edited note wins and stationary tail survives")
 
 S017 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: message "tail trim preserves surviving duration"
-  report.expectEqual(Tick(2), trimmed?.duration,
-                       cppID: "editcheck/EditCheckTest::noteMoveCollision",
-                       what: "tail trim preserves surviving duration")
 
 S018 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: message "stationary trim preserves identity"
-  report.expectEqual(ids[0], trimmed?.id,
-                       cppID: "editcheck/EditCheckTest::documentCrossingIdentities",
-                       what: "stationary trim preserves identity")
 
 S019 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: message "one undo restores collision victim"
-  report.expectEqual(Tick(0), document.note(ids[0])?.tick,
-                       cppID: "editcheck/EditCheckTest::noteMoveBatch",
-                       what: "one undo restores collision victim")
 
 S020 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: message "redo restores edited pitch"
-  report.expectEqual(UInt8(70), document.note(ids[1])?.pitch,
-                       cppID: "editcheck/EditCheckTest::noteMoveMerge",
-                       what: "redo restores edited pitch")
 
 S021 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: function
-  report.fail("editcheck/EditCheckTest::noteMoveCollisionRejects",
-                    "rejection fixture insertion failed")
 
 S022 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: message "conflicting pitch destinations reject whole operation"
-  report.expectEqual(revision, rejectionDocument.revision,
-                       cppID: "editcheck/EditCheckTest::noteMoveCollisionRejects",
-                       what: "conflicting pitch destinations reject whole operation")
 
 S023 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: message "zero movement creates no entry"
-  report.expectEqual(revision, rejectionDocument.revision,
-                       cppID: "editcheck/EditCheckTest::noteMoveRejects",
-                       what: "zero movement creates no entry")
 
 S024 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: message "leading resize clamps to one tick"
-  report.expectEqual(Tick(29), document.note(ids[2])?.tick,
-                       cppID: noteEditsBasicID,
-                       what: "leading resize clamps to one tick")
 
 S025 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: message "resize enforces minimum duration"
-  report.expectEqual(Tick(1), document.note(ids[2])?.duration,
-                       cppID: "editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart",
-                       what: "resize enforces minimum duration")
 
 S026 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: message "leading resize preserves note end"
-  report.expectEqual(UInt64(30), document.note(ids[2])?.endTick,
-                       cppID: noteEditsBasicID,
-                       what: "leading resize preserves note end")
 
 S027 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: function
-  report.fail("smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
-                    "unterminated fixture was not projected")
 
 S028 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: message "moving an unterminated note does not invent an end"
-  report.expect(unterminated.note(unterminatedID)?.isUnterminated == true,
-                    cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
-                    message: "moving an unterminated note does not invent an end")
 
 S029 | velocityEditing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "inserted velocity zero shares the domain floor"
-  report.expectEqual(UInt8(1), document.note(ids[2])?.velocity,
-                       cppID: "editcheck/EditCheckTest::documentVelocityAtomic",
-                       what: "inserted velocity zero shares the domain floor")
 
 S030 | velocityEditing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "batch velocity is atomic, clamped, and last-write-wins"
-  report.expect(changed == revision + 1 && document.note(ids[0])?.velocity == 99 &&
-        document.note(ids[1])?.velocity == 127,
-        cppID: "editcheck/EditCheckTest::documentVelocityAtomic",
-        message: "batch velocity is atomic, clamped, and last-write-wins")
 
 S031 | velocityEditing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "stale velocity revision rejects without mutation"
-  report.expect(document.setVelocities([NoteVelocity(noteID: ids[0], velocity: 20)],
-                                         expectedRevision: revision) == nil &&
-        document.state == beforeStale,
-        cppID: "editcheck/EditCheckTest::documentVelocityRejects",
-        message: "stale velocity revision rejects without mutation")
 
 S032 | velocityEditing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "relative velocity clamps each note"
-  report.expect(document.note(ids[0])?.velocity == 1 && document.note(ids[1])?.velocity == 1,
-                  cppID: "velocity-model/VelocityModelTest::gestureClampedDeltaAndCancellation",
-                  message: "relative velocity clamps each note")
 
 S033 | velocityEditing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "one invalid participant rejects the whole batch"
-  report.expect(invalid == nil && document.revision == beforeInvalid,
-                  cppID: "velocity-model/VelocityModelTest::gestureAtomicity",
-                  message: "one invalid participant rejects the whole batch")
 
 S034 | velocityEditing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "one relative batch publishes one revision"
-  report.expectEqual(beforeNudge + 1, beforeInvalid,
-                       cppID: "velocity-model/VelocityModelTest::gestureCompletionAndDeltaFromOriginals",
-                       what: "one relative batch publishes one revision")
 
 S035 | velocityEditing | src/checks/editcheck/NoteChecks.swift
 Anchor: message "velocity batch participates in undo and redo"
-  report.expect(restored && document.note(ids[0])?.velocity == 1,
-                  cppID: "velocity-model/VelocityModelTest::gestureLifecycle",
-                  message: "velocity batch participates in undo and redo")
 
 S036 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift
 Anchor: message "group rebuilds from origin and restores passed neighbor"
-  report.expect(document.note(ids[0])?.tick == 0 && document.note(ids[1])?.pitch == 71,
-                  cppID: "editcheck/EditCheckTest::documentMergedOverlapPublication",
-                  message: "group rebuilds from origin and restores passed neighbor")
 
 S037 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift
 Anchor: message "return to group origin restores state"
-  report.expect(document.note(ids[1])?.pitch == 69 && document.note(ids[0])?.duration == 4,
-                  cppID: "editcheck/EditCheckTest::documentPublicationNetZero",
-                  message: "return to group origin restores state")
 
 S038 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift
 Anchor: message "each real call including return-to-origin publishes once"
-  report.expect(changes == 4,
-                  cppID: "editcheck/EditCheckTest::documentLoadPublication",
-                  message: "each real call including return-to-origin publishes once")
 
 S039 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift
 Anchor: message "undo and redo restore stable note identity"
-  report.expectEqual(beforeUndo, document.note(ids[0])?.id,
-                       cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
-                       what: "undo and redo restore stable note identity")
 
 S040 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift
 Anchor: message "document-scoped identities remain owned after history crossing"
-  report.expect(document.note(ids[0])?.id == ids[0] && document.note(ids[1])?.id == ids[1],
-                  cppID: "editcheck/EditCheckTest::documentDuplicationOwnership",
-                  message: "document-scoped identities remain owned after history crossing")
 
 S041 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift
 Anchor: message "note-only mutations publish without a track remap"
-  report.expect(remaps.allSatisfy { $0 == nil },
-                  cppID: "editcheck/EditCheckTest::documentRemapsAndRaw",
-                  message: "note-only mutations publish without a track remap")
 
 S042 | saveIdentity | src/checks/editcheck/NoteChecks.swift
 Anchor: message "matching save snapshot marks its identity clean"
-  report.expect(!document.isDirty,
-                  cppID: "editcheck/EditCheckTest::documentSavedIdentity",
-                  message: "matching save snapshot marks its identity clean")
 
 S043 | saveIdentity | src/checks/editcheck/NoteChecks.swift
 Anchor: message "older completion cannot mark newer edits clean"
-  report.expect(document.isDirty,
-                  cppID: "editcheck/EditCheckTest::documentSavedIdentity",
-                  message: "older completion cannot mark newer edits clean")
 
 S044 | saveIdentity | src/checks/editcheck/NoteChecks.swift
 Anchor: message "undo returns to sealed saved identity"
-  report.expect(!document.isDirty,
-                  cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
-                  message: "undo returns to sealed saved identity")
 
 S045 | saveIdentity | src/checks/editcheck/NoteChecks.swift
 Anchor: message "save capture owns canonical format-one MIDI bytes"
-  report.expect(canonicalFile?.wasFormat0 == false,
-                  cppID: "editcheck/EditCheckTest::formatZeroCoercion",
-                  message: "save capture owns canonical format-one MIDI bytes")
 
 S046 | saveIdentity | src/checks/editcheck/NoteChecks.swift
 Anchor: message "empty typed tempo remains empty in live state"
-  report.expectEqual(0, document.state.tempo.count,
-                       cppID: "editcheck/EditCheckTest::documentTempoEmpty",
-                       what: "empty typed tempo remains empty in live state")
 
 S047 | saveIdentity | src/checks/editcheck/NoteChecks.swift
 Anchor: message "first track-name meta remains a name even with marker text"
-  report.expectEqual("[", markerDocument.trackName(0),
-                       cppID: "editcheck/EditCheckTest::markerVersusTrackName",
-                       what: "first track-name meta remains a name even with marker text")
 
 S048 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "new track occupies the next engine slot"
-  report.expectEqual(2, added,
-                       cppID: "editcheck/EditCheckTest::trackCreateDelete",
-                       what: "new track occupies the next engine slot")
 
 S049 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "new track voice is clamped and seeded"
-  report.expectEqual(127, document.lanePoints(track: added ?? -1, lane: .voice).first?.value,
-                       cppID: "editcheck/EditCheckTest::voiceLanePoint",
-                       what: "new track voice is clamped and seeded")
 
 S050 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "add publishes old engine-track identities"
-  report.expectEqual([0, 1], changes.last?.trackRemap?.engineTrackMap.compactMap { $0 },
-                       cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
-                       what: "add publishes old engine-track identities")
 
 S051 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "undo publishes the inverse track remap"
-  report.expectEqual(2, changes.last?.trackRemap?.newEngineTrackCount,
-                       cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
-                       what: "undo publishes the inverse track remap")
 
 S052 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "redo republishes the forward track remap"
-  report.expectEqual(3, changes.last?.trackRemap?.newEngineTrackCount,
-                       cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
-                       what: "redo republishes the forward track remap")
 
 S053 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: function
-  report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
 
 S054 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "duplicate preserves the fixture's literal note"
-  report.expectEqual(["8:60:4"],
-                       document.notes(in: copy).map { "\($0.tick):\($0.pitch):\($0.duration)" },
-                       cppID: "editcheck/EditCheckTest::trackDuplicate",
-                       what: "duplicate preserves the fixture's literal note")
 
 S055 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "duplicate remints note identities"
-  report.expect(document.notes(in: 0).first?.id != document.notes(in: copy).first?.id,
-                  cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
-                  message: "duplicate remints note identities")
 
 S056 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "conductor time signature survives reorder"
-  report.expect(document.timeSignatures.contains { $0.tick == 2 },
-                  cppID: "editcheck/EditCheckTest::trackMove",
-                  message: "conductor time signature survives reorder")
 
 S057 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "conductor marker remains in chunk zero"
-  report.expect(document.rawChunks[0].events.contains { MidiFile.metaIsMarker($0) },
-                  cppID: "editcheck/EditCheckTest::trackMarkerName",
-                  message: "conductor marker remains in chunk zero")
 
 S058 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "global signature is rescued before chunk deletion"
-  report.expect(document.rawChunks[0].events.contains { event in
-        event.metaType == 0x58 && event.tick == 2
-    }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
-    message: "global signature is rescued before chunk deletion")
 
 S059 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "winning loop marker is rescued"
-  report.expect(document.rawChunks[0].events.contains { event in
-        event.tick == 16 && MidiFile.metaIsMarker(event)
-    }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
-    message: "winning loop marker is rescued")
 
 S060 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "deleting the chunk-zero track retains the conductor chunk"
-  report.expectEqual(chunksBeforeChunkZeroDelete, document.rawChunks.count,
-                       cppID: "editcheck/EditCheckTest::trackCreateDelete",
-                       what: "deleting the chunk-zero track retains the conductor chunk")
 
 S061 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "rename trims the stored display name"
-  report.expectEqual("Bass", document.trackName(0),
-                       cppID: "editcheck/EditCheckTest::trackRename",
-                       what: "rename trims the stored display name")
 
 S062 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "loop-marker-shaped name is rejected"
-  report.expectEqual(revision + 1, document.revision,
-                       cppID: "editcheck/EditCheckTest::trackRename",
-                       what: "loop-marker-shaped name is rejected")
 
 S063 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "configured track budget rejects an added track"
-  report.expect(budgetLimited.addTrack(voice: 1) == nil,
-                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
-                  message: "configured track budget rejects an added track")
 
 S064 | trackEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "hardware track ceiling rejects a seventeenth track"
-  report.expect(ceiling.addTrack(voice: 1) == nil,
-                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
-                  message: "hardware track ceiling rejects a seventeenth track")
 
 S065 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "raw tempo meta is rejected"
-  report.expectEqual(beforeTempoRaw, document.revision,
-                       cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
-                       what: "raw tempo meta is rejected")
 
 S066 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "tempo normalization keeps the last same-tick value"
-  report.expectEqual([TempoPoint(tick: 8, microsecondsPerQuarterNote: 600_000)],
-                       document.state.tempo,
-                       cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
-                       what: "tempo normalization keeps the last same-tick value")
 
 S067 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "mixed raw and tempo replacement is atomic"
-  report.expectEqual(rawCount, document.rawChunks[0].events.count,
-                       cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
-                       what: "mixed raw and tempo replacement is atomic")
 
 S068 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "one undo restores both domains"
-  report.expectEqual(1, document.state.tempo.count,
-                       cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
-                       what: "one undo restores both domains")
 
 S069 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "same-tick signature is replaced"
-  report.expectEqual(1, document.timeSignatures.filter { $0.tick == 20 }.count,
-                       cppID: "editcheck/EditCheckTest::songTimeSignature",
-                       what: "same-tick signature is replaced")
 
 S070 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "signature moves with its payload"
-  report.expect(document.timeSignatures.contains { $0.tick == 24 && $0.numerator == 3 },
-                  cppID: "editcheck/EditCheckTest::songTimeSignature",
-                  message: "signature moves with its payload")
 
 S071 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "signature deletion removes destination"
-  report.expect(!document.timeSignatures.contains { $0.tick == 24 },
-                  cppID: "editcheck/EditCheckTest::songTimeSignature",
-                  message: "signature deletion removes destination")
 
 S072 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
 Anchor: message "move preserves every cross-chunk source signature"
-  report.expectEqual([3, 5], crossChunk.timeSignatures.filter { $0.tick == 24 }
-        .map { Int($0.numerator) }.sorted(),
-        cppID: "editcheck/EditCheckTest::songTimeSignature",
-        what: "move preserves every cross-chunk source signature")
 
 S073 | documentLoadPublicationContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A002 constructed document starts at revision one"
-  report.expectEqual(UInt64(1), document.revision, cppID: id,
-                     what: "A002 constructed document starts at revision one")
 
 S074 | documentLoadPublicationContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A008 constructed document retains three MIDI chunks"
-  report.expectEqual(3, document.state.file.chunks.count, cppID: id,
-                     what: "A008 constructed document retains three MIDI chunks")
 
 S075 | documentLoadPublicationContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A009 constructed document exposes two engine tracks"
-  report.expectEqual(2, document.engineTracks.usedTrackCount, cppID: id,
-                     what: "A009 constructed document exposes two engine tracks")
 
 S076 | documentTempoEmptyContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A013 empty typed tempo projects one default tempo"
-  report.expectEqual(1, timeline.tempoMap.count, cppID: id,
-                     what: "A013 empty typed tempo projects one default tempo")
 
 S077 | documentTempoEmptyContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A014 default playback tempo starts at tick zero"
-  report.expectEqual(Tick(0), timeline.tempoMap.first?.tick, cppID: id,
-                     what: "A014 default playback tempo starts at tick zero")
 
 S078 | documentTempoEmptyContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A015 default playback tempo is 120 BPM"
-  report.expectEqual(120.0, timeline.tempoMap.first?.beatsPerMinute, cppID: id,
-                     what: "A015 default playback tempo is 120 BPM")
 
 S079 | documentTempoEmptyContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A016 removing the only tempo restores empty typed tempo"
-  report.expect(document.state.tempo.isEmpty, cppID: id,
-                message: "A016 removing the only tempo restores empty typed tempo")
 
 S080 | documentTempoEmptyContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A017 undo restores the 150 BPM point"
-  report.expectEqual([point], document.state.tempo, cppID: id,
-                     what: "A017 undo restores the 150 BPM point")
 
 S081 | documentTempoEmptyContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A018 redo restores empty typed tempo"
-  report.expect(document.state.tempo.isEmpty, cppID: id,
-                message: "A018 redo restores empty typed tempo")
 
 S082 | documentTempoEmptyContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: function
-  let saved = try MidiFile.decode(document.captureSave().bytes)
-  // Throw is caught by documentEditContracts and reported under documentTempoEmpty.
 
 S083 | documentTempoEmptyContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A019-A021 saved MIDI contains no tempo meta events in any chunk"
-  report.expect(saved.chunks.allSatisfy { chunk in
-      chunk.events.allSatisfy { $0.metaType != 0x51 }
-  }, cppID: id, message: "A019-A021 saved MIDI contains no tempo meta events in any chunk")
 
 S084 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: function
-  guard notes.count == 2, notes.allSatisfy({ $0.id.isAssigned }),
-        notes[0].id != notes[1].id else {
-      report.fail(id, "fixture must have two distinct assigned note IDs")
-      return
-  }
 
 S085 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A027-A028 batch returns the next revision"
-  report.expectEqual(before + 1, result, cppID: id,
-                     what: "A027-A028 batch returns the next revision")
 
 S086 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A029 atomic batch advances revision once"
-  report.expectEqual(before + 1, document.revision, cppID: id,
-                     what: "A029 atomic batch advances revision once")
 
 S087 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A030 atomic batch adds exactly one undo entry"
-  report.expectEqual(beforeDepth + 1,
-                     try coreEditHistoryCountAtTip(document, report: report, cppID: id),
-                     cppID: id, what: "A030 atomic batch adds exactly one undo entry")
 
 S088 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A033-A034 last write wins and upper velocity clamps to 127"
-  report.expect(document.note(first)?.velocity == 99 && document.note(second)?.velocity == 127,
-                cppID: id, message: "A033-A034 last write wins and upper velocity clamps to 127")
 
 S089 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A035-A036 atomic batch publishes once without remapping tracks"
-  report.expect(changes.count == 1 && changes.last?.trackRemap == nil, cppID: id,
-                message: "A035-A036 atomic batch publishes once without remapping tracks")
 
 S090 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A037 undo advances revision"
-  report.expectEqual(changed + 1, document.revision, cppID: id,
-                     what: "A037 undo advances revision")
 
 S091 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A040-A041 one undo restores both original velocities"
-  report.expect(document.note(first)?.velocity == 100 && document.note(second)?.velocity == 90,
-                cppID: id, message: "A040-A041 one undo restores both original velocities")
 
 S092 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A042 one undo publishes once without a track remap"
-  report.expect(changes.count == 2 && changes.last?.trackRemap == nil, cppID: id,
-                message: "A042 one undo publishes once without a track remap")
 
 S093 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A043 redo advances revision"
-  report.expectEqual(undone + 1, document.revision, cppID: id,
-                     what: "A043 redo advances revision")
 
 S094 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A045 redo restores both batch velocities"
-  report.expect(document.note(first)?.velocity == 99 && document.note(second)?.velocity == 127,
-                cppID: id, message: "A045 redo restores both batch velocities")
 
 S095 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A046-A047 lower-clamp edit returns the next revision"
-  report.expectEqual(lowerBefore + 1, lower, cppID: id,
-                     what: "A046-A047 lower-clamp edit returns the next revision")
 
 S096 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A048 lower-clamp edit advances revision once"
-  report.expectEqual(lowerBefore + 1, document.revision, cppID: id,
-                     what: "A048 lower-clamp edit advances revision once")
 
 S097 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A051 zero velocity clamps to the domain floor of one"
-  report.expectEqual(UInt8(1), document.note(first)?.velocity, cppID: id,
-                     what: "A051 zero velocity clamps to the domain floor of one")
 
 S098 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A052 lower-clamp edit publishes once without a track remap"
-  report.expect(changes.count == 4 && changes.last?.trackRemap == nil, cppID: id,
-                message: "A052 lower-clamp edit publishes once without a track remap")
 
 S099 | documentVelocityAtomicContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A049 lower-clamp edit adds exactly one undo entry"
-  report.expectEqual(beforeDepth + 2,
-                     try coreEditHistoryCountAtTip(document, report: report, cppID: id),
-                     cppID: id, what: "A049 lower-clamp edit adds exactly one undo entry")
 
 S100 | documentVelocityRejectsContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A055 stale multi-note velocity request rejects atomically"
-  report.expect(document.setVelocities([
-      NoteVelocity(noteID: notes[0].id, velocity: 42),
-      NoteVelocity(noteID: notes[1].id, velocity: 77),
-  ], expectedRevision: revision - 1) == nil,
-                cppID: id, message: "A055 stale multi-note velocity request rejects atomically")
 
 S101 | documentVelocityRejectsContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A056 an invalid participant rejects the entire batch"
-  report.expect(document.setVelocities([
-      NoteVelocity(noteID: notes[0].id, velocity: 42),
-      NoteVelocity(noteID: NoteID(), velocity: 77),
-  ], expectedRevision: revision) == nil,
-                cppID: id, message: "A056 an invalid participant rejects the entire batch")
 
 S102 | documentVelocityRejectsContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A057-A058 same-value commit returns the current revision"
-  report.expectEqual(revision, result, cppID: id,
-                     what: "A057-A058 same-value commit returns the current revision")
 
 S103 | documentVelocityRejectsContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A059 rejected and same-value edits leave MIDI bytes unchanged"
-  report.expectEqual(bytes, try document.state.file.encoded(), cppID: id,
-                     what: "A059 rejected and same-value edits leave MIDI bytes unchanged")
 
 S104 | documentVelocityRejectsContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A060 rejected and same-value edits do not advance revision"
-  report.expectEqual(revision, document.revision, cppID: id,
-                     what: "A060 rejected and same-value edits do not advance revision")
 
 S105 | documentVelocityRejectsContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A062 rejected and same-value edits publish no changes"
-  report.expectEqual(0, changes, cppID: id,
-                     what: "A062 rejected and same-value edits publish no changes")
 
 S106 | documentVelocityRejectsContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A061 unchanged history depth after rejected and same-value edits"
-  report.expectEqual(depth, try coreEditHistoryCountAtTip(document, report: report, cppID: id),
-                     cppID: id, what: "A061 unchanged history depth after rejected and same-value edits")
 
 S107 | documentDuplicateIdentitiesContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: function
-  guard original.count == 2, let copy = document.duplicateTrack(0) else {
-      report.fail(id, "fixture source notes must duplicate into another track")
-      return
-  }
 
 S108 | documentDuplicateIdentitiesContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A065 duplication preserves note count"
-  report.expectEqual(original.count, copied.count, cppID: id,
-                     what: "A065 duplication preserves note count")
 
 S109 | documentDuplicateIdentitiesContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A066-A069 copied notes preserve tick, pitch, duration, and velocity"
-  report.expect(source.tick == duplicate.tick && source.pitch == duplicate.pitch &&
-      source.duration == duplicate.duration && source.velocity == duplicate.velocity,
-      cppID: id, message: "A066-A069 copied notes preserve tick, pitch, duration, and velocity")
 
 S110 | documentDuplicateIdentitiesContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A070 copied note receives a fresh assigned identity"
-  report.expect(duplicate.id.isAssigned && !original.contains(where: { $0.id == duplicate.id }),
-                cppID: id, message: "A070 copied note receives a fresh assigned identity")
 
 S111 | documentDuplicateIdentitiesContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A071 redo restores the copied note count"
-  report.expectEqual(minted.count, redone.count, cppID: id,
-                     what: "A071 redo restores the copied note count")
 
 S112 | documentDuplicateIdentitiesContract | src/checks/editcheck/DocumentEditChecks.swift
 Anchor: message "A072 redo restores exactly the minted note identities"
-  report.expectEqual(minted, redone.map(\.id), cppID: id,
-                     what: "A072 redo restores exactly the minted note identities")
 
 S113 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A074 move succeeds"
-  report.expect(document.moveTrack(0, to: 1), cppID: id, message: "A074 move succeeds")
 
 S114 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  expectRemap([0, 2, 1], [1, 0], 3, 2, "A075 move")
 
 S115 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  expectRemap([0, 2, 1], [1, 0], 3, 2, "A076 move undo")
 
 S116 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  expectRemap([0, 2, 1], [1, 0], 3, 2, "A077 move redo")
 
 S117 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A078 added slot"
-  report.expectEqual(2, document.addTrack(voice: 3), cppID: id, what: "A078 added slot")
 
 S118 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  expectRemap([0, 1, 2], [0, 1], 4, 3, "A079 add")
 
 S119 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  expectRemap([0, 1, 2, nil], [0, 1, nil], 3, 2, "A080 add undo")
 
 S120 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  expectRemap([0, 1, 2], [0, 1], 4, 3, "A081 add redo")
 
 S121 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  expectRemap([0, 1, 2, nil], [0, 1, nil], 3, 2, "A082 delete")
 
 S122 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  expectRemap([0, 1, 2], [0, 1], 4, 3, "A083 delete undo")
 
 S123 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  expectRemap([0, 1, 2, nil], [0, 1, nil], 3, 2, "A084 delete redo")
 
 S124 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A085 duplicate slot"
-  report.expectEqual(2, document.duplicateTrack(0), cppID: id, what: "A085 duplicate slot")
 
 S125 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  expectRemap([0, 1, 2], [0, 1], 4, 3, "A086 duplicate")
 
 S126 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  expectRemap([0, 1, 2, nil], [0, 1, nil], 3, 2, "A087 duplicate undo")
 
 S127 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  expectRemap([0, 1, 2], [0, 1], 4, 3, "A088 duplicate redo")
 
 S128 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A089-A090 meta insertion publishes one change without remap"
-  report.expect(changes.count == 1 && changes[0].trackRemap == nil,
-                cppID: id, message: "A089-A090 meta insertion publishes one change without remap")
 
 S129 | trackRemapPublicationContract.expectRemap | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "\(site) publishes exactly one change"
-  report.expectEqual(1, changes.count, cppID: id,
-                     what: "\(site) publishes exactly one change")
-  report.expectEqual(TrackRemap(chunkMap: chunk, engineTrackMap: engine,
-                                newChunkCount: chunkCount, newEngineTrackCount: engineCount),
-                     changes.last?.trackRemap, cppID: id,
-                     what: "\(site) publishes the exact track remap")
 
 S130 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A098 same-slot track move rejects"
-  report.expect(!document.moveTrack(0, to: 0), cppID: id,
-                message: "A098 same-slot track move rejects")
 
 S131 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A099 same-slot move leaves revision unchanged"
-  report.expectEqual(beforeNoOp, document.revision, cppID: id,
-                     what: "A099 same-slot move leaves revision unchanged")
 
 S132 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A100 same-slot move publishes no change"
-  report.expect(changes.isEmpty, cppID: id,
-                message: "A100 same-slot move publishes no change")
 
 S133 | documentSavedIdentityContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A102 saving current identity is clean"
-  report.expect(!document.isDirty, cppID: id, message: "A102 saving current identity is clean")
 
 S134 | documentSavedIdentityContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A103 tempo edit dirties saved identity"
-  report.expect(document.isDirty, cppID: id, message: "A103 tempo edit dirties saved identity")
 
 S135 | documentSavedIdentityContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A104 edited snapshot differs from the saved snapshot"
-  report.expect(edited.bytes != saved.bytes && edited.identity != saved.identity,
-                cppID: id, message: "A104 edited snapshot differs from the saved snapshot")
 
 S136 | documentSavedIdentityContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A105 undo returns to saved identity"
-  report.expect(!document.isDirty, cppID: id, message: "A105 undo returns to saved identity")
 
 S137 | documentSavedIdentityContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A106 redo leaves initial save point"
-  report.expect(document.isDirty, cppID: id, message: "A106 redo leaves initial save point")
 
 S138 | documentSavedIdentityContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A107 undo away from new save is dirty"
-  report.expect(document.isDirty, cppID: id, message: "A107 undo away from new save is dirty")
 
 S139 | documentSavedIdentityContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A108 redo back to new save is clean"
-  report.expect(!document.isDirty, cppID: id, message: "A108 redo back to new save is clean")
 
 S140 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A110 source owns channel one"
-  report.expectEqual(UInt8(1), document.engineTracks.tracks[0].channel,
-                     cppID: id, what: "A110 source owns channel one")
 
 S141 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A111 foreign channel is not a second note"
-  report.expectEqual(1, source.count, cppID: id, what: "A111 foreign channel is not a second note")
 
 S142 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A112-A115 only the channel-one note is projected"
-  report.expect(source.first?.tick == 0 && source.first?.pitch == 60 &&
-      source.first?.duration == 24 && source.first?.velocity == 100,
-      cppID: id, message: "A112-A115 only the channel-one note is projected")
 
 S143 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A116/A124-A128 duplicate preserves the owned assigned note and mints its identity"
-  report.expect(copied.first?.tick == sourceNote.tick &&
-      copied.first?.pitch == sourceNote.pitch &&
-      copied.first?.duration == sourceNote.duration &&
-      copied.first?.velocity == sourceNote.velocity &&
-      copied.first?.id != sourceNote.id && sourceNote.id.isAssigned,
-      cppID: id, message: "A116/A124-A128 duplicate preserves the owned assigned note and mints its identity")
 
 S144 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  guard let sourceNote = source.first, let copy = document.duplicateTrack(0) else {
-      report.fail(id, "A121 source note or duplicate missing")
-      return
-  }
 
 S145 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A122 duplicate receives the lowest free channel"
-  report.expectEqual(UInt8(0), document.engineTracks.tracks[copy].channel,
-                     cppID: id, what: "A122 duplicate receives the lowest free channel")
 
 S146 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A123 copied track has one note"
-  report.expectEqual(1, copied.count, cppID: id, what: "A123 copied track has one note")
 
 S147 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A129 duplication publishes once"
-  report.expectEqual(1, changes.count, cppID: id, what: "A129 duplication publishes once")
 
 S148 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A130-A135 duplication publishes complete identity maps and new counts"
-  report.expectEqual(TrackRemap(chunkMap: Array(0..<16).map(Optional.some),
-                                engineTrackMap: Array(0..<15).map(Optional.some),
-                                newChunkCount: 17, newEngineTrackCount: 16),
-                     changes.last?.trackRemap, cppID: id,
-                     what: "A130-A135 duplication publishes complete identity maps and new counts")
 
 S149 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A136-A139 duplicate copies only owned channel events"
-  report.expectEqual([
-      MidiEvent.channel(status: 0xC0, data0: 7),
-      .channel(status: 0x90, data0: 60, data1: 100),
-      .channel(tick: 24, status: 0x80, data0: 60),
-  ], events, cppID: id, what: "A136-A139 duplicate copies only owned channel events")
 
 S150 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A140 duplication reaches the track budget"
-  report.expectEqual(document.trackBudget, document.engineTracks.usedTrackCount,
-                     cppID: id, what: "A140 duplication reaches the track budget")
 
 S151 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A141-A142 both track creation paths reject the ceiling"
-  report.expect(!document.canAddTrack && document.addTrack(voice: 3) == nil &&
-      document.duplicateTrack(0) == nil,
-      cppID: id, message: "A141-A142 both track creation paths reject the ceiling")
 
 S152 | documentDuplicationOwnershipContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A143-A144 copied identity remains findable at its tick"
-  report.expectEqual(sourceNote.tick, document.note(copiedID)?.tick,
-                     cppID: id, what: "A143-A144 copied identity remains findable at its tick")
 
 S153 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A146 original typed globals and raw counts"
-  report.expect(globalsOriginal(), cppID: id, message: "A146 original typed globals and raw counts")
 
 S154 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  guard let copy = document.duplicateTrack(0) else {
-      report.fail(id, "A147 duplicate failed")
-      return
-  }
 
 S155 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A148 copy receives channel two"
-  report.expectEqual(UInt8(2), document.engineTracks.tracks[copy].channel,
-                     cppID: id, what: "A148 copy receives channel two")
 
 S156 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A149 copy has exactly three channel events and no globals"
-  report.expectEqual(3, events.count, cppID: id,
-                     what: "A149 copy has exactly three channel events and no globals")
 
 S157 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A150 rechanneled program"
-  report.expectEqual(MidiEvent.channel(status: 0xC2, data0: 6), events.first,
-                     cppID: id, what: "A150 rechanneled program")
 
 S158 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A151 rechanneled note on"
-  report.expectEqual(MidiEvent.channel(status: 0x92, data0: 60, data1: 100),
-                     events.indices.contains(1) ? events[1] : nil,
-                     cppID: id, what: "A151 rechanneled note on")
 
 S159 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A152 rechanneled note off"
-  report.expectEqual(MidiEvent.channel(tick: 24, status: 0x82, data0: 60),
-                     events.indices.contains(2) ? events[2] : nil,
-                     cppID: id, what: "A152 rechanneled note off")
 
 S160 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A153 globals survive duplication"
-  report.expect(globalsOriginal(), cppID: id, message: "A153 globals survive duplication")
 
 S161 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-  guard document.moveTrack(copy, to: 0) else { report.fail(id, "A154 move failed"); return }
 
 S162 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A155 globals survive move"
-  report.expect(globalsOriginal(), cppID: id, message: "A155 globals survive move")
 
 S163 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A156 globals survive delete"
-  report.expect(globalsOriginal(), cppID: id, message: "A156 globals survive delete")
 
 S164 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A157 globals survive undo \(step)"
-  for step in 1...3 {
-      guard document.history.undoDocument() else { report.fail(id, "A157 undo \(step) failed"); return }
-      report.expect(globalsOriginal(), cppID: id,
-                    message: "A157 globals survive undo \(step)")
-  }
 
 S165 | documentGlobalMetadataContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A158 globals survive redo \(step)"
-  for step in 1...3 {
-      guard document.history.redoDocument() else { report.fail(id, "A158 redo \(step) failed"); return }
-      report.expect(globalsOriginal(), cppID: id,
-                    message: "A158 globals survive redo \(step)")
-  }
 
 S166 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A162-A163 both original notes are unterminated"
-  report.expect(document.note(idA)?.isUnterminated == true &&
-      document.note(idB)?.isUnterminated == true, cppID: id,
-      message: "A162-A163 both original notes are unterminated")
 
 S167 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A165 first crossing move advances revision"
-  report.expectEqual(before + 1, document.revision, cppID: id,
-                     what: "A165 first crossing move advances revision")
 
 S168 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A166-A169 both IDs remain findable at pitch 61"
-  report.expect(document.note(idA)?.pitch == 61 && document.note(idB)?.pitch == 61,
-                cppID: id, message: "A166-A169 both IDs remain findable at pitch 61")
 
 S169 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A164 first move adds one history entry"
-  report.expectEqual(beforeDepth + 1,
-                     try coreEditHistoryCountAtTip(document, report: report, cppID: id),
-                     cppID: id, what: "A164 first move adds one history entry")
 
 S170 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A171 second crossing move advances revision"
-  report.expectEqual(before + 1, document.revision, cppID: id,
-                     what: "A171 second crossing move advances revision")
 
 S171 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A172-A175 IDs survive the crossed pitches"
-  report.expect(document.note(idA)?.pitch == 61 && document.note(idB)?.pitch == 60,
-                cppID: id, message: "A172-A175 IDs survive the crossed pitches")
 
 S172 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A170 second move adds another history entry"
-  report.expectEqual(beforeDepth + 2,
-                     try coreEditHistoryCountAtTip(document, report: report, cppID: id),
-                     cppID: id, what: "A170 second move adds another history entry")
 
 S173 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A176 first crossing undo advances revision"
-  report.expectEqual(before + 1, document.revision, cppID: id,
-                     what: "A176 first crossing undo advances revision")
 
 S174 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A177-A180 first undo restores both IDs at pitch 61"
-  report.expect(document.note(idA)?.pitch == 61 && document.note(idB)?.pitch == 61,
-                cppID: id, message: "A177-A180 first undo restores both IDs at pitch 61")
 
 S175 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A181 second crossing undo advances revision"
-  report.expectEqual(before + 1, document.revision, cppID: id,
-                     what: "A181 second crossing undo advances revision")
 
 S176 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A182-A185 second undo restores original pitches and IDs"
-  report.expect(document.note(idA)?.pitch == 60 && document.note(idB)?.pitch == 61,
-                cppID: id, message: "A182-A185 second undo restores original pitches and IDs")
 
 S177 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A186 first crossing redo advances revision"
-  report.expectEqual(before + 1, document.revision, cppID: id,
-                     what: "A186 first crossing redo advances revision")
 
 S178 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A187 second crossing redo advances revision"
-  report.expectEqual(before + 1, document.revision, cppID: id,
-                     what: "A187 second crossing redo advances revision")
 
 S179 | documentCrossingIdentitiesContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A188-A191 redo restores crossed pitches and original IDs"
-  report.expect(document.note(idA)?.pitch == 61 && document.note(idB)?.pitch == 60,
-                cppID: id, message: "A188-A191 redo restores crossed pitches and original IDs")
 
 S180 | documentPublicationNetZeroContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A195 first move advances revision"
-  report.expectEqual(firstRevision + 1, document.revision, cppID: id,
-                     what: "A195 first move advances revision")
 
 S181 | documentPublicationNetZeroContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A196 first move publishes exactly once"
-  report.expect(publications.count == 1 && publications.last?.revision == document.revision,
-                cppID: id, message: "A196 first move publishes exactly once")
 
 S182 | documentPublicationNetZeroContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A197 note-only move publishes no track remap"
-  report.expect(publications.last != nil && publications.last?.trackRemap == nil, cppID: id,
-                message: "A197 note-only move publishes no track remap")
 
 S183 | documentPublicationNetZeroContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A194 first move adds one history entry"
-  report.expectEqual(beforeDepth + 1,
-                     try coreEditHistoryCountAtTip(document, report: report, cppID: id),
-                     cppID: id, what: "A194 first move adds one history entry")
 
 S184 | documentPublicationNetZeroContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A199 inverse move advances revision"
-  report.expectEqual(inverseRevision + 1, document.revision, cppID: id,
-                     what: "A199 inverse move advances revision")
 
 S185 | documentPublicationNetZeroContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A200 inverse move publishes exactly once"
-  report.expect(publications.count == inversePublications + 1 &&
-      publications.last?.revision == document.revision,
-      cppID: id, message: "A200 inverse move publishes exactly once")
 
 S186 | documentPublicationNetZeroContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A201 return to origin drops the entry"
-  report.expectEqual(beforeDepth,
-                     try coreEditHistoryCountAtTip(document, report: report, cppID: id),
-                     cppID: id, what: "A201 return to origin drops the entry")
 
 S187 | documentPublicationNetZeroContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A202-A203 return to origin leaves no undo or redo"
-  report.expect(!document.history.canUndo && !document.history.canRedo, cppID: id,
-                message: "A202-A203 return to origin leaves no undo or redo")
 
 S188 | documentPublicationNetZeroContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A204 return to origin restores exact MIDI bytes"
-  report.expectEqual(baseline, try document.state.file.encoded(), cppID: id,
-                     what: "A204 return to origin restores exact MIDI bytes")
 
 S189 | documentPublicationNetZeroContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A205 rejected undo and redo preserve bytes"
-  report.expectEqual(baseline, try document.state.file.encoded(), cppID: id,
-                     what: "A205 rejected undo and redo preserve bytes")
 
 S190 | documentPublicationNetZeroContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A206 rejected undo and redo preserve revision"
-  report.expectEqual(frozenRevision, document.revision, cppID: id,
-                     what: "A206 rejected undo and redo preserve revision")
 
 S191 | documentPublicationNetZeroContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A207-A208 rejected undo and redo publish neither change nor remap"
-  report.expectEqual(frozenPublications, publications.count, cppID: id,
-                     what: "A207-A208 rejected undo and redo publish neither change nor remap")
 
 S192 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A212/A219/A226 grouped move \(step) advances revision"
-  report.expectEqual(beforeRevision + 1, document.revision, cppID: id,
-                     what: "A212/A219/A226 grouped move \(step) advances revision")
 
 S193 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A213-A214/A220-A221/A227-A228 grouped move \(step) publishes change only"
-  report.expect(publications.count == beforePublications + 1 &&
-      publications.last?.revision == document.revision &&
-      publications.last?.trackRemap == nil,
-      cppID: id, message: "A213-A214/A220-A221/A227-A228 grouped move \(step) publishes change only")
 
 S194 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A215/A222/A229 grouped move \(step) retains moved identity and pitch"
-  report.expect(document.note(movedID)?.tick == 0 &&
-      document.note(movedID)?.pitch == UInt8(pitch), cppID: id,
-      message: "A215/A222/A229 grouped move \(step) retains moved identity and pitch")
 
 S195 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A216-A217/A223-A224/A230-A231 survivor trims then restores from origin"
-  report.expect(document.note(survivorID)?.tick == Tick(survivorTick) &&
-      document.note(survivorID)?.pitch == 70 &&
-      document.note(survivorID)?.duration == Tick(survivorDuration), cppID: id,
-      message: "A216-A217/A223-A224/A230-A231 survivor trims then restores from origin")
 
 S196 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A211/A218/A225 grouped moves keep one history entry"
-  report.expectEqual(beforeDepth + 1,
-                     try coreEditHistoryCountAtTip(document, report: report, cppID: id),
-                     cppID: id, what: "A211/A218/A225 grouped moves keep one history entry")
 
 S197 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A232 grouped undo advances revision"
-  report.expectEqual(beforeRevision + 1, document.revision, cppID: id,
-                     what: "A232 grouped undo advances revision")
 
 S198 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A233-A234 grouped undo publishes change only"
-  report.expect(publications.count == beforePublications + 1 &&
-      publications.last?.trackRemap == nil, cppID: id,
-      message: "A233-A234 grouped undo publishes change only")
 
 S199 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A235-A237 one undo restores both original notes"
-  report.expect(document.note(movedID)?.pitch == 69 && document.note(movedID)?.tick == 0 &&
-      document.note(survivorID)?.pitch == 70 && document.note(survivorID)?.tick == 0 &&
-      document.note(survivorID)?.duration == 4, cppID: id,
-      message: "A235-A237 one undo restores both original notes")
 
 S200 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A238 grouped redo advances revision"
-  report.expectEqual(beforeRevision + 1, document.revision, cppID: id,
-                     what: "A238 grouped redo advances revision")
 
 S201 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A239-A240 grouped redo publishes change only"
-  report.expect(publications.count == beforePublications + 1 &&
-      publications.last?.trackRemap == nil, cppID: id,
-      message: "A239-A240 grouped redo publishes change only")
 
 S202 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A241 grouped redo returns to pitch 72"
-  report.expect(document.note(movedID)?.pitch == 72, cppID: id,
-                message: "A241 grouped redo returns to pitch 72")
 
 S203 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A242 ungrouped fourth move advances revision"
-  report.expectEqual(beforeRevision + 1, document.revision, cppID: id,
-                     what: "A242 ungrouped fourth move advances revision")
 
 S204 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A243-A244 fourth move publishes change only"
-  report.expect(publications.count == beforePublications + 1 &&
-      publications.last?.trackRemap == nil, cppID: id,
-      message: "A243-A244 fourth move publishes change only")
 
 S205 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A245 fourth-move undo advances revision"
-  report.expectEqual(beforeRevision + 1, document.revision, cppID: id,
-                     what: "A245 fourth-move undo advances revision")
 
 S206 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A246-A247 fourth-move undo publishes change only"
-  report.expect(publications.count == beforePublications + 1 &&
-      publications.last?.trackRemap == nil, cppID: id,
-      message: "A246-A247 fourth-move undo publishes change only")
 
 S207 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A248 fourth-move redo advances revision"
-  report.expectEqual(beforeRevision + 1, document.revision, cppID: id,
-                     what: "A248 fourth-move redo advances revision")
 
 S208 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "A249-A250 fourth-move redo publishes change only"
-  report.expect(publications.count == beforePublications + 1 &&
-      publications.last?.trackRemap == nil, cppID: id,
-      message: "A249-A250 fourth-move redo publishes change only")
 
 S209 | documentMergedOverlapContract | src/checks/editcheck/DocumentHistoryChecks.swift
 Anchor: message "ungrouped fourth move adds a second history entry"
-  report.expectEqual(beforeDepth + 2,
-                     try coreEditHistoryCountAtTip(document, report: report, cppID: id),
-                     cppID: id, what: "ungrouped fourth move adds a second history entry")

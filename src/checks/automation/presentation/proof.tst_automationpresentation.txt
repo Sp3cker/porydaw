@@ -5,51 +5,6 @@ Original: src/checks/automation/presentation/tst_automationpresentation.cpp
 Original SHA-256: 0d15772061c1b3e0e74b1e55c3bcdc8b0823d965504346fba2a8cc010170b0a9
 Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; the context inventory below records its rows, loops and fixtures.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-Unresolved entries remain work.
-
-Execution and ownership
-The original swiftcore suite entrypoints invoke these paired functions in their original
-order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
-VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
-Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
-
-Verification evidence
-Provided by the controller handoff for this reconciliation on the settled sources pinned
-above; this agent did not re-run either lane:
-deno task verify --filter swiftcore -> run_checks PASS (1/14 ok, 13 skipped). The selected
-harness runs runProjectSessionSuite -> runAutomationPageChecks
-(src/checks/workspace/SessionChecks.swift), which invokes the paired predicate
-drawerAutomationPencilCursorKind at src/checks/automation/AutomationPageChecks.swift.
-deno task verify:qml -> run_checks PASS (all harnesses). The Qt Quick Test lane runs
-src/checks/editorqml/tst_EditorDrawer.qml; its automation cases are indexed here as S###
-entries whose paths are src/checks/editorqml/tst_EditorDrawer.qml.
-No whole-tree run and no differential C++ comparison is claimed.
-
-Fixture, sequence, data-row and loop inventory
-Each line below is an exact original source anchor. Multiline declarations, helper
-implementations, native event delivery and the complete order remain in the pinned source.
-src/checks/automation/presentation/tst_automationpresentation.cpp:176 | QVERIFY2(m_document->adoptSmf(presentationSmf(), song, &error), qPrintable(error));
-src/checks/automation/presentation/tst_automationpresentation.cpp:191 | m_rig = checks::EditorRig::create(*m_document, config, error);
-src/checks/automation/presentation/tst_automationpresentation.cpp:218 | QTest::keyClick(m_quickWindow, Qt::Key_Escape);
-src/checks/automation/presentation/tst_automationpresentation.cpp:253 | for (int index = 0; index < int(rows.size()); ++index) {
-src/checks/automation/presentation/tst_automationpresentation.cpp:303 | void AutomationPresentationTest::mouseMove(songview::TimelineInputItem &input, QPointF contentPoint)
-src/checks/automation/presentation/tst_automationpresentation.cpp:335 | mouseMove(*m_plotInput, plotPoint);
-src/checks/automation/presentation/tst_automationpresentation.cpp:338 | mouseMove(*m_gutterInput, {m_gutterInput->bounds().center().x(), plotPoint.y()});
-src/checks/automation/presentation/tst_automationpresentation.cpp:342 | mouseMove(*m_plotInput, plotPoint);
-src/checks/automation/presentation/tst_automationpresentation.cpp:354 | mouseMove(*m_plotInput, lanePoint(pan, 24, 64));
-src/checks/automation/presentation/tst_automationpresentation.cpp:405 | mouseMove(*m_plotInput, plotPoint);
-src/checks/automation/presentation/tst_automationpresentation.cpp:408 | mouseMove(*m_plotInput, plotPoint);
-
-Original assertion inventory
-
 A001 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:176
 Disposition: GAP
 Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native EditorRig adoption of the presentation SMF (fallible adoptSmf into a shown EditorRig window); the Swift/QML lane constructs the document directly and mounts the production page (S031), so no fallible adoption ingress exists to assert.
@@ -58,39 +13,21 @@ Original expression:
 
 A002 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:192
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY2(m_rig, qPrintable(error))
 
 A003 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:195
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(root)
 
 A004 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:200
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(m_plotInput)
 
 A005 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:201
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(m_gutterInput)
 
 A006 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:203
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(m_quickWindow)
 
 A007 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:204
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QTRY_VERIFY(m_quickWindow->isVisible() && m_quickWindow->isExposed())
 
 A008 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:205
 Disposition: GAP
@@ -106,9 +43,6 @@ Original expression:
 
 A010 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:207
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QTRY_VERIFY(page() && page()->canvas())
 
 A011 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:208
 Disposition: GAP
@@ -130,9 +64,6 @@ Original expression:
 
 A014 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:211
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QTRY_VERIFY(quickScene())
 
 A015 | AutomationPresentationTest::cleanup | src/checks/automation/presentation/tst_automationpresentation.cpp:232
 Disposition: GAP
@@ -148,15 +79,11 @@ Original expression:
 
 A017 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:325
 Disposition: MATCHED
-Mapping/reason: S031 — mountProductionAutomation, src/checks/editorqml/tst_EditorDrawer.qml, "the production Automation page attaches to its slot": the production page is mounted and identified.
-Original expression:
-  QVERIFY(automationPage)
+Mapping: S031
 
 A018 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:328
 Disposition: MATCHED
-Mapping/reason: S001 — drawerAutomationParameterSwitchAndGhosts, src/checks/automation/presentation/tst_automationpresentation.swift, "a parameter switch is accepted": the Pan row activates.
-Original expression:
-  QVERIFY(activateParameter(panRow))
+Mapping: S001
 
 A019 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:330
 Disposition: GAP
@@ -172,9 +99,7 @@ Original expression:
 
 A021 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:336
 Disposition: MATCHED
-Mapping/reason: S027 — drawerAutomationPencilCursorKind, tst_automationpresentation.swift, "a pencil release arms the pencil cursor": with pencil mode armed the plot publishes the pencil cursor kind; the QCursor pixmap itself is QML-owned (AutomationPage.qml).
-Original expression:
-  QVERIFY(!m_plotInput->cursor().pixmap().isNull())
+Mapping: S027
 
 A022 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:339
 Disposition: PARTIAL
@@ -184,9 +109,7 @@ Original expression:
 
 A023 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:341
 Disposition: MATCHED
-Mapping/reason: S021 — drawerAutomationParameterSwitchAndGhosts, tst_automationpresentation.swift, "Tempo stays selectable without a track": the Tempo row activates.
-Original expression:
-  QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
+Mapping: S021
 
 A024 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:343
 Disposition: PARTIAL
@@ -196,45 +119,28 @@ Original expression:
 
 A025 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:349
 Disposition: MATCHED
-Mapping/reason: S031 — tst_EditorDrawer.qml: the production page is mounted and identified.
-Original expression:
-  QVERIFY(automationPage)
+Mapping: S031
 
 A026 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:352
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(pan.valid())
 
 A027 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:356
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress proof: the site reads the QCursor pixmap the retired AutomationCanvas installed through TimelineInputHost::setCursor; Swift AutomationPage publishes only cursorKind, an Int enum (AutomationPage.qml), and constructs no QCursor or QCursor pixmap (no QCursor reference exists under src/swift/app/drawer/automation or src/ui/songview/quick/drawer). The visible pencil cursor is a QML Image (AutomationPage.qml) whose sourceSize is scaled by Screen.devicePixelRatio (AutomationPage.qml), so the consumed behavior exists only in QML and is asserted by the cursor-kind predicate (S027).
-Original expression:
-  QVERIFY(!pixmap.isNull())
+Mapping/reason: S027
 
 A028 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:357
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress proof: the pixmap devicePixelRatio is the QML Image's Screen.devicePixelRatio scaling (AutomationPage.qml); no Swift QCursor pixmap is instantiated to compare against the input's DPR (no QCursor reference under src/swift/app/drawer/automation or src/ui/songview/quick/drawer). The cursor kinds the C++ host observed are asserted by S026-S030.
-Original expression:
-  QCOMPARE(pixmap.devicePixelRatio(), m_plotInput->devicePixelRatio())
+Mapping/reason: S026, S027, S028, S029, S030
 
 A029 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:363
 Disposition: MATCHED
-Mapping/reason: S031 — tst_EditorDrawer.qml.
-Original expression:
-  QVERIFY(automationPage)
+Mapping: S031
 
 A030 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:365
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(canvas)
 
 A031 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:366
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(m_plotInput)
 
 A032 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:367
 Disposition: GAP
@@ -256,15 +162,11 @@ Original expression:
 
 A035 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:380
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress proof: see A027; the QCursor pixmap the retired AutomationCanvas set has no Swift ingress, and the arrow/pencil/size cursor kinds it carried are asserted by S026-S030.
-Original expression:
-  QVERIFY(!pixmapAtOne.isNull())
+Mapping/reason: S026, S027, S028, S029, S030
 
 A036 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:381
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress proof: see A028; the pixmap DPR of 1.0 is a property of the retired QCursor pixmap, and Swift publishes cursor kinds only (S026-S030).
-Original expression:
-  QVERIFY(qFuzzyCompare(pixmapAtOne.devicePixelRatio(), 1.0))
+Mapping/reason: S026, S027, S028, S029, S030
 
 A037 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:384
 Disposition: GAP
@@ -274,15 +176,9 @@ Original expression:
 
 A038 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:386
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress proof: see A027.
-Original expression:
-  QVERIFY(!pixmapAtTwo.isNull())
 
 A039 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:387
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress proof: see A028; the injected host DPR of 2.0 existed only through the C++ CursorDprHost test host.
-Original expression:
-  QVERIFY(qFuzzyCompare(pixmapAtTwo.devicePixelRatio(), 2.0))
 
 A040 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:390
 Disposition: GAP
@@ -292,231 +188,114 @@ Original expression:
 
 A041 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:392
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress proof: see A027.
-Original expression:
-  QVERIFY(!pixmapAtOneAgain.isNull())
 
 A042 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:393
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress proof: see A028.
-Original expression:
-  QVERIFY(qFuzzyCompare(pixmapAtOneAgain.devicePixelRatio(), 1.0))
 
 A043 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:399
 Disposition: MATCHED
-Mapping/reason: S031 — tst_EditorDrawer.qml.
-Original expression:
-  QVERIFY(automationPage)
+Mapping: S031
 
 A044 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:402
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Original expression:
-  QVERIFY(pan.valid())
 
 A045 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:406
 Disposition: MATCHED
-Mapping/reason: S027 — tst_automationpresentation.swift, "a pencil release arms the pencil cursor": the pencil cursor kind while pencil mode is armed.
-Original expression:
-  QVERIFY(!m_plotInput->cursor().pixmap().isNull())
+Mapping: S027
 
 A046 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:409
 Disposition: MATCHED
-Mapping/reason: S030 — tst_automationpresentation.swift, "releasing the drag reverts to the arrow", with S026 — :92, "the plot starts with the arrow": the page publishes the arrow kind whenever no pencil or axis cursor is live.
-Original expression:
-  QCOMPARE(m_plotInput->cursor().shape(), Qt::ArrowCursor)
-
-Swift and Qt Quick predicate index
-The S entries are exact predicates already called by the swiftcore suite and the Qt Quick
-Test lane (src/checks/editorqml/tst_EditorDrawer.qml). Their presence alone
-does not close any A entry. Preserve their surrounding setup and order in the paired source.
+Mapping: S030, S026
 
 S001 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "a parameter switch is accepted"
-Swift expression:
-  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                    message: "a parameter switch is accepted")
 
 S002 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the switched parameter becomes active"
-Swift expression:
-  report.expectEqual(fixture.panLane, fixture.page.activeParameter, cppID: drawerAutomationSwitchID,
-                         what: "the switched parameter becomes active")
 
 S003 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the catalog index follows the switch"
-Swift expression:
-  report.expectEqual(panIndex, fixture.page.activeParameterIndex, cppID: drawerAutomationSwitchID,
-                         what: "the catalog index follows the switch")
 
 S004 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "switching a parameter mutates nothing"
-Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationSwitchID,
-                         what: "switching a parameter mutates nothing")
 
 S005 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "switching a parameter keeps the explicit selection"
-Swift expression:
-  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
-                         what: "switching a parameter keeps the explicit selection")
 
 S006 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the inactive parameter's selection indicator survives the switch"
-Swift expression:
-  report.expectEqual([fixture.panLane], fixture.page.selectedParameters, cppID: drawerAutomationSwitchID,
-                         what: "the inactive parameter's selection indicator survives the switch")
 
 S007 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the active lane title is the switched parameter's"
-Swift expression:
-  report.expectEqual("Pan (PAN)", AutomationCatalog.title(fixture.page.activeParameter),
-                         cppID: drawerAutomationSwitchID, what: "the active lane title is the switched parameter's")
 
 S008 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the active lane publishes its written-event count"
-Swift expression:
-  report.expectEqual(2, fixture.page.laneCount, cppID: drawerAutomationSwitchID,
-                         what: "the active lane publishes its written-event count")
 
 S009 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the active projection is the switched parameter's"
-Swift expression:
-  report.expectEqual(fixture.projection(fixture.panLane).points.map(\.x),
-                         fixture.page.projection?.points.map(\.x) ?? [], cppID: drawerAutomationSwitchID,
-                         what: "the active projection is the switched parameter's")
 
 S010 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "re-activating the active parameter is not a switch"
-Swift expression:
-  report.expect(!fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                    message: "re-activating the active parameter is not a switch")
 
 S011 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "an index outside the catalog is rejected"
-Swift expression:
-  report.expect(!fixture.page.activateParameter(index: AutomationCatalog.count), cppID: drawerAutomationSwitchID,
-                    message: "an index outside the catalog is rejected")
 
 S012 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "a parameter with events can be pinned as a ghost"
-Swift expression:
-  report.expect(fixture.page.toggleGhostParameter(index: volumeIndex), cppID: drawerAutomationSwitchID,
-                    message: "a parameter with events can be pinned as a ghost")
 
 S013 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the ghost label counts the lane's written events"
-Swift expression:
-  report.expectEqual(["Volume (VOL) · 2 Events"], fixture.page.ghostLabels, cppID: drawerAutomationSwitchID,
-                         what: "the ghost label counts the lane's written events")
 
 S014 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the same parameter unpins"
-Swift expression:
-  report.expect(fixture.page.toggleGhostParameter(index: volumeIndex), cppID: drawerAutomationSwitchID,
-                    message: "the same parameter unpins")
 
 S015 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "unpinning drops the label"
-Swift expression:
-  report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationSwitchID,
-                         what: "unpinning drops the label")
 
 S016 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the ghost pins again"
-Swift expression:
-  report.expect(fixture.page.toggleGhostParameter(index: volumeIndex), cppID: drawerAutomationSwitchID,
-                    message: "the ghost pins again")
 
 S017 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "toggling the active parameter clears its ghosts"
-Swift expression:
-  report.expect(fixture.page.toggleGhostParameter(index: panIndex), cppID: drawerAutomationSwitchID,
-                    message: "toggling the active parameter clears its ghosts")
 
 S018 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the active parameter owns every pin"
-Swift expression:
-  report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationSwitchID,
-                         what: "the active parameter owns every pin")
 
 S019 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "a parameter with no events cannot be pinned"
-Swift expression:
-  report.expect(!fixture.page.toggleGhostParameter(index: emptyIndex), cppID: drawerAutomationSwitchID,
-                    message: "a parameter with no events cannot be pinned")
 
 S020 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "no selected track publishes the missing-track message"
-Swift expression:
-  report.expectEqual(AutomationPagePolicy.noTrackMessage, fixture.page.plotMessage,
-                         cppID: drawerAutomationSwitchID,
-                         what: "no selected track publishes the missing-track message")
 
 S021 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "Tempo stays selectable without a track"
-Swift expression:
-  report.expect(fixture.page.activateParameter(index: AutomationCatalog.count - 1), cppID: drawerAutomationSwitchID,
-                    message: "Tempo stays selectable without a track")
 
 S022 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "Tempo becomes the active parameter"
-Swift expression:
-  report.expectEqual(AutomationParameter.tempo, fixture.page.activeParameter, cppID: drawerAutomationSwitchID,
-                         what: "Tempo becomes the active parameter")
 
 S023 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "Tempo's plot presents without a selected track"
-Swift expression:
-  report.expectEqual("", fixture.page.plotMessage, cppID: drawerAutomationSwitchID,
-                         what: "Tempo's plot presents without a selected track")
 
 S024 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "Tempo publishes its own event count"
-Swift expression:
-  report.expectEqual(1, fixture.page.laneCount, cppID: drawerAutomationSwitchID,
-                         what: "Tempo publishes its own event count")
 
 S025 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "a selected track presents again"
-Swift expression:
-  report.expectEqual("", fixture.page.plotMessage, cppID: drawerAutomationSwitchID,
-                         what: "a selected track presents again")
+
 S026 | drawerAutomationPencilCursorKind | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the plot starts with the arrow"
-Swift expression:
-  report.expectEqual(AutomationCursorKind.arrow.rawValue, page.cursorKind,
-                         cppID: drawerAutomationCursorKindID, what: "the plot starts with the arrow")
 
 S027 | drawerAutomationPencilCursorKind | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "a pencil release arms the pencil cursor"
-Swift expression:
-  report.expectEqual(AutomationCursorKind.pencil.rawValue, page.cursorKind,
-                         cppID: drawerAutomationCursorKindID,
-                         what: "a pencil release arms the pencil cursor")
 
 S028 | drawerAutomationPencilCursorKind | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "the pencil stroke is one revision"
-Swift expression:
-  report.expectEqual(pencilBefore.revision + 1, fixture.document.revision,
-                         cppID: drawerAutomationCursorKindID, what: "the pencil stroke is one revision")
 
 S029 | drawerAutomationPencilCursorKind | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "a Shift node drag locks the time axis"
-Swift expression:
-  report.expectEqual(AutomationCursorKind.sizeHorizontal.rawValue, page.cursorKind,
-                             cppID: drawerAutomationCursorKindID,
-                             what: "a Shift node drag locks the time axis")
 
 S030 | drawerAutomationPencilCursorKind | src/checks/automation/presentation/tst_automationpresentation.swift
 Anchor: message "releasing the drag reverts to the arrow"
-Swift expression:
-  report.expectEqual(AutomationCursorKind.arrow.rawValue, page.cursorKind,
-                             cppID: drawerAutomationCursorKindID,
-                             what: "releasing the drag reverts to the arrow")
 
 S031 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the production Automation page attaches to its slot"
-QML expression:
-  verify(bootstrap.attachProductionSection(testCase.automationKind),
-                 "the production Automation page attaches to its slot")

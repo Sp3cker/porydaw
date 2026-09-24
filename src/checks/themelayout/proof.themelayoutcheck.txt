@@ -5,182 +5,27 @@ Original: src/checks/themelayout/themelayoutcheck.cpp
 Original SHA-256: 33652cad2c689ce5b543c4d2fda9602fb7a5be7c2fa0e34946d12122bf3ee7e0
 Swift counterpart: none identified
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site in this file appears below. This file is the shared
-native harness for the theme/layout lanes: per-suite init()/cleanup() guards and
-the runThemeLayout*Check entry points. It contains no theme, font, or layout
-value assertions of its own; its three sites are QApplication preconditions.
-Source context preserves setup between assertions verbatim.
-MATCHED means a corresponding Swift predicate was identified and would execute;
-PARTIAL means a related Swift predicate exists with a stated unproved condition;
-GAP means no equivalent Swift assertion is established;
-NATIVE means the site observes native window/rendering/harness state a
-presenter-level Swift check cannot establish. The three init sites below are
-native-only harness preconditions with no Swift counterpart; the value
-contracts of the suites they launch are covered by the Swift/QML predicates
-inventoried in proof.tst_themelayout_font.txt and
-proof.tst_themelayout_scale.txt.
 
-Verification
 Command: deno task verify --filter fontcheck --verbose
 Command: deno task verify --filter swiftcore --verbose
 Command: deno task verify:shell --filter shell-typography --verbose
 Result: fontcheck PASS (0.13s), swiftcore PASS (20.87s) and shell-typography
-PASS (0.88s) on the current worktree; the themecheck/darkbasecheck/editor-layout
-lanes still execute until Main deletes them; source hashes pin the tree
-inspected here.
-The editor-layout-16 and editor-layout-18 lanes execute the same file with
-different base font sizes.
 
-Execution and ownership
-Native ownership only. runThemeLayoutThemeCheck, runThemeLayoutFontCheck,
-runThemeLayoutDarkBaseCheck, and runThemeLayoutScaleCheck (all defined in this
-file) launch the themecheck, fontcheck, darkbasecheck, and
-editor-layout-{12,16,18} lanes. ThemeLayoutTest::init,
 ThemeLayoutFontTest::init, and ThemeLayoutDarkBaseTest::init save the
 application font, palette, and stylesheet after applying the vanilla theme (or,
 for the dark-base suite, after the poison palette plus application init); the
 matching cleanup() methods restore them. Value counterparts for the font and
 scale suites now execute in Swift (TypographyLayoutChecks.swift) and the
 shell-typography QML entry; these three init sites remain native-only until
-Main deletes the harness. The suite declarations live in
-src/checks/themelayout/tst_themelayout.h; no shared Swift fixture file exists.
-
-Fixture, sequence and row constraints
-Each init() site executes before every test method of its suite, so A001 fans
-out over every ThemeLayoutTest case (themecheck lane), A002 over every
-ThemeLayoutFontTest case (fontcheck lane), and A003 over the
-ThemeLayoutDarkBaseTest case (darkbasecheck lane). ThemeLayoutScaleTest has no
-init() guard; its base font size arrives via the lane argument instead.
-Original setup, branch guards, and helper implementations at the reference
-revision remain authoritative; this inventory does not replace those sources.
-
-Original assertion inventory
 
 A001 | ThemeLayoutTest::init | src/checks/themelayout/themelayoutcheck.cpp:44
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/themelayoutcheck.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-must exist before the vanilla theme apply and the font/palette/stylesheet
-save. No QWidget/QApplication layer exists in the Swift shell, whose owners
-need no application object. Value behavior at the lane base is covered by the
-font/scale suites (proof.tst_themelayout_font.txt S001-S035,
-proof.tst_themelayout_scale.txt S001-S005).
-Source context since previous assertion:
-  #include "checks/themelayout/tst_themelayout.h"
-
-  #include "ui/typography.h"
-
-  #include "ui/applicationstartup.h"
-  #include "ui/layout.h"
-  #include "ui/theme/themeresolver.h"
-  #include "ui/theme/themeruntime.h"
-
-  #include <QApplication>
-  #include <QFontInfo>
-
-  #include <QPalette>
-  #include <QtTest>
-
-  namespace {
-
-  QStringList testArguments(const QString &suiteName, const QStringList &qtArguments)
-  {
-      QStringList arguments{suiteName};
-      arguments.append(qtArguments);
-      return arguments;
-  }
-
-  void poisonPalette(QApplication &application)
-  {
-      constexpr QColor poison(40, 0, 40);
-      application.setStyle(QStringLiteral("fusion"));
-      auto palette = application.palette();
-      for (int group = 0; group < QPalette::NColorGroups; ++group) {
-          for (int role = 0; role < QPalette::NColorRoles; ++role) {
-              palette.setColor(static_cast<QPalette::ColorGroup>(group),
-                               static_cast<QPalette::ColorRole>(role), poison);
-          }
-      }
-      application.setPalette(palette);
-  }
-
-  } // namespace
-
-  void ThemeLayoutTest::init()
-  {
-      m_application = qobject_cast<QApplication *>(QApplication::instance());
-Original expression:
-  QVERIFY(m_application);
 
 A002 | ThemeLayoutFontTest::init | src/checks/themelayout/themelayoutcheck.cpp:68
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/themelayoutcheck.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-obligation as A001: the shared QApplication instance must exist before the
-vanilla theme apply and the font/palette/stylesheet save. No
-QWidget/QApplication layer exists in the Swift shell; no Swift counterpart
-establishes the native application object. Value behavior is covered by the
-font suite (proof.tst_themelayout_font.txt S001-S035).
-Source context since previous assertion:
-  ;
-      themes::apply(*m_application, themes::vanilla());
-      m_font = m_application->font();
-      m_palette = m_application->palette();
-      m_styleSheet = m_application->styleSheet();
-  }
-
-  void ThemeLayoutTest::cleanup()
-  {
-      if (!m_application)
-          return;
-      themes::apply(*m_application, themes::vanilla());
-      m_application->setFont(m_font);
-      m_application->setPalette(m_palette);
-      m_application->setStyleSheet(m_styleSheet);
-  }
-
-  ThemeLayoutFontTest::ThemeLayoutFontTest(int expectedBaseFontPx)
-      : m_expectedBaseFontPx(expectedBaseFontPx)
-  {}
-
-  void ThemeLayoutFontTest::init()
-  {
-      m_application = qobject_cast<QApplication *>(QApplication::instance());
-Original expression:
-  QVERIFY(m_application);
 
 A003 | ThemeLayoutDarkBaseTest::init | src/checks/themelayout/themelayoutcheck.cpp:90
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/themelayoutcheck.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-shared QApplication instance must exist before the font/palette/stylesheet
-save (the poison palette is applied by the lane runner before init). No
-QWidget/QApplication layer exists in the Swift shell; no Swift counterpart
-establishes the native application object.
-Source context since previous assertion:
-  ;
-      themes::apply(*m_application, themes::vanilla());
-      m_font = m_application->font();
-      m_palette = m_application->palette();
-      m_styleSheet = m_application->styleSheet();
-  }
-
-  void ThemeLayoutFontTest::cleanup()
-  {
-      if (!m_application)
-          return;
-      themes::apply(*m_application, themes::vanilla());
-      m_application->setFont(m_font);
-      m_application->setPalette(m_palette);
-      m_application->setStyleSheet(m_styleSheet);
-  }
-
-  ThemeLayoutScaleTest::ThemeLayoutScaleTest(int baseFontPx) : m_baseFontPx(baseFontPx) {}
-
-  void ThemeLayoutDarkBaseTest::init()
-  {
-      m_application = qobject_cast<QApplication *>(QApplication::instance());
-Original expression:
-  QVERIFY(m_application);
 
 Remaining original source (closing sequence and helper bodies):
       m_font = m_application->font();

@@ -9,28 +9,9 @@ Swift counterpart: src/checks/workspace/SessionChecks.swift
 Swift counterpart: src/checks/workspace/bank_edits.swift
 Swift counterpart: src/checks/workspace/session_playback.swift
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies an equivalent Swift predicate that would execute;
-PARTIAL identifies a related Swift predicate with an explicit unproved condition;
-GAP identifies an original predicate without an established equivalent;
-NATIVE identifies an observation only a native window/rendering/harness run can establish.
-100 assertion sites across ProjectWorkspace open/startup/catalog/plan/reload/edit publication ordering. Only the Conflict edit row has a related Swift predicate (same projectworkspacecheck/ lane prefix); everything else is GAP. No site is marked MATCHED.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
-
-Execution and ownership
-runBankHistorySuite (SessionChecks.swift) owns the single related conflict predicate via ProjectService bank calls. No Swift suite models ProjectWorkspace publication (Loading/Ready/Failed states, catalog replacement, keyed plan events, reload staging, exact log-size counts).
-
-Fixture, sequence and row constraints
-QSettings are isolated per case with saved settings cleared; startup seeds lastOpenSongs order (mus_petalburg, mus_route101, porydaw_missing_song) with selected mus_route101; catalogReplaceVsUnkeyedFailure_data has 2 rows; editConflict_appliedReceipt_hardFailure_data has 3 rows; reload/edit cases assert exact m_log sizes (mark+1/+2/+3).
-
-Original assertion inventory
 
 A001 | ProjectWorkspaceTest::verifyStateErrorInvariant | src/checks/project/workspace.cpp:252
 Disposition: GAP
@@ -1525,12 +1506,6 @@ Swift assertion predicates
 
 S001 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "document mutation invokes session presenter callback"
-  report.expect(publishedChangeCount > 0,
-                    cppID: "projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
-                    message: "document mutation invokes session presenter callback")
 
 S002 | bankConflicts | src/checks/workspace/bank_edits.swift
 Anchor: message "materializing occupied slot triggers bankConflict"
-  report.expectEqual(ProjectServiceError.bankConflict, error,
-                             cppID: "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
-                             what: "materializing occupied slot triggers bankConflict")

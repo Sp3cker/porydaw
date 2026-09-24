@@ -19,27 +19,6 @@ Additional Swift counterpart: src/checks/drawerpresentation/drawer_basics.swift
 Additional Swift counterpart: src/checks/editcheck/DocumentTrackChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Status and evidence
-Sixteen test methods covering drawer seed projection, cross-tab fanout, event-list gating, focus fallback, hide retention, tab-switch refocus, edit-action projection/identity/unbound start, editor-view-state fanout and lane remap/mutation/noop persistence, and four MouseHints scope/layout cases.
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below (267 sites across 16 test methods),
-including fixture guards and platform gates. Source context preserves setup,
-loops, and guards between assertions verbatim. S identifiers identify exact
-Swift predicates in the counterpart, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native harness obligations;
-it does not establish coverage of a converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-Edit-action projection, retarget and enablement rows (A067, A073, A074, A080,
-A081, A086, A092, A093), the window-command presence row A068, and the Time and
-Tracks submenu containment and enablement rows (A075–A079) crosswalked to the
-offscreen Qt Quick shellwindow lane (S186–S197); the drawer focus-fallback rows
-(A041, A044, A046) and the all-hidden terminal row A045 crosswalked to the
-drawer focus predicates (S198, S199, S203); the hide-retention rows
-(A050–A052) crosswalked to the drawer visibility and stored-height predicates
-(S201, S203, S204); and the document move-success rows (A123, A145)
-crosswalked to the track-remap publication contract (S205). A142 and A153 stay
 PARTIAL: the move-undo remap publication (S206) is model-level only, with SMF
 byte equality unproved; A143 and A154 stay PARTIAL on the save-lifecycle dirty
 predicates (S030, S057, S060–S063) with the Qt undo-stack dirtiness wiring
@@ -52,10 +31,7 @@ remaining drawer, EditorViewState fanout/persistence, signal-count, byte,
 revision and snapshot rows stay GAP: cross-tab fanout plus QSettings
 persistence are not yet ported (the Swift app has no EditorViewState), and the
 single-layout drawer harness has no tab projection or key/action delivery.
-The Swift SHA-256 values pin the worktree content inspected here, which is currently
-modified relative to its HEAD revision.
 
-Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — build ok (0.15s); ok swiftcore (10.38s); verify 1/6 ok (5 skipped);
 run_checks PASS. Controller-run on the frozen tree pinned by the hashes above; the
@@ -63,54 +39,6 @@ ledger agent did not run it.
 Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS — build ok (0.16s); ok shellwindow (3.74s); verify 1/11 ok (10 skipped);
 run_checks PASS. Controller-run on the same frozen tree; the ledger agent did not run it.
-The swiftcore lane executes the paired Swift counterparts, including
-runKeybindingRegistryChecks from SessionChecks.swift, runEditorDrawerChecks
-(drawer focus/visibility predicates S198–S204) via runProjectSessionSuite, and
-documentTrackContracts (track-remap predicates S205–S206) via the event-edits
-suite in the same lane. The MATCHED shell-lane
-predicates S186–S197 execute in the offscreen Qt Quick shellwindow lane
-(deno task verify:shell over src/checks/editorqml/tst_ShellWindow.qml and its
-ShellQmlTests.swift bootstrap). The original Qt Widget/Quick delivery, Cocoa-gated,
-and harness-timing observations inventoried here execute only in the native Qt check
-harness, never in that lane.
-
-Execution and ownership
-The paired Swift checks execute under runProjectSessionSuite and
-runBankHistorySuite in src/checks/workspace/SessionChecks.swift; the
-predicates those suites own are split across the session_*.swift and
-bank_*.swift files. Within runProjectSessionSuite,
-mouseHintOwnershipChecks (session_editor_semantics.swift) owns the
-MouseHints model predicates (S002–S009); editorSelectionCommandChecks
-(session_editor_semantics.swift) owns the router availability/execution
-predicates (S010–S025); sessionOpenAndRecovery, sessionFailureStages,
-and sessionLifetime (session_io.swift) own the project-open, snapshot,
-failure-stage, and lifetime predicates;
-sessionPlaybackProjectionAndStatePublication (session_playback.swift)
-owns the session state publication predicates including mute/solo
-(S047–S051); and sessionSavePersistence (session_save.swift) owns the
-save/dirty predicates. Within runBankHistorySuite, the inline
-bank-mutation predicates remain in SessionChecks.swift;
-bankPreviewFailure, bankBlankMaterialization, bankMergeSealing,
-bankConflicts, and releaseEditorBankHistorySemantics live in
-bank_edits.swift; bankQueuedSave, bankCatalogOutage, and
-bankSaveRoundTrip live in bank_saves.swift;
-bankReleaseBoundsAndSharedBank and bankCoordinatorGate live in
-bank_sharing.swift; and historyTransitionRegressions lives in
-bank_history_probes.swift.
-Related-but-outside suites invoked by the same file — runTrackHeadersInputChecks
-(TrackHeadersInputChecks.swift), PlaybackChecks, and the camera/page suites —
-carry their own predicates in their own files and are not inventoried here.
-Previously-outside but now inventoried: runEditorDrawerChecks
-(EditorDrawerChecks.swift) owns the drawer focus predicates S198–S200 in
-drawer_state.swift and the visibility/stored-height predicates S201–S204 in
-drawer_basics.swift; documentTrackContracts (DocumentTrackChecks.swift, run via
-the event-edits suite) owns the track-remap publication predicates S205–S206.
-Of these, the MouseHints ownership predicates (S002–S009) and the dirty-tracking predicates (S030, S057, S060–S063) are the ones cited as PARTIAL mappings below. The offscreen shellwindow lane (src/checks/editorqml/tst_ShellWindow.qml with its src/checks/editorqml/ShellQmlTests.swift bootstrap) owns S186–S197.
-
-Fixture, sequence and row constraints
-Two-song MainWindow session opened per test (except the unbound-start case, which constructs a bare MainWindow under a SettingsGuard). No QTest _data rows. Loops expand single sites: drawer-page loops, track loops choosing moveTrack remap targets, the rename-row scan over the Quick menu model, and the captionIsCentered pixel-scan lambda. PromptGuard scopes the popup cases; QTRY/qWaitFor gates order menu, prompt, rename, and hint settle.
-
-Original assertion inventory and source sequence
 
 A001 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:52
 Disposition: GAP
@@ -515,11 +443,7 @@ Original expression:
 
 A041 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:138
 Disposition: MATCHED
-Mapping/reason: MATCHED to S198 (drawerLayoutCheckDrawerFocusRequests, src/checks/drawerpresentation/drawer_state.swift): hiding the active drawer section requests focus for the first remaining visible section, which is exactly this fallback to the Velocity band after the VoiceChanges section hides. TimelineBand identity is the Qt-side observation of the same fallback decision; real QWidget delivery stays NATIVE at A047-A048.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.focusedTimelineBand(), songview::TimelineBand::Velocity)
+Mapping: S198
 
 A042 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:141
 Disposition: GAP
@@ -540,28 +464,15 @@ Original expression:
 
 A044 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:143
 Disposition: MATCHED
-Mapping/reason: MATCHED to S198 (drawerLayoutCheckDrawerFocusRequests, src/checks/drawerpresentation/drawer_state.swift): hiding the active drawer section requests focus for the first remaining visible section, which is exactly this fallback to the Automation band after the Velocity section hides. TimelineBand identity is the Qt-side observation of the same fallback decision; real QWidget delivery stays NATIVE at A047-A048.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.focusedTimelineBand(), songview::TimelineBand::Automation)
+Mapping: S198
 
 A045 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:146
 Disposition: MATCHED
-Mapping/reason: MATCHED to S203 (drawerLayoutCheckDrawerVisibilityAndStoredHeights, src/checks/drawerpresentation/drawer_basics.swift): hiding every section leaves none visible with only the bar row showing, which is exactly this all-hidden terminal state after the last visible section hides. The cross-tab fanout of that state stays GAP at A053-A058.
-Source context since previous assertion:
-        b.focusTimelineBand(songview::TimelineBand::Automation, Qt::MouseFocusReason);
-        window.m_automationDrawerAction->trigger();
-Original expression:
-        QVERIFY(!b.hasVisibleDrawerSection())
+Mapping: S203
 
 A046 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:147
 Disposition: MATCHED
-Mapping/reason: MATCHED to S199 (drawerLayoutCheckDrawerFocusRequests, src/checks/drawerpresentation/drawer_state.swift): hiding the last visible section requests the roll surface while the bar row and its toggles stay, which is exactly this fallback to the Roll band when no drawer section remains. Real QWidget delivery stays NATIVE at A047-A048.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.focusedTimelineBand(), songview::TimelineBand::Roll)
+Mapping: S199
 
 A047 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:149
 Disposition: GAP
@@ -593,35 +504,15 @@ Original expression:
 
 A050 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:166
 Disposition: MATCHED
-Mapping/reason: MATCHED to S203 (drawerLayoutCheckDrawerVisibilityAndStoredHeights, src/checks/drawerpresentation/drawer_basics.swift): hiding sections keeps the active page it retains, which is exactly this Velocity active page surviving the hide of both sections. The cross-tab mirror of that page stays GAP at A053.
-Source context since previous assertion:
-        SongView &a = session->a->view();
-        SongView &b = session->b->view();
-        b.setDrawerActivePage(EditorDrawerPage::Velocity);
-        b.setDrawerSectionHeight(EditorDrawerPage::Velocity, 180);
-        b.setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, 97);
-        const int velocityHeight = b.drawerSectionHeight(EditorDrawerPage::Velocity);
-        const int voiceHeight = b.drawerSectionHeight(EditorDrawerPage::VoiceChanges);
-        b.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
-        b.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
-Original expression:
-        QCOMPARE(b.drawerActivePage(), EditorDrawerPage::Velocity)
+Mapping: S203
 
 A051 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:167
 Disposition: MATCHED
-Mapping/reason: MATCHED to S201 and S204 (drawerLayoutCheckDrawerVisibilityAndStoredHeights, src/checks/drawerpresentation/drawer_basics.swift and :339): hiding a section releases its body and handle while its stored height stays, which is exactly this retained Velocity height after the hide. The cross-tab mirror stays GAP at A054.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.drawerSectionHeight(EditorDrawerPage::Velocity), velocityHeight)
+Mapping: S201, S204
 
 A052 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:168
 Disposition: MATCHED
-Mapping/reason: MATCHED to S204 (drawerLayoutCheckDrawerVisibilityAndStoredHeights, src/checks/drawerpresentation/drawer_basics.swift): toggling hides the voice-changes section and keeps its stored height, which is exactly this retained VoiceChanges height after the hide. The cross-tab mirror stays GAP at A055.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QCOMPARE(b.drawerSectionHeight(EditorDrawerPage::VoiceChanges), voiceHeight)
+Mapping: S204
 
 A053 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:169
 Disposition: GAP
@@ -754,32 +645,11 @@ Original expression:
 
 A067 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:213
 Disposition: MATCHED
-Mapping/reason: tst_ShellWindow.qml openTwoSongShell opens mus_route101 then mus_littleroot_test from the same staged two-song fixture, observing tabCount 1 then 2 with Littleroot as the selected second tab (S186, staged by S192); that open is the two-song session precondition this site guards. No QWidget layer exists in the Swift app.
-Source context since previous assertion:
-    }
-
-    void editActionProjectionAndIdentity()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
+Mapping: S186, S192
 
 A068 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:224
 Disposition: MATCHED
-Mapping/reason: All four window commands have real QML Edit-menu counterparts: test_cWindowShortcutsAndNumericOwnership resolves shellAction_roll.copy in the production Edit menu and shellAction_roll.solo_tracks as a descendant of that Edit menu nested under Tracks (findChild recurses into the submenu) (S188), test_jTimeSelectionInsertAndDeleteMutatesDocument resolves shellAction_edit.insert_time and shellAction_edit.delete_time inside the production Time submenu (S197), and test_eTimeAndTracksMenuContainment walks every Time and Tracks row by objectName and order (S195, S196); QAction pointers themselves are not claimed. No QWidget layer exists in the Swift app. [S188][S195][S196][S197]
-Source context since previous assertion:
-        MainWindow &window = *session->window;
-        SongTab *a = session->a;
-        SongTab *b = session->b;
-
-        // The window commands are the canonical set's own objects, projected
-        // into the native Edit groups — no duplicates, no per-entry handlers.
-        QAction *copy = window.m_copyAction;
-        QAction *solo = window.m_soloAction;
-        QAction *insertTime = window.m_insertTimeAction;
-        QAction *deleteTime = window.m_deleteTimeAction;
-Original expression:
-        QVERIFY(copy && solo && insertTime && deleteTime)
+Mapping: S188, S197, S195, S196
 
 A069 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:225
 Disposition: GAP
@@ -815,78 +685,39 @@ Original expression:
 
 A073 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:230
 Disposition: MATCHED
-Mapping/reason: test_cWindowShortcutsAndNumericOwnership resolves shell.menuBar child shellEditMenu and verifies the production Edit menu exists (S187); the QML Menu replaces the QWidget QMenu this site looked up. No QWidget layer exists in the Swift app.
-Source context since previous assertion:
-        QMenu *edit = editMenu(window);
-Original expression:
-        QVERIFY(edit)
+Mapping: S187
 
 A074 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:231
 Disposition: MATCHED
-Mapping/reason: test_cWindowShortcutsAndNumericOwnership finds shellAction_roll.copy as a child of the production Edit menu and verifies it and shellAction_roll.solo_tracks are real Edit-menu actions (S188); the QML menu item replaces the QAction containment check on the QMenu action list. No QWidget layer exists in the Swift app.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(edit->actions().contains(copy))
+Mapping: S188
 
 A075 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:234
 Disposition: MATCHED
-Mapping/reason: test_eTimeAndTracksMenuContainment resolves shell.shellTimeMenu before any song (S193) and in the active shell as a child of the Edit menu (S194), verifying the Edit submenus exist; the QML Menu replaces the QWidget QMenu this site looked up. No QWidget layer exists in the Swift app. [S193][S194]
-Source context since previous assertion:
-        QMenu *timeMenu = submenuWithTitle(*edit, QStringLiteral("Time"));
-        QMenu *tracksMenu = submenuWithTitle(*edit, QStringLiteral("Tracks"));
-Original expression:
-        QVERIFY(timeMenu)
+Mapping: S193, S194
 
 A076 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:235
 Disposition: MATCHED
-Mapping/reason: test_eTimeAndTracksMenuContainment resolves shell.shellTracksMenu before any song (S193) and in the active shell as a child of the Edit menu (S194), verifying the Edit submenus exist; the QML Menu replaces the QWidget QMenu this site looked up. No QWidget layer exists in the Swift app. [S193][S194]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(tracksMenu)
+Mapping: S193, S194
 
 A077 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:236
 Disposition: MATCHED
-Mapping/reason: S195 walks every Time row by objectName in order and index 0 is shellAction_edit.insert_time, so the command is contained in the production Time submenu action list exactly as this site asserts; the matching enablement rows are S196. No QWidget layer exists in the Swift app. [S195][S196]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(timeMenu->actions().contains(insertTime))
+Mapping: S195, S196
 
 A078 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:237
 Disposition: MATCHED
-Mapping/reason: S195 walks every Time row by objectName in order and index 1 is shellAction_edit.delete_time, so the command is contained in the production Time submenu action list exactly as this site asserts; the matching enablement rows are S196. No QWidget layer exists in the Swift app. [S195][S196]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(timeMenu->actions().contains(deleteTime))
+Mapping: S195, S196
 
 A079 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:238
 Disposition: MATCHED
-Mapping/reason: S195 walks every Tracks row by objectName in order and shellAction_roll.solo_tracks is one of its two rows, so the Solo command is contained in the production Tracks submenu action list exactly as this site asserts. No QWidget layer exists in the Swift app. [S195]
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(tracksMenu->actions().contains(solo))
+Mapping: S195
 
 A080 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:242
 Disposition: MATCHED
-Mapping/reason: test_cWindowShortcutsAndNumericOwnership clicks the first tab control and observes the controller retargeting selectedId to the first song (S189; "a real first-tab click retargets the selected workspace"); target-pointer identity is not claimed. No QWidget layer exists in the Swift app.
-Source context since previous assertion:
-
-        // Retargeting follows the selection; the projected objects do not.
-        window.m_workspace->selectSongTab(a);
-Original expression:
-        QCOMPARE(window.m_editActions->target(), &a->view())
+Mapping: S189
 
 A081 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:244
 Disposition: MATCHED
-Mapping/reason: test_cWindowShortcutsAndNumericOwnership clicks the second tab control and observes the controller retargeting selectedId back to Littleroot (S190; "a real second-tab click restores Littleroot's workspace"); target-pointer identity is not claimed. No QWidget layer exists in the Swift app.
-Source context since previous assertion:
-        window.m_workspace->selectSongTab(b);
-Original expression:
-        QCOMPARE(window.m_editActions->target(), &b->view())
+Mapping: S190
 
 A082 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:245
 Disposition: GAP
@@ -922,13 +753,7 @@ Original expression:
 
 A086 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:252
 Disposition: MATCHED
-Mapping/reason: test_cWindowShortcutsAndNumericOwnership compares menuSolo.enabled true after the second page one-note selection (S191; "Solo is enabled for the selected track"); QML menu-item enablement replaces QAction::isEnabled() on a QWidget menu. No QWidget layer exists in the Swift app.
-Source context since previous assertion:
-        // A ready selected tab opens the readiness-gated commands; an
-        // explicit unbind through the production seam disables everything
-        // until the next real selection change retargets the set.
-Original expression:
-        QVERIFY(solo->isEnabled())
+Mapping: S191
 
 A087 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:254
 Disposition: GAP
@@ -972,19 +797,11 @@ Original expression:
 
 A092 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:260
 Disposition: MATCHED
-Mapping/reason: The re-selection after the unbind is the same first-tab retarget observation as A080 (S189; "a real first-tab click retargets the selected workspace"); the unbind that precedes it stays GAP at A087 and target-pointer identity is not claimed. No QWidget layer exists in the Swift app.
-Source context since previous assertion:
-        window.m_workspace->selectSongTab(a);
-Original expression:
-        QCOMPARE(window.m_editActions->target(), &a->view())
+Mapping: S189
 
 A093 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:261
 Disposition: MATCHED
-Mapping/reason: The readiness-gated Solo enablement after the retarget is the same observation as A086 (S191; "Solo is enabled for the selected track"); QAction::isEnabled() has no QWidget counterpart. No QWidget layer exists in the Swift app.
-Source context since previous assertion:
-(none — assertion sites adjacent)
-Original expression:
-        QVERIFY(solo->isEnabled())
+Mapping: S191
 
 A094 | MainWindowRoutingStateTest::editActionsStartUnboundWithNoWorkspace | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:271
 Disposition: GAP
@@ -1044,15 +861,6 @@ Original expression:
 
 A100 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:282
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-    }
-
-    void nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
 
 A101 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:297
 Disposition: GAP
@@ -1245,15 +1053,6 @@ Original expression:
 
 A121 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:340
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-    }
-
-    void laneIdentityRemapPersistsAndQuietRemapStaysSilent()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
 
 A122 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:353
 Disposition: GAP
@@ -1276,14 +1075,7 @@ Original expression:
 
 A123 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:358
 Disposition: MATCHED
-Mapping/reason: MATCHED to S205 (trackRemapPublicationContract, src/checks/editcheck/DocumentTrackChecks.swift): the document move succeeds and publishes exactly one change with the exact track remap, which is exactly this successful moveTrack ahead of the remap fanout. The EditorViewState fanout of that move has no Swift counterpart and stays GAP.
-Source context since previous assertion:
-        const int source = 1;
-        const int target = source == tracks - 1 ? 0 : tracks - 1;
-        const QByteArray midi = b.document().smf().write();
-        const EditorViewState before = b.editorViewState();
-Original expression:
-        QVERIFY(b.document().moveTrack(source, target))
+Mapping: S205
 
 A124 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:360
 Disposition: GAP
@@ -1456,22 +1248,7 @@ Original expression:
 
 A145 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:396
 Disposition: MATCHED
-Mapping/reason: MATCHED to S205 (trackRemapPublicationContract, src/checks/editcheck/DocumentTrackChecks.swift): the document move succeeds and publishes exactly one change with the exact track remap, which is exactly this successful quiet moveTrack under the reduced view state. The EditorViewState silence that follows stays GAP at A146-A148.
-Source context since previous assertion:
-
-        EditorViewState reduced;
-        reduced.velocity = {true, 173};
-        reduced.automation = {true, 44};
-        reduced.voiceChanges = {true, 55};
-        reduced.activePage = EditorDrawerPage::Automations;
-        b.setEditorViewState(reduced);
-        projection.clear();
-        origin.clear();
-        hub.clear();
-        persisted.clear();
-        const QByteArray quietMidi = b.document().smf().write();
-Original expression:
-        QVERIFY(b.document().moveTrack(source, target))
+Mapping: S205
 
 A146 | MainWindowRoutingStateTest::laneIdentityRemapPersistsAndQuietRemapStaysSilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:398
 Disposition: GAP
@@ -1548,15 +1325,6 @@ Original expression:
 
 A155 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:414
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-    }
-
-    void viewOnlyLaneMutationsPersistWithoutDocumentMutation()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
 
 A156 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:431
 Disposition: GAP
@@ -1706,15 +1474,6 @@ Original expression:
 
 A172 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:456
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-    }
-
-    void rejectedRemapIsTotalNoop()
-    {
-        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
-Original expression:
-        QVERIFY(session.has_value())
 
 A173 | MainWindowRoutingStateTest::rejectedRemapIsTotalNoop | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:474
 Disposition: GAP
@@ -1835,31 +1594,12 @@ Original expression:
 
 A185 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:496
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-        SongView &view = session->b->view();
-        ui::MouseHints &hints = mouseHints();
-        QQuickWindow *const canvas = quickCanvas(view);
-Original expression:
-        QVERIFY(canvas)
 
 A186 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:500
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-        QQuickItem *const plot = quickItem(view, QLatin1String("timelineRollInput"));
-        QQuickItem *const gutter = quickItem(view, QLatin1String("timelineRollGutterInput"));
-        QQuickItem *const headers = quickItem(view, QLatin1String("timelineTrackHeadersInput"));
-Original expression:
-        QVERIFY(plot && gutter && headers)
 
 A187 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:502
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-        songview::TrackHeaderModel *const model = trackHeaders(view);
-Original expression:
-        QVERIFY(model)
 
 A188 | MainWindowRoutingStateTest::mouseHintFollowsRealTargets | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:503
 Disposition: GAP
@@ -1996,21 +1736,9 @@ Original expression:
 
 A202 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:553
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-        SongView &view = session->b->view();
-        ui::MouseHints &hints = mouseHints();
-        QQuickWindow *const canvas = quickCanvas(view);
-Original expression:
-        QVERIFY(canvas)
 
 A203 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:555
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-        songview::TrackHeaderModel *const model = trackHeaders(view);
-Original expression:
-        QVERIFY(model)
 
 A204 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:556
 Disposition: GAP
@@ -2030,11 +1758,6 @@ Original expression:
 
 A206 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:560
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-        songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
-Original expression:
-        QVERIFY(popup)
 
 A207 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:569
 Disposition: GAP
@@ -2070,11 +1793,6 @@ Original expression:
 
 A210 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:576
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-        QQuickItem *const editor = renameInput->parentItem();
-Original expression:
-        QVERIFY(editor)
 
 A211 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:580
 Disposition: GAP
@@ -2153,24 +1871,9 @@ Original expression:
 
 A219 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:606
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-
-        // The menu's own Rename row — the real path a user takes — reopens
-        // the editor on the menu's track, and the editor's hint returns.
-        const int menuTrack =
-            model->data(model->index(1, 0), songview::TrackHeaderModel::TrackRole).toInt();
-        QQuickItem *const panel = quick_popup::menuPanel(*popup);
-Original expression:
-        QVERIFY(panel)
 
 A220 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:608
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-        songview::QuickMenuModel *const menuModel = quick_popup::menuModel(*panel);
-Original expression:
-        QVERIFY(menuModel)
 
 A221 | MainWindowRoutingStateTest::mouseHintMenuScopeKeepsRenameAndRestoresEditor | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:618
 Disposition: GAP
@@ -2263,14 +1966,6 @@ Original expression:
 
 A230 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:644
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-        MainWindow &window = *session->window;
-        SongView &view = session->b->view();
-        ui::MouseHints &hints = mouseHints();
-        QQuickWindow *const canvas = quickCanvas(view);
-Original expression:
-        QVERIFY(canvas)
 
 A231 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:646
 Disposition: GAP
@@ -2282,11 +1977,6 @@ Original expression:
 
 A232 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:648
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-        songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
-Original expression:
-        QVERIFY(popup)
 
 A233 | MainWindowRoutingStateTest::mouseHintPopupScopeRestoresCoveredTarget | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:652
 Disposition: GAP
@@ -2386,23 +2076,9 @@ Original expression:
 
 A243 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:685
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-        MainWindow &window = *session->window;
-        SongView &view = session->b->view();
-        ui::MouseHints &hints = mouseHints();
-        QQuickWindow *const canvas = quickCanvas(view);
-Original expression:
-        QVERIFY(canvas)
 
 A244 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:688
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
-Source context since previous assertion:
-        QQuickItem *const plot = quickItem(view, QLatin1String("timelineRollInput"));
-        QQuickItem *const gutter = quickItem(view, QLatin1String("timelineRollGutterInput"));
-Original expression:
-        QVERIFY(plot && gutter)
 
 A245 | MainWindowRoutingStateTest::mouseHintStatusLayoutStaysStable | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:690
 Disposition: GAP
@@ -2670,1292 +2346,618 @@ Swift assertion predicates
 
 S001 | savedMidiCompilesAfterDocumentSave | src/checks/workspace/session_save.swift
 Anchor: message "actual mid2agb exit result for the persisted edited MIDI and flags"
-    report.expectEqual(Int32(1), compileResult, cppID: cppID,
-                       what: "actual mid2agb exit result for the persisted edited MIDI and flags")
 
 S002 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "inactive windows reject hint claims"
-    report.expectEqual("", hints.text, cppID: id,
-                       what: "inactive windows reject hint claims")
 
 S003 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "replaced source cannot clear an identical-profile new owner"
-    report.expectEqual(nodeHint, hints.text, cppID: id,
-                       what: "replaced source cannot clear an identical-profile new owner")
 
 S004 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "empty profile replaces and clears prior visible hint"
-    report.expectEqual("", hints.text, cppID: id,
-                       what: "empty profile replaces and clears prior visible hint")
 
 S005 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "replacing the node profile changes the presented instructions"
-    report.expect(hints.text != nodeHint, cppID: id,
-                  message: "replacing the node profile changes the presented instructions")
 
 S006 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "current source lifecycle clear removes hint"
-    report.expectEqual("", hints.text, cppID: id,
-                       what: "current source lifecycle clear removes hint")
 
 S007 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "window deactivation clears an owned hint"
-    report.expectEqual("", hints.text, cppID: id,
-                       what: "window deactivation clears an owned hint")
 
 S008 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "reactivation never resurrects cached ownership"
-    report.expectEqual("", hints.text, cppID: id,
-                       what: "reactivation never resurrects cached ownership")
 
 S009 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "unknown profile clears rather than retaining unrelated instructions"
-    report.expectEqual("", hints.text, cppID: id,
-                       what: "unknown profile clears rather than retaining unrelated instructions")
 
 S010 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "automation range owns semantic edit availability"
-    report.expect(router.isAvailable(.delete) && router.isAvailable(.copy)
-                  && router.isAvailable(.cut), cppID: id,
-                  message: "automation range owns semantic edit availability")
 
 S011 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "range Delete retains canonical repeat execution"
-    report.expectEqual(EditKeyDecision.execute.rawValue,
-                       router.route(.delete, autoRepeat: true).rawValue,
-                       cppID: id, what: "range Delete retains canonical repeat execution")
 
 S012 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "availability and key arbitration never mutate the document"
-    report.expectEqual(revision, document.revision, cppID: id,
-                       what: "availability and key arbitration never mutate the document")
 
 S013 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "lane-scoped transpose consumes without falling through to notes"
-    report.expectEqual(EditKeyDecision.consume.rawValue,
-                       router.route(.transposeUp, autoRepeat: false).rawValue,
-                       cppID: id, what: "lane-scoped transpose consumes without falling through to notes")
 
 S014 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "lane transpose does not mutate a simultaneous note selection"
-    report.expectEqual(revision, document.revision, cppID: id,
-                       what: "lane transpose does not mutate a simultaneous note selection")
 
 S015 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "range Delete removes only points in the selected interval"
-    report.expectEqual([Tick(72)], document.lanePoints(
-        track: 0, lane: .controller(TimeDefaults.ccPan)).map(\.tick),
-        cppID: id, what: "range Delete removes only points in the selected interval")
 
 S016 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "time selection deletion leaves simultaneously selected notes intact"
-    report.expect(document.note(selectedNote.id) != nil, cppID: id,
-                  message: "time selection deletion leaves simultaneously selected notes intact")
 
 S017 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "empty selected range deletion never falls through to notes"
-    report.expectEqual(afterDelete, document.revision, cppID: id,
-                       what: "empty selected range deletion never falls through to notes")
 
 S018 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "empty range still owns the operation target"
-    report.expect(document.note(selectedNote.id) != nil, cppID: id,
-                  message: "empty range still owns the operation target")
 
 S019 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "canonical clear-selection command clears the automation range"
-    report.expect(page.selection == nil, cppID: id,
-                  message: "canonical clear-selection command clears the automation range")
 
 S020 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "note selection becomes the target after range clear"
-    report.expectEqual(EditKeyDecision.execute.rawValue,
-                       router.route(.delete, autoRepeat: false).rawValue,
-                       cppID: id, what: "note selection becomes the target after range clear")
 
 S021 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "shared note deletion remains reachable after range clear"
-    report.expect(document.note(selectedNote.id) == nil, cppID: id,
-                  message: "shared note deletion remains reachable after range clear")
 
 S022 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "track range deletes both its notes and automation points"
-    report.expect(!document.notes(in: 0).contains(where: { $0.tick == 48 })
-                  && document.lanePoints(track: 0, lane: .controller(TimeDefaults.ccPan)).isEmpty,
-                  cppID: id, message: "track range deletes both its notes and automation points")
 
 S023 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "track range leaves outside notes intact"
-    report.expect(document.notes(in: 0).contains(where: { $0.tick == 96 }), cppID: id,
-                  message: "track range leaves outside notes intact")
 
 S024 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "a live pointer gesture consumes semantic deletion"
-    report.expectEqual(EditKeyDecision.consume.rawValue,
-                       router.route(.delete, autoRepeat: false).rawValue,
-                       cppID: id, what: "a live pointer gesture consumes semantic deletion")
 
 S025 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift
 Anchor: message "direct activation cannot bypass pointer gesture arbitration"
-    report.expectEqual(beforeGestureCommand, document.revision, cppID: id,
-                       what: "direct activation cannot bypass pointer gesture arbitration")
 
 S026 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
 Anchor: message "published project snapshot survives source registry replacement"
-        report.expectEqual("mus_session_test", detached.source.label,
-                           cppID: "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
-                           what: "published project snapshot survives source registry replacement")
 
 S027 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
 Anchor: message "failed replacement open retains the worker's prior project"
-            report.expectEqual("mus_session_test", retained.source.label,
-                               cppID: "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
-                               what: "failed replacement open retains the worker's prior project")
 
 S028 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
 Anchor: message "unknown label reaches the native playable-song rejection"
-        report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
-                      cppID: "vgbankcheck/VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels",
-                      message: "unknown label reaches the native playable-song rejection")
 
 S029 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
 Anchor: message "DocumentSession adopts the requested song source"
-        report.expectEqual("mus_session_test", session.document.source.label,
-                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
-                           what: "DocumentSession adopts the requested song source")
 
 S030 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
 Anchor: message "opened session starts clean"
-    report.expectEqual(false, session.document.isDirty,
-                       cppID: "project-identity/ProjectIdentityTest::songHistory_startsClean",
-                       what: "opened session starts clean")
 
 S031 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "initial timeline matches canonical state factory projection"
-    report.expectEqual(initialExpectedTimeline.sample(for: 24), session.timeline.sample(for: 24),
-                       cppID: "swiftcore/DocumentSession::initialPlaybackProjection",
-                       what: "initial timeline matches canonical state factory projection")
 
 S032 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "adoption stripped tempo meta events from file chunks into authoritative state.tempo"
-    report.expect(chunkMetasStripped,
-                  cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-                  message: "adoption stripped tempo meta events from file chunks into authoritative state.tempo")
 
 S033 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "authoritative tempo point count in state"
-    report.expectEqual(1, session.document.state.tempo.count,
-                       cppID: "swiftcore/DocumentSession::authoritativeTempoAdoption",
-                       what: "authoritative tempo point count in state")
 
 S034 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "initial tempo 120 BPM schedules exactly 24000 samples at tick 24"
-    report.expectEqual(UInt64(24_000), initialSampleAt24,
-                       cppID: "project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe",
-                       what: "initial tempo 120 BPM schedules exactly 24000 samples at tick 24")
 
 S035 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "document mutation invokes session presenter callback"
-    report.expect(publishedChangeCount > 0,
-                  cppID: "projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
-                  message: "document mutation invokes session presenter callback")
 
 S036 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "immutable playback publication callback received updated timeline"
-    report.expect(lastPublishedTimeline != nil,
-                  cppID: "project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths",
-                  message: "immutable playback publication callback received updated timeline")
 
 S037 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "state factory projection computes exact 19200 samples for edited tempo"
-    report.expectEqual(UInt64(19_200), editedSampleAt24,
-                       cppID: "project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
-                       what: "state factory projection computes exact 19200 samples for edited tempo")
 
 S038 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "48-clock conversion quantizes the 13-tick gate to 12 ticks"
-    report.expectEqual(UInt64(48_000), noteOffSample(extendedTimeline, key: 64),
-                       cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
-                       what: "48-clock conversion quantizes the 13-tick gate to 12 ticks")
 
 S039 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "extended clocks change an observable note-release sample"
-    report.expect(defaultClock64 != noteOffSample(extendedTimeline, key: 64),
-                  cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
-                  message: "extended clocks change an observable note-release sample")
 
 S040 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "exact gate preserves the 25-tick release instead of LUT bucket 24"
-    report.expectEqual(UInt64(20_000), configuredGate60,
-                       cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
-                       what: "exact gate preserves the 25-tick release instead of LUT bucket 24")
 
 S041 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "exact gate changes an observable note-release sample"
-    report.expect(defaultGate60 != configuredGate60,
-                  cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
-                  message: "exact gate changes an observable note-release sample")
 
 S042 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "undo config restores default gate release scheduling"
-        report.expectEqual(defaultGate60, noteOffSample(session.timeline, key: 60),
-                           cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
-                           what: "undo config restores default gate release scheduling")
 
 S043 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "timeline remains at 150 BPM prior to tempo undo"
-        report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
-                           cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
-                           what: "timeline remains at 150 BPM prior to tempo undo")
 
 S044 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "undo tempo restores initial 120 BPM timing"
-        report.expectEqual(UInt64(24_000), session.timeline.sample(for: 24),
-                           cppID: "project-identity/ProjectIdentityTest::savedRecipe_selectionFallbacks",
-                           what: "undo tempo restores initial 120 BPM timing")
 
 S045 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "redo tempo restores 150 BPM timing"
-        report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
-                           cppID: "project-identity/ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty",
-                           what: "redo tempo restores 150 BPM timing")
 
 S046 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "redo config reproduces exact-gate event timing"
-        report.expectEqual(configuredGate60, noteOffSample(session.timeline, key: 60),
-                           cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
-                           what: "redo config reproduces exact-gate event timing")
 
 S047 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "cursor-only mutation publishes exactly the cursor domain"
-    report.expect(
-        publishedChangeCount == publicationStart + 1
-            && publishedChanges.last?.domains == [.cursor]
-            && publishedChanges.last?.revision == preRevision
-            && publishedChanges.last?.trackRemap == nil,
-        cppID: statePublicationID,
-        message: "cursor-only mutation publishes exactly the cursor domain")
 
 S048 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "equal cursor assignment publishes nothing"
-    report.expectEqual(publicationStart, publishedChangeCount,
-                       cppID: statePublicationID,
-                       what: "equal cursor assignment publishes nothing")
 
 S049 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "mute mutation publishes exactly the mix-state domain"
-    report.expect(
-        publishedChangeCount == publicationStart + 1
-            && publishedChanges.last?.domains == [.mixState],
-        cppID: statePublicationID,
-        message: "mute mutation publishes exactly the mix-state domain")
 
 S050 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "solo mutation publishes exactly the mix-state domain"
-    report.expect(
-        publishedChangeCount == publicationStart + 1
-            && publishedChanges.last?.domains == [.mixState],
-        cppID: statePublicationID,
-        message: "solo mutation publishes exactly the mix-state domain")
 
 S051 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "equal mute and solo assignments publish nothing"
-    report.expectEqual(publicationStart, publishedChangeCount,
-                       cppID: statePublicationID,
-                       what: "equal mute and solo assignments publish nothing")
 
 S052 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "nested throwing batch publishes completed state exactly once"
-    report.expect(publishedChangeCount == publicationStart + 1 && observedCompletedBatch,
-                  cppID: statePublicationID,
-                  message: "nested throwing batch publishes completed state exactly once")
 
 S053 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "session-only changes preserve revision, dirty/history, and playback publication"
-    report.expect(
-        session.document.revision == preRevision
-            && session.document.isDirty == preDirty
-            && session.document.history.currentIdentity == preIdentity
-            && session.document.history.canUndo == preCanUndo
-            && session.document.history.canRedo == preCanRedo
-            && publishedPlaybackCount == prePlaybackCount,
-        cppID: statePublicationID,
-        message: "session-only changes preserve revision, dirty/history, and playback publication")
 
 S054 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
 Anchor: message "selection reconciler prunes dead note IDs when notes are deleted"
-        report.expectEqual(false, session.selectedNotes.contains(note1),
-                           cppID: "swiftcore/DocumentSession::selectionPrunesDeletedNotes",
-                           what: "selection reconciler prunes dead note IDs when notes are deleted")
 
 S055 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "fixture exposes the other song's midi.cfg line"
-    report.expect(otherSongCfgBefore != nil,
-                  cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-                  message: "fixture exposes the other song's midi.cfg line")
 
 S056 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "the loop-start edit is present before save"
-    report.expectEqual(Tick(72), preSaveLoopStart,
-                       cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-                       what: "the loop-start edit is present before save")
 
 S057 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "edited song save confirms clean state"
-        report.expectEqual(false, session.document.isDirty,
-                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-                           what: "edited song save confirms clean state")
 
 S058 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "save preserves the other song's complete midi.cfg line bytes"
-    report.expectEqual(
-        otherSongCfgBefore, configLineBytes(at: midiCfgPath, label: "mus_session_test2"),
-        cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-        what: "save preserves the other song's complete midi.cfg line bytes")
 
 S059 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "save leaves legacy sidecar JSON untouched"
-    report.expect(legacyContent?.contains("\"protected\": true") == true,
-                  cppID: "project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
-                  message: "save leaves legacy sidecar JSON untouched")
 
 S060 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "edit after save is dirty"
-        report.expectEqual(true, session.document.isDirty,
-                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
-                           what: "edit after save is dirty")
 
 S061 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "undo to the saved state is clean"
-        report.expectEqual(false, session.document.isDirty,
-                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
-                           what: "undo to the saved state is clean")
 
 S062 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "redo away from the saved state is dirty"
-        report.expectEqual(true, session.document.isDirty,
-                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
-                           what: "redo away from the saved state is dirty")
 
 S063 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "cleanup undo returns to the saved state"
-        report.expectEqual(false, session.document.isDirty,
-                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
-                           what: "cleanup undo returns to the saved state")
 
 S064 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "reopen reproduces saved authoritative 150 BPM timing"
-        report.expectEqual(UInt64(19_200), reopened.timeline.sample(for: 24),
-                           cppID: "project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
-                           what: "reopen reproduces saved authoritative 150 BPM timing")
 
 S065 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "reopen reproduces settings-sensitive note-release timing"
-        report.expectEqual(preSaveGate60, noteOffSample(reopened.timeline, key: 60),
-                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
-                           what: "reopen reproduces settings-sensitive note-release timing")
 
 S066 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "note and non-tempo metadata streams survive save/reopen"
-        report.expectEqual(preSaveFile, reopened.document.state.file,
-                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-                           what: "note and non-tempo metadata streams survive save/reopen")
 
 S067 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "loop-start marker survives save/reopen"
-        report.expectEqual(preSaveLoopStart, reopened.timeline.loopStartTick,
-                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-                           what: "loop-start marker survives save/reopen")
 
 S068 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "loop-end marker survives save/reopen"
-        report.expectEqual(preSaveLoopEnd, reopened.timeline.loopEndTick,
-                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-                           what: "loop-end marker survives save/reopen")
 
 S069 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "raw config flags survive save/reopen"
-        report.expectEqual(preSaveConfig.rawFlags, reopenedConfig.rawFlags,
-                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-                           what: "raw config flags survive save/reopen")
 
 S070 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "voicegroup argument survives save/reopen"
-        report.expectEqual(preSaveConfig.voicegroupArgument, reopenedConfig.voicegroupArgument,
-                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-                           what: "voicegroup argument survives save/reopen")
 
 S071 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "master volume survives save/reopen"
-        report.expectEqual(preSaveConfig.masterVolume, reopenedConfig.masterVolume,
-                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-                           what: "master volume survives save/reopen")
 
 S072 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "reverb survives save/reopen"
-        report.expectEqual(preSaveConfig.reverb, reopenedConfig.reverb,
-                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-                           what: "reverb survives save/reopen")
 
 S073 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "priority survives save/reopen"
-        report.expectEqual(preSaveConfig.priority, reopenedConfig.priority,
-                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
-                           what: "priority survives save/reopen")
 
 S074 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "exact-gate setting survives save/reopen"
-        report.expectEqual(preSaveConfig.exactGate, reopenedConfig.exactGate,
-                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
-                           what: "exact-gate setting survives save/reopen")
 
 S075 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "extended-clock setting survives save/reopen"
-        report.expectEqual(preSaveConfig.extendedClocks, reopenedConfig.extendedClocks,
-                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
-                           what: "extended-clock setting survives save/reopen")
 
 S076 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "tempo metas remain stripped while authoritative timing persists"
-        report.expectEqual(false, reopenedHasTempoMeta,
-                           cppID: "project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
-                           what: "tempo metas remain stripped while authoritative timing persists")
 
 S077 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "stale snapshot completion leaves the newer document dirty"
-        report.expectEqual(true, session.document.isDirty,
-                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
-                           what: "stale snapshot completion leaves the newer document dirty")
 
 S078 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "undoing only the newer edit remains dirty"
-        report.expectEqual(true, session.document.isDirty,
-                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
-                           what: "undoing only the newer edit remains dirty")
 
 S079 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "undoing both post-save edits returns to the saved state"
-        report.expectEqual(false, session.document.isDirty,
-                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
-                           what: "undoing both post-save edits returns to the saved state")
 
 S080 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "opened song has non-zero bank token"
-        report.expect(song1.bank.bankToken != 0,
-                      cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
-                      message: "opened song has non-zero bank token")
 
 S081 | sessionSavePersistence | src/checks/workspace/session_save.swift
 Anchor: message "songs sharing the same voicegroup reuse the native bank lease"
-        report.expectEqual(song1.bank.bankToken, song2.bank.bankToken,
-                           cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
-                           what: "songs sharing the same voicegroup reuse the native bank lease")
 
 S082 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "failed stage preserves MIDI file bytes"
-        report.expectEqual(midiBeforeFailures, bytes(at: midiPath), cppID: cppID,
-                           what: "failed stage preserves MIDI file bytes")
 
 S083 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "failed stage preserves voicegroup file bytes"
-        report.expectEqual(bankBeforeFailures, bytes(at: bankPath), cppID: cppID,
-                           what: "failed stage preserves voicegroup file bytes")
 
 S084 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "failed stage leaves document dirty"
-        report.expectEqual(true, session.document.isDirty, cppID: cppID,
-                           what: "failed stage leaves document dirty")
 
 S085 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "failed stage leaves bank dirty"
-        report.expectEqual(true, session.bankDirty, cppID: cppID,
-                           what: "failed stage leaves bank dirty")
 
 S086 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "reconcile stage reports the native playable-song failure"
-        report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
-                      cppID: reconcileID,
-                      message: "reconcile stage reports the native playable-song failure")
 
 S087 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "MIDI stage reports its missing source file"
-            report.expect(operationFailureMessage(error)?.contains("Cannot read") == true,
-                          cppID: midiID,
-                          message: "MIDI stage reports its missing source file")
 
 S088 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "voicegroup stage reports its missing source file"
-            report.expect(operationFailureMessage(error)?.contains("voicegroup") == true,
-                          cppID: voicegroupID,
-                          message: "voicegroup stage reports its missing source file")
 
 S089 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "save stage reports the unwritable destination"
-        report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
-                      cppID: saveID,
-                      message: "save stage reports the unwritable destination")
 
 S090 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "playable label reaches native voicegroup resolution and is rejected"
-            report.expect(
-                operationFailureMessage(error)?.lowercased().contains("voicegroup") == true,
-                cppID: cppID,
-                message: "playable label reaches native voicegroup resolution and is rejected")
 
 S091 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "native service publishes a project-relative normalized bank identity"
-        report.expectEqual("sound/voicegroups/test_vg.inc", normalized.bank.sourcePath,
-                           cppID: "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
-                           what: "native service publishes a project-relative normalized bank identity")
 
 S092 | sessionFailureStages | src/checks/workspace/session_io.swift
 Anchor: message "native service round-trips the accepted playable song label"
-        report.expectEqual("mus_session_test", normalized.source.label,
-                           cppID: "project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
-                           what: "native service round-trips the accepted playable song label")
 
 S093 | sessionLifetime | src/checks/workspace/session_io.swift
 Anchor: message "first document closes cleanly"
-        report.expectEqual(true, firstDocumentClosed,
-                           cppID: lifetimeID,
-                           what: "first document closes cleanly")
 
 S094 | sessionLifetime | src/checks/workspace/session_io.swift
 Anchor: message "first document marks isClosed without closing its project service"
-    report.expectEqual(true, session.isClosed,
-                       cppID: lifetimeID,
-                       what: "first document marks isClosed without closing its project service")
 
 S095 | sessionLifetime | src/checks/workspace/session_io.swift
 Anchor: message "project song labels remain available after document close"
-        report.expect(labels.contains("mus_session_test") &&
-                      labels.contains("mus_session_test2"),
-                      cppID: lifetimeID,
-                      message: "project song labels remain available after document close")
 
 S096 | sessionLifetime | src/checks/workspace/session_io.swift
 Anchor: message "same project service opens a second document without reopening"
-        report.expectEqual("mus_session_test2", secondLabel,
-                           cppID: lifetimeID,
-                           what: "same project service opens a second document without reopening")
 
 S097 | sessionLifetime | src/checks/workspace/session_io.swift
 Anchor: message "second document closes cleanly"
-        report.expectEqual(true, secondDocumentClosed,
-                           cppID: lifetimeID,
-                           what: "second document closes cleanly")
 
 S098 | sessionLifetime | src/checks/workspace/session_io.swift
 Anchor: message "explicit project service close owns worker shutdown"
-        report.expectEqual(ProjectServiceError.serviceClosed, error,
-                           cppID: lifetimeID,
-                           what: "explicit project service close owns worker shutdown")
 
 S099 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "published bank has slot views"
-    report.expect(session.bankSlots.count >= 4,
-                  cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                  message: "published bank has slot views")
 
 S100 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "slot 0 is editable square 1"
-    report.expectEqual(BankSlotKind.editable, session.bankSlots[0].kind,
-                       cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                       what: "slot 0 is editable square 1")
 
 S101 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "slot 3 is initially blank"
-    report.expectEqual(BankSlotKind.none, session.bankSlots[3].kind,
-                       cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
-                       what: "slot 3 is initially blank")
 
 S102 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "bank edit dirties bank"
-        report.expectEqual(true, session.bankDirty,
-                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                           what: "bank edit dirties bank")
 
 S103 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "scalar edit changes the requested voice and preserves every other slot"
-        report.expectEqual(scalarEditedSlots, session.bankSlots,
-                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                           what: "scalar edit changes the requested voice and preserves every other slot")
 
 S104 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "applied bank edit mints a fresh lease"
-        report.expect(result.lease.bankToken != oldToken,
-                      cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                      message: "applied bank edit mints a fresh lease")
 
 S105 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "superseded lease retains its bank token and stays valid"
-        report.expectEqual(oldToken, oldLease.bankToken,
-                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                           what: "superseded lease retains its bank token and stays valid")
 
 S106 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "bank edit publishes bank, dirty, and history exactly once"
-        report.expect(
-            bankPublications.count == 1
-                && bankPublications[0].domains == [.bank, .dirty, .history],
-            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
-            message: "bank edit publishes bank, dirty, and history exactly once")
 
 S107 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "undo restores the complete original bank view"
-        report.expectEqual(originalSlots, session.bankSlots,
-                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                           what: "undo restores the complete original bank view")
 
 S108 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "bank undo publishes bank, dirty, and history exactly once"
-        report.expect(
-            bankPublications.count == 1
-                && bankPublications[0].domains == [.bank, .dirty, .history],
-            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
-            message: "bank undo publishes bank, dirty, and history exactly once")
 
 S109 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "redo restores the scalar edit without changing other slots"
-        report.expectEqual(scalarEditedSlots, session.bankSlots,
-                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                           what: "redo restores the scalar edit without changing other slots")
 
 S110 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "bank redo publishes bank, dirty, and history exactly once"
-        report.expect(
-            bankPublications.count == 1
-                && bankPublications[0].domains == [.bank, .dirty, .history],
-            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
-            message: "bank redo publishes bank, dirty, and history exactly once")
 
 S111 | bankPreviewFailure | src/checks/workspace/bank_edits.swift
 Anchor: message "preview filesystem failure reaches the public service error type"
-            report.expect(operationFailureMessage(error) != nil,
-                          cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-                          message: "preview filesystem failure reaches the public service error type")
 
 S112 | bankPreviewFailure | src/checks/workspace/bank_edits.swift
 Anchor: message "preview failure preserves every visible bank slot"
-    report.expectEqual(previewSlots, session.bankSlots,
-                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-                       what: "preview failure preserves every visible bank slot")
 
 S113 | bankPreviewFailure | src/checks/workspace/bank_edits.swift
 Anchor: message "preview failure preserves visible dirty state"
-    report.expectEqual(previewDirty, session.bankDirty,
-                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-                       what: "preview failure preserves visible dirty state")
 
 S114 | bankPreviewFailure | src/checks/workspace/bank_edits.swift
 Anchor: message "preview failure leaves source file bytes unchanged"
-    report.expectEqual(previewSourceBytes, bytes(at: previewSourcePath),
-                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-                       what: "preview failure leaves source file bytes unchanged")
 
 S115 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift
 Anchor: message "blank slot materialization issues a single-shot token"
-        report.expect(materialized.materializationToken != nil,
-                      cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
-                      message: "blank slot materialization issues a single-shot token")
 
 S116 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift
 Anchor: message "blank materialization publishes the requested voice and preserves other slots"
-        report.expectEqual(materializedSlots, session.bankSlots,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
-                           what: "blank materialization publishes the requested voice and preserves other slots")
 
 S117 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift
 Anchor: message "undo restores the complete pre-materialization bank view"
-        report.expectEqual(beforeMaterializationSlots, session.bankSlots,
-                           cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
-                           what: "undo restores the complete pre-materialization bank view")
 
 S118 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift
 Anchor: message "redo rematerializes the voice without changing other slots"
-        report.expectEqual(materializedSlots, session.bankSlots,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
-                           what: "redo rematerializes the voice without changing other slots")
 
 S119 | bankMergeSealing | src/checks/workspace/bank_edits.swift
 Anchor: message "second pan edit applied"
-        report.expectEqual(Int32(25), session.bankSlots[0].voice?.pan,
-                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-                           what: "second pan edit applied")
 
 S120 | bankMergeSealing | src/checks/workspace/bank_edits.swift
 Anchor: message "undo reverts merged pan edits to origin in one step"
-        report.expectEqual(Int32(15), session.bankSlots[0].voice?.pan,
-                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-                           what: "undo reverts merged pan edits to origin in one step")
 
 S121 | bankMergeSealing | src/checks/workspace/bank_edits.swift
 Anchor: message "real-service pan A-to-B-to-A removes its entry so undo reaches the preceding materialization"
-        report.expect(reachedPreceding && session.bankSlots[3].kind == BankSlotKind.none,
-                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-                      message: "real-service pan A-to-B-to-A removes its entry so undo reaches the preceding materialization")
 
 S122 | bankConflicts | src/checks/workspace/bank_edits.swift
 Anchor: message "stale expected voice triggers bankConflict"
-        report.expectEqual(ProjectServiceError.bankConflict, error,
-                           cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
-                           what: "stale expected voice triggers bankConflict")
 
 S123 | bankConflicts | src/checks/workspace/bank_edits.swift
 Anchor: message "initial conflict leaves canUndo unchanged"
-    report.expectEqual(undoBeforeInitialConflict, session.document.history.canUndo,
-                       cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
-                       what: "initial conflict leaves canUndo unchanged")
 
 S124 | bankConflicts | src/checks/workspace/bank_edits.swift
 Anchor: message "initial conflict leaves canRedo unchanged"
-    report.expectEqual(redoBeforeInitialConflict, session.document.history.canRedo,
-                       cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
-                       what: "initial conflict leaves canRedo unchanged")
 
 S125 | bankConflicts | src/checks/workspace/bank_edits.swift
 Anchor: message "materializing occupied slot triggers bankConflict"
-        report.expectEqual(ProjectServiceError.bankConflict, error,
-                           cppID: "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
-                           what: "materializing occupied slot triggers bankConflict")
 
 S126 | bankConflicts | src/checks/workspace/bank_edits.swift
 Anchor: message "unknown token triggers bankConflict"
-        report.expectEqual(ProjectServiceError.bankConflict, error,
-                           cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
-                           what: "unknown token triggers bankConflict")
 
 S127 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "unified save marks the song clean"
-        report.expectEqual(false, session.document.isDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                           what: "unified save marks the song clean")
 
 S128 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "unified save marks the bank clean"
-        report.expectEqual(false, session.bankDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                           what: "unified save marks the bank clean")
 
 S129 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "unified bank save publishes bank, dirty, and history exactly once"
-        report.expect(
-            bankPublications.count == 1
-                && bankPublications[0].domains == [.bank, .dirty, .history],
-            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
-            message: "unified bank save publishes bank, dirty, and history exactly once")
 
 S130 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "unified save changes persisted MIDI bytes"
-        report.expect(bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
-                      cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                      message: "unified save changes persisted MIDI bytes")
 
 S131 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "unified save changes persisted bank bytes"
-        report.expect(bytes(at: unifiedBankPath) != bankBeforeUnifiedSave,
-                      cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                      message: "unified save changes persisted bank bytes")
 
 S132 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "fresh reopen reads the unified song edit from disk"
-        report.expectEqual(expectedUnifiedFile, reopened.document.state.file,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                           what: "fresh reopen reads the unified song edit from disk")
 
 S133 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift
 Anchor: message "fresh reopen reads the unified bank edits and preserved slots from disk"
-        report.expectEqual(expectedUnifiedSlots, reopened.bankSlots,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                           what: "fresh reopen reads the unified bank edits and preserved slots from disk")
 
 S134 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "queued save writes the captured stale MIDI snapshot"
-            report.expectEqual(Optional(Data(staleSnapshot.bytes)),
-                               bytes(at: session.document.source.midiPath),
-                               cppID: queuedSaveID,
-                               what: "queued save writes the captured stale MIDI snapshot")
 
 S135 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "save completion preserves the newer document identity"
-            report.expectEqual(newerIdentity, session.document.history.currentIdentity,
-                               cppID: queuedSaveID,
-                               what: "save completion preserves the newer document identity")
 
 S136 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "stale save completion cannot clean the newer edit"
-            report.expectEqual(true, session.document.isDirty, cppID: queuedSaveID,
-                               what: "stale save completion cannot clean the newer edit")
 
 S137 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "queued native bank write publishes its clean receipt"
-            report.expectEqual(false, session.bankDirty, cppID: queuedSaveID,
-                               what: "queued native bank write publishes its clean receipt")
 
 S138 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "queued bank save preserves the edited bank voice"
-            report.expectEqual(savedVoice, session.bankSlots[0].voice,
-                               cppID: queuedSaveID,
-                               what: "queued bank save preserves the edited bank voice")
 
 S139 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "retry writes the newer MIDI snapshot"
-            report.expectEqual(Optional(Data(newerSnapshot.bytes)),
-                               bytes(at: session.document.source.midiPath),
-                               cppID: queuedSaveID,
-                               what: "retry writes the newer MIDI snapshot")
 
 S140 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "newer-state retry marks the document clean"
-            report.expectEqual(false, session.document.isDirty, cppID: queuedSaveID,
-                               what: "newer-state retry marks the document clean")
 
 S141 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "first undo removes only the newer note"
-            report.expect(undidNewer && session.document.note(newerNote) == nil
-                && session.document.note(staleNote) != nil,
-                cppID: queuedSaveID,
-                message: "first undo removes only the newer note")
 
 S142 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "second undo removes the stale note"
-            report.expect(undidStale && session.document.note(staleNote) == nil,
-                          cppID: queuedSaveID,
-                          message: "second undo removes the stale note")
 
 S143 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "undoing past the retry save point is dirty"
-            report.expectEqual(true, session.document.isDirty, cppID: queuedSaveID,
-                               what: "undoing past the retry save point is dirty")
 
 S144 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "note undos leave the saved bank clean"
-            report.expectEqual(false, session.bankDirty, cppID: queuedSaveID,
-                               what: "note undos leave the saved bank clean")
 
 S145 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "note undos leave the saved bank edit applied"
-            report.expectEqual(savedVoice, session.bankSlots[0].voice,
-                               cppID: queuedSaveID,
-                               what: "note undos leave the saved bank edit applied")
 
 S146 | bankQueuedSave | src/checks/workspace/bank_saves.swift
 Anchor: message "note undos leave saved bank bytes intact"
-            report.expectEqual(savedBankBytes, bytes(at: bankPath), cppID: queuedSaveID,
-                               what: "note undos leave saved bank bytes intact")
 
 S147 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
 Anchor: message "adjacent release edit reaches the production bank view"
-        report.expectEqual(adjacent.release, session.bankSlots[0].voice?.release,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
-                           what: "adjacent release edit reaches the production bank view")
 
 S148 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
 Anchor: message "adjacent release edit dirties the bank"
-        report.expectEqual(true, session.bankDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
-                           what: "adjacent release edit dirties the bank")
 
 S149 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
 Anchor: message "adjacent release edit does not dirty the document"
-        report.expectEqual(documentWasDirty, session.document.isDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
-                           what: "adjacent release edit does not dirty the document")
 
 S150 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
 Anchor: message "lower release bound reaches the production bank view"
-        report.expectEqual(Int32(0), session.bankSlots[0].voice?.release,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
-                           what: "lower release bound reaches the production bank view")
 
 S151 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
 Anchor: message "lower-bound bank edit dirties the bank"
-        report.expectEqual(true, session.bankDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
-                           what: "lower-bound bank edit dirties the bank")
 
 S152 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
 Anchor: message "lower-bound bank edit does not dirty the document"
-        report.expectEqual(documentWasDirty, session.document.isDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
-                           what: "lower-bound bank edit does not dirty the document")
 
 S153 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
 Anchor: message "upper release bound reaches the production bank view"
-        report.expectEqual(Int32(255), session.bankSlots[0].voice?.release,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
-                           what: "upper release bound reaches the production bank view")
 
 S154 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
 Anchor: message "upper-bound bank edit dirties the bank"
-        report.expectEqual(true, session.bankDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
-                           what: "upper-bound bank edit dirties the bank")
 
 S155 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
 Anchor: message "upper-bound bank edit does not dirty the document"
-        report.expectEqual(documentWasDirty, session.document.isDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
-                           what: "upper-bound bank edit does not dirty the document")
 
 S156 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
 Anchor: message "opening another song reuses the unsaved shared-bank record"
-        report.expectEqual(session.bankLease.bankToken, switched.bank.bankToken,
-                           cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
-                           what: "opening another song reuses the unsaved shared-bank record")
 
 S157 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
 Anchor: message "another song publishes the unsaved shared-bank edit"
-        report.expectEqual(Int32(255), switched.bankSlots[0].voice?.release,
-                           cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
-                           what: "another song publishes the unsaved shared-bank edit")
 
 S158 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift
 Anchor: message "another song preserves shared-bank dirty state"
-        report.expectEqual(true, switched.bankDirty,
-                           cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
-                           what: "another song preserves shared-bank dirty state")
 
 S159 | bankCatalogOutage | src/checks/workspace/bank_saves.swift
 Anchor: message "catalog outage reaches the native service error boundary"
-            report.expect(operationFailureMessage(error) != nil,
-                          cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
-                          message: "catalog outage reaches the native service error boundary")
 
 S160 | bankCatalogOutage | src/checks/workspace/bank_saves.swift
 Anchor: message "catalog outage retains the last valid bank lease"
-    report.expectEqual(retainedToken, session.bankLease.bankToken,
-                       cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
-                       what: "catalog outage retains the last valid bank lease")
 
 S161 | bankCatalogOutage | src/checks/workspace/bank_saves.swift
 Anchor: message "catalog outage retains the last valid bank slots"
-    report.expectEqual(retainedSlots, session.bankSlots,
-                       cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
-                       what: "catalog outage retains the last valid bank slots")
 
 S162 | bankCatalogOutage | src/checks/workspace/bank_saves.swift
 Anchor: message "catalog outage retains bank dirty state"
-    report.expectEqual(retainedDirty, session.bankDirty,
-                       cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
-                       what: "catalog outage retains bank dirty state")
 
 S163 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "round-trip scalar edit preserves every other bank slot"
-        report.expectEqual(editedSlots, roundtripSession.bankSlots,
-                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                           what: "round-trip scalar edit preserves every other bank slot")
 
 S164 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "successful bank save publishes a refreshed native bank"
-        report.expect(roundtripSession.bankLease.bankToken != preSaveToken,
-                      cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
-                      message: "successful bank save publishes a refreshed native bank")
 
 S165 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "successful bank save publishes a clean record"
-        report.expectEqual(false, roundtripSession.bankDirty,
-                           cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
-                           what: "successful bank save publishes a clean record")
 
 S166 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "successful bank save changes persisted bank bytes"
-        report.expect(editedBytes != originalBytes,
-                      cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
-                      message: "successful bank save changes persisted bank bytes")
 
 S167 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "undo after save restores the complete original bank"
-        report.expectEqual(originalSlots, roundtripSession.bankSlots,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
-                           what: "undo after save restores the complete original bank")
 
 S168 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "saving the undo restores original voicegroup bytes"
-        report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
-                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
-                           what: "saving the undo restores original voicegroup bytes")
 
 S169 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "redo after saving the undo restores the edited bank and other slots"
-        report.expectEqual(editedSlots, roundtripSession.bankSlots,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
-                           what: "redo after saving the undo restores the edited bank and other slots")
 
 S170 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "saving the redo reproduces edited voicegroup bytes"
-        report.expectEqual(editedBytes, bytes(at: roundtripBankPath),
-                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
-                           what: "saving the redo reproduces edited voicegroup bytes")
 
 S171 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "final undo/save restores original voicegroup bytes"
-        report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
-                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
-                           what: "final undo/save restores original voicegroup bytes")
 
 S172 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "failed bank save reports its unwritable source"
-            report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
-                          cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
-                          message: "failed bank save reports its unwritable source")
 
 S173 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "failed bank save retains the dirty bank record"
-            report.expectEqual(true, roundtripSession.bankDirty,
-                               cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
-                               what: "failed bank save retains the dirty bank record")
 
 S174 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "failed ordered save retains the dirty document record"
-            report.expectEqual(true, roundtripSession.document.isDirty,
-                               cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
-                               what: "failed ordered save retains the dirty document record")
 
 S175 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "unknown identity is reported as a hard native error"
-            report.expect(operationFailureMessage(error)?.contains("not loaded") == true,
-                          cppID: "vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
-                          message: "unknown identity is reported as a hard native error")
 
 S176 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
 Anchor: message "session gate refuses a second transition while the first is pending"
-        report.expectEqual(
-            ProjectServiceError.operationFailed("A bank transition is already in progress."),
-            result.1,
-            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-            what: "session gate refuses a second transition while the first is pending")
 
 S177 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
 Anchor: message "coordinator publishes only the applied transition"
-        report.expectEqual(firstVoice, coordinatorSession.bankSlots[0].voice,
-                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-                           what: "coordinator publishes only the applied transition")
 
 S178 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
 Anchor: message "coordinator adopts the applied transition lease"
-        report.expectEqual(result.0.lease.bankToken, coordinatorSession.bankLease.bankToken,
-                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-                           what: "coordinator adopts the applied transition lease")
 
 S179 | releaseEditorBankHistorySemantics | src/checks/workspace/bank_edits.swift
 Anchor: message "the production bank pipeline publishes release \(target) and one undo restores the original without dirtying the song"
-            report.expect(appliedThroughBankPipeline && undone
-                && session.bankSlots[0].voice?.release == original.release
-                && !session.document.isDirty,
-                cppID: cppID,
-                message: "the production bank pipeline publishes release \(target) and one undo restores the original without dirtying the song")
 
 S180 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "pending bank undo gates mutation; the next admitted document edit undoes cleanly"
-        report.expect(result.0 && !result.1 && result.2 == 1 && result.3 == 1 && !result.4,
-            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-            message: "pending bank undo gates mutation; the next admitted document edit undoes cleanly")
 
 S181 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "pending bank redo cannot admit a newer document edit, replay twice, or dirty"
-        report.expect(result.0 && !result.1 && result.2 == 2 && result.3 == 2 && !result.4,
-            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-            message: "pending bank redo cannot admit a newer document edit, replay twice, or dirty")
 
 S182 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "stale bank redo entry is removed without mutating document state"
-    report.expect(staleRedoRemoved && !staleRedoDocument.history.canRedo &&
-        staleRedoDocument.state.config.priority == 6,
-        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-        message: "stale bank redo entry is removed without mutating document state")
 
 S183 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "stale bank undo entry is removed so the next undo reaches document history"
-    report.expect(staleRemoved && staleUndoDocument.state.config.priority == 0,
-        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-        message: "stale bank undo entry is removed so the next undo reaches document history")
 
 S184 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "hard bank failure keeps the entry available and does not cross it"
-    report.expect(hardAction.calls == 2 && hardDocument.state.config.priority == 4 &&
-        hardDocument.history.canUndo,
-        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-        message: "hard bank failure keeps the entry available and does not cross it")
 
 S185 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "self-cancelling bank merge is removed so undo reaches the preceding document edit"
-    report.expect(cancelling.state.config.priority == 0,
-        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-        message: "self-cancelling bank merge is removed so undo reaches the preceding document edit")
-
-No shared Swift fixture files carrying report.expect predicates are part of this
-counterpart: the session_fixtures.swift/session_support.swift staging helpers
-(makeMidiFixture, stageTestProject, bytes/configLineBytes readers) assert
-nothing and are not inventoried. Predicates from related suites invoked by runProjectSessionSuite
-live in their own files and are likewise outside this inventory.
 
 S186 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "Littleroot opens in the second tab of the same project"
-    session.openProjectAndSong(bootstrap.projectRoot, "mus_route101") at :107 with
-    verify(session.songOpen, "Route 101 loads from the original mainwindowrouting project") at :111,
-    then tryCompare(session.songTabs, "tabCount", 1); the same session's
-    session.openSong("mus_littleroot_test") at :115 with
-    verify(session.songTabs.tabCount === 2, "Littleroot opens in the second tab of the same project")
-    at :119 and the second tab selected (tryVerify selectedId !== firstId at :122).
 
 S187 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "shellEditMenu"
-    var editMenu = findChild(shell.menuBar, "shellEditMenu");
-    verify(editMenu, "the production Edit menu exists")
 
 S188 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "shellAction_roll.copy"
-    var menuCopy = findChild(editMenu, "shellAction_roll.copy");
-    var menuSolo = findChild(editMenu, "shellAction_roll.solo_tracks");
-    verify(menuCopy && menuSolo, "Copy and Solo are real Edit-menu actions")
 
 S189 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "a real first-tab click retargets the selected workspace"
-    mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2) then
-    tryCompare(tabs, "selectedId", firstId, 3000,
-               "a real first-tab click retargets the selected workspace")
 
 S190 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "a real second-tab click restores Littleroot's workspace"
-    mouseClick(secondButton, secondButton.width / 3, secondButton.height / 2) then
-    tryCompare(tabs, "selectedId", secondId, 3000,
-               "a real second-tab click restores Littleroot's workspace")
 
 S191 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "Solo is enabled for the selected track"
-    editMenu.open() at :263 with one note selected on the selected second tab
-    (selectDrawnVelocityNote(surface) at :239) then
-    compare(menuSolo.enabled, true, "Solo is enabled for the selected track")
 
 S192 | entries | src/checks/editorqml/ShellQmlTests.swift
 Anchor: function
-    Entry(name: "shellwindow", inputFileName: "tst_ShellWindow.qml",
-    fixtureFiles: songs("mus_route101", "mus_littleroot_test")) stages both original songs
-    with the decomp-project fixture into one scratch directory;
-    ShellQmlBootstrap.stage(projectRoot: scratch) at :103 publishes that directory
-    through bootstrap.projectRoot.
 
 S193 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "shellTimeMenu" #1
-    var noSongTime = findChild(shell, "shellTimeMenu");
-    var noSongTracks = findChild(shell, "shellTracksMenu");
-    verify(noSongTime && noSongTracks, "both Edit submenus exist before any song")
 
 S194 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "shellEditMenu"
-  var editMenu = findChild(shell, "shellEditMenu")
-  var timeMenu = findChild(shell, "shellTimeMenu")
-  var tracksMenu = findChild(shell, "shellTracksMenu")
-  verify(editMenu && timeMenu && tracksMenu, "the active shell exposes Edit submenus")
-  compare(timeMenu.title, "&Time")
-  compare(tracksMenu.title, "Tr&acks")
 
 S195 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "Time contains the original six commands"
-    compare(timeMenu.count, timeIds.length, "Time contains the original six commands") and
-    compare(tracksMenu.count, trackIds.length, "Tracks contains Mute and Solo") at :498-499, then
-    compare(timeMenu.itemAt(timeIndex).objectName, "shellAction_" + timeIds[timeIndex], ...)
-    at :500-502 and compare(tracksMenu.itemAt(tracksIndex).objectName,
-    "shellAction_" + trackIds[trackIndex], ...) at :503-506 walk every row by objectName and
-    index order, over timeIds = edit.insert_time, edit.delete_time, roll.duplicate_time,
-    edit.clear_time_selection, edit.edit_time_signature, edit.remove_time_signature and
-    trackIds = roll.mute_tracks, roll.solo_tracks; the editOrder array at :507-518 pins the
-    24-entry absolute top-level order (top 2 + separator 1 + clipboard 5 + Time 1 + notes 6
-    + Tracks 1 + tail 8), compare(editMenu.count, editOrder.length, "Edit contains exactly
-    the mounted commands") at :519 with the menuAt/itemAt walk at :520-525, and
-    compare(JSON.stringify(actualOrder), JSON.stringify(editOrder), "Edit preserves the
-    complete absolute top-level order") at :526-527 pins the Edit-menu order absolutely.
 
 S196 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "shellAction_" #1
-    var action = findChild(noSongTime, "shellAction_" + timeIds[index]);
-    verify(action, "Time has " + timeIds[index]) at :482 and
-    compare(action.enabled, false, "no song disables " + timeIds[index]) at :483, and
-    var trackAction = findChild(noSongTracks, "shellAction_" + trackIds[trackIndex]) at
-    :486-487 with verify(trackAction, "Tracks has " + trackIds[trackIndex]) at :488 and
-    compare(trackAction.enabled, false, "no song disables " + trackIds[trackIndex]) at :489.
 
 S197 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "shellTimeMenu"
-  var timeMenu = findChild(shell, "shellTimeMenu")
-  verify(timeMenu, "the production Time submenu is available")
-  var insertTime = findChild(timeMenu, "shellAction_edit.insert_time")
-  var deleteTime = findChild(timeMenu, "shellAction_edit.delete_time")
-  verify(insertTime && deleteTime, "both original time-edit commands exist")
 
 S198 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer_state.swift
 Anchor: message "hiding the active section requests focus for the first remaining visible section"
-    report.expect(hiddenActive.focusRequest?.target == DrawerSectionKind.velocity.rawValue &&
-    hiddenActive.focusRequest?.revision == 1 && hiddenActive.published &&
-    harness.layout.activePage == .automation, cppID: drawerLayoutFocusID
-    ("swiftcore/EditorDrawer::focusRequests"), message: "hiding the active section
-    requests focus for the first remaining visible section". Executed via
-    runEditorDrawerChecks under runProjectSessionSuite in the swiftcore lane.
 
 S199 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer_state.swift
 Anchor: message "hiding the last visible section requests the roll while the bar and its toggles stay without any body or handle"
-    report.expect(last.focusRequest?.target == -1 && harness.layout.snapshot.barVisible &&
-    harness.layout.snapshot.height == drawerLayoutDrawerBarHeight && toggles stay at 16
-    with no body or handle, cppID: drawerLayoutFocusID, message: "hiding the last
-    visible section requests the roll while the bar and its toggles stay without any
-    body or handle". Executed via runEditorDrawerChecks under runProjectSessionSuite
-    in the swiftcore lane.
 
 S200 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer_state.swift
 Anchor: message "a request never targets a kind that is not available and visible"
-    report.expect(skipped.focusRequest?.target == DrawerSectionKind.automation.rawValue &&
-    unavailable.layout.activePage == .velocity, cppID: drawerLayoutFocusID, message:
-    "a request never targets a kind that is not available and visible". Executed via
-    runEditorDrawerChecks under runProjectSessionSuite in the swiftcore lane. Cited
-    in ownership only; no A-row claims it alone.
 
 S201 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift
 Anchor: message "hiding a section releases its body and handle while its toggle, URL and stored height stay"
-    report.expect(hidden.published && harness.layout.storedBodyHeight(.automation) == 100 &&
-    released body/handle geometry with toggle, URL and stored height kept, cppID:
-    drawerLayoutVisibilityID ("swiftcore/EditorDrawer::visibilityAndStoredHeights"),
-    message: "hiding a section releases its body and handle while its toggle, URL and
-    stored height stay". Executed via runEditorDrawerChecks under runProjectSessionSuite
-    in the swiftcore lane.
 
 S202 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift
 Anchor: message "re-showing a hidden section restores its stored body height"
-    report.expect(shown.published && restored snapshot height &&
-    harness.layout.snapshot[.automation].bodyHeight == 100, cppID:
-    drawerLayoutVisibilityID, message: "re-showing a hidden section restores its stored
-    body height". Executed via runEditorDrawerChecks under runProjectSessionSuite in
-    the swiftcore lane. Cited in ownership only; no A-row claims it alone.
 
 S203 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift
 Anchor: message "hiding every section leaves the bar row, keeps every stored height and the active page"
-    report.expect(!isVisible(.velocity) && !isVisible(.voiceChanges) &&
-    !isVisible(.automation) && snapshot.height == drawerLayoutDrawerBarHeight &&
-    snapshot.barVisible && activePage kept with every stored height, cppID:
-    drawerLayoutVisibilityID, message: "hiding every section leaves the bar row, keeps
-    every stored height and the active page". Executed via runEditorDrawerChecks under
-    runProjectSessionSuite in the swiftcore lane.
 
 S204 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift
 Anchor: message "toggling hides the voice-changes section and keeps its stored height"
-    report.expect(voiceHidden.published && !isVisible(.voiceChanges) &&
-    harness.layout.storedBodyHeight(.voiceChanges) == 50, cppID:
-    drawerLayoutVisibilityID, message: "toggling hides the voice-changes section and
-    keeps its stored height", with the re-show restoring 50 at :343-347. Executed via
-    runEditorDrawerChecks under runProjectSessionSuite in the swiftcore lane.
 
 S205 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: message "A074 move succeeds"
-    report.expect(document.moveTrack(0, to: 1), cppID:
-    "editcheck/EditCheckTest::documentRemapsAndRaw", message: "A074 move succeeds",
-    with the exact-remap publication check at :117-119 ("A075 move publishes the exact
-    track remap"). Executed via documentTrackContracts under the event-edits suite in
-    the same swiftcore check binary.
 
 S206 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
-    Move undo at :118-119 and redo at :120-121 each publish exactly one change with
-    the exact track remap (cppID "editcheck/EditCheckTest::documentRemapsAndRaw",
-    "A076 move undo" / "A077 move redo"); model-level restoration only, with no byte
-    or dirty assertion. Executed via documentTrackContracts under the event-edits
-    suite in the same swiftcore check binary.
