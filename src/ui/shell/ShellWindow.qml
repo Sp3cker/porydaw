@@ -194,7 +194,48 @@ ApplicationWindow {
             objectName: "shellEditMenu"
             title: qsTr("&Edit")
             onAboutToShow: ++root.actionRevision
-            MenuSeparator {}
+            Component.onCompleted: {
+                editTopItems.active = true
+                editClipboardItems.active = true
+                editNotesItems.active = true
+                editTailItems.active = true
+            }
+            Instantiator {
+                id: editTopItems
+                active: false
+                model: shell.editTopActionIds
+                delegate: MenuItem {
+                    required property string modelData
+                    objectName: "shellAction_" + modelData
+                    text: root.nativeMenuText(modelData)
+                    enabled: {
+                        root.actionRevision
+                        return shell.actionEnabled(modelData)
+                    }
+                    onTriggered: shell.activate(modelData)
+                }
+                onObjectAdded: (index, object) => editMenu.insertItem(index, object)
+                onObjectRemoved: (index, object) => editMenu.removeItem(object)
+            }
+            MenuSeparator { objectName: "shellEditSectionSeparator" }
+            Instantiator {
+                id: editClipboardItems
+                active: false
+                model: shell.editClipboardActionIds
+                delegate: MenuItem {
+                    required property string modelData
+                    objectName: "shellAction_" + modelData
+                    text: root.nativeMenuText(modelData)
+                    enabled: {
+                        root.actionRevision
+                        return shell.actionEnabled(modelData)
+                    }
+                    onTriggered: shell.activate(modelData)
+                }
+                onObjectAdded: (index, object) =>
+                    editMenu.insertItem(shell.editTopActionIds.length + 1 + index, object)
+                onObjectRemoved: (index, object) => editMenu.removeItem(object)
+            }
             Menu {
                 id: timeMenu
                 objectName: "shellTimeMenu"
@@ -215,6 +256,25 @@ ApplicationWindow {
                     onObjectAdded: (index, object) => timeMenu.insertItem(index, object)
                     onObjectRemoved: (index, object) => timeMenu.removeItem(object)
                 }
+            }
+            Instantiator {
+                id: editNotesItems
+                active: false
+                model: shell.editNotesActionIds
+                delegate: MenuItem {
+                    required property string modelData
+                    objectName: "shellAction_" + modelData
+                    text: root.nativeMenuText(modelData)
+                    enabled: {
+                        root.actionRevision
+                        return shell.actionEnabled(modelData)
+                    }
+                    onTriggered: shell.activate(modelData)
+                }
+                onObjectAdded: (index, object) =>
+                    editMenu.insertItem(shell.editTopActionIds.length
+                                        + shell.editClipboardActionIds.length + 2 + index, object)
+                onObjectRemoved: (index, object) => editMenu.removeItem(object)
             }
             Menu {
                 id: tracksMenu
@@ -238,7 +298,9 @@ ApplicationWindow {
                 }
             }
             Instantiator {
-                model: shell.editActionIds
+                id: editTailItems
+                active: false
+                model: shell.editTailActionIds
                 delegate: MenuItem {
                     required property string modelData
                     objectName: "shellAction_" + modelData
@@ -249,13 +311,10 @@ ApplicationWindow {
                     }
                     onTriggered: shell.activate(modelData)
                 }
-                onObjectAdded: (index, object) => {
-                    const firstNotes = shell.editActionIds.indexOf("roll.transpose_up")
-                    const firstAutomation = shell.editActionIds.indexOf("automation.pencil_mode")
-                    const offset = index < 2 ? 0 : index < firstNotes ? 1
-                                 : index < firstAutomation ? 2 : 3
-                    editMenu.insertItem(index + offset, object)
-                }
+                onObjectAdded: (index, object) =>
+                    editMenu.insertItem(shell.editTopActionIds.length
+                                        + shell.editClipboardActionIds.length
+                                        + shell.editNotesActionIds.length + 3 + index, object)
                 onObjectRemoved: (index, object) => editMenu.removeItem(object)
             }
         }

@@ -6,7 +6,7 @@ Original SHA-256: b7d9cbae89ad503c6650e245838dc43a02d476bd5784746e639c27dcd3df74
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 1c92461ad5e5507e556b0f3567caaad9acc7d0836695d231c04ba175a4627cee
+Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
@@ -845,7 +845,7 @@ S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
   report.expect(fixture.document.state == state, cppID: id,
                     message: "draft and cancellation preserve the full song contents")
 
-S009 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:734
+S009 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:745
   keyClick(Qt.Key_D, Qt.ControlModifier)
   var duplicated = JSON.parse(grid.noteSummary).filter(function(note) {
       return note.selected && note.id !== original.id
@@ -855,7 +855,7 @@ S009 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_Sh
   // Reaches the production roll through ShellQmlLane
   // (src/checks/editorqml/ShellQmlTests.swift:46).
 
-S010 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:740
+S010 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:751
   keySequence(StandardKey.SelectAll)
   var selectedForJoin = JSON.parse(grid.noteSummary).filter(function(note) {
       return note.selected && note.track === original.track
@@ -864,7 +864,7 @@ S010 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_Sh
          && selectedForJoin.some(function(note) { return note.id === duplicated[0].id }),
          "Select All includes both same-track notes")
 
-S011 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:747
+S011 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:758
   keyClick(Qt.Key_J, Qt.ControlModifier)
   verify(joined.filter(function(note) { return note.track === original.track }).length
          < selectedForJoin.length,
@@ -875,13 +875,13 @@ S011 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_Sh
   })
   verify(selectedJoined.length > 0, "Join selects a subdividable merged note")
 
-S012 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:757
+S012 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:768
   keyClick(Qt.Key_E, Qt.ControlModifier)
   verify(split.length > joined.length, "Ctrl+E splits selected notes on grid boundaries")
   verify(split.some(function(note) { return note.selected && note.pitch === original.pitch }),
          "Split keeps the resulting note fragments selected")
 
-S013 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:764
+S013 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:775
   keySequence(StandardKey.Cut)
   verify(afterCut.length < beforeCut, "Cut deletes selected notes from the focused roll")
   var cutClip = JSON.parse(bootstrap.copiedClipSummary())
@@ -892,7 +892,7 @@ S013 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_Sh
   verify(afterPaste.some(function(note) { return note.selected }),
          "Paste selects at least one inserted note")
 
-S014 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:784
+S014 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:795
   keyClick(Qt.Key_D, Qt.ControlModifier)
   compare(grid.noteSummary, notesBeforeLocalKeys,
           "text-focused Duplicate never changes the musical notes")
@@ -901,7 +901,7 @@ S014 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_Sh
   compare(grid.noteSummary, notesBeforeLocalKeys,
           "text-focused Delete never deletes selected notes")
 
-S015 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:795
+S015 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:806
   keySequence(StandardKey.SelectAll)
   verify(selectedAll.length > 0, "Select All targets the currently focused roll track")
   keyClick(Qt.Key_Delete)

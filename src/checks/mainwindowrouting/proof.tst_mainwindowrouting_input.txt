@@ -24,7 +24,7 @@ Additional Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift SHA-256: c4092dcabd070ecb2b17b3551e13c528f3bcb60607c825e5d8a152adb118af6d
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 1c92461ad5e5507e556b0f3567caaad9acc7d0836695d231c04ba175a4627cee
+Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
 
 Status and evidence
 Eight test methods routing tab readiness/focus handoff, drawer shortcut delivery to the persistent Quick toggle, copy/solo QAction routing including text-field respect, and Insert/Delete Time command fanout with undo-byte restore.
@@ -3258,45 +3258,45 @@ counterpart: the session_fixtures.swift/session_support.swift staging helpers
 nothing and are not inventoried. Predicates from related suites invoked by runProjectSessionSuite
 live in their own files and are likewise outside this inventory.
 
-S186 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml:861
+S186 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml:872
     var timeMenu = findChild(shell, "shellTimeMenu");
     verify(timeMenu, "the production Time submenu is available");
     var insertTime = findChild(timeMenu, "shellAction_edit.insert_time");
     var deleteTime = findChild(timeMenu, "shellAction_edit.delete_time");
     verify(insertTime && deleteTime, "both original time-edit commands exist")
 
-S187 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml:866
+S187 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml:877
     after the Volume-lane right-drag range (mousePress/mouseMove/mouseRelease with Qt.RightButton on
-    automationPlotInput at :858-860): tryCompare(insertTime, "enabled", true, 3000, "the selected
-    lane range enables Insert Time") at :866-867 and tryCompare(deleteTime, "enabled", true, 3000,
-    "the selected lane range enables Delete Time") at :868-869; compare(grid.appliedRevisionText,
-    beforeSelectionRevision, "selecting a range does not write the document") at :870-871.
+    automationPlotInput at :869-871): tryCompare(insertTime, "enabled", true, 3000, "the selected
+    lane range enables Insert Time") at :877-878 and tryCompare(deleteTime, "enabled", true, 3000,
+    "the selected lane range enables Delete Time") at :879-880; compare(grid.appliedRevisionText,
+    beforeSelectionRevision, "selecting a range does not write the document") at :881-882.
 
-S188 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml:872
+S188 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml:883
     keyClick(Qt.Key_I, Qt.ControlModifier | Qt.ShiftModifier) then verify(waitForNative(function() {
     var moved = writtenTicks(page, []).sort(...); return moved.length === originalTicks.length &&
     moved.some(function(tick, index) { return tick > originalTicks[index] }) }, 3000), "the window
-    Insert Time shortcut shifts written Volume events forward; ...") at :873-881;
-    verify(shift > 0, "inserting the selected blank range shifts later events") at :885; the
+    Insert Time shortcut shifts written Volume events forward; ...") at :884-892;
+    verify(shift > 0, "inserting the selected blank range shifts later events") at :896; the
     per-index compare(shiftedTicks[tickIndex], originalTicks[tickIndex] + (tickIndex >= firstShifted
-    ? shift : 0), "Insert Time shifts all later events by the same range span") at :889-892; and
+    ? shift : 0), "Insert Time shifts all later events by the same range span") at :900-903; and
     verify(grid.appliedRevisionText !== beforeSelectionRevision && session.documentDirty, "Insert
-    Time commits an unsaved document change") at :893-894.
+    Time commits an unsaved document change") at :904-905.
 
-S189 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml:902
-    editMenu.open(); timeMenu.open(); tryCompare(deleteTime, "enabled", true, 3000) at :901;
-    mouseClick(deleteTime, deleteTime.width / 2, deleteTime.height / 2) at :902 then
+S189 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml:913
+    editMenu.open(); timeMenu.open(); tryCompare(deleteTime, "enabled", true, 3000) at :912;
+    mouseClick(deleteTime, deleteTime.width / 2, deleteTime.height / 2) at :913 then
     tryVerify(function() { var restored = writtenTicks(page, []).sort(...); return
     restored.length === originalTicks.length && restored.every(function(tick, index) { return tick ===
     originalTicks[index] }) }, 3000, "the Time menu Delete Time removes the inserted blank range")
-    at :903-907.
+    at :914-918.
 
-S190 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml:895
-    compare(grid.noteSummary, notesBefore, "a Volume-only selection does not move notes") at :895 and
-    compare(grid.noteSummary, notesBefore, "a Volume-only deletion preserves all notes") at :908.
+S190 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml:906
+    compare(grid.noteSummary, notesBefore, "a Volume-only selection does not move notes") at :906 and
+    compare(grid.noteSummary, notesBefore, "a Volume-only deletion preserves all notes") at :919.
 
-S191 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml:518
+S191 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml:529
     compare(findChild(timeMenu, "shellAction_edit.insert_time").enabled, false, "an open song without
-    a time selection cannot insert a selected range") at :518-519 and
+    a time selection cannot insert a selected range") at :529-530 and
     compare(findChild(timeMenu, "shellAction_edit.delete_time").enabled, false, "an open song without
-    a time selection cannot delete a selected range") at :520-521.
+    a time selection cannot delete a selected range") at :531-532.

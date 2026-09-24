@@ -504,16 +504,27 @@ TestCase {
             compare(tracksMenu.itemAt(tracksIndex).objectName,
                     "shellAction_" + trackIds[tracksIndex],
                     "Tracks keeps the original order at index " + tracksIndex)
-        var timePosition = -1
-        var tracksPosition = -1
+        var editOrder = [
+            "shellAction_edit.undo", "shellAction_edit.redo", "shellEditSectionSeparator",
+            "shellAction_roll.copy", "shellAction_roll.cut", "shellAction_roll.paste",
+            "shellAction_roll.delete", "shellAction_roll.select_all", "shellTimeMenu",
+            "shellAction_roll.transpose_up", "shellAction_roll.transpose_down",
+            "shellAction_roll.transpose_up_octave", "shellAction_roll.transpose_down_octave",
+            "shellAction_roll.nudge_left", "shellAction_roll.nudge_right", "shellTracksMenu",
+            "shellAction_automation.pencil_mode", "shellAction_roll.split",
+            "shellAction_roll.join", "shellAction_roll.lengthen_note",
+            "shellAction_roll.shorten_note", "shellAction_roll.grid_narrow",
+            "shellAction_roll.grid_widen", "shellAction_roll.grid_triplet",
+        ]
+        compare(editMenu.count, editOrder.length, "Edit contains exactly the mounted commands")
+        var actualOrder = []
         for (var menuIndex = 0; menuIndex < editMenu.count; ++menuIndex) {
-            if (editMenu.menuAt(menuIndex) === timeMenu)
-                timePosition = menuIndex
-            if (editMenu.menuAt(menuIndex) === tracksMenu)
-                tracksPosition = menuIndex
+            var entry = editMenu.menuAt(menuIndex) || editMenu.itemAt(menuIndex)
+            verify(entry, "Edit has an item at index " + menuIndex)
+            actualOrder.push(entry.objectName)
         }
-        verify(timePosition >= 0 && tracksPosition > timePosition,
-               "Edit nests Time before Tracks")
+        compare(JSON.stringify(actualOrder), JSON.stringify(editOrder),
+                "Edit preserves the complete absolute top-level order")
         editMenu.open()
         compare(findChild(timeMenu, "shellAction_edit.insert_time").enabled, false,
                 "an open song without a time selection cannot insert a selected range")
@@ -548,7 +559,7 @@ TestCase {
         tryCompare(grid, "pencilMode", true, 3000)
         tryCompare(automation, "isPencilMode", true, 3000)
         wait(520)
-        compare(grid.pencilMode, true, "holding B never toggles the pencil twice")
+        compare(grid.pencilMode, true, "the pencil latch survives the B hold without release")
         compare(automation.isPencilMode, true, "holding B preserves automation pencil mode")
         keyRelease(Qt.Key_B)
         compare(grid.pencilMode, true, "releasing B keeps the pencil latched")

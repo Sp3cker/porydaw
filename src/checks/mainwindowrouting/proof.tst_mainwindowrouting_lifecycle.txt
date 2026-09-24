@@ -24,7 +24,7 @@ Additional Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift SHA-256: c4092dcabd070ecb2b17b3551e13c528f3bcb60607c825e5d8a152adb118af6d
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 1c92461ad5e5507e556b0f3567caaad9acc7d0836695d231c04ba175a4627cee
+Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
 
 Status and evidence
 Thirteen test methods covering tab close/reopen global state, ready-reload transient preservation, reload focus handoff, fresh-bind/staged-reload/bank-rebind staging, failed-open preservation, project switch/quit, and five MouseHints drag/focus/tab delivery cases.
@@ -2750,9 +2750,9 @@ S187 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_Shel
     5000), "Discard advances the remaining clean tab and detaches the scene") at :464-467;
     compare(tabs.pendingCloseId, -1, "the close-all gate is fully resolved") at :468.
 
-S188 | test_eTimeAndTracksMenuContainment (with test_d retarget rows) | src/checks/editorqml/tst_ShellWindow.qml:527
+S188 | test_eTimeAndTracksMenuContainment (with test_d retarget rows) | src/checks/editorqml/tst_ShellWindow.qml:538
     test_d :442-445 clicks songTabSelect_<secondId> with tryCompare(tabs, "selectedId", secondId,
     3000) and :449-451 clicks songTabSelect_<firstId> with tryCompare(tabs, "selectedId", firstId,
-    3000); test_e :527-528 mouseClick(firstButton, ...) then tryCompare(shell.shellPresenter.session
+    3000); test_e :538-539 mouseClick(firstButton, ...) then tryCompare(shell.shellPresenter.session
     .songTabs, "selectedId", firstId) and compare(findChild(tracksMenu, "shellAction_roll.solo_tracks")
-    .enabled, true, "Solo rebinds to the newly active song") at :529-531.
+    .enabled, true, "Solo rebinds to the newly active song") at :540-542.

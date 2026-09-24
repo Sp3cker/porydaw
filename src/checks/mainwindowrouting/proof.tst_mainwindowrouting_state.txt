@@ -24,7 +24,7 @@ Additional Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift SHA-256: c4092dcabd070ecb2b17b3551e13c528f3bcb60607c825e5d8a152adb118af6d
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 1c92461ad5e5507e556b0f3567caaad9acc7d0836695d231c04ba175a4627cee
+Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
 
 Status and evidence
 Sixteen test methods covering drawer seed projection, cross-tab fanout, event-list gating, focus fallback, hide retention, tab-switch refocus, edit-action projection/identity/unbound start, editor-view-state fanout and lane remap/mutation/noop persistence, and four MouseHints scope/layout cases.
@@ -754,7 +754,7 @@ Original expression:
 
 A068 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:224
 Disposition: MATCHED
-Mapping/reason: All four window commands have real QML Edit-menu counterparts: test_cWindowShortcutsAndNumericOwnership resolves shellAction_roll.copy and shellAction_roll.solo_tracks inside the production Edit menu (S188), test_jTimeSelectionInsertAndDeleteMutatesDocument resolves shellAction_edit.insert_time and shellAction_edit.delete_time inside the production Time submenu (S197), and test_eTimeAndTracksMenuContainment walks every Time and Tracks row by objectName and order (S195, S196); QAction pointers themselves are not claimed. No QWidget layer exists in the Swift app. [S188][S195][S196][S197]
+Mapping/reason: All four window commands have real QML Edit-menu counterparts: test_cWindowShortcutsAndNumericOwnership resolves shellAction_roll.copy in the production Edit menu and shellAction_roll.solo_tracks as a descendant of that Edit menu nested under Tracks (findChild recurses into the submenu) (S188), test_jTimeSelectionInsertAndDeleteMutatesDocument resolves shellAction_edit.insert_time and shellAction_edit.delete_time inside the production Time submenu (S197), and test_eTimeAndTracksMenuContainment walks every Time and Tracks row by objectName and order (S195, S196); QAction pointers themselves are not claimed. No QWidget layer exists in the Swift app. [S188][S195][S196][S197]
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongTab *a = session->a;
@@ -3646,14 +3646,18 @@ S194 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow
 
 S195 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml:498
     compare(timeMenu.count, timeIds.length, "Time contains the original six commands") and
-    compare(tracksMenu.count, trackIds.length, "Tracks contains Mute and Solo") at :499, then
+    compare(tracksMenu.count, trackIds.length, "Tracks contains Mute and Solo") at :498-499, then
     compare(timeMenu.itemAt(timeIndex).objectName, "shellAction_" + timeIds[timeIndex], ...)
     at :500-502 and compare(tracksMenu.itemAt(tracksIndex).objectName,
-    "shellAction_" + trackIds[tracksIndex], ...) at :503-506 walk every row by objectName and
+    "shellAction_" + trackIds[trackIndex], ...) at :503-506 walk every row by objectName and
     index order, over timeIds = edit.insert_time, edit.delete_time, roll.duplicate_time,
     edit.clear_time_selection, edit.edit_time_signature, edit.remove_time_signature and
-    trackIds = roll.mute_tracks, roll.solo_tracks; verify(timePosition >= 0 && tracksPosition > timePosition,
-    "Edit nests Time before Tracks") at :507-516 pins the Edit-menu nesting order.
+    trackIds = roll.mute_tracks, roll.solo_tracks; the editOrder array at :507-518 pins the
+    24-entry absolute top-level order (top 2 + separator 1 + clipboard 5 + Time 1 + notes 6
+    + Tracks 1 + tail 8), compare(editMenu.count, editOrder.length, "Edit contains exactly
+    the mounted commands") at :519 with the menuAt/itemAt walk at :520-525, and
+    compare(JSON.stringify(actualOrder), JSON.stringify(editOrder), "Edit preserves the
+    complete absolute top-level order") at :526-527 pins the Edit-menu order absolutely.
 
 S196 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml:481
     var action = findChild(noSongTime, "shellAction_" + timeIds[index]);
@@ -3663,7 +3667,7 @@ S196 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow
     :486-487 with verify(trackAction, "Tracks has " + trackIds[trackIndex]) at :488 and
     compare(trackAction.enabled, false, "no song disables " + trackIds[trackIndex]) at :489.
 
-S197 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml:861
+S197 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml:872
     var timeMenu = findChild(shell, "shellTimeMenu");
     verify(timeMenu, "the production Time submenu is available");
     var insertTime = findChild(timeMenu, "shellAction_edit.insert_time");

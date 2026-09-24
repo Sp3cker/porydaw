@@ -6,7 +6,7 @@ Original SHA-256: 69dfaa2c94085416c2507de2b7167f5df3db2a327698490d34dda13bbe77d3
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 1c92461ad5e5507e556b0f3567caaad9acc7d0836695d231c04ba175a4627cee
+Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
 
 Status and evidence
 Tally: MATCHED 0, PARTIAL 3, GAP 3, NATIVE 14.
@@ -627,7 +627,7 @@ S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
   report.expect(fixture.document.state == state, cppID: id,
                     message: "draft and cancellation preserve the full song contents")
 
-S009 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:601
+S009 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:612
   function test_gEditorRoutedNoteKeysAndChromeArrows() {
       openTwoSongShell()
       var roll = findChild(selectedSurface(), "swiftRollInput")
@@ -639,25 +639,25 @@ S009 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_Shel
   // mus_route101 and mus_littleroot_test; selectDrawnVelocityNote clicks the
   // drawn velocity node fill (:153-167).
 
-S010 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:620
+S010 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:631
   keyClick(Qt.Key_Up)
   compare(selectedNote().pitch, original.pitch + 1, "Up transposes one semitone")
   keyClick(Qt.Key_Down)
   compare(selectedNote().pitch, original.pitch, "Down reverses Up")
 
-S011 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:624
+S011 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:635
   keyClick(Qt.Key_Up, Qt.ShiftModifier)
   compare(selectedNote().pitch, original.pitch + 12, "Shift+Up transposes an octave")
   keyClick(Qt.Key_Down, Qt.ShiftModifier)
   compare(selectedNote().pitch, original.pitch, "Shift+Down reverses the octave")
 
-S012 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:628
+S012 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:639
   keyClick(Qt.Key_Right)
   verify(selectedNote().tick > original.tick, "Right nudges the selected note forward")
   keyClick(Qt.Key_Left)
   compare(selectedNote().tick, original.tick, "Left returns the selected note")
 
-S013 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:632
+S013 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:643
   keyClick(Qt.Key_Right, Qt.ShiftModifier)
   verify(selectedNote().duration > original.duration,
          "Shift+Right lengthens the selected note")
@@ -665,7 +665,7 @@ S013 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_Shel
   compare(selectedNote().duration, original.duration,
           "Shift+Left restores the selected note duration")
 
-S014 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:611
+S014 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:622
   function selectedNote() {
       var selection = JSON.parse(grid.noteSummary).filter(function(note) {
           return note.selected && note.id === original.id

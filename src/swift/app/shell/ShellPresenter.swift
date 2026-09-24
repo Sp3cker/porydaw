@@ -56,16 +56,25 @@ public final class ShellPresenter: QmlInstantiableStatus {
     private static let byId = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0) })
     private static let allActionIds = actions.map(\.id)
     private static let fileIds = allActionIds.filter { $0.hasPrefix("file.") }
+    private static let editTopIds = ["edit.undo", "edit.redo"]
+    private static let editClipboardIds = [
+        "roll.copy", "roll.cut", "roll.paste", "roll.delete", "roll.select_all",
+    ]
     private static let timeIds = [
         "edit.insert_time", "edit.delete_time", "roll.duplicate_time",
         "edit.clear_time_selection", "edit.edit_time_signature", "edit.remove_time_signature",
     ]
     private static let tracksIds = ["roll.mute_tracks", "roll.solo_tracks"]
-    private static let submenuIds = Set(timeIds + tracksIds)
-    private static let editIds = allActionIds.filter {
-        ($0.hasPrefix("edit.") || $0.hasPrefix("roll.") || $0.hasPrefix("automation."))
-            && !submenuIds.contains($0)
-    }
+    private static let editNotesIds = [
+        "roll.transpose_up", "roll.transpose_down",
+        "roll.transpose_up_octave", "roll.transpose_down_octave",
+        "roll.nudge_left", "roll.nudge_right",
+    ]
+    private static let editTailIds = [
+        "automation.pencil_mode", "roll.split", "roll.join",
+        "roll.lengthen_note", "roll.shorten_note", "roll.grid_narrow",
+        "roll.grid_widen", "roll.grid_triplet",
+    ]
     private static let transportIds = allActionIds.filter { $0.hasPrefix("transport.") }
     private static let contextIds = [
         "roll.copy", "roll.cut", "roll.duplicate_time", "roll.paste",
@@ -86,11 +95,12 @@ public final class ShellPresenter: QmlInstantiableStatus {
     private let keybindings = KeybindingRegistry()
 
     @QtTracked public var session: ApplicationSession
-    // QtBridgeable registers stored roles, not computed properties. The shell
-    // initializes these catalogue snapshots once from the single action list.
     @QtTracked public var actionIds: [String]
     @QtTracked public var fileActionIds: [String]
-    @QtTracked public var editActionIds: [String]
+    @QtTracked public var editTopActionIds: [String]
+    @QtTracked public var editClipboardActionIds: [String]
+    @QtTracked public var editNotesActionIds: [String]
+    @QtTracked public var editTailActionIds: [String]
     @QtTracked public var timeActionIds: [String]
     @QtTracked public var tracksActionIds: [String]
     @QtTracked public var transportActionIds: [String]
@@ -110,7 +120,10 @@ public final class ShellPresenter: QmlInstantiableStatus {
         session = ApplicationSession()
         actionIds = Self.allActionIds
         fileActionIds = Self.fileIds
-        editActionIds = Self.editIds
+        editTopActionIds = Self.editTopIds
+        editClipboardActionIds = Self.editClipboardIds
+        editNotesActionIds = Self.editNotesIds
+        editTailActionIds = Self.editTailIds
         timeActionIds = Self.timeIds
         tracksActionIds = Self.tracksIds
         transportActionIds = Self.transportIds

@@ -8,7 +8,7 @@ Swift SHA-256: d00e05534bcb9e621426c20fbe36aca9d386c8fb906c735901b97509f866fea1
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
 Swift SHA-256: d70079064b3497280fc052f594e9d53e374cd8b65e2e902a92abb83f82727e44
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Swift SHA-256: 1c92461ad5e5507e556b0f3567caaad9acc7d0836695d231c04ba175a4627cee
+Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
 Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
 Swift SHA-256: 1815b25fa9324fe0c694879db826643105c7fc5563408e0335dbe1d21f91159e
 
@@ -113,7 +113,7 @@ Original expression:
 
 A009 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:62
 Disposition: MATCHED
-Mapping/reason: S033 asserts the real text probe created under the production window reaches activeFocus (:577) before B is delivered, the focus establishment this QTRY waits for; both layers use a test-owned text input. [S033]
+Mapping/reason: S033 asserts the real text probe created under the production window reaches activeFocus (:588) before B is delivered, the focus establishment this QTRY waits for; both layers use a test-owned text input. [S033]
 Original expression:
   QTRY_VERIFY(editor.hasFocus())
 
@@ -561,46 +561,46 @@ Swift expression:
       QtKeyCode.b.rawValue, QtKeyboardModifier.none.rawValue, true) at :122 asserting
       registry.matches(0x42, 0, "automation.pencil_mode"). cppID: KeymapCheckTest::deliveryScopes.
 
-S030 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:547
+S030 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:558
 Swift expression:
-  keyPress(Qt.Key_B) with tryCompare(grid, "pencilMode", true, 3000) at :548 and
-  tryCompare(automation, "isPencilMode", true, 3000) at :549, after
-  compare(grid.pencilMode, false) and compare(automation.isPencilMode, false) at :543-544
+  keyPress(Qt.Key_B) with tryCompare(grid, "pencilMode", true, 3000) at :559 and
+  tryCompare(automation, "isPencilMode", true, 3000) at :560, after
+  compare(grid.pencilMode, false) and compare(automation.isPencilMode, false) at :554-555
   establish the off state; automation is session.automationPage().
 
-S031 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:550
+S031 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:561
 Swift expression:
-  wait(520); compare(grid.pencilMode, true, "holding B never toggles the pencil twice") at
-  :551; compare(automation.isPencilMode, true, "holding B preserves automation pencil mode")
-  at :552; keyRelease(Qt.Key_B) at :553; compare(grid.pencilMode, true, "releasing B keeps
-  the pencil latched") at :554 and compare(automation.isPencilMode, true, "releasing B keeps
-  automation pencil latched") at :555.
+  wait(520); compare(grid.pencilMode, true, "the pencil latch survives the B hold without release") at
+  :562; compare(automation.isPencilMode, true, "holding B preserves automation pencil mode")
+  at :563; keyRelease(Qt.Key_B) at :564; compare(grid.pencilMode, true, "releasing B keeps
+  the pencil latched") at :565 and compare(automation.isPencilMode, true, "releasing B keeps
+  automation pencil latched") at :566.
 
-S032 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:564
+S032 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:575
 Swift expression:
-  keyPress(Qt.Key_B) at :564 with tryCompare(grid, "pencilMode", false, 3000) at :565 and
-  tryCompare(automation, "isPencilMode", false, 3000) at :566; keyRelease(Qt.Key_B) at :567;
-  compare(grid.pencilMode, false, "releasing the second B preserves the off state") at :568
+  keyPress(Qt.Key_B) at :575 with tryCompare(grid, "pencilMode", false, 3000) at :576 and
+  tryCompare(automation, "isPencilMode", false, 3000) at :577; keyRelease(Qt.Key_B) at :578;
+  compare(grid.pencilMode, false, "releasing the second B preserves the off state") at :579
   and compare(automation.isPencilMode, false, "releasing the second B preserves the
-  automation off state") at :569-570.
+  automation off state") at :580-581.
 
-S033 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:576
+S033 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:587
 Swift expression:
-  textProbe.forceActiveFocus(Qt.OtherFocusReason) at :576 with
-  tryCompare(textProbe, "activeFocus", true, 3000) at :577; keyClick(Qt.Key_B) at :578;
-  compare(textProbe.text.toLowerCase(), "b", "text focus keeps its typed B") at :579;
-  compare(grid.pencilMode, false, "text-field B never enables the pencil") at :580 and
+  textProbe.forceActiveFocus(Qt.OtherFocusReason) at :587 with
+  tryCompare(textProbe, "activeFocus", true, 3000) at :588; keyClick(Qt.Key_B) at :589;
+  compare(textProbe.text.toLowerCase(), "b", "text focus keeps its typed B") at :590;
+  compare(grid.pencilMode, false, "text-field B never enables the pencil") at :591 and
   compare(automation.isPencilMode, false, "text-field B never changes automation pencil
-  mode") at :581-582.
+  mode") at :592-593.
 
-S034 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:590
+S034 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:601
 Swift expression:
-  var field = findChild(surface, "noteVelocityInput") at :588 with
-  tryCompare(field, "activeFocus", true, 3000) at :590; keyClick(Qt.Key_B) at :592;
-  compare(field.text, numericText, "numeric text rejects the nonnumeric B") at :593;
-  compare(grid.pencilMode, false, "numeric B never reaches the pencil shortcut") at :594 and
+  var field = findChild(surface, "noteVelocityInput") at :599 with
+  tryCompare(field, "activeFocus", true, 3000) at :601; keyClick(Qt.Key_B) at :603;
+  compare(field.text, numericText, "numeric text rejects the nonnumeric B") at :604;
+  compare(grid.pencilMode, false, "numeric B never reaches the pencil shortcut") at :605 and
   compare(automation.isPencilMode, false, "numeric B never changes automation pencil mode")
-  at :595-596.
+  at :606-607.
 
 S035 | test_aKeymapNativeSettingsSeeds (shellwindow lane) | src/checks/editorqml/tst_ShellWindow.qml:181
 Swift expression:

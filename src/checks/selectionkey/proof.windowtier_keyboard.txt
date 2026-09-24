@@ -6,7 +6,7 @@ Original SHA-256: f00861f60ece3fc2b9de78b2c6b886d6139a71f79c7c07aeb5d1c8a69a5730
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 1c92461ad5e5507e556b0f3567caaad9acc7d0836695d231c04ba175a4627cee
+Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift SHA-256: c4092dcabd070ecb2b17b3551e13c528f3bcb60607c825e5d8a152adb118af6d
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
@@ -316,7 +316,7 @@ Original expression:
 
 A017 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:159
 Disposition: PARTIAL
-Mapping/reason: Related predicates S037-S039 in src/checks/editorqml/tst_ShellWindow.qml (test_gEditorRoutedNoteKeysAndChromeArrows): the drawerHandle_velocity grip takes focus (:642-643) and resizes the drawer on Up/Down (S038) and the full note summary is unchanged across all four grip arrows (S039 against the S037 snapshot, "grip arrows never mutate selected notes"). Unproved as stated: the reserved tick-2400 note pair (the shell tracks one drawn velocity note), the drawerAutomationHandle chrome, and the exact integer grip-step equality.
+Mapping/reason: Related predicates S037-S039 in src/checks/editorqml/tst_ShellWindow.qml (test_gEditorRoutedNoteKeysAndChromeArrows): the drawerHandle_velocity grip takes focus (:653-654) and resizes the drawer on Up/Down (S038) and the full note summary is unchanged across all four grip arrows (S039 against the S037 snapshot, "grip arrows never mutate selected notes"). Unproved as stated: the reserved tick-2400 note pair (the shell tracks one drawn velocity note), the drawerAutomationHandle chrome, and the exact integer grip-step equality.
 Source context since previous assertion:
   ;
 
@@ -1635,30 +1635,30 @@ S036 | copiedClipSummary | src/checks/editorqml/ShellQmlTests.swift:188
   // Reads the native clip through production pd_clipboard_read and
   // ClipboardCodec.decode (ShellQmlTests.swift:176-180); "[]" means absent.
 
-S037 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:644
+S037 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:655
   var beforeGrip = grid.noteSummary
   var heightBefore = surface.drawerPresenter.section(
               bootstrap.velocitySectionKind()).bodyHeight
   // Snapshot precedes every grip arrow; S039 compares against it.
-S038 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:647
+S038 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:658
   keyClick(Qt.Key_Up)
   verify(surface.drawerPresenter.section(bootstrap.velocitySectionKind()).bodyHeight
          > heightBefore, "grip Up resizes the drawer locally")
   keyClick(Qt.Key_Down)
   compare(surface.drawerPresenter.section(bootstrap.velocitySectionKind()).bodyHeight,
           heightBefore, "grip Down restores its height")
-S039 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:653
+S039 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:664
   keyClick(Qt.Key_Left)
   keyClick(Qt.Key_Right)
   compare(grid.noteSummary, beforeGrip, "grip arrows never mutate selected notes")
-S040 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml:684
+S040 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml:695
   keyClick(Qt.Key_Space)
   tryCompare(playhead, "playing", true, 3000)
   compare(section.visible, sectionVisible, "chrome Space does not toggle the section")
   compare(surface.gridModel.noteSummary, noteSnapshot,
           "chrome Space never changes musical selection")
-  // drawerToggle_velocity owns active focus (:680-681); the second Space stops
-  // transport (:689-690).
+  // drawerToggle_velocity owns active focus (:691-692); the second Space stops
+  // transport (:700-701).
 
 Supplemental converted-window evidence
 

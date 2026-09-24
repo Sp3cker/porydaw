@@ -6,7 +6,7 @@ Original SHA-256: 47d589471dbc0075cb36225ef0f79df0eb818a96a61bfc963a79ab67f4e8d8
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 1c92461ad5e5507e556b0f3567caaad9acc7d0836695d231c04ba175a4627cee
+Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
@@ -829,7 +829,7 @@ S021 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_Shel
   compare(shell.shellPresenter.session.documentDirty, true,
           "only the pasted destination has unsaved changes")
 
-S022 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml:527
+S022 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml:538
   mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
   tryCompare(shell.shellPresenter.session.songTabs, "selectedId", firstId)
 
@@ -838,7 +838,7 @@ S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_Shell
   tryCompare(tabs, "selectedId", firstId, 3000,
              "a real first-tab click retargets the selected workspace")
 
-S024 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:620
+S024 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:631
   keyClick(Qt.Key_Up)
   compare(selectedNote().pitch, original.pitch + 1, "Up transposes one semitone")
 
