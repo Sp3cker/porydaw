@@ -5,6 +5,7 @@ Original: src/checks/rollcheck/interlock.cpp
 Original SHA-256: 971c3e6a77a900a75bbef16205c6f5a4cb3c5872fad7a6833cd7d1d85c842e18
 Swift counterpart: src/checks/rollcheck/interlock.swift
 Swift SHA-256: d37ba279712c6fec477b9d5d407aa378be67cedf26683b0b3dc8d23617ccc93c
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

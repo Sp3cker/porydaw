@@ -5,6 +5,7 @@ Original: src/checks/scrollbar/geometry.cpp
 Original SHA-256: 2a350fe816265dd168c72fb035d4eb10c4b75d6b8838996554dfd8da445aa64f
 Swift counterpart: none identified
 Swift SHA-256: n/a
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

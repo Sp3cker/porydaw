@@ -5,6 +5,7 @@ Original: src/checks/rollcheck/timemenu.cpp
 Original SHA-256: 6d55204de3dc8c173d5bcb80107ae20ee92bb20c9d63f2e9de77d9c89c74416f
 Swift counterpart: src/checks/rollcheck/timemenu.swift
 Swift SHA-256: 0ec19201ff364ba3a694258e725460f4901ffc26b94f2cdfc9ea7781314f36b7
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

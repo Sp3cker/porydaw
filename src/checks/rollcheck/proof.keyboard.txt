@@ -10,6 +10,7 @@ Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833f
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
 Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 Retired in: 4d7fa617 Delete C++ window host, main.cpp and legacy keymap/layout/typography/theme C++; the pinned SHA is the 5f0924e8 blob, resolvable via git show 5f0924e8:src/checks/swiftrollgated/gesturechecks.cpp. S001-S028 index that pinned revision and close no A entry.
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

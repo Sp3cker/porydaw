@@ -5,6 +5,7 @@ Original: src/checks/visual/visualbaseline.cpp
 Original SHA-256: 3d2bf84e35b6e348098f3184c063c8b77077ccc6925c3fae9f4cbda7881834fc
 Swift counterpart: none identified
 Swift SHA-256: n/a
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 Zero assertion sites. This file is shared visual-baseline infrastructure

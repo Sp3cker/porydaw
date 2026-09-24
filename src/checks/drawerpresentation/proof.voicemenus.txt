@@ -5,6 +5,7 @@ Original: src/checks/drawerpresentation/voicemenus.cpp
 Original SHA-256: d9d25f1358b21abdc07c7f03023240d202b38f23bea8fe2b49006f668e228617
 Swift counterpart: src/checks/drawerpresentation/voicemenus.swift
 Swift SHA-256: e02fc54ed587a7fe307f8273010c04abe5e674a118284b05e7afc5493a64cccf
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.

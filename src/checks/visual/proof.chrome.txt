@@ -5,6 +5,7 @@ Original: src/checks/visual/chrome.cpp
 Original SHA-256: 4d56d2d67f8f8c009ea37b7f36e0fb997930c3a110a7e1e3d06bf546a514d1f5
 Swift counterpart: none identified
 Swift SHA-256: n/a
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

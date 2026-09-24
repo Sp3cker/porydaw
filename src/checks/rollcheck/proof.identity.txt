@@ -7,6 +7,7 @@ Swift counterpart: src/checks/rollcheck/identity.swift
 Swift SHA-256: 2898d686195d4e6dcd146728931deb4d25345a2bd858b874aa2621138dacb952
 Additional Swift counterpart: src/checks/rollcheck/presentation.swift
 Additional Swift SHA-256: 592f516980fe1e10bfa1861326aea56309034273b059db437f11047fb338de2b
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

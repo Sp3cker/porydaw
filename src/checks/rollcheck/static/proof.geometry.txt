@@ -11,6 +11,7 @@ Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
 Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Additional Swift counterpart: src/checks/rollcheck/time_signature_prompt.swift
 Additional Swift SHA-256: 9d3f191f01c4cf2be84411e15545eaa20743af72c7ad98566c11f014b9b97aa2
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

@@ -29,6 +29,7 @@ Additional Swift counterpart: src/checks/editorqml/tst_ShellTabs.qml
 Additional Swift SHA-256: d5875c0c5d83b79f1ab4f0bda4d25127de7d5a71e3af4fab57fd3f3e63c5055f
 Additional Swift counterpart: src/checks/editorqml/tst_ShellOpenFailure.qml
 Additional Swift SHA-256: aec647538487e81a7145bd2a3d234b6eb5ab3887ceadb4940cee1935b41e1d09
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 Four test methods, every one gated on the Cocoa WindowSystem backend (QSKIP otherwise): native menu/window shortcut routing, foreign-window key isolation with Insert Time popup protection, bound-view teardown unbinding, and the failed-project modal dialog preserving the live tab.

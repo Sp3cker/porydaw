@@ -5,6 +5,7 @@ Original: src/checks/visual/dialogs.cpp
 Original SHA-256: 83b7c5889b8c614092920dd3054fe74bc478aa8fb3c4ddcce7dd515cc2c2428c
 Swift counterpart: none identified
 Swift SHA-256: n/a
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

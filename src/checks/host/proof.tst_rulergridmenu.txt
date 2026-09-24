@@ -5,6 +5,7 @@ Original: src/checks/host/tst_rulergridmenu.cpp
 Original SHA-256: 050bc30d7fe744c91d1f084885730ecd67915e58ed95f823bb1dc063a4dc9876
 Swift counterpart: src/checks/editorqml/tst_ShellGridMenu.qml :: test_gridDivisionAndFeelMenusDispatchAndDismiss + test_actionRowsCloseBeforePromptAndDisabledRowsStayOpen
 Swift SHA-256: f14886994ed1fff10ad5674f007b8aad697571b8a28719d20aea1cc445a01ed2
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

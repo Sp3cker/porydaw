@@ -27,6 +27,7 @@ Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift SHA-256: 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3
 Additional Swift counterpart: src/checks/workspace/session_time_routing.swift
 Additional Swift SHA-256: e3fb115cb297132c52da8391197238dc7dcfc2f7c51bed0bac4f3c150229fbb9
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 Eight test methods routing tab readiness/focus handoff, drawer shortcut delivery to the persistent Quick toggle, copy/solo QAction routing including text-field respect, and Insert/Delete Time command fanout with undo-byte restore.

@@ -5,6 +5,7 @@ Original: src/checks/trackheaders/tst_trackactivitymeter.cpp
 Original SHA-256: d673e4f7ad9e3f93080f5a4c1e04c8cda7a05948603b5b20adff2bb8050b33eb
 Swift counterpart: src/checks/trackheaders/tst_trackactivitymeter.swift
 Swift SHA-256: d4cea65e6f6a598d48d0536be723df5e522943dce77312d6b7599406beb6661a
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

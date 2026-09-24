@@ -25,6 +25,7 @@ Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift SHA-256: 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 Thirteen test methods covering tab close/reopen global state, ready-reload transient preservation, reload focus handoff, fresh-bind/staged-reload/bank-rebind staging, failed-open preservation, project switch/quit, and five MouseHints drag/focus/tab delivery cases.

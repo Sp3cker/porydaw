@@ -10,6 +10,7 @@ src/checks/editcheck/NoteChecks.swift
 Swift SHA-256: bdc3462bbab22accf93f21fa10386443e617728fe783982e6e58a3d41555dfab
 src/checks/editcheck/EventChecks.swift
 Swift SHA-256: 401aa1ae13ed0ed92d2cb26b33029f4b6ec90ef99d0dd61894ba165a00002705
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

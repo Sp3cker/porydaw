@@ -5,6 +5,7 @@ Original: src/checks/rollcheck/ruler_loop_menu.cpp
 Original SHA-256: 01fd47f273c20f209a8baa5fee8003f95ea9a66865c75bf7426cab2189ac22f6
 Swift counterpart: src/checks/rollcheck/ruler_loop_menu.swift
 Swift SHA-256: 30bd4ebf214dcc5a8daed5483fa5974e661a445130039f41845b24ada48266ac
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

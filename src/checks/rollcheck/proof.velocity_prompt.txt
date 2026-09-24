@@ -5,6 +5,7 @@ Original: src/checks/rollcheck/velocity_prompt.cpp
 Original SHA-256: 909169cc2bebb6c06b28a98d919a9d94942d98bd35f723cf04a5b2f1f5c7fa30
 Swift counterpart: src/checks/rollcheck/velocity_prompt.swift
 Swift SHA-256: c3b986acf84e9422692cae0ecc36c78bacf81bb9eadbc23bc8f20e296f358185
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.

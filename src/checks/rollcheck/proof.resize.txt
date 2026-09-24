@@ -13,6 +13,7 @@ Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
 Additional Swift SHA-256: 4538a7863acc6e39fbed17606e2bc1402eed7607058685780b7e0f1f6f5db726
 Additional Swift counterpart: src/checks/editorqml/tst_ShellNoteVisuals.qml
 Additional Swift SHA-256: 0c4e102040e4682e215720f4e2aa3829513afe9a14e873a78454762647d14223
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

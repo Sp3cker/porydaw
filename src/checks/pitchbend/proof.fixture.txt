@@ -5,6 +5,7 @@ Original: src/checks/pitchbend/fixture.cpp
 Original SHA-256: febe431b2ea9b34f9265539f79cf1daaea9d1b13f38e98aa2fe232485f7fbc89
 Swift counterpart: none identified
 Swift SHA-256: n/a
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

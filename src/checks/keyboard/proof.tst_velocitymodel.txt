@@ -9,6 +9,7 @@ Additional Swift counterpart: src/checks/keyboard/tst_velocitygesture.swift
 Additional Swift SHA-256: d7da2f1be2d2a1156ee4ba98a1c61934a20256fd994bd60d8c3836e6b7ea4f03
 Additional Swift counterpart: src/checks/keyboard/tst_velocityaxis.swift
 Additional Swift SHA-256: 459ddc92727454e5309b1f4201b57b4cbdb9ac627d922d6cb1c1790575a5a301
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 VelocityGestureModel is DELETED by the B1 re-review; the gesture owner is now

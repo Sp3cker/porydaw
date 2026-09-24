@@ -11,6 +11,7 @@ Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
 Additional Swift SHA-256: cb49bddf735ed93df3d0faaa0e9a76e46cf989d3c6498ac05faff54de3d48b6e
 Additional Swift counterpart: src/checks/velocity/VelocityPaintDetentChecks.swift
 Additional Swift SHA-256: 9c6f9389d6da12297ae6600087b5d8ffb5ab60b5a7275b422b4e655e6afebe8d
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.

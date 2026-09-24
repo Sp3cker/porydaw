@@ -7,6 +7,7 @@ Swift counterpart: src/checks/editcheck/SelectionChecks.swift
 Swift SHA-256: 778da8c451451063174068f222938592213cc116b252e1c77c4c62eb668c78e6
 Production counterpart (AutomationRowStack projection): src/swift/app/drawer/automation/AutomationLaneProjection.swift
 Production SHA-256: 0500ae4898050f756894d99b3b92ebc5978af268e0f9ac188f352ee30d76a324
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

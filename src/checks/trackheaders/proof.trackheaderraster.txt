@@ -5,6 +5,7 @@ Original: src/checks/trackheaders/trackheaderraster.cpp
 Original SHA-256: b1617fff2ac01b216df78376f32c3e66258407c61889f40d1fb11b30e67cef8e
 Swift counterpart: src/checks/trackheaders/trackheaderraster.swift
 Swift SHA-256: 9c9ab74a3f20421c85104e12c78a7cabbafba19974caee39d95b9472948a4589
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

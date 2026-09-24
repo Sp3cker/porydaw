@@ -13,6 +13,7 @@ Swift counterpart: src/checks/drawerpresentation/voice_lifecycle.swift
 Swift SHA-256: e7a97f7fab6e5d3ea60e5333f20719c19d3c995c1111b4cb9fa49f6802b43d63
 Converted-window counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 QML SHA-256: 819923b2a7855cb9c4497b6cbc295958a1afbddab5144e38f9cf2a6bd82626f5
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.

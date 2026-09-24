@@ -5,6 +5,7 @@ Original: src/checks/onboardcheck/regionedlayout.cpp
 Original SHA-256: a59d94a22f58702307844009f0f4f90f7179be69a1b51acafec4ff6e31344219
 Swift counterpart: none identified
 Swift SHA-256: n/a
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

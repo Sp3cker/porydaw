@@ -7,6 +7,7 @@ Swift counterpart: src/checks/rollcheck/note_rendering.swift
 Swift SHA-256: 7dbe0a49d10a8f68d26beee519aba7b6386942c27ac6bd7ab2c113a089a161ae
 Additional Swift counterpart: src/checks/editorqml/tst_ShellNoteVisuals.qml
 Additional Swift SHA-256: 0c4e102040e4682e215720f4e2aa3829513afe9a14e873a78454762647d14223
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

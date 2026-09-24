@@ -5,6 +5,7 @@ Original: src/checks/selectionkey/window.cpp
 Original SHA-256: 24b508983d6d19c9f2e2656750ebda853fa6b302d7b5075d06d56dd13cdf4599
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

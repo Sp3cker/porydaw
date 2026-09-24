@@ -5,6 +5,7 @@ Original: src/checks/rollcheck/scale_projection.cpp
 Original SHA-256: 4dc0fed604392d4a02f9a9f67f8b95fedf68363320ffba60658062c3f437c36d
 Swift counterpart: src/checks/rollcheck/static/geometry.swift
 Swift SHA-256: 9e7a6c1d3dec6fb682d93d17aaa4f0d3e61cc001116f9f37b96b488e8c635259
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

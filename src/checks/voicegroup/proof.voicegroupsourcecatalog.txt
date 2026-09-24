@@ -5,6 +5,7 @@ Original: src/checks/voicegroup/voicegroupsourcecatalog.cpp
 Original SHA-256: 19df14b6511fae332d2f8b74222a67f996abf3d2f7d7f3e5dd96c739d6950b53
 Swift counterpart: none identified
 Swift SHA-256: n/a
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

@@ -31,6 +31,7 @@ Additional Swift counterpart: src/checks/drawerpresentation/drawer_basics.swift
 Additional Swift SHA-256: 2b0985c935710b0c8f98e55ca9f9eacf2f90210d0530dea666c0b33b88ae2fb8
 Additional Swift counterpart: src/checks/editcheck/DocumentTrackChecks.swift
 Additional Swift SHA-256: fc85a019c914537b8c04732629d41faf69b4e3464f68a681a2b2c1ab6602cf3b
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 Sixteen test methods covering drawer seed projection, cross-tab fanout, event-list gating, focus fallback, hide retention, tab-switch refocus, edit-action projection/identity/unbound start, editor-view-state fanout and lane remap/mutation/noop persistence, and four MouseHints scope/layout cases.

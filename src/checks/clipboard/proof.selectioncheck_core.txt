@@ -5,6 +5,7 @@ Original: src/checks/clipboard/selectioncheck_core.cpp
 Original SHA-256: 6ce29f432dbc1378d18cfbd24b1b4a03699ad616cd0781a4d16da021faa6f6a3
 Swift counterpart: src/checks/editcheck/SelectionChecks.swift
 Swift SHA-256: 778da8c451451063174068f222938592213cc116b252e1c77c4c62eb668c78e6
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

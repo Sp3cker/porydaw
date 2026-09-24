@@ -5,6 +5,7 @@ Original: src/checks/rollcheck/scale_editing.cpp
 Original SHA-256: cbe3d727ae2a6731de8863136f0bfc86e412d5ebbe1bf645aa0138153b3f9b2f
 Swift counterpart: none identified
 Swift SHA-256: n/a
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

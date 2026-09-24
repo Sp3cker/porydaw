@@ -5,6 +5,7 @@ Original: src/checks/clipboard/clipmime_test.cpp
 Original SHA-256: 0d0a02515571b1c3969d261705702d72977b45dbd8fdfaa7113405f0336a9482
 Swift counterpart: src/checks/editcheck/TimeChecks.swift
 Swift SHA-256: 42370dd398741e3f138df3474efd1635c299a050c3893322abda537b0edbe933
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

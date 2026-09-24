@@ -5,6 +5,7 @@ Original: src/checks/midi/tst_midiroundtrip.cpp
 Original SHA-256: 5569d902b961eac8d872144d27ded4a9fc75c4609d2bcb4a5052f3f8274fa66f
 Swift counterpart: src/checks/midi/MidiChecks.swift
 Swift SHA-256: ad617ef213c07267de4e3b79fa8e2bf3abc2747b3fc32bb6ff588b1ccfe5adef
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

@@ -5,6 +5,7 @@ Original: src/checks/voicegroup/tst_voicegrouploader.cpp
 Original SHA-256: 739660ff97d4e8782c4d7264d8fa9e5f25b3379341540441fba5579bb4ab1fb3
 Swift counterpart: none identified
 Swift SHA-256: n/a
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

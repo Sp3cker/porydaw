@@ -5,6 +5,7 @@ Original: src/checks/keyboard/keymapregistry.cpp
 Original SHA-256: 2f58e54dca9f1fa9ae9edd47eff3fea35bf2faddff5656412ec77469b828e749
 Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
 Swift SHA-256: 1815b25fa9324fe0c694879db826643105c7fc5563408e0335dbe1d21f91159e
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

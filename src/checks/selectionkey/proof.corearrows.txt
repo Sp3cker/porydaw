@@ -7,6 +7,7 @@ Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift SHA-256: 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 Tally: MATCHED 0, PARTIAL 3, GAP 12, NATIVE 0, RETIRED-REPRESENTATION 5.

@@ -5,6 +5,7 @@ Original: src/checks/onboardcheck/support.cpp
 Original SHA-256: 20d14a92ec00a9031cfbcd86ec7a65e914dd199a574e6d7c57583ff078f8e7b8
 Swift counterpart: none identified
 Swift SHA-256: n/a
+Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
