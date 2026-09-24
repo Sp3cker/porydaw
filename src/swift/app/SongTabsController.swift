@@ -152,6 +152,7 @@ public final class SongTabsController {
     /// The tab the close gate must reopen in place once the user approves; `-1`
     /// while the gate is asking about a plain close.
     @QtIgnored private var reloadId = -1
+    @QtIgnored private var replacementLabel: String?
     /// The tab whose close-save is in flight. The gate stays up until the
     /// application reports back, so a second Save press starts no second write.
     @QtIgnored private var savingCloseId = -1
@@ -304,6 +305,7 @@ public final class SongTabsController {
         guard pendingCloseId != -1 else { return }
         pendingCloseId = -1
         if reloadId != -1 { reloadId = -1 }
+        replacementLabel = nil
         if isClosingAll {
             isClosingAll = false
             projectSwitchApprovalIndex = nil
@@ -325,6 +327,15 @@ public final class SongTabsController {
         } else {
             closeTab(index: index)
         }
+    }
+
+    /// Applies the ordinary dirty close gate before placing a different song
+    /// at the selected tab's position.
+    @QtIgnored
+    func requestReplacement(tabId: Int, label: String) {
+        guard pendingCloseId == -1, tab(id: tabId) != nil else { return }
+        replacementLabel = label
+        requestReload(tabId: tabId)
     }
 
     /// The application's answer to `confirmSave()`.
@@ -361,6 +372,7 @@ public final class SongTabsController {
         // answer drives advanceCloseAll — and drop any reload so the walk owns
         // the outcome.
         reloadId = -1
+        replacementLabel = nil
         isClosingAll = true
         if pendingCloseId == -1 { advanceCloseAll() }
     }
@@ -411,7 +423,11 @@ public final class SongTabsController {
         let closingSelected = tabId == selectedId
         if pendingCloseId == tabId { pendingCloseId = -1 }
         let reopening = reloadId == tabId
-        if reopening { reloadId = -1 }
+        let replacement = reopening ? replacementLabel : nil
+        if reopening {
+            reloadId = -1
+            replacementLabel = nil
+        }
         // The closing workspace releases the one shared engine, the playhead and
         // its drawer slots while the scene still shows it.
         if closingSelected { tab.workspace.deactivate() }
@@ -428,7 +444,7 @@ public final class SongTabsController {
             tabs[survivorIndex].workspace.activate()
         }
         app?.tabsDidChange()
-        if reopening { app?.reloadApproved(label: tab.title, index: index) }
+        if reopening { app?.reloadApproved(label: replacement ?? tab.title, index: index) }
     }
 
     private func advanceCloseAll() {

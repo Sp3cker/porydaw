@@ -58,6 +58,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private let eventList: EventListPresenter
     private let transportBar: TransportBarPresenter
     private let voiceList = VoiceListController()
+    private let songDock = SongDockController()
     private let mouseHints = MouseHints()
     /// The workspaces whose rows have left the strip and whose pages have not
     /// reported their destruction yet. The page holds the C++ proxy for every
@@ -79,6 +80,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         let label: String?
         let service: ProjectService
         let labels: [String]
+        let songs: [SongListing]
         let voicegroupArgs: [String]
         let voicegroupCatalog: VoicegroupCatalog
     }
@@ -134,6 +136,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
         songTabs.attach(app: self)
         transportBar.attach(session: self)
+        songDock.attach(session: self)
     }
 
     public func componentComplete() {}
@@ -333,6 +336,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func eventListPresenter() -> EventListPresenter { eventList }
 
+    public func songDockController() -> SongDockController { songDock }
+
+    @QtIgnored
+    func refreshSongLabels(_ updated: [String]) { labels = updated }
+
     public func mouseHintsPresenter() -> MouseHints { mouseHints }
 
     @QtIgnored
@@ -465,6 +473,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         // would release this session — and the QObject proxies it owns — after
         // Qt's own teardown, and that order crashes in the proxy destructor.
         let service = catalogService
+        songDock.detach()
         catalogService = nil
         let replacementTask = activeReplacementTask
         let closing = retireChain
@@ -501,6 +510,21 @@ public final class ApplicationSession: QmlInstantiableStatus {
             return
         }
         startOpen(label: label, at: nil)
+    }
+
+    @QtIgnored
+    func openSongFromDock(label: String, newTab: Bool) {
+        if let live = songTabs.tab(label: label) {
+            if live.tabId == songTabs.selectedId, !newTab {
+                songTabs.requestReload(tabId: live.tabId)
+            } else {
+                songTabs.selectTab(tabId: live.tabId)
+            }
+        } else if !newTab, let selected = songTabs.selectedPage {
+            songTabs.requestReplacement(tabId: selected.tabId, label: label)
+        } else {
+            startOpen(label: label, at: nil)
+        }
     }
 
     /// Closes every tab, asking about each dirty one in turn. The host's close
@@ -679,7 +703,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
             let service = ProjectService()
             do {
                 try await service.open(root: path)
-                let labels = try await service.songLabels()
+                let listings = try await service.songs()
+                let labels = listings.map(\.label)
                 let voicegroupArgs = try await service.voicegroupArgs()
                 let voicegroupCatalog = try await service.voicegroupCatalog()
                 guard !self.isDisposed, !Task.isCancelled else {
@@ -688,6 +713,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 }
                 let candidate = ProjectSwitchCandidate(
                     path: path, label: label, service: service, labels: labels,
+                    songs: listings,
                     voicegroupArgs: voicegroupArgs, voicegroupCatalog: voicegroupCatalog)
                 if self.songTabs.tabCount == 0 {
                     await self.finishProjectSwitch(candidate)
@@ -861,6 +887,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         catalogService = candidate.service
         projectRoot = candidate.path
         labels = candidate.labels
+        songDock.install(service: candidate.service, songs: candidate.songs)
         let catalog = candidate.voicegroupCatalog
         voiceList.setVoicegroupChoices(candidate.voicegroupArgs)
         voiceList.sampleChoices = catalog.samples
@@ -879,6 +906,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// workspace.
     private func refreshDocumentState() {
         songOpen = songTabs.tabCount > 0
+        songDock.syncSelection()
         guard let session = workspace?.session else {
             documentDirty = false
             canUndo = false

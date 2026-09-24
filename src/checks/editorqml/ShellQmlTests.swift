@@ -69,6 +69,11 @@ enum ShellQmlLane {
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-tabs", inputFileName: "tst_ShellTabs.qml",
               fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym")),
+        Entry(name: "shell-songs", inputFileName: "tst_ShellSongs.qml",
+              fixtureFiles: songs("mus_route101", "mus_petalburg", "mus_gym", "mus_surf",
+                                  "mus_victory_wild", "se_fanfare_1trk", "se_pc_login",
+                                  "se_use_item") + ["sound/voicegroups/fixture_alt.inc",
+                                                     "include/constants/songs.h"]),
         Entry(name: "shell-drawer-parity", inputFileName: "tst_ShellDrawerParity.qml",
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-polyphony", inputFileName: "tst_ShellPolyphony.qml",
@@ -212,6 +217,62 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
         let file = fixtures.appendingPathComponent("macos-dpr1-font12/voicegroupbrowser")
             .appendingPathComponent(variant).appendingPathComponent("vanilla.json")
         return (try? String(contentsOf: file, encoding: .utf8)) ?? ""
+    }
+
+    /// Creates a stray and a partial song in this entry's isolated scratch project.
+    public func prepareSongDockFixture() -> Bool {
+        let root = URL(fileURLWithPath: projectRoot, isDirectory: true)
+        let midi = root.appendingPathComponent("sound/songs/midi", isDirectory: true)
+        let source = midi.appendingPathComponent("mus_route101.mid")
+        let table = root.appendingPathComponent("sound/song_table.inc")
+        do {
+            let bytes = try Data(contentsOf: source)
+            try bytes.write(to: midi.appendingPathComponent("mus_stray_test.mid"))
+            try bytes.write(to: midi.appendingPathComponent("mus_partial_test.mid"))
+            let config = midi.appendingPathComponent("midi.cfg")
+            let originalConfig = try String(contentsOf: config, encoding: .utf8)
+            try (originalConfig + "\nmus_stray_test.mid: -E -R50 -G_fixture_songs_dock -V100\n")
+                .write(to: config, atomically: true, encoding: .utf8)
+            let groups = root.appendingPathComponent("sound/voicegroups", isDirectory: true)
+            let originalVoicegroup = try String(contentsOf: groups.appendingPathComponent("fixture_rich.inc"),
+                                                encoding: .utf8)
+            try originalVoicegroup.replacingOccurrences(of: "voice_group fixture_rich",
+                                                        with: "voice_group fixture_songs_dock")
+                .write(to: groups.appendingPathComponent("fixture_songs_dock.inc"),
+                       atomically: true, encoding: .utf8)
+            let original = try String(contentsOf: table, encoding: .utf8)
+            if !original.contains("song mus_partial_test,") {
+                try (original + "\n    song mus_partial_test, MUSIC_PLAYER_BGM, 0\n")
+                    .write(to: table, atomically: true, encoding: .utf8)
+            }
+            return true
+        } catch { return false }
+    }
+
+    public func dockVoicegroupExists() -> Bool {
+        FileManager.default.fileExists(atPath:
+            projectRoot + "/sound/voicegroups/fixture_songs_dock.inc")
+    }
+
+    public func dockSongMidiExists() -> Bool {
+        FileManager.default.fileExists(atPath:
+            projectRoot + "/sound/songs/midi/mus_stray_test.mid")
+    }
+
+    public func dockTrashedMidiExists() -> Bool {
+        FileManager.default.fileExists(atPath:
+            projectRoot + "/.porydaw/trash/mus_stray_test.mid")
+    }
+
+    /// Selects the frozen widget geometry for the actual mounted display
+    /// profile rather than assuming that shell tests run at DPR 2/font 12.
+    public func songListBaselineJson(dpr: Int, fontPx: Int) -> String {
+        guard (dpr == 1 || dpr == 2), (fontPx == 12 || fontPx == 16) else { return "" }
+        let root = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
+            .deletingLastPathComponent()
+        let url = root.appendingPathComponent(
+            "fixtures/visual/macos-dpr\(dpr)-font\(fontPx)/songlist/vanilla.json")
+        return (try? String(contentsOf: url, encoding: .utf8)) ?? ""
     }
 
     /// Qt Quick Test's wait() pumps Qt but does not service Swift's main-actor

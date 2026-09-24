@@ -18,7 +18,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     private static let actions: [Action] = [
         Action("file.open_project", "Open Project…"),
-        Action("file.open_song", "Open Song…"),
+        Action("songs.find", "Find Song"),
         Action("file.save_song", "Save"),
         Action("file.quit", "Quit"),
         Action("edit.undo", "Undo"),
@@ -56,7 +56,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     ]
     private static let byId = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0) })
     private static let allActionIds = actions.map(\.id)
-    private static let fileIds = allActionIds.filter { $0.hasPrefix("file.") }
+    private static let fileIds = allActionIds.filter { $0.hasPrefix("file.") || $0 == "songs.find" }
     private static let editTopIds = ["edit.undo", "edit.redo"]
     private static let editClipboardIds = [
         "roll.copy", "roll.cut", "roll.paste", "roll.delete", "roll.select_all",
@@ -84,7 +84,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     ]
 
     /// Scope inspection is pure Swift; Qt resolves sequence strings only after
-    /// QGuiApplication starts. Open Song is not in the keymap and stays unbound.
+    /// QGuiApplication starts.
     private static let windowIds: [String] = {
         let registry = KeybindingRegistry()
         let ids = Set(registry.ids)
@@ -114,7 +114,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var sceneActive = true
     @QtTracked public var themeMode = "vanilla"
     @QtTracked public var gridLineContrast = 50
-    @QtTracked public var songLabels: [String] = []
     @QtTracked public var polyphonyVisible = false
     @QtTracked public var statusText = "Ready"
     private var closePending = false
@@ -162,7 +161,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
             return session.songOpen && session.gridCommandAvailable(command: command.rawValue)
         }
         switch id {
-        case "file.open_song": return session.projectOpen
+        case "songs.find": return session.projectOpen
         case "file.save_song": return session.songOpen && !session.saveInProgress
         case "edit.undo": return session.songOpen && session.canUndo
         case "edit.redo": return session.songOpen && session.canRedo
@@ -180,17 +179,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         }
         switch id {
         case "file.open_project": chooseProjectRequested()
-        case "file.open_song":
-            songLabels = (0..<session.songCount()).compactMap { index in
-                let label = session.songLabel(index: index)
-                return label.isEmpty ? nil : label
-            }
-            if songLabels.isEmpty {
-                informationRequested(title: "Open Song",
-                                     message: "The project has no playable songs.")
-            } else {
-                chooseSongRequested()
-            }
+        case "songs.find": session.songDockController().presenter.focusSearch()
         case "file.save_song": session.requestSave()
         case "file.quit": quitRequested()
         case "edit.undo": session.requestUndo()
@@ -295,12 +284,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
         session.openProject(path: url.path)
     }
 
-    /// Completion of the QML selection dialog, whose labels come from the
-    /// session's actual project song catalogue.
-    public func chooseSong(label: String) {
-        guard !label.isEmpty else { return }
-        session.openSong(label: label)
-    }
 
     public func songOpenChanged() {
         if session.songOpen { statusText = "Song open" }
@@ -334,7 +317,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
     }
 
     @QtSignal public func chooseProjectRequested()
-    @QtSignal public func chooseSongRequested()
     @QtSignal public func quitRequested()
     @QtSignal public func informationRequested(title: String, message: String)
     @QtSignal public func criticalRequested(title: String, message: String)

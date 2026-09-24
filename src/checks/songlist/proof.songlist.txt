@@ -27,7 +27,7 @@ behavior inventory of the panel's observable contract, not an inventory
 of C++ assertion-macro sites; each entry carries a Coverage label rather
 than an assertion-site Disposition.
 
-Coverage tally: 17 entries: 13 MATCHED, 4 NATIVE, 0 GAP.
+Coverage tally: 17 entries: 13 MATCHED, 4 PARTIAL, 0 NATIVE, 0 GAP.
 
 Verification
 Command: deno task verify --filter swiftcore
@@ -147,40 +147,46 @@ fallback-song delete refuses; unknown labels fail both plan halves.
 
 N001 | Scroll-into-view and focus proxy | songlistpanel.cpp:124-125,
 184-187, 172-176
-Coverage: NATIVE
-Mapping: scrollToItem(PositionAtCenter), setFocusProxy(list) and
-focusSearch's focus+selectAll are surface obligations. The presenter
-publishes revealRequest/revealSongId and searchFocusRequest counters for
-the shell to honor; no model predicate can prove pixels or focus.
+Coverage: PARTIAL
+Mapping: SongsPanel.qml handles searchFocusRequest and revealRequest;
+shell-songs/test_mountedSongDockAndConfirmationRoundTrips asserts Find
+Song focuses search. Centered reveal/focus-proxy pixel equivalence and
+integrated execution have not yet been demonstrated.
 
 N002 | Context menu construction/exec | songlistpanel.cpp:95-117
-Coverage: NATIVE
-Mapping: QMenu assembly, itemAt hit-testing and exec are widget
-obligations. The presenter exposes the four request* actions and
-canRegister; the shell owns menu presentation.
+Coverage: PARTIAL
+Mapping: SongsPanel.qml shows QuickMenuPanel on a right-clicked row;
+shell-songs/test_mountedSongDockAndConfirmationRoundTrips clicks Open,
+Open in New Tab, Register and Delete on the mounted surface. Native QMenu
+assembly/hit-testing and integrated execution remain unproved.
 
 N003 | Key routing: Space passthrough and search arrows |
 songlistpanel.cpp:194-214
-Coverage: NATIVE
-Mapping: ShortcutOverride ignores bare Space so the window-level
-play/pause shortcut fires; Up/Down/PageUp/PageDown in the search box are
-forwarded to the list. These are event-routing obligations of the shell's
-input tier, not list-model state.
+Coverage: PARTIAL
+Mapping: shell-songs/test_mountedSongDockAndConfirmationRoundTrips asserts
+Down from the focused search steers the list, literal Space stays in the
+focused search, and bare Space on the non-text list reaches window transport.
+AGENTS.md Global keyboard shortcut priority intentionally exempts literal
+text/IME entry: unlike the QWidget, search Space does not passthrough.
+Up/PageUp/PageDown remain unasserted.
 
 N004 | Register/Delete confirmation dialogs | workspaceui_project.cpp
 (confirmRegistration/confirmDeletion)
-Coverage: NATIVE
-Mapping: the QMessageBox confirmations, projectBusy/dialogOps gating and
-the post-mutation tab refresh are application-shell obligations. The
-service owns the transaction (B012/B013); the shell presents the plan and
-calls the mutation.
+Coverage: PARTIAL
+Mapping: SongConfirmDialog.qml and SongDockController.swift present real
+registration/deletion plans and execute the confirmed service operations;
+shell-songs/test_mountedSongDockAndConfirmationRoundTrips checks cancel,
+register, delete, unused voicegroup removal and refreshed rows. The
+QMessageBox representation, dirty-tab deletion and integrated execution
+remain unproved.
 
 Remaining UI-only obligations for the shell slice
 - Render rows with the warning foreground and tooltips (N001/N002 cover
   the data; the amber color and tooltip surface are presentation).
 - Honor revealRequest (scroll) and searchFocusRequest (focus+selectAll).
-- Route bare Space to the window play/pause action and arrows from the
-  search field to the list (N003).
+- Route bare Space from the non-text list to window play/pause; preserve
+  literal Space in search per AGENTS.md policy, and send search arrows to
+  the list (N003).
 - Present the context menu and wire requestOpen/requestOpenInNewTab/
   requestRegister/requestDelete plus canRegister (N002).
 - Present the register/delete confirmations from songRegistrationPlan/

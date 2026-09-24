@@ -71,18 +71,11 @@ public final class SongListPresenter {
     @QtTracked public var totalCount = 0
     /// "%1 songs" or "%1 of %2 songs" while filtered.
     @QtTracked public var countText = ""
-    /// Two-way filter state: writing any of these rebuilds the visible rows,
-    /// like the native controls' change signals.
-    @QtTracked public var searchText = "" {
-        didSet { if !suspendRebuilds { rebuildList() } }
-    }
+    /// QML reads filter state; mutations must use the methods below to rebuild.
+    @QtTracked public var searchText = ""
     /// 0 = ID order, 1 = A–Z.
-    @QtTracked public var sortIndex = 0 {
-        didSet { if !suspendRebuilds { rebuildList() } }
-    }
-    @QtTracked public var categoryIndex = 0 {
-        didSet { if !suspendRebuilds { rebuildList() } }
-    }
+    @QtTracked public var sortIndex = 0
+    @QtTracked public var categoryIndex = 0
     /// The list's current row: the loaded song while the search is empty,
     /// cleared otherwise. -1 when nothing is selected.
     @QtTracked public var selectedSongId = -1
@@ -107,7 +100,6 @@ public final class SongListPresenter {
     /// Restored category awaiting its first rebuild; a category the project
     /// doesn't have falls back to All.
     @QtIgnored private var pendingCategory = ""
-    @QtIgnored private var suspendRebuilds = false
 
     public init() {
         // The native combo ships one placeholder All entry until the first
@@ -136,6 +128,28 @@ public final class SongListPresenter {
         songs.first { $0.id == songId }
     }
 
+    /// Stable identity at a filtered row position, for QML keyboard navigation.
+    public func songId(at index: Int) -> Int {
+        visible.indices.contains(index) ? visible[index].id : -1
+    }
+
+    public func categoryName(at index: Int) -> String {
+        index >= 0 && index < categories.count ? categories[index].name : ""
+    }
+    /// QML and Swift enter through the same mutation path so the rows rebuild.
+    public func updateSearch(text: String) {
+        searchText = text
+        rebuildList()
+    }
+    public func selectSort(index: Int) {
+        sortIndex = index
+        rebuildList()
+    }
+    public func selectCategory(index: Int) {
+        categoryIndex = index
+        rebuildList()
+    }
+
     // MARK: - Filter state (persisted across runs by the shell)
 
     /// The active category's combo data: the pending restored category until
@@ -149,12 +163,10 @@ public final class SongListPresenter {
     public func restoreFilters(search: String, sort sortIndex: Int,
                                category categoryPrefix: String) {
         pendingCategory = categoryPrefix
-        suspendRebuilds = true
         if sortIndex >= 0 && sortIndex < 2 {
             self.sortIndex = sortIndex
         }
         searchText = search
-        suspendRebuilds = false
         rebuildList()
     }
 
@@ -278,9 +290,7 @@ public final class SongListPresenter {
             built.append(SongListCategory(name: "Other (\(other))", prefix: Self.otherPrefix))
         }
         categories.reset(to: built)
-        suspendRebuilds = true
         categoryIndex = built.firstIndex { $0.prefix == previous } ?? 0
-        suspendRebuilds = false
     }
 
     private func matchesFilters(_ song: SongListing) -> Bool {

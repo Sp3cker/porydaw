@@ -6,6 +6,7 @@ import QtCore
 import QtQml.Models
 import PorydawApp
 import "qrc:/porydaw/swiftroll" as SwiftRoll
+import "qrc:/porydaw/docks" as Docks
 
 ApplicationWindow {
     id: root
@@ -68,6 +69,12 @@ ApplicationWindow {
             shell.openStartup()
         }
     }
+
+    Settings {
+        id: dockSettings
+        category: "swiftDock"
+        property int columnWidth: 280
+    }
     Component.onCompleted: {
         if (establishApplicationIdentity) {
             Qt.application.name = "porydaw"
@@ -112,7 +119,6 @@ ApplicationWindow {
     Connections {
         target: shell
         function onChooseProjectRequested() { projectPicker.open() }
-        function onChooseSongRequested() { songPicker.open() }
         function onQuitRequested() { root.close() }
         function onInformationRequested(title, message) {
             informationDialog.text = title
@@ -361,34 +367,65 @@ ApplicationWindow {
         }
     }
 
-    Loader {
-        id: editorScene
-        objectName: "shellSceneLoader"
+    SplitView {
+        id: shellBody
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: polyDock.visible ? polyDock.left : parent.right
-        active: shell.sceneActive
-        focus: true
-        onActiveFocusChanged: {
-            if (item && !activeFocus)
-                shell.session.cancelGridInput(0)
-        }
-        sourceComponent: SwiftRoll.SongTabs {
-            objectName: "shellSongTabs"
-            controller: shell.session.songTabs
-            applicationFont: root.font
-            shellRouter: shell
-            onContextMenuAt: (x, y) => {
-                root.actionRevision++
-                gridContextMenu.x = x
-                gridContextMenu.y = y
-                gridContextMenu.open()
+        orientation: Qt.Horizontal
+
+        Docks.SongsDockColumn {
+            id: dockColumn
+            SplitView.minimumWidth: 200
+            SplitView.maximumWidth: 480
+            SplitView.preferredWidth: Math.max(200, Math.min(480, dockSettings.columnWidth))
+            controller: shell.session.songDockController()
+            colors: shell.session.palette
+            applicationFont: Application.font
+            baseFontPx: baseFontInfo.pixelSize
+            onWidthChanged: {
+                if (width >= 200 && width <= 480 && width !== dockSettings.columnWidth)
+                    dockSettings.columnWidth = Math.round(width)
             }
         }
-        onItemChanged: {
-            if (!item && !shell.sceneActive)
-                shell.sceneDestroyed()
+
+        Loader {
+            id: editorScene
+            objectName: "shellSceneLoader"
+            SplitView.fillWidth: true
+            SplitView.fillHeight: true
+            active: shell.sceneActive
+            focus: true
+            onActiveFocusChanged: {
+                if (item && !activeFocus)
+                    shell.session.cancelGridInput(0)
+            }
+            sourceComponent: SwiftRoll.SongTabs {
+                objectName: "shellSongTabs"
+                controller: shell.session.songTabs
+                applicationFont: root.font
+                shellRouter: shell
+                onContextMenuAt: (x, y) => {
+                    root.actionRevision++
+                    gridContextMenu.x = x
+                    gridContextMenu.y = y
+                    gridContextMenu.open()
+                }
+            }
+            onItemChanged: {
+                if (!item && !shell.sceneActive)
+                    shell.sceneDestroyed()
+            }
+            Text {
+                objectName: "shellEmptySongMessage"
+                anchors.centerIn: parent
+                visible: !shell.session.songOpen && shell.sceneActive
+                text: qsTr("Open a project and song to play with the Swift core.")
+                font: root.font
+                color: shell.session.palette.windowText
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
     }
     Item {
@@ -445,13 +482,19 @@ ApplicationWindow {
         }
     }
 
-    Text {
-        anchors.centerIn: parent
-        visible: !shell.session.songOpen && shell.sceneActive
-        text: qsTr("Open a project and song to play with the Swift core.")
-        font: root.font
-        color: shell.session.palette.windowText
-        horizontalAlignment: Text.AlignHCenter
+    Loader {
+        id: songConfirmation
+        objectName: "songConfirmationLoader"
+        active: shell.session.songDockController().confirmation.length > 0
+        sourceComponent: Docks.SongConfirmDialog {
+            controller: shell.session.songDockController()
+            applicationFont: root.font
+            baseFontPx: root.bodyFontPx
+        }
+        onLoaded: {
+            if (status === Loader.Ready)
+                item.open()
+        }
     }
     header: TransportBar {
         id: transportBar
@@ -546,50 +589,6 @@ ApplicationWindow {
         objectName: "shellProjectPicker"
         title: qsTr("Open Project")
         onAccepted: shell.chooseProject(selectedFolder.toString())
-    }
-    // These replace a QSS-painted QInputDialog, not a native system panel.
-    // Select theme-capable controls locally; keep the rest of the app's style.
-    Basic.Dialog {
-        id: songPicker
-        objectName: "shellSongPicker"
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        title: qsTr("Open Song")
-        modal: true
-        focus: true
-        font: root.font
-        palette.window: root.colors.windowBackground
-        palette.windowText: root.colors.windowText
-        palette.text: root.colors.windowText
-        palette.base: root.colors.menuBackground
-        palette.button: root.colors.buttonBackground
-        palette.buttonText: root.colors.buttonText
-        palette.light: root.colors.buttonHoverBackground
-        palette.mid: root.colors.outline
-        palette.dark: root.colors.outline
-        palette.highlight: root.colors.selectionRing
-        palette.highlightedText: root.colors.selectionText
-        palette.disabled.windowText: root.colors.disabledText
-        palette.disabled.buttonText: root.colors.disabledText
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        onAccepted: shell.chooseSong(songChoices.currentText)
-        contentItem: Column {
-            spacing: bodyFontPx / 2
-            Label { text: qsTr("Song:"); font: root.font }
-            Basic.ComboBox {
-                id: songChoices
-                objectName: "shellSongChoices"
-                model: shell.songLabels
-                font: root.font
-                focus: true
-                hoverEnabled: true
-                implicitContentWidthPolicy: ComboBox.WidestText
-                palette.button: root.colors.buttonHoverBackground
-                palette.mid: root.colors.buttonPressedBackground
-                palette.buttonText: down ? root.colors.buttonPressedText : root.colors.windowText
-                palette.dark: root.colors.windowText
-            }
-        }
     }
     MessageDialog {
         id: informationDialog

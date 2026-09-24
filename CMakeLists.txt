@@ -248,6 +248,15 @@ qt_add_resources(porydaw_app "drawer_shared_qml"
         src/ui/songview/quick/AutomationTabs.qml
 )
 
+qt_add_resources(porydaw_app "songs_dock_qml"
+    PREFIX "/porydaw/docks"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/docks"
+    FILES
+        src/ui/songview/quick/docks/SongsPanel.qml
+        src/ui/songview/quick/docks/SongsDockColumn.qml
+        src/ui/songview/quick/docks/SongConfirmDialog.qml
+)
+
 # The drawer keeps the swiftroll prefix layout, so EditorSurface's relative
 # `import "../drawer"` resolves in both the resource engine and the source tree.
 qt_add_resources(porydaw_app "drawer_qml"
