@@ -161,16 +161,16 @@ TestCase {
         return item
     }
 
-    // The canonical band rect: the surface minus the drawer and the hint
-    // strip — the same rectangles the production band and the shared playhead
-    // are laid out from.
+    // The roll band reserves a horizontal scrollbar below it, and the plot
+    // reserves the vertical track beside its right edge.
     function canonicalBand() {
         var s = surface()
         var drawer = findChild(s, "editorDrawer")
         var hint = findChild(s, "mouseHintStatus")
         verify(drawer && hint, "the drawer and hint strip are mounted")
         return Qt.rect(0, 0, s.width,
-                       Math.max(s.height - drawer.height - hint.height, 0))
+                       Math.max(s.height - drawer.height - hint.height
+                                - s.headersModel.scrollbarWidth, 0))
     }
 
     // The canonical plot column excludes the ruler above the note rows as
@@ -180,7 +180,7 @@ TestCase {
         var band = canonicalBand()
         var origin = s.headersModel.trackHeaderWidth + s.gridModel.keyboardWidth
         return Qt.rect(origin, band.y + s.gridModel.rulerHeight,
-                       Math.max(band.width - origin, 0),
+                       Math.max(band.width - origin - s.headersModel.scrollbarWidth, 0),
                        Math.max(band.height - s.gridModel.rulerHeight, 0))
     }
 

@@ -200,8 +200,8 @@ Original expression:
   QVERIFY(scrollbar.boundingRect().contains(target));
 
 A009 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:108
-Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_trackPagingAndKeyboardNavigation clicks the mounted time track forward and backward and asserts the Swift camera changes by exactly one page; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
       press(scrollbar.mapToScene(target));
       release();
@@ -220,8 +220,8 @@ Original expression:
   QTRY_VERIFY(std::abs(camera.scrollY() - otherBefore) < kTolerance);
 
 A011 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:111
-Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_trackPagingAndKeyboardNavigation clicks the mounted roll track forward and backward and asserts the Swift camera changes by exactly one page; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
       } else {
 Original expression:
@@ -323,8 +323,8 @@ Original expression:
   QTRY_VERIFY(std::abs(camera.scrollY() - midpoint) < kTolerance);
 
 A017 | ScrollbarTest::wheelScrolling | src/checks/scrollbar/input.cpp:226
-Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar-targeted wheel routing needs the unmounted EditorSurface.qml scrollbar item under the cursor.
+Disposition: PARTIAL
+Mapping/reason: tst_TimelineScrollbar.qml::test_wheelAndResizeRebase exercises wheel scrolling on both mounted bars and ScrollbarChecks.swift::runTimelineScrollbarChecks asserts pixel-over-angle precedence; full 16-case native wheel matrix remains unproved; verify:qml-roll and swiftcore passed.
 Source context since previous assertion:
       double expected = midpoint;
       switch (behavior) {
@@ -480,8 +480,8 @@ Original expression:
   QTRY_VERIFY(window().activeFocusItem() == &scrollbar && scrollbar.hasActiveFocus());
 
 A026 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:300
-Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_trackPagingAndKeyboardNavigation focuses the mounted horizontal bar and asserts exact single-step, Home, and End camera values; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
       Qt::Key key = Qt::Key_Right;
       double expected = midpoint;
@@ -514,8 +514,8 @@ Original expression:
   QTRY_VERIFY(std::abs(camera.scrollY() - otherBefore) < kTolerance);
 
 A028 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:303
-Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus.
+Disposition: MATCHED
+Mapping/reason: tst_TimelineScrollbar.qml::test_trackPagingAndKeyboardNavigation focuses the mounted roll bar and asserts exact single-step, Home, and End camera values; deno task verify:qml-roll --verbose passed.
 Source context since previous assertion:
       } else {
 Original expression:

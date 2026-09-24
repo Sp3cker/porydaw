@@ -1,9 +1,8 @@
 import QtQuick
-import Porydaw.Ui
 // Shared scrollbar for timeline Quick surfaces, in either orientation. The
 // owning model stays authoritative: the control reports requested values and
 // renders thumb geometry from its inputs, never touching model state itself.
-TimelineGestureScrollbar {
+Item {
     id: scrollbar
 
     property int orientation: Qt.Vertical
@@ -57,7 +56,7 @@ TimelineGestureScrollbar {
     property real dragLastPosition: 0
     property point dragLastPoint: Qt.point(0, 0)
     property bool dragThresholdReached: false
-    gestureActive: thumbMouse.pressed
+    property bool gestureActive: thumbMouse.pressed
 
     signal valueRequested(real value)
     signal wheelRequested(real pixelX, real pixelY, real angleX, real angleY, bool inverted)
