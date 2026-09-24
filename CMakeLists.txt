@@ -260,6 +260,27 @@ qt_add_resources(porydaw_app "drawer_qml"
         src/ui/songview/quick/drawer/AutomationMenu.qml
 )
 
+qt_add_resources(porydaw_app "voicegroup_dock_qml"
+    PREFIX "/porydaw/docks"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/docks"
+    FILES
+        src/ui/songview/quick/docks/VoicegroupPanel.qml
+        src/ui/songview/quick/docks/VoiceEditor.qml
+)
+
+qt_add_resources(porydaw_app "voicegroup_type_icons"
+    PREFIX "/porydaw/voiceicons"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    FILES
+        resources/waveform.svg
+        resources/wave-square.svg
+        resources/wave-triangle.svg
+        resources/wave-sine.svg
+        resources/waveform-path.svg
+        resources/piano-keyboard.svg
+        resources/drum.svg
+)
+
 qt_add_resources(porydaw_app "drawer_icons"
     PREFIX "/icons"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"

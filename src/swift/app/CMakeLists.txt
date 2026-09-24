@@ -22,6 +22,8 @@ add_library(PorydawApp STATIC
     songlist/SongListPresenter.swift
     voicelist/VoiceListSemantics.swift
     voicelist/VoiceListController.swift
+    voicelist/VoiceEditorController.swift
+    voicelist/VoicegroupCatalog.swift
     MouseHints.swift
     QListModelSync.swift
     roll/PianoGrid.swift

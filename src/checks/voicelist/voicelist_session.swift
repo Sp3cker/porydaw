@@ -21,6 +21,23 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         return
     }
     let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-voicelist-test")
+    let alternate = URL(fileURLWithPath: projectDir)
+        .appendingPathComponent("sound/voicegroups/other.inc")
+    let groupIndex = URL(fileURLWithPath: projectDir)
+        .appendingPathComponent("sound/voice_groups.inc")
+    do {
+        try """
+        .align 2
+        voice_group other
+            voice_square_2 60, 0, 1, 3, 2, 11, 4
+        """.write(to: alternate, atomically: true, encoding: .utf8)
+        let index = try String(contentsOf: groupIndex, encoding: .utf8)
+        try (index + "\n.include \"sound/voicegroups/other.inc\"\n")
+            .write(to: groupIndex, atomically: true, encoding: .utf8)
+    } catch {
+        report.fail(bindingID, "alternate voicegroup fixture failed: \(error)")
+        return
+    }
     let service = ProjectService()
     do {
         try runBlocking {
@@ -31,6 +48,16 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         return
     }
     var session: DocumentSession!
+    let catalogArgs: [String]
+    do {
+        catalogArgs = try runBlocking { try await service.voicegroupArgs() }
+    } catch {
+        report.fail(bindingID, "voicegroup catalog failed: \(error)")
+        return
+    }
+    report.expect(catalogArgs.contains("_other") && catalogArgs.count >= 2,
+                  cppID: "vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit",
+                  message: "the staged selector catalog offers both original and alternate groups")
     do {
         session = try runBlocking {
             try await DocumentSession.open(service: service, label: "mus_session_test")
@@ -157,16 +184,26 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     report.expectEqual("003  [Blank]", list.rows[3].title, cppID: blankID,
                        what: "the reverted row renders the blank template again")
 
-    // The selector reflects undoable cfg edits: the owner commits the -G
-    // change and echoes it back; undo restores the standing arg. (Bank
-    // rebind on switch is a missing service operation — see report.)
+    // A -G selection changes both document history and the real loaded bank.
     let selectorID = "vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit"
-    var cfg = session.document.state.config
-    cfg.voicegroupArgument = "_other"
-    session.document.setConfig(cfg)
+    let originalToken = session.bankLease.bankToken
+    do {
+        try runBlocking { try await session.selectVoicegroup("_other") }
+    } catch {
+        report.fail(selectorID, "-G bank rebind threw: \(error)")
+        return
+    }
     list.refresh(from: session)
+    report.expectEqual(true, session.document.isDirty, cppID: selectorID,
+                       what: "the selected -G marks the song config dirty")
     report.expectEqual("other", list.selectorText, cppID: selectorID,
-                       what: "a committed -G edit reflects as the selector's display text")
+                       what: "selected -G name reflects the undoable config")
+    report.expectEqual("other", session.bankLoadName, cppID: selectorID,
+                       what: "the selected -G loads the alternate bank")
+    report.expect(session.bankLease.bankToken != originalToken &&
+                      session.bankSlots[0].voice?.macro == BankVoiceMacro.square2,
+                  cppID: selectorID,
+                  message: "the alternate bank owns a fresh lease and different voice")
     do {
         _ = try runBlocking { try await session.undo() }
     } catch {
@@ -175,5 +212,11 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     }
     list.refresh(from: session)
     report.expectEqual("test_vg", list.selectorText, cppID: selectorID,
-                       what: "-G undo restores the standing arg's display text")
+                       what: "-G undo restores the original selector")
+    report.expectEqual("test_vg", session.bankLoadName, cppID: selectorID,
+                       what: "-G undo restores the original loaded bank")
+    report.expectEqual(false, session.document.isDirty, cppID: selectorID,
+                       what: "-G undo clears the song config dirty state")
+    report.expectEqual(original, session.bankSlots[0].voice, cppID: selectorID,
+                       what: "-G undo restores the original slot's instrument")
 }

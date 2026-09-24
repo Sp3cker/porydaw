@@ -321,12 +321,42 @@ public final class DocumentSession {
         return result
     }
 
+    /// Retargets the song's -G argument only after its replacement bank loads.
+    /// The config mutation is a normal undoable document edit; the lease swap
+    /// publishes separately so the active renderer adopts the new voices.
+    public func selectVoicegroup(_ arg: String) async throws {
+        try requireOpen()
+        guard !arg.isEmpty, arg != document.state.config.voicegroupArgument,
+              !bankPersistenceInFlight, !document.history.bankTransitionInFlight else { return }
+        bankPersistenceInFlight = true
+        defer { bankPersistenceInFlight = false }
+        let previous = document.state.config.voicegroupArgument
+        let bank = try await service.loadBank(voicegroupArg: arg)
+        try requireOpen()
+        guard document.state.config.voicegroupArgument == previous else {
+            throw ProjectServiceError.operationFailed("Voicegroup changed during load.")
+        }
+        var config = document.state.config
+        config.voicegroupArgument = arg
+        document.setConfig(config)
+        guard document.state.config.voicegroupArgument == arg else { return }
+        adoptBank(bank)
+        publishChange([.bank, .dirty, .history])
+    }
+
     @discardableResult
     public func undo() async throws -> Bool {
         try requireOpen()
         guard !bankPersistenceInFlight else { return false }
+        let previousArg = document.state.config.voicegroupArgument
         let undone = try await document.history.undo()
         var domains: SessionChangeDomains = [.dirty, .history]
+        if undone, document.state.config.voicegroupArgument != previousArg {
+            let bank = try await service.loadBank(
+                voicegroupArg: document.state.config.voicegroupArgument)
+            adoptBank(bank)
+            domains.insert(.bank)
+        }
         if undone, let result = inbox.drain() {
             adoptBank(result)
             domains.insert(.bank)
@@ -339,8 +369,15 @@ public final class DocumentSession {
     public func redo() async throws -> Bool {
         try requireOpen()
         guard !bankPersistenceInFlight else { return false }
+        let previousArg = document.state.config.voicegroupArgument
         let redone = try await document.history.redo()
         var domains: SessionChangeDomains = [.dirty, .history]
+        if redone, document.state.config.voicegroupArgument != previousArg {
+            let bank = try await service.loadBank(
+                voicegroupArg: document.state.config.voicegroupArgument)
+            adoptBank(bank)
+            domains.insert(.bank)
+        }
         if redone, let result = inbox.drain() {
             adoptBank(result)
             domains.insert(.bank)

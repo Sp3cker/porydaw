@@ -97,6 +97,9 @@ public final class VoiceListController {
     public var rows: QListModel<VoiceListRowHandle> = QListModel()
     /// The selector's -G choices (display name + raw arg per entry).
     public var argChoices: QListModel<VoiceListArgChoice> = QListModel()
+    @QtIgnored public let editor = VoiceEditorController()
+
+    public func editorModel() -> VoiceEditorController { editor }
 
     @QtTracked public var isLoading = false
     /// Whether a bank view is bound (setSource(nullptr) detaches).
@@ -119,6 +122,7 @@ public final class VoiceListController {
     /// names the row. Never takes keyboard focus.
     @QtTracked public var revealRequest = 0
     @QtTracked public var revealSlotId = -1
+    @QtTracked public var catalogRevision = 0
 
     // MARK: Outward intents (the native signals)
 
@@ -168,6 +172,15 @@ public final class VoiceListController {
         didSet { if synthSymbols != oldValue { rederiveRows() } }
     }
     @QtIgnored public var adsrDefaults = VoiceListAdsrDefaults()
+    @QtIgnored public var waveSymbols: [String] = []
+    @QtIgnored public var drumkitSymbols: [String] = []
+
+    public func sampleSymbols() -> [String] { sampleChoices }
+    public func samplePickerSymbols() -> [String] {
+        keysplitTables.keys.sorted() + sampleChoices
+    }
+    public func waveChoices() -> [String] { waveSymbols }
+    public func drumkitChoices() -> [String] { drumkitSymbols }
 
     @QtIgnored private weak var session: DocumentSession?
 
@@ -175,6 +188,7 @@ public final class VoiceListController {
         rows.reset(to: (0..<VoiceListController.slotCount).map { slot in
             VoiceListRowHandle(VoiceListRow(slot: slot, title: String(format: "%03d", slot)))
         })
+        editor.owner = self
     }
 
     // MARK: Session binding (the owner's refresh seam)
@@ -237,6 +251,7 @@ public final class VoiceListController {
             selectorText = VoiceListSemantics.voicegroupDisplayName(currentArg)
         }
         rederiveRows()
+        editor.refresh()
         updateSelectorEnabled()
     }
 
@@ -265,6 +280,7 @@ public final class VoiceListController {
             usedVoices = []
         }
         rederiveRows()
+        editor.refresh()
         updateSelectorEnabled()
     }
 
@@ -281,6 +297,7 @@ public final class VoiceListController {
             slots[slot] = slotView
         }
         rederiveRow(slot)
+        if slot == currentSlot { editor.refresh() }
     }
 
     // MARK: Selector
@@ -323,6 +340,7 @@ public final class VoiceListController {
     public func selectSlot(slot: Int) {
         guard slot >= 0 && slot < rows.count else { return }
         currentSlot = slot
+        editor.refresh()
     }
 
     /// Jump-from-context navigation: select the slot and ask the shell to
@@ -342,7 +360,11 @@ public final class VoiceListController {
     public func setUsedVoices(_ used: Set<Int>) {
         usedVoices = used
         for slot in 0..<rows.count {
-            rows[slot].used = used.contains(slot)
+            let row = rows[slot]
+            let marked = used.contains(slot)
+            guard row.used != marked else { continue }
+            row.used = marked
+            rows[slot] = row
         }
     }
 
@@ -357,7 +379,15 @@ public final class VoiceListController {
     /// voice sounds releases it first.
     public func pressVoice(slot: Int) {
         releaseVoice()
-        guard !isLoading, slot >= 0 && slot < rows.count else { return }
+        guard !isLoading, slots.indices.contains(slot) else { return }
+        if let voice = slots[slot].voice,
+           voice.macro == BankVoiceMacro.keysplit ||
+               voice.macro == BankVoiceMacro.keysplitAll {
+            guard let leaf = slots[slot].subvoiceMacro(
+                forKey: Int(VoiceListSemantics.auditionKey)),
+                  VoiceListSemantics.isDirectSoundFamily(leaf) ||
+                  VoiceListSemantics.isWaveMacro(leaf) else { return }
+        }
         soundingVoice = slot
         onAuditionVoice?(slot, VoiceListSemantics.auditionKey,
                          VoiceListSemantics.auditionVelocity)
@@ -417,6 +447,17 @@ public final class VoiceListController {
             return VoiceListDraft(voice: voice, materializesBlank: true)
         default:
             return nil
+        }
+    }
+
+    @QtIgnored
+    public func noticeForSlot(_ slot: Int) -> String {
+        guard slots.indices.contains(slot) else { return "Select a voice to edit it." }
+        switch slots[slot].kind {
+        case BankSlotKind.readOnlyVoice: return "Cry voices are read-only."
+        case BankSlotKind.broken:
+            return "This voice line couldn't be parsed; it is kept as-is."
+        default: return "No voice is defined at this slot."
         }
     }
 
@@ -480,31 +521,45 @@ public final class VoiceListController {
         for slot in 0..<rows.count { rederiveRow(slot) }
     }
 
+    /// QListModel snapshots each handle's role values. Mutating the handle
+    /// alone leaves QML delegates on their original snapshot; setting the same
+    /// handle back emits the model's dataChanged without replacing row identity.
+    private func publishRow(_ value: VoiceListRow, at slot: Int) {
+        let row = rows[slot]
+        guard row.title != value.title || row.typeName != value.typeName ||
+                row.adsr != value.adsr ||
+                row.typeIconKey != VoiceListSemantics.iconKey(glyph: value.glyph,
+                                                               altChip: value.altChip) ||
+                row.altChip != value.altChip || row.used != value.used else { return }
+        row.apply(value)
+        rows[slot] = row
+    }
+
     private func rederiveRow(_ slot: Int) {
         if isLoading {
             // The overlay rewrites the text cells only; used marks survive
             // (native setLoading never touches kUsedRole).
-            rows[slot].apply(VoiceListRow(slot: slot,
-                                          title: String(format: "%03d  Loading...", slot),
-                                          used: usedVoices.contains(slot)))
+            publishRow(VoiceListRow(slot: slot,
+                                    title: String(format: "%03d  Loading...", slot),
+                                    used: usedVoices.contains(slot)), at: slot)
             return
         }
         // Blank slots render like their editor: a None-kind row is a
         // template the user can materialize.
         if slots.indices.contains(slot), slots[slot].kind == BankSlotKind.none {
-            rows[slot].apply(VoiceListRow(slot: slot,
-                                          title: String(format: "%03d  [Blank]", slot),
-                                          used: usedVoices.contains(slot)))
+            publishRow(VoiceListRow(slot: slot,
+                                    title: String(format: "%03d  [Blank]", slot),
+                                    used: usedVoices.contains(slot)), at: slot)
             return
         }
         // Parsed editable voices are authoritative for unsaved edits. Native
         // loaded-tone facts cover read-only and otherwise unparsed slots.
         if let voice = voiceAt(slot) {
-            let synth = synthSymbols.contains(voice.symbol)
+            let synth = slots[slot].isSynth || synthSymbols.contains(voice.symbol)
             let typeByte = VoiceListSemantics.voiceType(forMacro: voice.macro)
             let typeName = VoiceListSemantics.typeDisplayName(typeByte: typeByte, synth: synth)
             let name = VoiceListSemantics.macroHasSymbol(voice.macro) ? voice.symbol : ""
-            rows[slot].apply(VoiceListRow(
+            publishRow(VoiceListRow(
                 slot: slot,
                 title: VoiceListSemantics.voiceColumnText(slot: slot, symbol: name,
                                                          typeName: typeName),
@@ -512,7 +567,7 @@ public final class VoiceListController {
                 adsr: VoiceListSemantics.adsrText(voice),
                 glyph: VoiceListSemantics.glyph(forTypeByte: typeByte, synth: synth),
                 altChip: VoiceListSemantics.isAltChip(typeByte),
-                used: usedVoices.contains(slot)))
+                used: usedVoices.contains(slot)), at: slot)
             return
         }
         if slots.indices.contains(slot), let tone = slots[slot].tone {
@@ -522,7 +577,7 @@ public final class VoiceListController {
             let adsr = tone.adsr.map {
                 "\($0.attack) \($0.decay) \($0.sustain) \($0.release)"
             } ?? ""
-            rows[slot].apply(VoiceListRow(
+            publishRow(VoiceListRow(
                 slot: slot,
                 title: VoiceListSemantics.voiceColumnText(
                     slot: slot, symbol: tone.name, typeName: typeName),
@@ -530,10 +585,10 @@ public final class VoiceListController {
                 adsr: adsr,
                 glyph: VoiceListSemantics.glyph(forTypeByte: typeByte, synth: tone.isSynth),
                 altChip: VoiceListSemantics.isAltChip(typeByte),
-                used: usedVoices.contains(slot)))
+                used: usedVoices.contains(slot)), at: slot)
             return
         }
-        rows[slot].apply(VoiceListRow(slot: slot, title: String(format: "%03d", slot),
-                                      used: usedVoices.contains(slot)))
+        publishRow(VoiceListRow(slot: slot, title: String(format: "%03d", slot),
+                                used: usedVoices.contains(slot)), at: slot)
     }
 }

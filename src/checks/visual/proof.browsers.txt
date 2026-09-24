@@ -382,8 +382,8 @@ Original expression:
   QVERIFY2(m_rig, qPrintable(error));
 
 A007 | VisualBrowsersTest::initTestCase | src/checks/visual/browsers.cpp:305
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: voicegroup browser. No-ingress fact retained: browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Real VoicegroupBrowser populates from catalog scans, sample set, and used voices; native widget/fixture state.
+Disposition: PARTIAL
+Mapping/reason: tst_ShellVoicegroup.qml::test_128RowsSelectionAndAudition opens mus_route101 from the staged fixture and observes 128 live bank rows, a loaded DirectSound sample and read-only cry slot in VoicegroupPanel; unproved: native sample-set loop metadata and full type-icon/used-mark pixel parity.
 Source context since previous assertion:
 
 Original expression:
@@ -525,8 +525,8 @@ Original expression:
   QVERIFY2(applyTheme(theme), qPrintable(QStringLiteral("unknown theme '%1'").arg(theme)));
 
 A009 | VisualBrowsersTest::browserBaseline | src/checks/visual/browsers.cpp:437
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: voicegroup browser. No-ingress fact retained: browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Screenshot baseline voicegroupbrowser/<theme>: selector, tree rows, type icons, selection, used-voice tints, DirectSound editor; native pixels.
+Disposition: PARTIAL
+Mapping/reason: tst_ShellVoicegroup.qml::test_referenceProfileCapture mounts VoicegroupPanel, compares selector/tree/header/first-row geometry to the macos-dpr1-font12 vanilla widget JSON and records a PNG; unproved: native pixel colors/icons, alternate theme and DPR/font profiles.
 Source context since previous assertion:
 
       m_browser->selectSlot(kDirectSoundSlot);
@@ -568,8 +568,8 @@ Original expression:
   QVERIFY2(applyTheme(theme), qPrintable(QStringLiteral("unknown theme '%1'").arg(theme)));
 
 A011 | VisualBrowsersTest::editorVariants | src/checks/visual/browsers.cpp:465
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: voicegroup browser. No-ingress fact retained: browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog; frozen baseline under src/checks/fixtures/visual/ is a legacy QWidget render with no converted-window owner. Original observation: Screenshot baseline voicegroupbrowser/<editor-variant>/<theme>; native pixels.
+Disposition: PARTIAL
+Mapping/reason: tst_ShellVoicegroup.qml::test_referenceProfileCapture captures the mounted Square 1 and read-only editor variants against the macos-dpr1-font12 vanilla widget JSON; unproved: per-field pixel/colors, darkneutralhigh and other font/DPR profiles.
 Source context since previous assertion:
 
       m_browser->selectSlot(slot);

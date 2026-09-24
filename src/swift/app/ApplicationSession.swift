@@ -55,6 +55,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private let playhead: SharedPlayheadPresenter
     private let playheadGuides: PlayheadGuidesPresenter
     private let eventList: EventListPresenter
+    private let voiceList = VoiceListController()
     private let mouseHints = MouseHints()
     /// The workspaces whose rows have left the strip and whose pages have not
     /// reported their destruction yet. The page holds the C++ proxy for every
@@ -83,6 +84,26 @@ public final class ApplicationSession: QmlInstantiableStatus {
             audio = try NativeAudio()
         } catch {
             lastSaveError = String(describing: error)
+        }
+        voiceList.onAuditionVoice = { [weak self] voice, key, velocity in
+            guard (0..<128).contains(voice), (0..<128).contains(key),
+                  (0..<128).contains(velocity) else { return }
+            self?.audio?.previewVoice(program: UInt8(voice), key: UInt8(key),
+                                      velocity: UInt8(velocity))
+        }
+        voiceList.onVoicegroupChangeRequested = { [weak self] arg in
+            guard let self, let session = self.selectedDocument else { return }
+            Task { [weak self, weak session] in
+                guard let session else { return }
+                do {
+                    try await session.selectVoicegroup(arg)
+                } catch {
+                    self?.lastSaveError = String(describing: error)
+                }
+                if self?.selectedDocument === session {
+                    self?.voiceList.refresh(from: session)
+                }
+            }
         }
         songTabs.attach(app: self)
     }
@@ -204,6 +225,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// same state through the presenter accessors below.
     @QtIgnored
     public var selectedDocument: DocumentSession? { workspace?.session }
+    public func voiceListController() -> VoiceListController { voiceList }
 
     public func isDocumentDirty() -> Bool { documentDirty }
     public func songCount() -> Int { labels.count }
@@ -449,6 +471,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     func tabsDidChange() {
         refreshDocumentState()
+        refreshVoicegroupDock()
         // The selected workspace's grid owns command availability; switching
         // tabs swaps it, so the window's Edit-menu enabled states must refresh.
         gridCommandAvailabilityChanged()
@@ -547,6 +570,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private func tabStateChanged() {
         songTabs.refreshDirty()
         refreshDocumentState()
+        refreshVoicegroupDock()
+    }
+
+    private func refreshVoicegroupDock() {
+        if let session = selectedDocument {
+            voiceList.refresh(from: session)
+        } else {
+            voiceList.bindBank(slots: nil)
+        }
     }
 
     /// Retires one tab: releases the workspace's presenters and closes its
@@ -769,6 +801,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
         do {
             try await service.open(root: path)
             let newLabels = try await service.songLabels()
+            let voicegroupArgs = try await service.voicegroupArgs()
+            let voicegroupCatalog = try await service.voicegroupCatalog()
             await releaseTabs()
             await catalogService?.close()
             guard !isDisposed, !Task.isCancelled else {
@@ -778,6 +812,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
             catalogService = service
             projectRoot = path
             labels = newLabels
+            voiceList.setVoicegroupChoices(voicegroupArgs)
+            voiceList.sampleChoices = voicegroupCatalog.samples
+            voiceList.waveSymbols = voicegroupCatalog.waves
+            voiceList.drumkitSymbols = voicegroupCatalog.drumkits
+            voiceList.keysplitTables = voicegroupCatalog.keysplits
+            voiceList.synthSymbols = Set(voicegroupCatalog.synths)
+            voiceList.adsrDefaults = voicegroupCatalog.defaults
+            voiceList.catalogRevision += 1
             projectOpen = true
             return true
         } catch {
