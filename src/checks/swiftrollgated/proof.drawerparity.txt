@@ -1,0 +1,769 @@
+Assertion correspondence: swiftrollgated/drawerparity.cpp
+
+Reference revision: 03a190a0bf1bba3a007f31bf74eb01ed362b92ce
+Original: src/checks/swiftrollgated/drawerparity.cpp
+Original SHA-256: 0699e32c19617c3dd1d0ef0033b3cbbbc0c194b84e29fe5bdaf14a35dda74519
+Swift counterpart: src/checks/editorqml/tst_ShellDrawerParity.qml
+Swift SHA-256: 4e8a64ed35f57faa8ff7578ec1e4c4e325f19f74bcb4b481f47dbd8e77ca32e2
+Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
+Swift SHA-256: bbe0aaffd68c126118a8d3e0a7c7cd55e6642fe29a3d9092ebef63cbdc823169
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro site appears below, including mode gates. Source context preserves
+setup, rows, loops and guards between assertions verbatim. S identifiers identify
+exact shell-lane predicates, listed after the inventory.
+MATCHED means the named shell-lane predicate executes the same observation on the
+production Swift shell; PARTIAL means a related predicate exists but the stated
+condition is unproved; GAP means no equivalent shell-lane predicate is established.
+Unsure between PARTIAL and GAP is recorded as GAP. Bookkeeping must not overclaim.
+Editor drawer parity for the swiftrollgated surface: automation hover raster and
+read-only stability, written-node hover rings, the voice-marker drag transaction
+with commit and cancel paths, and grip Tab and arrow focus ownership. Document
+revisions are read through the published appliedRevisionText the original
+scene.revision() reads.
+
+Verification
+Command: deno task verify:shell --filter shell-drawer-parity --verbose
+Result: PASS, entry green with every TestCase slot passing.
+Command: deno task verify:shell --filter shellwindow --verbose
+Result: PASS, the existing lane is unaffected.
+Command: deno task proof check
+Result: PASS.
+
+Execution and ownership
+ShellQmlLane (src/checks/editorqml/ShellQmlTests.swift) stages mus_route101 and
+runs tst_ShellDrawerParity.qml through shell_qml_tests. The S predicates below
+name the exact QML observations.
+
+Fixture, sequence and row constraints
+One shell per TestCase function over the staged mus_route101 project with the
+velocity, automation and voice sections visible; the automation case activates
+Pan then Tempo, the voice case runs one commit and one cancel transaction, and
+the grip case selects a real grid note first. No data rows expand sites beyond
+the two parameter passes and the two transaction directions above.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory
+
+A001 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:34
+Disposition: MATCHED
+Mapping/reason: Matched by S031 (shell-drawer-parity entry runs this surface by construction; no mode switch exists).
+Source context since previous assertion:
+void SwiftRollGatedTest::drawerAutomationHoverRaster()
+{
+    if (m_mode != QStringLiteral("swiftrollgated"))
+Original expression:
+QSKIP("drawer raster parity belongs to swiftrollgated")
+
+A002 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:38
+Disposition: MATCHED
+Mapping/reason: Matched by S032 (staged route101 opens with both drawer plots mounted).
+Source context since previous assertion:
+    QFETCH(QString, parameter);
+    NativeScene scene;
+    QString error;
+Original expression:
+QVERIFY2(scene.open(m_projectRoot, m_songLabel, &error), qPrintable(error))
+
+A003 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:42
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    auto *page = scene.item("automationPage");
+    auto *input = scene.item("automationPlotInput");
+    auto *model = scene.model("automationPage");
+Original expression:
+QVERIFY(page && input && model)
+
+A004 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:50
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    QPointer<QQuickItem> tab;
+    for (int index = 0; index < model->property("tabCount").toInt(); ++index) {
+        auto *candidate = gridcheck::visualDescendant(
+            page, QStringLiteral("automationParameterTab%1").arg(index));
+        if (candidate && candidate->property("text").toString() == parameter)
+            tab = candidate;
+    }
+Original expression:
+QVERIFY2(tab, qPrintable(QStringLiteral("missing parameter tab: %1").arg(parameter)))
+
+A005 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:55
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    // Focus scrolls the real selector into view; activation still arrives by pointer.
+    tab->forceActiveFocus(Qt::TabFocusReason);
+    QTest::mouseClick(scene.view, Qt::LeftButton, Qt::NoModifier,
+                      tab->mapToScene(QPointF(tab->width() * 0.2, tab->height() * 0.5)).toPoint());
+Original expression:
+QTRY_VERIFY(tab && tab->property("checked").toBool())
+
+A006 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:57
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    scene.move(scene.item("swiftRollInput"), QPointF(20, 20));
+Original expression:
+QTRY_VERIFY(!model->property("hoverVisible").toBool())
+
+A007 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:59
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    const QString before = scene.revision();
+Original expression:
+QVERIFY(!before.isEmpty())
+
+A008 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:61
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    const QImage idle = scene.capture(input);
+Original expression:
+QVERIFY(!idle.isNull())
+
+A009 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:67
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+
+    // Background insertion hover must actually paint, remain read-only, and be
+    // pixel-stable when the same pointer position is delivered twice.
+    const QPointF insertion(input->width() * 0.55, input->height() * 0.5);
+    scene.move(input, insertion);
+Original expression:
+QTRY_VERIFY(model->property("hoverVisible").toBool())
+
+A010 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:69
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    QImage hovered;
+Original expression:
+QTRY_VERIFY(!(hovered = scene.capture(input)).isNull() && hovered != idle)
+
+A011 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:70
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QCOMPARE(scene.revision(), before)
+
+A012 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:72
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    scene.move(input, insertion);
+Original expression:
+QCOMPARE(scene.capture(input), hovered)
+
+A013 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:75
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+
+    scene.move(scene.item("swiftRollInput"), QPointF(20, 20));
+Original expression:
+QTRY_VERIFY(!model->property("hoverVisible").toBool())
+
+A014 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:76
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QTRY_COMPARE(scene.capture(input), idle)
+
+A015 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:77
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QCOMPARE(scene.revision(), before)
+
+A016 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:90
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+
+    // A written node must paint a ring, not merely flip a presenter flag.
+    const auto fills = scene.descendants(page, "automationNodeFill");
+    QQuickItem *node = nullptr;
+    for (auto *fill : fills) {
+        const QPointF center = fill->mapToItem(input, fill->boundingRect().center());
+        if (fill->isVisible() &&
+            input->boundingRect().adjusted(12, 12, -12, -12).contains(center)) {
+            node = fill;
+            break;
+        }
+    }
+Original expression:
+QVERIFY2(node, "the fixture must expose a written node away from plot edges")
+
+A017 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:94
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    const QPoint nodeCenter = node->mapToScene(node->boundingRect().center()).toPoint();
+    auto *ring =
+        gridcheck::visualDescendant(node->parentItem(), QStringLiteral("automationNodeHover"));
+Original expression:
+QVERIFY(ring)
+
+A018 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:97
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    const QRectF ringBounds = ring->mapRectToScene(ring->boundingRect());
+    const QImage ringIdle = scene.capture(ringBounds);
+Original expression:
+QVERIFY(!ringIdle.isNull())
+
+A019 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:101
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    // Hover publication may replace delegates. Keep coordinates, not pointers,
+    // across the input boundary, and inspect freshly resolved render items.
+    QTest::mouseMove(scene.view, nodeCenter);
+Original expression:
+QTRY_VERIFY([&] {
+        const auto rings = scene.descendants(page, "automationNodeHover");
+        return std::any_of(rings.cbegin(), rings.cend(),
+                           [](auto *item) { return item->isVisible(); });
+    }())
+
+A020 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:107
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    QImage ringFrame;
+Original expression:
+QTRY_VERIFY(!(ringFrame = scene.capture(ringBounds)).isNull() && ringFrame != ringIdle)
+
+A021 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:108
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QCOMPARE(scene.revision(), before)
+
+A022 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:110
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+    scene.move(scene.item("swiftRollInput"), QPointF(20, 20));
+Original expression:
+QTRY_COMPARE(scene.capture(ringBounds), ringIdle)
+
+A023 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:111
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QTRY_COMPARE(scene.capture(input), idle)
+
+A024 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:112
+Disposition: MATCHED
+Mapping/reason: Matched by S033 (pointer tab activation, insertion-hover paint without writes, repeat stability and node-ring paint).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QCOMPARE(scene.revision(), before)
+
+A025 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:125
+Disposition: MATCHED
+Mapping/reason: Matched by S031 (shell-drawer-parity entry runs this surface by construction; no mode switch exists).
+Source context since previous assertion:
+void SwiftRollGatedTest::drawerVoicePreviewTransaction()
+{
+    if (m_mode != QStringLiteral("swiftrollgated"))
+Original expression:
+QSKIP("drawer raster parity belongs to swiftrollgated")
+
+A026 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:129
+Disposition: MATCHED
+Mapping/reason: Matched by S032 (staged route101 opens with both drawer plots mounted).
+Source context since previous assertion:
+    QFETCH(bool, cancel);
+    NativeScene scene;
+    QString error;
+Original expression:
+QVERIFY2(scene.open(m_projectRoot, m_songLabel, &error), qPrintable(error))
+
+A027 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:134
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    auto *input = scene.item("voicePlotInput");
+    auto *page = scene.item("voiceChangesPage");
+    auto *model = scene.model("voiceChangesPage");
+    auto *preview = scene.item("voiceDragPreview");
+Original expression:
+QVERIFY(input && page && model && preview)
+
+A028 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:137
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    scene.move(scene.item("swiftRollInput"), QPointF(20, 20));
+    auto *line = scene.item("voiceChangeMarkerLine");
+Original expression:
+QVERIFY2(line, "the fixture must publish a voice-change marker")
+
+A029 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:139
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    const QPointF source = line->mapToItem(input, line->boundingRect().center());
+Original expression:
+QVERIFY(input->boundingRect().contains(source))
+
+A030 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:141
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    scene.move(input, source);
+Original expression:
+QTRY_COMPARE(model->property("hoverHintProfile").toInt(), 21)
+
+A031 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:143
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    const QString before = scene.revision();
+Original expression:
+QVERIFY(!before.isEmpty())
+
+A032 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:145
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    const QImage idle = scene.capture(input);
+Original expression:
+QVERIFY(!idle.isNull())
+
+A033 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:154
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    const QPoint press = input->mapToScene(source).toPoint();
+    QTest::mousePress(scene.view, Qt::LeftButton, Qt::NoModifier, press);
+    bool buttonHeld = true;
+    const auto release = qScopeGuard([&] {
+        if (buttonHeld)
+            QTest::mouseRelease(scene.view, Qt::LeftButton);
+    });
+    QCoreApplication::processEvents();
+Original expression:
+QCOMPARE(scene.revision(), before)
+
+A034 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:155
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(!preview->isVisible())
+
+A035 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:157
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    const QImage pressed = scene.capture(input);
+Original expression:
+QCOMPARE(pressed, idle)
+
+A036 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:160
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+
+    const QPointF target(source.x() + scene.grid->property("beatWidth").toDouble() * 2, source.y());
+Original expression:
+QVERIFY(input->boundingRect().contains(target))
+
+A037 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:162
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    scene.move(input, target);
+Original expression:
+QTRY_VERIFY(preview->isVisible())
+
+A038 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:163
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QTRY_COMPARE(input->cursor().shape(), Qt::SizeHorCursor)
+
+A039 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:165
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    QImage draft;
+Original expression:
+QTRY_VERIFY(!(draft = scene.capture(input)).isNull() && draft != idle)
+
+A040 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:166
+Disposition: PARTIAL
+Mapping/reason: Related predicate S037 (frame width compared; height equality follows from the shared anchor).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QCOMPARE(draft.size(), idle.size())
+
+A041 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:167
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QCOMPARE(scene.revision(), before)
+
+A042 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:168
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(model->property("interactionActive").toBool())
+
+A043 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:173
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+
+    if (cancel) {
+        input->parentItem()->forceActiveFocus(Qt::OtherFocusReason);
+        QTest::keyClick(scene.view, Qt::Key_Escape);
+Original expression:
+QTRY_VERIFY(!preview->isVisible())
+
+A044 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:177
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+        QTest::mouseRelease(scene.view, Qt::LeftButton, Qt::NoModifier,
+                            input->mapToScene(target).toPoint());
+        buttonHeld = false;
+Original expression:
+QCOMPARE(scene.revision(), before)
+
+A045 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:178
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(!scene.session->property("canUndo").toBool())
+
+A046 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:183
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    } else {
+        QTest::mouseRelease(scene.view, Qt::LeftButton, Qt::NoModifier,
+                            input->mapToScene(target).toPoint());
+        buttonHeld = false;
+Original expression:
+QTRY_VERIFY(scene.revision() != before)
+
+A047 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:184
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QTRY_VERIFY(!preview->isVisible())
+
+A048 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:185
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QTRY_VERIFY(scene.session->property("canUndo").toBool())
+
+A049 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:187
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+        const QString committed = scene.revision();
+Original expression:
+QVERIFY(QMetaObject::invokeMethod(scene.session, "requestUndo"))
+
+A050 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:190
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+        // canUndo clears before asynchronous replay starts; the published
+        // revision, not the disabled action, establishes completion.
+Original expression:
+QTRY_VERIFY(scene.revision() != committed)
+
+A051 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:191
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QTRY_VERIFY(!scene.session->property("canUndo").toBool())
+
+A052 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:193
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    }
+Original expression:
+QTRY_VERIFY(!model->property("interactionActive").toBool())
+
+A053 | SwiftRollGatedTest::drawerVoicePreviewTransaction | src/checks/swiftrollgated/drawerparity.cpp:195
+Disposition: MATCHED
+Mapping/reason: Matched by S034 (marker hover profile, press without paint, drag preview with cursor, commit with undo or Escape cancel).
+Source context since previous assertion:
+    scene.move(input, source);
+Original expression:
+QTRY_COMPARE(scene.capture(input), idle)
+
+A054 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:201
+Disposition: MATCHED
+Mapping/reason: Matched by S031 (shell-drawer-parity entry runs this surface by construction; no mode switch exists).
+Source context since previous assertion:
+void SwiftRollGatedTest::drawerGripKeyboardIsolation()
+{
+    if (m_mode != QStringLiteral("swiftrollgated"))
+Original expression:
+QSKIP("drawer window keyboard routing belongs to swiftrollgated")
+
+A055 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:204
+Disposition: MATCHED
+Mapping/reason: Matched by S032 (staged route101 opens with both drawer plots mounted).
+Source context since previous assertion:
+    NativeScene scene;
+    QString error;
+Original expression:
+QVERIFY2(scene.open(m_projectRoot, m_songLabel, &error), qPrintable(error))
+
+A056 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:207
+Disposition: MATCHED
+Mapping/reason: Matched by S036 (Tab traversal to the grip with Up and Down resize and ignored horizontal arrows).
+Source context since previous assertion:
+    auto *grip = scene.item("drawerHandle_automation");
+    auto *plot = scene.item("automationPlot");
+Original expression:
+QVERIFY(grip && plot)
+
+A057 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:212
+Disposition: MATCHED
+Mapping/reason: Matched by S036 (Tab traversal to the grip with Up and Down resize and ignored horizontal arrows).
+Source context since previous assertion:
+    // Without selected notes, leaked arrows could be harmless and the check
+    // would miss the regression. Select a real visible note before traversal.
+    const auto notesBefore =
+        QJsonDocument::fromJson(scene.grid->property("noteSummary").toString().toUtf8());
+Original expression:
+QVERIFY(notesBefore.isArray())
+
+A058 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:214
+Disposition: MATCHED
+Mapping/reason: Matched by S036 (Tab traversal to the grip with Up and Down resize and ignored horizontal arrows).
+Source context since previous assertion:
+    auto *roll = scene.item("swiftRollInput");
+Original expression:
+QVERIFY(roll)
+
+A059 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:226
+Disposition: MATCHED
+Mapping/reason: Matched by S036 (Tab traversal to the grip with Up and Down resize and ignored horizontal arrows).
+Source context since previous assertion:
+    QQuickItem *note = nullptr;
+    for (const auto value : notesBefore.array()) {
+        const auto id = quint64(value.toObject().value(QStringLiteral("id")).toDouble());
+        auto *candidate =
+            gridcheck::visualDescendant(scene.root, QStringLiteral("gridNote_%1").arg(id));
+        if (candidate && roll->boundingRect().contains(
+                             candidate->mapToItem(roll, candidate->boundingRect().center()))) {
+            note = candidate;
+            break;
+        }
+    }
+Original expression:
+QVERIFY2(note, "the fixture must expose a note for the routing negative control")
+
+A060 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:229
+Disposition: MATCHED
+Mapping/reason: Matched by S035 (published summary parsed for the clickable note and the routing control).
+Source context since previous assertion:
+    QTest::mouseClick(scene.view, Qt::LeftButton, Qt::NoModifier,
+                      note->mapToScene(note->boundingRect().center()).toPoint());
+Original expression:
+QTRY_VERIFY([&] {
+        const auto selected =
+            QJsonDocument::fromJson(scene.grid->property("noteSummary").toString().toUtf8())
+                .array();
+        return std::any_of(selected.cbegin(), selected.cend(), [](const auto &entry) {
+            return entry.toObject().value(QStringLiteral("selected")).toBool();
+        });
+    }())
+
+A061 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:242
+Disposition: MATCHED
+Mapping/reason: Matched by S036 (Tab traversal to the grip with Up and Down resize and ignored horizontal arrows).
+Source context since previous assertion:
+    const auto previous = QGuiApplication::styleHints()->tabFocusBehavior();
+    const auto restore =
+        qScopeGuard([&] { QGuiApplication::styleHints()->setTabFocusBehavior(previous); });
+    QGuiApplication::styleHints()->setTabFocusBehavior(Qt::TabFocusAllControls);
+    plot->forceActiveFocus(Qt::OtherFocusReason);
+Original expression:
+QTRY_VERIFY(plot->hasActiveFocus())
+
+A062 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:243
+Disposition: PARTIAL
+Mapping/reason: Related predicate S036 (native focus-window handle not observed; window activeFocusItem asserted).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QTRY_COMPARE(QGuiApplication::focusWindow(), scene.view)
+
+A063 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:251
+Disposition: MATCHED
+Mapping/reason: Matched by S036 (Tab traversal to the grip with Up and Down resize and ignored horizontal arrows).
+Source context since previous assertion:
+    QStringList focusPath;
+    for (int count = 0; count < 80 && !grip->hasActiveFocus(); ++count) {
+        QTest::keyClick(scene.view, Qt::Key_Tab);
+        QCoreApplication::processEvents();
+        auto *focus = scene.view->activeFocusItem();
+        focusPath.append(focus ? focus->objectName() : QStringLiteral("<none>"));
+    }
+Original expression:
+QVERIFY2(grip->hasActiveFocus(), qPrintable(QStringLiteral("Tab traversal missed grip: %1")
+
+                                                    .arg(focusPath.join(QStringLiteral(" -> ")))))
+
+A064 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:264
+Disposition: PARTIAL
+Mapping/reason: Related predicate S036 (key acceptance flags not returned by QML key delivery; resize effects observed).
+Source context since previous assertion:
+    const QString before = scene.revision();
+    const QString notes = scene.grid->property("noteSummary").toString();
+    const qreal height = plot->height();
+    const int step = layout::space(layout::Space::Two);
+    const auto arrow = [&](Qt::Key code) {
+        QKeyEvent press(QEvent::KeyPress, code, Qt::NoModifier);
+        QCoreApplication::sendEvent(scene.view, &press);
+        QKeyEvent release(QEvent::KeyRelease, code, Qt::NoModifier);
+        QCoreApplication::sendEvent(scene.view, &release);
+        return press.isAccepted();
+    };
+Original expression:
+QVERIFY(arrow(Qt::Key_Up))
+
+A065 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:265
+Disposition: PARTIAL
+Mapping/reason: Related predicate S036 (growth direction observed; the exact layout spacing step is not pinned).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QTRY_COMPARE(plot->height(), height + step)
+
+A066 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:266
+Disposition: PARTIAL
+Mapping/reason: Related predicate S036 (key acceptance flags not returned by QML key delivery; resize effects observed).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(arrow(Qt::Key_Down))
+
+A067 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:267
+Disposition: MATCHED
+Mapping/reason: Matched by S036 (Tab traversal to the grip with Up and Down resize and ignored horizontal arrows).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QTRY_COMPARE(plot->height(), height)
+
+A068 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:268
+Disposition: PARTIAL
+Mapping/reason: Related predicate S036 (key acceptance flags not returned by QML key delivery; resize effects observed).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(arrow(Qt::Key_Left))
+
+A069 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:269
+Disposition: PARTIAL
+Mapping/reason: Related predicate S036 (key acceptance flags not returned by QML key delivery; resize effects observed).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(arrow(Qt::Key_Right))
+
+A070 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:270
+Disposition: MATCHED
+Mapping/reason: Matched by S036 (Tab traversal to the grip with Up and Down resize and ignored horizontal arrows).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QCOMPARE(plot->height(), height)
+
+A071 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:271
+Disposition: MATCHED
+Mapping/reason: Matched by S036 (Tab traversal to the grip with Up and Down resize and ignored horizontal arrows).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QCOMPARE(scene.revision(), before)
+
+A072 | SwiftRollGatedTest::drawerGripKeyboardIsolation | src/checks/swiftrollgated/drawerparity.cpp:272
+Disposition: MATCHED
+Mapping/reason: Matched by S035 (published summary parsed for the clickable note and the routing control).
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QCOMPARE(scene.grid->property("noteSummary").toString(), notes)
+Swift assertion predicates
+
+S031 | shell-drawer-parity entry | src/checks/editorqml/ShellQmlTests.swift:50
+Counterpart expression:
+  stages mus_route101 with the _fixture_rich voicegroup and runs tst_ShellDrawerParity.qml against the production ShellWindow
+
+S032 | openDrawerShell | src/checks/editorqml/tst_ShellDrawerParity.qml:91
+Counterpart expression:
+  opens mus_route101 with velocity, automation and voice sections visible and awaits both drawer plots
+
+S033 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml:255
+Counterpart expression:
+  pointer activation of one parameter tab, insertion-hover paint without writes, repeat stability and node-ring paint with settled grabs
+
+S034 | dragVoiceTransaction | src/checks/editorqml/tst_ShellDrawerParity.qml:350
+Counterpart expression:
+  voice-marker hover profile, press without paint, drag preview with horizontal cursor, then release-to-commit with undo or Escape-to-cancel
+
+S035 | clickFirstGridNote | src/checks/editorqml/tst_ShellDrawerParity.qml:227
+Counterpart expression:
+  selects a real visible grid note with a real click as the routing negative control
+
+S036 | test_dGripKeyboardIsolation | src/checks/editorqml/tst_ShellDrawerParity.qml:445
+Counterpart expression:
+  Tab traversal from the automation plot to its grip, Up and Down resize, horizontal arrows ignored, song untouched
+
+S037 | settled grabImage helpers | src/checks/editorqml/tst_ShellDrawerParity.qml:196
+Counterpart expression:
+  regionOf maps controls through window coordinates with clamping; changedPixels reads grabbed frames; grabRegionStable and grabUntilDifferent settle mid-repaint frames
+
+S038 | gridPointFor | src/checks/editorqml/tst_ShellDrawerParity.qml:217
+Counterpart expression:
+  maps tick and pitch to roll-input coordinates for the clickable-note search
