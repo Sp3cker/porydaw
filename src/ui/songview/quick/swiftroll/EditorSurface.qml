@@ -383,6 +383,7 @@ Item {
                         // The drawer returns focus here when no section stays visible.
                         activeFocusOnTab: true
                         property bool timeMenuPressHandled: false
+                        property bool rightSweepActive: false
 
                         cursorShape: {
                             switch (root.gridModel.cursorKind) {
@@ -398,13 +399,19 @@ Item {
                             if (mouse.button === Qt.MiddleButton)
                                 root.gridModel.beginPan(mouse.x, mouse.y)
                             else if (mouse.button === Qt.RightButton) {
-                                root.timeSelectionMenuPosition = mapToItem(root, mouse.x, mouse.y)
-                                root.rulerMenu.openTimeSelection(mouse.x)
-                                timeMenuPressHandled = root.rulerMenu.menuKind === 2
-                                root.timeMenuFocus = timeMenuPressHandled
-                                if (!timeMenuPressHandled)
-                                    root.gridModel.beginRightPointer(mouse.x, mouse.y)
-                            } else
+                                rightSweepActive = (mouse.modifiers & Qt.ShiftModifier) !== 0
+                                if (rightSweepActive) {
+                                    root.rulerMenu.beginSweep(mouse.x)
+                                } else {
+                                    root.timeSelectionMenuPosition = mapToItem(root, mouse.x, mouse.y)
+                                    root.rulerMenu.openTimeSelection(mouse.x)
+                                    timeMenuPressHandled = root.rulerMenu.menuKind === 2
+                                    root.timeMenuFocus = timeMenuPressHandled
+                                    if (!timeMenuPressHandled)
+                                        root.gridModel.beginRightPointer(mouse.x, mouse.y)
+                                }
+                            }
+                            else
                                 root.gridModel.beginPointer(mouse.x, mouse.y, mouse.modifiers)
                             mouse.accepted = true
                         }
@@ -417,7 +424,9 @@ Item {
                             if (mouse.buttons & Qt.MiddleButton)
                                 root.gridModel.updatePan(mouse.x, mouse.y)
                             else if (mouse.buttons & Qt.RightButton) {
-                                if (!timeMenuPressHandled)
+                                if (rightSweepActive)
+                                    root.rulerMenu.updateSweep(mouse.x)
+                                else if (!timeMenuPressHandled)
                                     root.gridModel.updateRightPointer(mouse.x, mouse.y)
                             }
                             else if (mouse.buttons & Qt.LeftButton)
@@ -431,8 +440,11 @@ Item {
                             if (mouse.button === Qt.MiddleButton)
                                 root.gridModel.endPan()
                             else if (mouse.button === Qt.RightButton) {
-                                if (!timeMenuPressHandled)
+                                if (rightSweepActive)
+                                    root.rulerMenu.endSweep(mouse.x)
+                                else if (!timeMenuPressHandled)
                                     root.gridModel.endRightPointer(mouse.x, mouse.y)
+                                rightSweepActive = false
                                 timeMenuPressHandled = false
                             }
                             else
@@ -441,6 +453,9 @@ Item {
                         }
                         onCanceled: {
                             timeMenuPressHandled = false
+                            if (rightSweepActive)
+                                root.rulerMenu.cancelSweep()
+                            rightSweepActive = false
                             root.gridModel.inputCancelled(root.cancelReasonPointerUngrabbed)
                         }
                         onExited: {

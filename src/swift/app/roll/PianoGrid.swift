@@ -420,13 +420,51 @@ public final class PianoGrid {
             refreshFromSession()
         default:
             let grid = UInt32(max(1, metrics.snapTicks(camera: session.camera)))
-            _ = commands.execute(
+            let didEdit = commands.execute(
                 command, snapTicks: Tick(grid),
                 editCursor: TimeDefaults.tick(from: Double(editCursorTick)),
                 nextSubdivision: { tick in
                     TimeDefaults.shiftTickClamped(
                         tick, by: Int64(grid - tick % grid))
                 })
+            guard didEdit else { return }
+            switch command {
+            case .transposeUp, .transposeUpOctave, .transposeDown, .transposeDownOctave:
+                let upward = command == .transposeUp || command == .transposeUpOctave
+                var edgePitch = upward ? 0 : 127
+                var found = false
+                for id in session.selectedNoteOrder {
+                    guard let note = session.document.note(id),
+                          note.track == session.selectedTrack else { continue }
+                    edgePitch = upward ? max(edgePitch, Int(note.pitch))
+                                       : min(edgePitch, Int(note.pitch))
+                    found = true
+                }
+                if found {
+                    session.mutateCamera { camera in
+                        _ = camera.ensureKeyVisible(edgePitch)
+                    }
+                }
+            case .nudgeLeft, .nudgeRight:
+                var first = UInt64.max
+                var last: UInt64 = 0
+                for id in session.selectedNoteOrder {
+                    guard let note = session.document.note(id),
+                          note.track == session.selectedTrack else { continue }
+                    first = min(first, UInt64(note.tick))
+                    let duration = note.isUnterminated ? grid : max(1, note.duration)
+                    last = max(last, UInt64(note.tick) + UInt64(duration))
+                }
+                if first != UInt64.max {
+                    let preferEnd = command == .nudgeRight
+                    session.mutateCamera { camera in
+                        _ = camera.ensureRangeVisible(startTick: first, endTick: last,
+                                                      preferEnd: preferEnd, dpr: devicePixelRatio)
+                    }
+                }
+            default:
+                break
+            }
         }
     }
 

@@ -13,6 +13,8 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore projectSession suite executed runKeyboardChecks (S043..S060) and EditorGridCameraChecks commandRouting (S029..S042), not the gated S001..S028.
+Command: deno task verify --filter swiftcore --qt projectSession
+Result: PASS — 1/31 ok (local checkKeyboardKeepsEditedNoteVisible; transpose/nudge viewport and undo assertions executed).
 Command: deno task verify:qml-roll --verbose
 Result: PASS — 1/1 ok (controller-recorded post-change run); no keyboard site depends on the roll QML lane.
 Command: deno task verify:shell --verbose
@@ -53,142 +55,52 @@ Original expression:
   QCOMPARE(doc.smf().write(), before);
 
 A007 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:75
-Disposition: GAP
-Mapping/reason: GAP — the Swift roll has no keep-in-sight scroll, so this keep-visible seed guard has no executing counterpart: withKeyboardSeed (keyboard.swift) builds a visible seed and S043 (keyboard.swift) guards its presence, but no predicate parks a transposed row outside the viewport.
-Source context since previous assertion:
-  }
-
-  void PianoRollTest::keyboardKeepVisible()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Disposition: MATCHED
+Mapping: S043
 
 A008 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:86
-Disposition: GAP
-Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: S043 (keyboard.swift) guards the transpose slot seed, not this keep-visible seed lookup, and no predicate observes scroll state after an edit.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const int track = check.track();
-      const SnappedRows rows{view, roll};
-      const Cell &d = seed->cell;
-      const Tick snapCell = seed->snapCell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      DocNote transposed;
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed),
-               "keyboard keep-visible seed note was not found");
+Disposition: MATCHED
+Mapping: S061
 
 A009 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:89
-Disposition: GAP
-Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: the post-transpose seed position has no executing counterpart (S044-S045 in keyboard.swift prove the transpose slot moves, not this slot parked state).
-Source context since previous assertion:
-      doc.moveNotes({transposed}, int64_t(snapCell), -11);
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
-               "keyboard keep-visible seed did not reach the expected post-transpose state");
+Disposition: MATCHED
+Mapping: S061
 
 A010 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:95
-Disposition: GAP
-Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: no predicate parks a note row above the viewport via scrollRollBy or asserts the parked-row geometry.
-Source context since previous assertion:
-      view.selectionModel().setNoteSelection({transposed.noteId});
-
-      const int keyNow = d.key - 11;
-      view.scrollRollBy((129 - keyNow) * view.camera().keyHeight() - view.camera().scrollY());
-Original expression:
-  QVERIFY2((128 - keyNow) * view.camera().keyHeight() - view.camera().scrollY() <= 1e-9,
-               "could not park the note's row above the viewport");
+Disposition: MATCHED
+Mapping: S062
 
 A011 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:98
-Disposition: GAP
-Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: S044 (keyboard.swift) proves Up-transpose on the transpose slot selection, not this parked-viewport transpose.
-Source context since previous assertion:
-      sendKeyStroke(roll, Qt::Key_Up, Qt::NoModifier, false);
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(keyNow + 1), &transposed),
-               "Up did not transpose the selected note before the keep-visible check");
+Disposition: MATCHED
+Mapping: S063
 
 A012 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:100
-Disposition: GAP
-Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: no predicate asserts a transposed row top/bottom against the roll bounds after scrolling.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(rows.top(keyNow + 1) >= 0.0 && rows.bottom(keyNow + 1) <= roll.bounds().height(),
-               "Up above the viewport did not keep the transposed row fully visible");
+Disposition: MATCHED
+Mapping: S064
 
 A013 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:108
-Disposition: GAP
-Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: no predicate parks a note past the left edge via scrollByPx.
-Source context since previous assertion:
-      sendKeyStroke(roll, Qt::Key_Down, Qt::NoModifier, false);
-
-      Tick nStart = d.tick + snapCell;
-      const qreal dpr = roll.devicePixelRatio();
-      const qreal physicalPixel = dpr > 0.0 ? 1.0 / dpr : 1.0;
-      view.scrollByPx(view.camera().contentX(double(nStart + snapCell)) + 40);
-Original expression:
-  QVERIFY2(view.camera().displayX(double(nStart + snapCell), 0.0, dpr) < 0.0,
-               "could not park the note past the left edge");
+Disposition: MATCHED
+Mapping: S065
 
 A014 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:112
-Disposition: GAP
-Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: no predicate asserts displayX == 0.0 scroll-to-edge after a Right nudge.
-Source context since previous assertion:
-      sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
-      nStart += snapCell;
-Original expression:
-  QCOMPARE(view.camera().displayX(double(nStart), 0.0, dpr), 0.0);
+Disposition: MATCHED
+Mapping: S066
 
 A015 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:120
-Disposition: GAP
-Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: the multi-ride Right loop and its camera ride have no executing counterpart.
-Source context since previous assertion:
-      const qreal vw = std::max<qreal>(50, roll.width());
-      const qreal cellPx =
-          view.camera().contentX(double(nStart + snapCell)) - view.camera().contentX(double(nStart));
-      const int rides = (vw - view.camera().contentX(double(nStart + snapCell))) / cellPx + 2;
-      for (int i = 0; i < rides; ++i)
-          sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
-      nStart += uint64_t(rides) * snapCell;
-Original expression:
-  QVERIFY2(doc.findNote(track, nStart, uint8_t(keyNow), &transposed),
-               "Right did not nudge the selected note to the expected tick");
+Disposition: MATCHED
+Mapping: S067
 
 A016 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:125
-Disposition: GAP
-Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: no predicate asserts a nudged note displayX span stays inside the viewport width.
-Source context since previous assertion:
-      const qreal visibleStart = view.camera().displayX(double(transposed.tick), 0.0, dpr);
-      const qreal visibleEnd =
-          view.camera().displayX(double(transposed.tick + transposed.duration), 0.0, dpr);
-Original expression:
-  QVERIFY2(visibleStart >= 0.0 && visibleEnd <= vw - physicalPixel,
-               "Right did not keep the nudged note fully visible");
+Disposition: MATCHED
+Mapping: S068
 
 A017 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:129
-Disposition: GAP
-Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: the ride-right-and-back return has no executing counterpart.
-Source context since previous assertion:
-      for (int i = 0; i < rides + 1; ++i)
-          sendKeyStroke(roll, Qt::Key_Left, Qt::NoModifier, false);
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
-               "the ride right and back did not return the note home");
+Disposition: MATCHED
+Mapping: S069
 
 A018 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:133
-Disposition: GAP
-Mapping/reason: GAP — S048 (keyboard.swift) restores the pre-seed document, camera, and history identity, whereas this unwind targets the post-seed snapshot; the keep-visible slot SMF restoration is unproved and its scroll state is unmodelled.
-Source context since previous assertion:
-      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), before);
+Disposition: MATCHED
+Mapping: S070
 
 A019 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:140
 Disposition: GAP
@@ -1484,3 +1396,36 @@ Anchor: message "lane-scoped blank insertion shifts CC7 without moving the note"
 
 S060 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift
 Anchor: message "undo restores the lane-scoped insertion"
+
+S061 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
+Anchor: message "the keep-visible seed reaches its parked pitch and tick"
+
+S062 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
+Anchor: message "the selected note is parked above the roll"
+
+S063 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
+Anchor: message "Up transposes the parked note one semitone"
+
+S064 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
+Anchor: message "Up keeps the parked note fully within the roll"
+
+S065 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
+Anchor: message "the next nudge starts left of the viewport"
+
+S066 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
+Anchor: message "Right reveals the parked note at the left edge"
+
+S067 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
+Anchor: message "the note rides right by every requested snap step"
+
+S068 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
+Anchor: message "every Right nudge keeps the whole note in the viewport"
+
+S069 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
+Anchor: message "riding left returns the same note to its parked position"
+
+S070 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
+Anchor: message "undo restores the pre-gesture song bytes"
+
+S071 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
+Anchor: message "every Left nudge keeps the whole note in the viewport"
