@@ -337,12 +337,9 @@ TestCase {
         var clip = testCase.playheadClip(name)
         return clip ? findChild(clip, "sharedPlayheadLine") : null
     }
-    // A line is plot-local, so its surface position is its clip's origin plus
-    // the one shared projection.
     function playheadSurfaceX(name) {
-        var clip = testCase.playheadClip(name)
         var line = testCase.playheadLine(name)
-        return clip && line ? clip.x + line.x : -1
+        return line ? line.mapToItem(testCase.surface, line.width / 2, 0).x : -1
     }
     function verifyPlayheadPixels(name) {
         var line = testCase.playheadLine(name)
@@ -823,8 +820,8 @@ TestCase {
                 "the plot width is the rest of the surface")
         compare(testCase.rollBand().height, testCase.editorHeight(),
                 "the roll fills the editor above the persistent status strip")
-        compare(testCase.rollInput().height, testCase.editorHeight(),
-                "the roll input fills the editor above the persistent status strip")
+        compare(testCase.rollInput().height, testCase.editorHeight() - testCase.surface.gridModel.rulerHeight,
+                "the roll input fills the editor below the ruler and above the persistent status strip")
     }
 
     // Three real pages host through the production seam: chrome and stacking
@@ -967,7 +964,7 @@ TestCase {
         compare(testCase.section(kind).visible, false, "the click hides the section")
         compare(presenter.height, barRow, "a hidden section releases its height")
         testCase.awaitRenderedLayout()
-        compare(testCase.rollInput().height, testCase.editorHeight() - barRow,
+        compare(testCase.rollInput().height, testCase.editorHeight() - barRow - testCase.surface.gridModel.rulerHeight,
                 "the roll grows by the released height")
         compare(testCase.grip(kind).visible, false, "no handle while hidden")
         compare(testCase.body(kind).visible, false, "no body while hidden")
@@ -994,8 +991,8 @@ TestCase {
         testCase.awaitRenderedLayout()
         fuzzyCompare(testCase.section(kind).bodyHeight, stored, 0.01,
                      "re-showing restores the same body height")
-        fuzzyCompare(testCase.rollInput().height, testCase.editorHeight() - openHeight, 0.01,
-                     "the roll gives the height back")
+        compare(testCase.rollInput().height, testCase.editorHeight() - openHeight - testCase.surface.gridModel.rulerHeight,
+                "the roll gives the height back")
     }
 
     // Real press/drag/release resizes by the drag delta, the minimum and the
@@ -1401,14 +1398,15 @@ TestCase {
         verify(rollClip !== null && rollPlot !== null, "the composition mounted the roll segment")
         testCase.awaitPlayheadVisibility("sharedPlayheadRollClip", true)
         var plotOrigin = rollPlot.mapToItem(testCase.surface, 0, 0)
-        testCase.verifySurfaceRect(rollClip, plotOrigin.x, plotOrigin.y,
-                                   rollPlot.width, rollPlot.height,
-                                   "the roll segment clips to the plot column")
-        fuzzyCompare(testCase.playheadSurfaceX("sharedPlayheadRollClip"),
-                     origin + playhead.contentX, 0.01,
-                     "the roll line is the published projection from the shared origin")
-        verify(rollClip.x >= testCase.surface.timelineSplitX - 0.01,
-               "no segment covers the headers or keyboard")
+        var clipOrigin = rollClip.mapToItem(testCase.surface, 0, 0)
+        compare(clipOrigin.x, plotOrigin.x - playhead.triangleHalfWidthPx,
+                "the roll segment permits the ruler triangle overhang")
+        compare(clipOrigin.y, plotOrigin.y, "the roll segment starts at the plot top")
+        compare(rollClip.width, rollPlot.width + playhead.triangleHalfWidthPx,
+                "the roll segment ends at the plot right edge")
+        compare(rollClip.height, rollPlot.height, "the roll segment covers the plot height")
+        compare(testCase.playheadSurfaceX("sharedPlayheadRollClip"), origin + playhead.contentX,
+                "the roll line is the published projection from the shared origin")
         testCase.verifyPlayheadPixels("sharedPlayheadRollClip")
 
         // A second published position moves the drawn segment with it.
@@ -1479,13 +1477,12 @@ TestCase {
         tryVerify(function() {
             var presenter = testCase.playheadPresenter()
             var drawn = testCase.playheadClip("sharedPlayheadRollClip")
-            var line = testCase.playheadLine("sharedPlayheadRollClip")
             return drawn.visible === presenter.visible
-                && Math.abs(drawn.x + line.x - (origin + presenter.contentX)) < 0.01
+                && testCase.playheadSurfaceX("sharedPlayheadRollClip") === origin + presenter.contentX
         }, 2000, "the drawn segment catches up with the last published position")
         testCase.awaitRenderedLayout()
-        compare(rollClip.x >= testCase.surface.timelineSplitX - 0.01, true,
-                "the last position still never covers the gutter")
+        compare(rollClip.x + playhead.triangleHalfWidthPx, testCase.surface.timelineSplitX,
+                "the last position retains only the ruler triangle overhang")
     }
 
     // A camera change reprojects the retained authoritative tick, an
@@ -1957,7 +1954,7 @@ TestCase {
             fuzzyCompare(band.width, bandBounds.w, 0.01, "band width matches the checked-in region")
             var origin = band.mapToItem(testCase.surface, 0, 0)
             fuzzyCompare(origin.x, bandBounds.x, 0.01, "the band starts at the left edge")
-            fuzzyCompare(origin.y, 0, 0.01, "the surface starts below the legacy top chrome")
+            compare(origin.y, testCase.surface.gridModel.rulerHeight, "the header band starts below the ruler")
             // The rows region includes the scrollbar, not just the narrower row delegates.
             var viewport = rows.parent.parent.parent
             var rowOrigin = viewport.mapToItem(band, 0, 0)
@@ -1992,8 +1989,13 @@ TestCase {
         var scrollbar = findChild(band, "timelineTrackHeaderScrollBar")
         verify(band && input && rows && scrollbar, "the production header surface is mounted")
         verify(band.visible && input.visible, "the header band and its input are visible")
-        testCase.verifySurfaceRect(band, 0, 0, testCase.surface.headersModel.trackHeaderWidth,
-                                   testCase.rollBand().height, "the mounted header band")
+        var origin = band.mapToItem(testCase.surface, 0, 0)
+        compare(origin.x, 0, "the mounted header band: x")
+        compare(origin.y, testCase.surface.gridModel.rulerHeight, "the mounted header band: y")
+        compare(band.width, testCase.surface.headersModel.trackHeaderWidth,
+                "the mounted header band: width")
+        compare(band.height, testCase.rollBand().height - testCase.surface.gridModel.rulerHeight,
+                "the mounted header band: height")
         fuzzyCompare(input.width + scrollbar.width, band.width, 0.01)
         fuzzyCompare(input.height, band.height, 0.01)
         fuzzyCompare(scrollbar.x, input.width, 0.01)
@@ -4802,8 +4804,8 @@ TestCase {
                   "an idle page lets follow scroll the camera")
         compare(bootstrap.automationPlayheadPresentations() > presentations, true,
                 "the page received the shared presentation")
-        compare(bootstrap.automationContentBuilds() > builds, true,
-                "the follow scroll moved the shared camera and re-projected the lane")
+        compare(bootstrap.automationContentBuilds(), builds,
+                "the follow scroll re-projects the lane without rebuilding static content")
 
         // The same observation with the camera already at its target publishes
         // nothing at all, so no static content is rebuilt.
@@ -5103,8 +5105,7 @@ TestCase {
             // The drawn binding catches up on the next event-loop pass, the same
             // lag every other drawn binding in this suite accounts for.
             tryVerify(function() {
-                return Math.abs(testCase.playheadSurfaceX(names[i])
-                                - (origin + playhead.contentX)) < 0.01
+                return testCase.playheadSurfaceX(names[i]) === origin + playhead.contentX
             }, 2000, "the " + names[i] + " line catches up with the shared published position")
         }
     }

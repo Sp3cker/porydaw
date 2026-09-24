@@ -534,120 +534,120 @@ S034 | undo-regression | src/checks/trackheaders/trackheaderraster.swift :: core
   report.expectEqual(changed, fx.headers.rows[0].subtitle, cppID: id,
                          what: "redo restores the changed subtitle")
 
-S035 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2045
+S035 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2047
   verify(rows && rows.count > 1, "the real header has track rows")
 
-S036 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2048
+S036 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2050
   verify(bootstrap.presentHeaderActivity(track, 0, 0, true))
 
-S037 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2050
+S037 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2052
   verify(bootstrap.presentHeaderActivity(track, 255, 0, true))
 
-S038 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2060
+S038 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2062
   compare(row.activityRightHeight, 0, "left-only activity leaves the right meter dark")
 
-S039 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2061
+S039 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2063
   verify(row.activityLeftHeight > 0)
 
-S040 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2062
+S040 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2064
   verify(observedSpan >= Math.max(1, expectedSpan - 2),
                "rendered changed span reaches the published height at observed grab scale")
 
-S041 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2064
+S041 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2066
   verify(observedSpan <= expectedSpan + 2,
                "rendered changed span does not exceed the published height tolerance")
 
-S042 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2066
+S042 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2068
   verify(bootstrap.presentHeaderActivity(track, 128, 128, true))
 
-S043 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2072
+S043 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2074
   verify(shared < 255, "two adjacent levels share a physical pixel")
 
-S044 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2073
+S044 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2075
   verify(bootstrap.presentHeaderActivity(track, shared, shared, true))
 
-S045 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2075
+S045 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2077
   verify(bootstrap.presentHeaderActivity(track, shared + 1, shared + 1, true))
 
-S046 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2077
+S046 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2079
   compare(same.pixels, within.pixels, "levels within one physical pixel render identically")
 
-S047 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2080
+S047 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2082
   verify(across < 255, "a larger level crosses a physical pixel")
 
-S048 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2081
+S048 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2083
   verify(bootstrap.presentHeaderActivity(track, across, across, true))
 
-S049 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2083
+S049 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2085
   verify(JSON.stringify(changed.pixels) !== JSON.stringify(within.pixels),
                "crossing a physical pixel changes the rendered meter")
 
-S050 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2085
+S050 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2087
   verify(bootstrap.presentHeaderActivity(track, 255, 64, true))
 
-S051 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2090
+S051 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2092
   verify(stereo.pixels[top * stereo.width + left] !== stereo.pixels[top * stereo.width + right],
                "stereo channel tops render different fill heights")
 
-S052 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2092
+S052 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2094
   compare(stereo.pixels[(stereo.height - 1) * stereo.width + left],
                 stereo.pixels[(stereo.height - 1) * stereo.width + right],
                 "stereo channels share their track identity at the bottom")
 
-S053 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2095
+S053 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2097
   verify(bootstrap.presentHeaderActivity(track, 0, 0, false))
 
-S054 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2097
+S054 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2099
   compare(paused.width, active.width)
 
-S055 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2098
+S055 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2100
   compare(paused.height, active.height)
 
-S056 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2099
+S056 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2101
   compare(paused.dpr, active.dpr)
 
-S057 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2111
+S057 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2113
   verify(complete >= 2, "paused fill covers at least two complete meter columns")
 
-S058 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2113
+S058 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2115
   verify(active.pixels[probe] !== paused.pixels[probe], "paused fill differs from active half level")
 
-S059 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: headerMeterPixels:2022
+S059 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: headerMeterPixels:2024
   verify(dpr > 0, "the rendered meter has an observed DPR")
 
-S060 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: headerMeterPixels:2027
+S060 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: headerMeterPixels:2029
   verify(width > 0 && height > 0, "the meter capture excludes the separator")
 
-S061 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: headerMeterPixels:2031
+S061 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: headerMeterPixels:2033
   compare(image.alpha(x0 + x, y0 + y), 255, "meter pixels remain opaque")
 
-S062 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2123
+S062 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2125
   verify(rows && input && rows.count > 1)
 
-S063 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2130
+S063 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2132
   mouseClick(input, point.x, point.y, Qt.LeftButton)
 
-S064 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2138
+S064 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2140
   tryVerify(function() { return bootstrap.automationDocumentRevision() !== revision }, 2000,
                   "the real voice picker completion writes the fixture program")
 
-S065 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2140
+S065 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2142
   tryVerify(function() { return row.subtitle !== beforeSubtitle }, 2000,
                   "the changed program publishes a new header subtitle")
 
-S066 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2144
+S066 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2146
   compare(after.width, before.width)
 
-S067 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2145
+S067 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2147
   compare(after.height, before.height)
 
-S068 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2154
+S068 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2156
   verify(differences > 0, "the retained original header QML renders the changed subtitle")
 
-S069 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2155
+S069 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2157
   verify(bootstrap.requestAutomationUndo(), "the production undo completes through the Swift run loop")
 
-S070 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2156
+S070 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2158
   tryCompare(row, "subtitle", beforeSubtitle, 2000,
                    "undo restores the original program subtitle")
 
@@ -698,12 +698,12 @@ src/checks/trackheaders/headerinputfixture.swift:67
                              what: "\(phase): history unchanged")
 Converted-window predicate source
 Source: src/checks/editorqml/tst_EditorDrawer.qml
-SHA-256: 8f1d9940064f0863eb61b069297fea5320d1a8175b01e798af53f90e8ed8cfbe
+SHA-256: 081c61933828125649cdcc40ba91d7a3d70a5cd917cea918235f0669ab0553c7
 Command: deno task verify:qml --verbose
 New raster predicates await the next centralized run; no passing result is inferred.
 Image scale is the observed Qt composition grab scale, not a physical desktop DPR claim.
 
-regionOf | src/checks/editorqml/tst_EditorDrawer.qml:628
+regionOf | src/checks/editorqml/tst_EditorDrawer.qml:625
         function regionOf(image, anchor, control) {
             var origin = control.mapToItem(anchor, 0, 0)
             var scaleX = anchor.width > 0 ? image.width / anchor.width : 1
@@ -713,7 +713,7 @@ regionOf | src/checks/editorqml/tst_EditorDrawer.qml:628
                      y1: Math.round((origin.y + control.height) * scaleY) - 1 }
         }
 
-headerMeterPixels | src/checks/editorqml/tst_EditorDrawer.qml:2016
+headerMeterPixels | src/checks/editorqml/tst_EditorDrawer.qml:2018
         function headerMeterPixels(row) {
             waitForRendering(row)
             var image = grabImage(testCase.surface)
@@ -737,7 +737,7 @@ headerMeterPixels | src/checks/editorqml/tst_EditorDrawer.qml:2016
             return { pixels: pixels, width: width, height: height, dpr: dpr }
         }
 
-test_trackActivityRenderedMeterParity | src/checks/editorqml/tst_EditorDrawer.qml:2039
+test_trackActivityRenderedMeterParity | src/checks/editorqml/tst_EditorDrawer.qml:2041
         function test_trackActivityRenderedMeterParity() {
             if (testCase.containerPhase) skip("the production cases run in the lane's own process")
             testCase.resetChrome(bootstrap.preferencesUrl("track-header-activity"))
@@ -815,7 +815,7 @@ test_trackActivityRenderedMeterParity | src/checks/editorqml/tst_EditorDrawer.qm
             verify(active.pixels[probe] !== paused.pixels[probe], "paused fill differs from active half level")
         }
 
-test_headerVoiceChangeAltersRetainedRaster | src/checks/editorqml/tst_EditorDrawer.qml:2116
+test_headerVoiceChangeAltersRetainedRaster | src/checks/editorqml/tst_EditorDrawer.qml:2118
         function test_headerVoiceChangeAltersRetainedRaster() {
             if (testCase.containerPhase) skip("the production cases run in the lane's own process")
             testCase.resetChrome(bootstrap.preferencesUrl("track-header-voice-raster"))
