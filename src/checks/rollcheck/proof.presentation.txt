@@ -5,38 +5,61 @@ Original: src/checks/rollcheck/presentation.cpp
 Original SHA-256: 898cf2f8c3470a0ebcee65764bb17ac67081ad0d659ec53bd4d850efe741e38d
 Swift counterpart: src/checks/rollcheck/presentation.swift
 Swift SHA-256: 592f516980fe1e10bfa1861326aea56309034273b059db437f11047fb338de2b
-Retained native counterpart: src/checks/swiftrollgated/chromevisuals.cpp
-Retained native SHA-256: 1912beb70940207f7504aae791e961e51e0ac51e66379b9f0c6236664bccd23d
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
 S identifiers identify exact counterpart predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
+MATCHED identifies equivalent Swift predicates executed by the swiftcore suite.
 PARTIAL identifies related counterpart predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift surface.
+NATIVE identifies retained native fixture/input/host obligations; it does not
+establish coverage of the converted Swift surface.
 GAP identifies an original predicate without a replacement assertion.
-Pan follow-scroll suspension, inline track rename (commit/discard/loop-marker guard), revealNote dock jumps and keyboard mute/solo with header-role publication are exercised against the legacy Quick header model and camera. The registered presentation.swift checks observe converted camera, header, rename and mute/solo models; the original pan probes both roll and automation input, and Quick rename and mute/solo assertions depend on focused native/QML input delivery not executed by those model calls.
+checkHeaderPanFollow in presentation.swift suspends and resumes SharedPlayheadPolicy
+follow around a real PianoGrid pan and restores the camera snapshot.
+checkHeaderRename drives the TrackHeadersPresenter rename (open, draft, Return commit,
+Escape discard, loop-marker refusal, single-undo restoration). checkHeaderKeyboardMuteSolo
+dispatches the mute/solo EditCommands through PianoGrid and asserts the header roles and
+counters. headerRevealNote's polyphony-dock reveal has no owner in the Swift roll and
+stays GAP. Disposition tally: 40 sites: 22 MATCHED, 4 PARTIAL, 8 GAP, 6 NATIVE.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS (controller, 10.17s); presentation.swift ran green, without closing the original QML input and fixture obligations.
+Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore
+projectSession suite executed runPresentationChecks and the S001-S024 predicates.
+Command: deno task verify:qml-roll --verbose
+Result: PASS — 1/1 ok (controller-recorded post-change run); no presentation site
+depends on the roll QML lane.
+Command: deno task verify:shell --verbose
+Result: PASS — 11/11 ok (controller-recorded post-change run); no presentation site
+depends on the shell lane. The shell and roll QML runs predate only a
+swiftcore-checks-only commit; no production or QML source changed after them.
 
 Execution and ownership
-runPresentationChecks executes converted header/camera models in swiftcore; it does not replay the original native/QML input sequences. The indexed S predicates remain the older gated chrome raster checks and do not prove any listed A site. Original headercheck::model/renameInput and trackheaders rowForTrack helpers have no equivalent input assertion here.
+runPresentationChecks executes checkHeaderPanFollow, checkHeaderRename,
+checkHeaderKeyboardMuteSolo and checkHeaderReconciliation in the projectSession Swift
+suite (swiftcore). It drives TrackHeadersPresenter, PianoGrid and EditorCamera directly;
+it does not replay the original native/QML input sequences, so native focus/field
+preconditions stay NATIVE. Original headercheck::model/renameInput and trackheaders
+rowForTrack helpers have no counterpart in this ledger.
 
 Fixture, sequence and row constraints
-headerPanFollow probes both the roll input and the automation-lanes input with a middle-button pan while the playhead follows; headerRename types drafts through the rename field with Return/Escape and a '[' loop-marker guard; headerRevealNote jumps to the middle view-model note then probes an unused key; headerKeyboardMuteSolo toggles M/masks, triggers the canonical Solo action, and probes a mixed mute scope while counting model resets. All methods end with undo-index and SMF comparisons.
+The original headerPanFollow probed both the roll input and the automation-lanes input
+with a middle-button pan while the playhead followed; headerRename typed drafts through
+the Quick rename field with Return/Escape and a '[' loop-marker guard; headerRevealNote
+jumped to the middle view-model note then probed an unused key; headerKeyboardMuteSolo
+toggled M/masks, triggered the canonical Solo action and probed a mixed mute scope while
+counting model resets. Every slot ends with undo-index and SMF comparisons. The Swift
+fixture instead seeds a one/two-track song and drives the presenter and grid commands.
 Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.cpp:45
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE
+Mapping/reason: Original native/QML input guard: the slot requires the automation-lanes TimelineInputItem alongside the roll input. The Swift pan check drives PianoGrid directly and hosts no automation input item.
 Source context since previous assertion:
 #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -87,8 +110,8 @@ Original expression:
 QFAIL("automation input item not found")
 
 A002 | PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.cpp:57
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S001 (src/checks/rollcheck/presentation.swift:30-32) asserts that while the roll pan is live the SharedPlayheadPolicy follow is blocked and the camera scrollX is unchanged — the follow-suspension observable of this site.
 Source context since previous assertion:
 ;
         return;
@@ -107,8 +130,8 @@ Original expression:
 QFAIL("playhead follow-scroll moved the view during a pan gesture")
 
 A003 | PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.cpp:62
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S002 (presentation.swift:37-38) asserts follow becomes eligible once the pan ends, and S003 (presentation.swift:41-42) asserts the resumed follow scrolls the shared roll camera.
 Source context since previous assertion:
 ;
         checks::events::sendMouse(surface, QEvent::MouseButtonRelease, middle, Qt::MiddleButton,
@@ -120,8 +143,8 @@ Original expression:
 QFAIL("playhead follow-scroll did not resume after the pan ended")
 
 A004 | PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.cpp:68
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S005 (presentation.swift:51-53) asserts the document state and history identity are unchanged after the pan/follow probe — the state/identity public-API form of the unchanged undo index. S004 (presentation.swift:49-50) additionally asserts the incoming camera snapshot is restored.
 Source context since previous assertion:
 ;
         view.setPlayheadSample(0, false);
@@ -134,8 +157,8 @@ Original expression:
 QCOMPARE(doc.undoStack()->index(), undo)
 
 A005 | PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.cpp:69
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S005 (presentation.swift:51-53) asserts session.document.state == before after the pan/follow probe; SongState equality includes the serialized file, the observable this SMF byte comparison pins.
 Source context since previous assertion:
 ;
 
@@ -143,8 +166,8 @@ Original expression:
 QCOMPARE(doc.smf().write(), before)
 
 A006 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:79
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE
+Mapping/reason: Original native Quick-header guard: requires the live TrackHeaderModel on the retired SongView. The Swift check constructs TrackHeadersPresenter without a hosted Quick view.
 Source context since previous assertion:
 ;
 }
@@ -161,8 +184,8 @@ Original expression:
 QFAIL("Quick track-header model was not found")
 
 A007 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:85
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE
+Mapping/reason: Original native input precondition: focusTimelineBand on the Quick SongView. The swiftcore roll lane has no focusable timeline band.
 Source context since previous assertion:
 ;
         return;
@@ -176,8 +199,8 @@ QVERIFY2(view.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherF
              "the Quick track-header input was unavailable")
 
 A008 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:87
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE
+Mapping/reason: Original native focus observation: focusedTimelineBand() == TrackHeaders after the Quick focus route. No Swift roll predicate observes focus routing.
 Source context since previous assertion:
 ;
 
@@ -186,8 +209,8 @@ QTRY_VERIFY2(view.focusedTimelineBand() == songview::TimelineBand::TrackHeaders,
                  "the Quick track-header input did not take active focus")
 
 A009 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:99
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S007 (presentation.swift:85-86) asserts the presenter publishes the typed draft (renameDraft == "Rolled"). Unproved: the native Quick rename field receiving the model draft (its text property and focus).
 Source context since previous assertion:
 ;
     const auto renameIsOpen = [&] {
@@ -205,8 +228,8 @@ Original expression:
 QFAIL("Quick rename input did not receive the model draft")
 
 A010 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:102
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S006 (presentation.swift:82-83) asserts the presenter rename opens with renamingTrack == the selected track. Unproved: the Quick rename field's visible/activeFocus state that the original renameIsOpen() also requires.
 Source context since previous assertion:
 ;
     };
@@ -216,8 +239,8 @@ Original expression:
 QTRY_VERIFY2(renameIsOpen(), "Quick rename input did not open")
 
 A011 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:108
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S008 (presentation.swift:88-90) asserts the committed name reaches the document and the editor closes (trackName == "Rolled" && renamingTrack == -1) after finishRename(commit: true).
 Source context since previous assertion:
 ;
     QObject *field = renameInput(view);
@@ -230,8 +253,8 @@ Original expression:
 QFAIL("Quick Return did not commit the inline rename")
 
 A012 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:112
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S009 (presentation.swift:91-92) asserts the renamed header can reopen its editor (renamingTrack == track). Unproved: the Quick rename field's visible/activeFocus state.
 Source context since previous assertion:
 ;
         return;
@@ -242,8 +265,8 @@ Original expression:
 QTRY_VERIFY2(renameIsOpen(), "Quick rename input did not reopen")
 
 A013 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:118
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S010 (presentation.swift:95-96) asserts Escape discards the draft: the name stays "Rolled" and the editor closes.
 Source context since previous assertion:
 ;
     field = renameInput(view);
@@ -256,8 +279,8 @@ Original expression:
 QFAIL("Quick Escape did not discard the inline rename draft")
 
 A014 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:122
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S011 (presentation.swift:98-99) asserts the editor can reopen for the loop-marker guard. Unproved: the Quick rename field's visible/activeFocus state.
 Source context since previous assertion:
 ;
         return;
@@ -268,8 +291,8 @@ Original expression:
 QTRY_VERIFY2(renameIsOpen(), "Quick rename input did not reopen for the loop-marker guard")
 
 A015 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:129
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S012 (presentation.swift:104-106) asserts the loop-marker draft "[" is refused: the name stays "Rolled", and state and history identity are unchanged (no transaction); S013 (presentation.swift:107-108) asserts the single accepted rename undoes.
 Source context since previous assertion:
 ;
     const int commands = doc.undoStack()->count();
@@ -283,8 +306,8 @@ Original expression:
 QFAIL("loop-marker name was not refused")
 
 A016 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:132
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S014 (presentation.swift:109-110) asserts the document state and history identity are back to the pre-rename snapshot after the undo drain — the state/identity form of the unchanged undo index and the restored SMF bytes.
 Source context since previous assertion:
 ;
     while (doc.undoStack()->index() > undo)
@@ -295,7 +318,7 @@ QCOMPARE(doc.smf().write(), before)
 
 A017 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:149
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Feature not yet ported: the polyphony-dock revealNote jump (view.revealNote selecting the losing track and the lost note) has no owner in the Swift roll; no predicate asserts a reveal-note selection or its viewport jump.
 Source context since previous assertion:
 ;
 }
@@ -320,7 +343,7 @@ QFAIL("no notes in the view model for revealNote")
 
 A018 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:153
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Feature not yet ported: revealNote's note-lookup outcome (the note at or before the event tick is found) is not implemented in the Swift roll.
 Source context since previous assertion:
 ;
         } else {
@@ -332,7 +355,7 @@ QFAIL("revealNote did not find the note")
 
 A019 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:155
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Feature not yet ported: revealNote's track-selection outcome (primaryTrack becomes the revealed track) has no Swift roll predicate.
 Source context since previous assertion:
 ;
             if (view.selectionModel().primaryTrack() != int(target.track))
@@ -342,7 +365,7 @@ QFAIL("revealNote did not select the track")
 
 A020 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:158
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Feature not yet ported: revealNote's single-note selection payload has no Swift roll predicate.
 Source context since previous assertion:
 ;
             const auto &sel = view.selectionModel().noteSelection();
@@ -353,7 +376,7 @@ QFAIL("revealNote did not select the note")
 
 A021 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:174
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Feature not yet ported: revealNote miss on an unused key (returns false without selecting a note) has no Swift roll predicate.
 Source context since previous assertion:
 ;
 
@@ -377,7 +400,7 @@ QFAIL("revealNote found a note on an unused key")
 
 A022 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:176
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Feature not yet ported: the revealNote miss keeps the track selection — no Swift roll predicate observes it.
 Source context since previous assertion:
 ;
                 if (view.selectionModel().primaryTrack() != int(target.track))
@@ -387,7 +410,7 @@ QFAIL("revealNote miss dropped the track selection")
 
 A023 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:180
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Feature not yet ported: revealNote's no-undo-stack-change guarantee has no Swift roll predicate because revealNote itself is unported.
 Source context since previous assertion:
 ;
             }
@@ -399,7 +422,7 @@ QCOMPARE(doc.undoStack()->index(), undo)
 
 A024 | PianoRollTest::headerRevealNote | src/checks/rollcheck/presentation.cpp:181
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Feature not yet ported: revealNote's no-SMF-write guarantee has no Swift roll predicate because revealNote itself is unported.
 Source context since previous assertion:
 ;
 
@@ -407,8 +430,8 @@ Original expression:
 QCOMPARE(doc.smf().write(), before)
 
 A025 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:193
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE
+Mapping/reason: Original native Quick-header guard: requires the live TrackHeaderModel on the retired SongView.
 Source context since previous assertion:
 ;
 }
@@ -427,8 +450,8 @@ Original expression:
 QVERIFY2(headers, "Quick track-header model was not found")
 
 A026 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:213
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE
+Mapping/reason: Original native action-binding precondition: the canonical SoloTracks QAction bound to the Quick view. The Swift check dispatches EditCommand.soloTracks through PianoGrid.performCommand and does not assert the action binding.
 Source context since previous assertion:
 ;
 
@@ -455,8 +478,8 @@ Original expression:
 QFAIL("canonical solo action was not bound to the view")
 
 A027 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:217
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S015 (presentation.swift:157-158) asserts mute and solo scopes are clean before the keyboard toggles.
 Source context since previous assertion:
 ;
 
@@ -467,8 +490,8 @@ Original expression:
 QFAIL("mute/solo masks not clean before the keyboard toggles")
 
 A028 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:220
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S016 (presentation.swift:160-161) asserts M mutes the selected track (mutedTracks == [0]).
 Source context since previous assertion:
 ;
         sendKeyStroke(roll, Qt::Key_M, Qt::NoModifier, false);
@@ -478,8 +501,8 @@ Original expression:
 QFAIL("M did not mute the selected track")
 
 A029 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:222
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S016 (presentation.swift:160-161) asserts the same site publishes the checked header mute role (headers.rows[0].muteChecked).
 Source context since previous assertion:
 ;
         if (!roleChecked(selectedTrack, songview::TrackHeaderModel::MuteCheckedRole))
@@ -488,8 +511,8 @@ Original expression:
 QFAIL("keyboard mute did not publish the checked Quick header role")
 
 A030 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:225
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S017 (presentation.swift:163-164) asserts the second M clears the selected track mute.
 Source context since previous assertion:
 ;
         sendKeyStroke(roll, Qt::Key_M, Qt::NoModifier, false);
@@ -499,8 +522,8 @@ Original expression:
 QFAIL("second M did not unmute the selected track")
 
 A031 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:227
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S017 (presentation.swift:163-164) asserts the second M clears the checked header mute role.
 Source context since previous assertion:
 ;
         if (roleChecked(selectedTrack, songview::TrackHeaderModel::MuteCheckedRole))
@@ -509,8 +532,8 @@ Original expression:
 QFAIL("keyboard unmute did not clear the checked Quick header role")
 
 A032 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:231
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S018 (presentation.swift:166-167) asserts the Solo command marks the selected track solo and publishes the checked header solo role.
 Source context since previous assertion:
 ;
         soloAction->trigger();
@@ -521,8 +544,8 @@ Original expression:
 QFAIL("S did not publish the selected track's solo role")
 
 A033 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:236
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S019 (presentation.swift:169-170) asserts the second Solo action clears both the solo set and the checked header solo role.
 Source context since previous assertion:
 ;
         }
@@ -534,8 +557,8 @@ Original expression:
 QFAIL("second S did not clear the selected track's solo role")
 
 A034 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:244
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S020 (presentation.swift:171-173) guards that a second header row exists for the mixed-scope probe (report.fail when missing).
 Source context since previous assertion:
 ;
         }
@@ -550,8 +573,8 @@ Original expression:
 QFAIL("Quick header record was missing for the scoped keyboard probe")
 
 A035 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:252
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S021 (presentation.swift:178-181) asserts M over the mixed scope mutes every scoped track (mutedTracks == [0, other] with both header roles checked).
 Source context since previous assertion:
 ;
         } else {
@@ -566,8 +589,8 @@ Original expression:
 QFAIL("M over a mixed scope did not mute every scoped track")
 
 A036 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:256
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S022 (presentation.swift:182-183) asserts the second M unmutes the whole scoped selection (mutedTracks.isEmpty).
 Source context since previous assertion:
 ;
             }
@@ -578,8 +601,8 @@ Original expression:
 QFAIL("second M did not unmute the whole scope")
 
 A037 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:260
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S023 (presentation.swift:185-186) asserts mute/solo role updates never reset the header rows (rowRebuildCount unchanged).
 Source context since previous assertion:
 ;
             view.trackHeaderClicked(selectedTrack, Qt::NoModifier); // collapse scope
@@ -590,8 +613,8 @@ Original expression:
 QFAIL("keyboard mute/solo reset the TrackHeaderModel")
 
 A038 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:262
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S024 (presentation.swift:187-188) asserts the keyboard toggles leave the document state and history identity untouched (no undo entry).
 Source context since previous assertion:
 ;
         if (doc.undoStack()->count() != preCount)
@@ -600,8 +623,8 @@ Original expression:
 QFAIL("keyboard mute/solo touched the undo stack")
 
 A039 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:266
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S024 (presentation.swift:187-188) asserts the document and history identity are unchanged by the mute/solo sequence; the check's defer additionally asserts state == before (presentation.swift:136-138).
 Source context since previous assertion:
 ;
         QObject::disconnect(resetConnection);
@@ -612,8 +635,8 @@ Original expression:
 QCOMPARE(doc.undoStack()->index(), undo)
 
 A040 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:267
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S024 (presentation.swift:187-188) asserts the document state is untouched (SongState equality includes the serialized file), corroborated by the defer assertion at presentation.swift:136-138.
 Source context since previous assertion:
 ;
 
@@ -624,188 +647,108 @@ Remaining original source (closing sequence and helper bodies):
 ;
 }
 
-Counterpart executable predicate index
-The S entries are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid (no report.expect Swift predicates exist in these counterparts). Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+Swift assertion predicates
+The S entries are exact report predicates (report.expect except the S020 report.fail guard) already executed by
+runPresentationChecks in the swiftcore projectSession suite (deno task verify
+--filter swiftcore --verbose, PASS 1/14 ok, controller-recorded).
 
-S001 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:145
-Counterpart expression:
-QSKIP("chrome raster parity belongs to the swiftrollgated surface")
+S001 | swiftcore/PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.swift:30
+  report.expect(grid.interactionActive && blocked == nil
+                && session.camera.snapshot.scrollX == home, cppID: id,
+                message: "live roll pan suspends follow without moving the camera")
 
-S002 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:147
-Counterpart expression:
-QSKIP("chrome raster parity belongs to the swiftrollgated surface")
+S002 | swiftcore/PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.swift:37
+  report.expect(!grid.interactionActive && resumed != nil, cppID: id,
+                message: "follow becomes eligible once the pan ends")
 
-S003 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:149
-Counterpart expression:
-QSKIP("chrome raster parity belongs to the swiftrollgated surface")
+S003 | swiftcore/PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.swift:41
+  report.expect(session.camera.snapshot.scrollX != home, cppID: id,
+                message: "resumed follow scrolls the shared roll camera")
 
-S004 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:150
-Counterpart expression:
-QCOMPARE(m_mode, QStringLiteral("swiftrollgated"))
+S004 | swiftcore/PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.swift:49
+  report.expectEqual(oldCamera, session.camera.snapshot, cppID: id,
+                     what: "pan probe restores the incoming camera viewport and scroll")
 
-S005 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:153
-Counterpart expression:
-QVERIFY(window.isReady())
+S005 | swiftcore/PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.swift:51
+  report.expect(session.document.state == before && session.document.history.currentIdentity == identity,
+                cppID: id, message: "pan and follow do not edit the song or its undo history")
 
-S006 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:158
-Counterpart expression:
-QVERIFY(session != nullptr)
+S006 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:82
+  report.expectEqual(track, headers.renamingTrack, cppID: id,
+                     what: "inline rename opens on the selected header")
 
-S007 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:159
-Counterpart expression:
-QTRY_VERIFY_WITH_TIMEOUT(session->property("projectOpen").toBool(), 15'000)
+S007 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:85
+  report.expectEqual("Rolled", headers.renameDraft, cppID: id,
+                     what: "header publishes the typed draft")
 
-S008 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:160
-Counterpart expression:
-QTRY_VERIFY_WITH_TIMEOUT(session->property("songOpen").toBool(), 15'000)
+S008 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:88
+  report.expect(document.trackName(track) == "Rolled" && headers.renamingTrack == -1,
+                cppID: id, message: "Return commits the inline rename and closes the editor")
 
-S009 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:161
-Counterpart expression:
-QTRY_VERIFY_WITH_TIMEOUT(window.gridView() != nullptr, 5'000)
+S009 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:91
+  report.expectEqual(track, headers.renamingTrack, cppID: id,
+                     what: "the renamed header can reopen its editor")
 
-S010 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:164
-Counterpart expression:
-QTRY_VERIFY_WITH_TIMEOUT(view->rootObject() != nullptr && view->isExposed(), 5'000)
+S010 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:95
+  report.expect(document.trackName(track) == "Rolled" && headers.renamingTrack == -1,
+                cppID: id, message: "Escape discards the draft without changing the name")
 
-S011 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:166
-Counterpart expression:
-QVERIFY(root != nullptr)
+S011 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:98
+  report.expectEqual(track, headers.renamingTrack, cppID: id,
+                     what: "editor can reopen for the marker-name guard")
 
-S012 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:168
-Counterpart expression:
-QVERIFY(grid != nullptr)
+S012 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:104
+  report.expect(document.trackName(track) == "Rolled" && document.state == accepted
+                && document.history.currentIdentity == acceptedIdentity, cppID: id,
+                message: "loop-marker name is refused without a transaction")
 
-S013 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:169
-Counterpart expression:
-QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000)
+S013 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:107
+  report.expect(document.history.undoDocument(), cppID: id,
+                message: "one undo reverts the only accepted rename")
 
-S014 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:185
-Counterpart expression:
-QVERIFY(plot != nullptr)
+S014 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:109
+  report.expect(document.state == before && document.history.currentIdentity == identity,
+                cppID: id, message: "cancellation and invalid marker add no undo steps")
 
-S015 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:186
-Counterpart expression:
-QVERIFY(gutter != nullptr)
+S015 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:157
+  report.expect(session.mutedTracks.isEmpty && session.soloedTracks.isEmpty,
+                cppID: id, message: "keyboard mute and solo begin with clear scopes")
 
-S016 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:187
-Counterpart expression:
-QVERIFY(surface != nullptr)
+S016 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:160
+  report.expect(session.mutedTracks == [0] && headers.rows[0].muteChecked,
+                cppID: id, message: "M mutes the selected track and publishes the header role")
 
-S017 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:188
-Counterpart expression:
-QVERIFY(rows != nullptr)
+S017 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:163
+  report.expect(session.mutedTracks.isEmpty && !headers.rows[0].muteChecked,
+                cppID: id, message: "second M clears the selected header mute role")
 
-S018 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:189
-Counterpart expression:
-QVERIFY(time != nullptr)
+S018 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:166
+  report.expect(session.soloedTracks == [0] && headers.rows[0].soloChecked,
+                cppID: id, message: "Solo action publishes the selected header solo role")
 
-S019 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:190
-Counterpart expression:
-QVERIFY(keys != nullptr)
+S019 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:169
+  report.expect(session.soloedTracks.isEmpty && !headers.rows[0].soloChecked,
+                cppID: id, message: "second Solo action clears the solo role")
 
-S020 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:191
-Counterpart expression:
-QVERIFY(chip != nullptr)
+S020 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:171
+  guard headers.rows.count > other else {
+      report.fail(id, "second header row is missing for mixed-scope mute")
+      return
+  }
 
-S021 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:195
-Counterpart expression:
-QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(rows, plotScene) > 0, 5'000)
+S021 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:178
+  report.expect(session.mutedTracks == [0, other]
+                && headers.rows[0].muteChecked && headers.rows[other].muteChecked,
+                cppID: id, message: "M over a mixed scope mutes every scoped track")
 
-S022 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:196
-Counterpart expression:
-QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(time, plotScene) > 0, 5'000)
+S022 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:182
+  report.expect(session.mutedTracks.isEmpty, cppID: id,
+                message: "second M unmutes the whole scoped selection")
 
-S023 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:197
-Counterpart expression:
-QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(keys, gutterScene) > 0, 5'000)
+S023 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:185
+  report.expect(headers.rowRebuildCount == rebuilds, cppID: id,
+                message: "mute and solo role updates never reset header rows")
 
-S024 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:201
-Counterpart expression:
-QVERIFY(rowHeight > 0.0)
-
-S025 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:202
-Counterpart expression:
-QVERIFY(keyboardWidth > 0.0)
-
-S026 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:205
-Counterpart expression:
-QTRY_VERIFY_WITH_TIMEOUT(!(image = view->grabWindow()).isNull(), 5'000)
-
-S027 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:206
-Counterpart expression:
-QVERIFY(image.devicePixelRatio() > 0.0)
-
-S028 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:212
-Counterpart expression:
-QVERIFY(std::isfinite(cameraScrollX))
-
-S029 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:213
-Counterpart expression:
-QVERIFY(std::isfinite(cameraScrollY))
-
-S030 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:223
-Counterpart expression:
-QVERIFY2(rowProbes.has_value(),
-             "the C4/C#4 row centers did not expose the production role colors")
-
-S031 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:225
-Counterpart expression:
-QVERIFY2(rowProbes->matchingColumns >= rowProbes->sampledColumns / 4,
-             "less than one quarter of the C4/C#4 row-center region kept both role colors")
-
-S032 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:235
-Counterpart expression:
-QVERIFY(gridcheck::colorsNear(gridcheck::pixelAt(image, naturalKey), expectedNaturalKey))
-
-S033 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:236
-Counterpart expression:
-QVERIFY(gridcheck::colorsNear(gridcheck::pixelAt(image, accidentalKey), expectedAccidentalKey))
-
-S034 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:245
-Counterpart expression:
-QVERIFY2(gutterSeparatorRow.has_value(), "the keyboard C4 separator is not role-colored")
-
-S035 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:246
-Counterpart expression:
-QVERIFY2(rollSeparatorRow.has_value(), "the roll C4 separator is not role-colored")
-
-S036 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:247
-Counterpart expression:
-QCOMPARE(*gutterSeparatorRow, *rollSeparatorRow)
-
-S037 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:257
-Counterpart expression:
-QVERIFY2(!gridcheck::colorsNear(expectedBarNatural, natural) &&
-                 !gridcheck::colorsNear(expectedBarAccidental, accidental),
-             "the active theme makes bar lines indistinguishable from both row roles")
-
-S038 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:260
-Counterpart expression:
-QVERIFY2(!gridcheck::colorsNear(expectedBeatNatural, natural) &&
-                 !gridcheck::colorsNear(expectedBeatAccidental, accidental),
-             "the active theme makes beat lines indistinguishable from both row roles")
-
-S039 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:269
-Counterpart expression:
-QVERIFY2(barProbes.has_value(),
-             "no visible bar line composited the grid role over both row backgrounds")
-
-S040 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:273
-Counterpart expression:
-QVERIFY2(beatProbes.has_value(),
-             "no visible beat line composited the relative-alpha grid role over both rows")
-
-S041 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:280
-Counterpart expression:
-QTRY_VERIFY_WITH_TIMEOUT(
-        std::abs(grid->property("cameraScrollY").toDouble() - initialScrollY) > 0.5, 5'000)
-
-S042 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:291
-Counterpart expression:
-QTRY_VERIFY_WITH_TIMEOUT(grid->property("hoverKey").toInt() == hoverPitch && chip->isVisible(),
-                             5'000)
-
-S043 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:295
-Counterpart expression:
-QVERIFY2(std::abs(chipCenterY - hoverCenter.y()) <= oneDevicePixel,
-             "the scrolled keyboard hover chip is not centered on the hovered pitch row")
+S024 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:187
+  report.expect(document.state == noEdit && document.history.currentIdentity == noEditIdentity,
+                cppID: id, message: "keyboard toggles do not touch MIDI or the undo stack")

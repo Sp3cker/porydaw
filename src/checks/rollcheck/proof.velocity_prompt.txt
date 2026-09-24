@@ -25,9 +25,17 @@ Core domain scenarios retain their original EventChecks/TimeChecks entrypoint po
 Verification evidence
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS (controller, 10.17s).
-Counts: MATCHED 0, PARTIAL 0, GAP 105, NATIVE 0. The indexed Swift
-prompt-model predicates do not establish the original QML input text, native
-event delivery, or history count/index conjuncts; no site is flipped.
+Counts: MATCHED 0, PARTIAL 11, GAP 28, NATIVE 66. Prompt-window delivery
+sites (window/popup realization, rendered input/buttons, open/close state,
+focus restoration, mouse/key delivery, geometry) are NATIVE obligations a
+presenter-level Swift check cannot establish. Eleven document-transaction
+sites are PARTIAL: same-slot VelocityPage predicates execute, but the
+QUndoStack index/count (and, where noted, smf-byte or QML-text) conjuncts
+remain unproved. The indexed drawerVelocityPromptTransaction S001-S046
+predicates run under distinct VelocityPage cppIDs on a different fixture;
+none establishes whole-predicate equivalence for a velocity_prompt.cpp site,
+so none flips a site to MATCHED. QML input text, latched-draw, teardown
+epilogues, and outside-dismissal preservation stay GAP with per-site reasons.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -77,64 +85,64 @@ Original assertion inventory
 
 A001 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:155
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: fixture seed guard with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
 Original expression:
   QVERIFY(seed.has_value())
 
 A002 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:166
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic))
 
 A003 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:169
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(input, "the velocity prompt has no text input")
 
 A004 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:170
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: QML prompt text-input content (text/selectedText) is not ported. The Swift VelocityPage promptDraft model is a different surface; S047 was considered and does not establish the QML text observation.
 Original expression:
   QCOMPARE(input->property("text").toString(), QStringLiteral("73"))
 
 A005 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:171
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: QML prompt text-input content (text/selectedText) is not ported. The Swift VelocityPage promptDraft model is a different surface; S047 was considered and does not establish the QML text observation.
 Original expression:
   QCOMPARE(input->property("selectedText").toString(), QStringLiteral("73"))
 
 A006 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:177
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: QML prompt text-input content (text/selectedText) is not ported. The Swift VelocityPage promptDraft model is a different surface; S047 was considered and does not establish the QML text observation.
 Original expression:
   QCOMPARE(input->property("text").toString(), QStringLiteral("95"))
 
 A007 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:178
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S048 | src/checks/rollcheck/velocity_prompt.swift:198 drafting 95 leaves song bytes, revision and history identity untouched. Unproved: the QUndoStack index/count conjuncts (no executing history-depth predicate).
 Original expression:
   QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
                    doc.undoStack()->count() == undoCount && doc.revision() == revision,
                "typing into the velocity prompt mutated the song")
 
 A008 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::clickPromptButton(*opened.popup, QLatin1String("noteVelocityAccept")),
                "the velocity prompt has no OK button")
 
 A009 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:188
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "the OK button did not close the velocity prompt")
 
 A010 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:190
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S049 | src/checks/rollcheck/velocity_prompt.swift:202 accepting 95 sets velocity 95 with revision +1 and a new history identity. Unproved: the undo count/index advance exactly +1.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &accepted) &&
                    accepted.velocity == 95 && doc.revision() == revision + 1 &&
@@ -142,14 +150,14 @@ Original expression:
                "velocity prompt acceptance did not commit one undoable velocity edit")
 
 A011 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:194
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QTRY_VERIFY2(roll.hasFocus(), "focus did not return to the roll after acceptance")
 
 A012 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:198
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S051 | src/checks/rollcheck/velocity_prompt.swift:210 one undo restores velocity 73 and the pre-acceptance song bytes. Unproved: the undo index returns to the baseline.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &undone) &&
                    undone.velocity == 73 && doc.smf().write() == before &&
@@ -158,40 +166,40 @@ Original expression:
 
 A013 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:210
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: drawing notes with the latched velocity is not ported; Swift observes only the acceptedValues latch callback (S050 velocity_prompt.swift:207), never a drawn note. Open obligation.
 Original expression:
   QVERIFY2(latchCellA.key >= 0, "no free grid cell for the pre-latch draw")
 
 A014 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:213
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: drawing notes with the latched velocity is not ported; Swift observes only the acceptedValues latch callback (S050 velocity_prompt.swift:207), never a drawn note. Open obligation.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), latchCellA.tick, uint8_t(latchCellA.key), &preLatch) &&
                    preLatch.velocity == 95,
                "drawing did not use the accepted velocity latch before the no-op acceptance")
 
 A015 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:221
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(reopened.window && reopened.popup, qUtf8Printable(reopened.diagnostic))
 
 A016 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:222
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::clickPromptButton(*reopened.popup, QLatin1String("noteVelocityAccept")),
                "the reopened velocity prompt has no OK button")
 
 A017 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:225
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "the unchanged acceptance did not close the prompt")
 
 A018 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:227
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S052 | src/checks/rollcheck/velocity_prompt.swift:216 unchanged acceptance relatches (acceptedValues [95, 73]) with an unchanged revision/identity snapshot. Unproved: smf byte equality and the undo index/count conjuncts.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &unchanged) &&
                    unchanged.velocity == 73 && doc.smf().write() == afterDraw &&
@@ -200,13 +208,13 @@ Original expression:
 
 A019 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:233
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: drawing notes with the latched velocity is not ported; Swift observes only the acceptedValues latch callback (S050 velocity_prompt.swift:207), never a drawn note. Open obligation.
 Original expression:
   QVERIFY2(latchCellB.key >= 0, "no free grid cell for the post-latch draw")
 
 A020 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:236
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: drawing notes with the latched velocity is not ported; Swift observes only the acceptedValues latch callback (S050 velocity_prompt.swift:207), never a drawn note. Open obligation.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), latchCellB.tick, uint8_t(latchCellB.key), &latched) &&
                    latched.velocity == 73,
@@ -214,124 +222,124 @@ Original expression:
 
 A021 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:242
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: suite-teardown byte-restoration epilogue with no executing Swift predicate. Open obligation.
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A022 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:249
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: fixture seed guard with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
 Original expression:
   QVERIFY(seed.has_value())
 
 A023 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:264
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!unopened || !unopened->isOpen(),
                "the selected-note velocity entry opened without a selection")
 
 A024 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:266
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S053 | src/checks/rollcheck/velocity_prompt.swift:235 the selectionless entry refuses and the revision/identity snapshot is unchanged (no-commit corroboration). Unproved: smf byte equality and the undo index/count conjuncts.
 Original expression:
   QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
                    doc.undoStack()->count() == undoCount && doc.revision() == revision,
                "the selectionless velocity entry wrote to the song")
 
 A025 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:273
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(escapee.window && escapee.popup, qUtf8Printable(escapee.diagnostic))
 
 A026 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:276
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(input, "the velocity prompt has no text input")
 
 A027 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:279
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: QML prompt text-input content (text/selectedText) is not ported. The Swift VelocityPage promptDraft model is a different surface; S047 was considered and does not establish the QML text observation.
 Original expression:
   QCOMPARE(input->property("text").toString(), QStringLiteral("20"))
 
 A028 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:283
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "Escape did not close the velocity prompt")
 
 A029 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:284
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S054 | src/checks/rollcheck/velocity_prompt.swift:243 cancelling a 20 draft closes the prompt with history and notes untouched. Unproved: Escape key delivery itself is native; smf byte equality and the undo index/count conjuncts.
 Original expression:
   QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
                    doc.undoStack()->count() == undoCount && doc.revision() == revision,
                "Escape on the velocity prompt wrote to the song")
 
 A030 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:287
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QTRY_VERIFY2(roll.hasFocus(), "focus did not return to the roll after Escape")
 
 A031 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:291
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(cancelled.window && cancelled.popup, qUtf8Printable(cancelled.diagnostic))
 
 A032 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:294
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::clickPromptButton(*cancelled.popup, QLatin1String("noteVelocityCancel")),
                "the velocity prompt has no Cancel button")
 
 A033 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:297
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "the Cancel button did not close the velocity prompt")
 
 A034 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:298
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S054 | src/checks/rollcheck/velocity_prompt.swift:243 same cancel-no-write predicate (20 draft). Unproved: Cancel-button click delivery is native; smf byte equality and the undo index/count conjuncts.
 Original expression:
   QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
                    doc.undoStack()->count() == undoCount && doc.revision() == revision,
                "the velocity prompt Cancel button wrote to the song")
 
 A035 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:301
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QTRY_VERIFY2(roll.hasFocus(), "focus did not return to the roll after the Cancel button")
 
 A036 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:307
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(stale.window && stale.popup, qUtf8Printable(stale.diagnostic))
 
 A037 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:311
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::clickPromptButton(*stale.popup, QLatin1String("noteVelocityAccept")),
                "the stale velocity prompt has no OK button")
 
 A038 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:314
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "a stale acceptance did not close the prompt")
 
 A039 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:316
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S055 | src/checks/rollcheck/velocity_prompt.swift:252 the stale 30 draft refuses, the prompt closes, and the foreign velocity 40 with its snapshot is preserved. Unproved: smf bytes wholesale and the undo count/index +1 conjuncts.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &staleNote) &&
                    staleNote.velocity == 40 && doc.revision() == revision + 1 &&
@@ -339,51 +347,51 @@ Original expression:
                "a stale velocity acceptance wrote to the song")
 
 A040 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:320
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QTRY_VERIFY2(roll.hasFocus(), "focus did not return to the roll after the stale acceptance")
 
 A041 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:324
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: suite-teardown byte-restoration epilogue with no executing Swift predicate. Open obligation.
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A042 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:331
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: fixture seed guard with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
 Original expression:
   QVERIFY(seed.has_value())
 
 A043 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:342
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(outside.window && outside.popup, qUtf8Printable(outside.diagnostic))
 
 A044 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:347
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: timeline-cell guard for the outside-dismissal point with no executing Swift predicate. Open setup obligation.
 Original expression:
   QVERIFY2(outsideCell.key >= 0, "no timeline cell for the popup underlay dismissal")
 
 A045 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:350
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(content && !content->contains(content->mapFromScene(QPointF(outsidePoint))),
                "the dismissal point did not reach the popup underlay")
 
 A046 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:358
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!outside.popup->isOpen(), "an outside canvas press did not cancel the draft")
 
 A047 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:361
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: outside-dismissal preservation (selection, bytes, history) has no executing Swift predicate; Swift implements no outside-press dismissal path. Open obligation.
 Original expression:
   QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
                    doc.undoStack()->count() == undoCount && doc.revision() == revision &&
@@ -391,41 +399,41 @@ Original expression:
                "the paired outside release reached the timeline after popup teardown")
 
 A048 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:365
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QTRY_VERIFY2(roll.hasFocus(), "outside cancellation did not restore roll focus")
 
 A049 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:371
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(interrupted.window && interrupted.popup, qUtf8Printable(interrupted.diagnostic))
 
 A050 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:374
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!interrupted.popup->isOpen(), "the interrupted outside press did not close the draft")
 
 A051 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:378
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: outside-dismissal preservation (selection, bytes, history) has no executing Swift predicate; Swift implements no outside-press dismissal path. Open obligation.
 Original expression:
   QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
                    doc.undoStack()->count() == undoCount && doc.revision() == revision,
                "interrupted popup dismissal changed the timeline")
 
 A052 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:383
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(checks::events::primeMouseMove(*interrupted.window, roll, freshPoint),
                "could not prime the fresh velocity drag after interrupted dismissal")
 
 A053 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:388
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(view.previewVelocity(seed->noteB.noteId) == std::optional<int>{93} &&
                    doc.smf().write() == before && doc.undoStack()->index() == undo &&
@@ -434,7 +442,7 @@ Original expression:
 
 A054 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:395
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: interruption-recovery fresh-drag preview path is not ported; no Swift predicate stages a release-dependent preview after interruption. Open obligation.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &freshVelocity) &&
                    freshVelocity.velocity == 93 && doc.undoStack()->index() == undo + 1 &&
@@ -444,19 +452,19 @@ Original expression:
 
 A055 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:402
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: suite-teardown byte-restoration epilogue with no executing Swift predicate. Open obligation.
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A056 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:408
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(deactivated.window && deactivated.popup, qUtf8Printable(deactivated.diagnostic))
 
 A057 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:413
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!deactivated.popup->isOpen() && !roll.hasFocus() && doc.smf().write() == before &&
                    doc.undoStack()->index() == postInterruptionUndo &&
@@ -465,14 +473,14 @@ Original expression:
                "window deactivation wrote the draft or reactivated the timeline")
 
 A058 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:420
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(resized.window && resized.popup, qUtf8Printable(resized.diagnostic))
 
 A059 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:425
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!resized.popup->isOpen() && doc.smf().write() == before &&
                    doc.undoStack()->index() == postInterruptionUndo &&
@@ -481,36 +489,36 @@ Original expression:
                "canvas resize accepted or wrote the velocity draft")
 
 A060 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:438
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(smallViewport && smallViewport->isOpen() && smallViewport->window(),
                "Insert Time did not open its canvas form in the small viewport")
 
 A061 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:446
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(form && accept && cancel, "the small-viewport Insert Time form has no action buttons")
 
 A062 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:464
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(smallViewport->window()->height() < form->implicitHeight() &&
                    canvasBounds.contains(acceptBounds) && canvasBounds.contains(cancelBounds),
                qPrintable(geometryDiagnostic))
 
 A063 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:467
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::clickPromptButton(*smallViewport, QLatin1String("insertTimeCancel")),
                "the visible small-viewport Insert Time Cancel button did not receive a real click")
 
 A064 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:470
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!smallViewport->isOpen() && doc.smf().write() == before &&
                    doc.undoStack()->index() == postInterruptionUndo &&
@@ -520,114 +528,114 @@ Original expression:
 
 A065 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:487
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: fixture seed guard with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
 Original expression:
   QVERIFY(seed.has_value())
 
 A066 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:498
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(outside.window && outside.popup, qUtf8Printable(outside.diagnostic))
 
 A067 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:501
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: timeline-cell guard for the outside-dismissal point with no executing Swift predicate. Open setup obligation.
 Original expression:
   QVERIFY2(outsideCell.key >= 0, "no timeline cell for the prompt outside-right dismissal")
 
 A068 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:504
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(content && !content->contains(content->mapFromScene(QPointF(outsidePoint))),
                "the dismissal point did not reach the popup underlay")
 
 A069 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:509
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!outside.popup->isOpen(), "an outside right press did not dismiss the prompt")
 
 A070 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:513
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "the swallowed outside right release opened a popup")
 
 A071 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:514
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: outside-dismissal preservation (selection, bytes, history) has no executing Swift predicate; Swift implements no outside-press dismissal path. Open obligation.
 Original expression:
   QCOMPARE(view.selectionModel().noteSelection(), selectionBefore)
 
 A072 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:515
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: outside-dismissal preservation (selection, bytes, history) has no executing Swift predicate; Swift implements no outside-press dismissal path. Open obligation.
 Original expression:
   QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
                    doc.undoStack()->count() == undoCount && doc.revision() == revision,
                "the outside right dismissal wrote to the song")
 
 A073 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:518
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QTRY_VERIFY2(roll.hasFocus(), "outside right cancellation did not restore roll focus")
 
 A074 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:525
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: fixture seed guard with no executing Swift predicate; the Swift counterpart builds its own synthetic fixture. Open setup obligation.
 Original expression:
   QVERIFY(seed.has_value())
 
 A075 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:537
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(cycled.window && cycled.popup, qUtf8Printable(cycled.diagnostic))
 
 A076 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:540
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(cycleInput, "the keyboard-cycle velocity prompt has no text input")
 
 A077 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:546
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::inputHasActiveFocus(*cycled.window, QLatin1String("noteVelocityInput")),
                "velocity keyboard cycle did not start in its text input")
 
 A078 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:550
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QCOMPARE(activeObjectName(*cycled.window), QStringLiteral("noteVelocityAccept"))
 
 A079 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:553
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QCOMPARE(activeObjectName(*cycled.window), QStringLiteral("noteVelocityCancel"))
 
 A080 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:556
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::inputHasActiveFocus(*cycled.window, QLatin1String("noteVelocityInput")),
                "Tab did not wrap from Cancel back to the velocity input")
 
 A081 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:560
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QCOMPARE(activeObjectName(*cycled.window), QStringLiteral("noteVelocityCancel"))
 
 A082 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:561
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(cycled.popup->isOpen() && cycleInput->property("text").toString() == cycleDraft &&
                    doc.smf().write() == before && doc.undoStack()->index() == undo &&
@@ -635,33 +643,33 @@ Original expression:
                "velocity focus traversal closed or accepted its draft")
 
 A083 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:567
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!cycled.popup->isOpen(), "Escape did not close the keyboard-cycle velocity prompt")
 
 A084 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:573
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic))
 
 A085 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:576
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(input, "the velocity prompt has no text input")
 
 A086 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:580
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && popup->isOpen(),
                "an out-of-range draft closed the velocity prompt before commit")
 
 A087 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:584
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S056 | src/checks/rollcheck/velocity_prompt.swift:273 the invalid 999 draft refuses, the prompt stays open, and the snapshot is unchanged. Unproved: the QML text identity and the undo count conjunct.
 Original expression:
   QVERIFY2(popup->isOpen() &&
                    input->property("text").toString() == QString::number(seed->noteB.velocity) &&
@@ -669,116 +677,116 @@ Original expression:
                "an invalid velocity draft was accepted or wrote to the song")
 
 A088 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:590
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!popup->isOpen(), "Escape did not close the corrected-draft prompt")
 
 A089 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:594
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(lowered.window && lowered.popup, qUtf8Printable(lowered.diagnostic))
 
 A090 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:600
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(loweredInput, "the lowered velocity prompt has no text input")
 
 A091 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:601
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: QML prompt text-input content (text/selectedText) is not ported. The Swift VelocityPage promptDraft model is a different surface; S047 was considered and does not establish the QML text observation.
 Original expression:
   QCOMPARE(loweredInput->property("text").toString(), QStringLiteral("1"))
 
 A092 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:604
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "the lower-bound acceptance did not close the prompt")
 
 A093 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:606
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S057 | src/checks/rollcheck/velocity_prompt.swift:277 the valid lower-bound velocity 1 commits to the captured note. Unproved: the undo count +1 conjunct.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &lower) &&
                    lower.velocity == 1 && doc.undoStack()->count() == undoCount + 1,
                "the lower bound velocity acceptance did not commit exactly velocity 1")
 
 A094 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:612
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(raised.window && raised.popup, qUtf8Printable(raised.diagnostic))
 
 A095 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:618
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(raisedInput, "the raised velocity prompt has no text input")
 
 A096 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:619
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: QML prompt text-input content (text/selectedText) is not ported. The Swift VelocityPage promptDraft model is a different surface; S047 was considered and does not establish the QML text observation.
 Original expression:
   QCOMPARE(raisedInput->property("text").toString(), QStringLiteral("127"))
 
 A097 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:622
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "the upper-bound acceptance did not close the prompt")
 
 A098 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:624
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S058 | src/checks/rollcheck/velocity_prompt.swift:281 the valid upper-bound velocity 127 commits to the captured note. Unproved: the undo count shape (+2 across the two-commit bounds flow).
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &upper) &&
                    upper.velocity == 127 && doc.undoStack()->count() == undoCount + 2,
                "the upper bound velocity acceptance did not commit exactly velocity 127")
 
 A099 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:631
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(capped.window && capped.popup, qUtf8Printable(capped.diagnostic))
 
 A100 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:634
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(cappedInput, "the capped velocity prompt has no text input")
 
 A101 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:642
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && popup->isOpen(), "clamped step keys closed the velocity prompt")
 
 A102 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:643
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: QML prompt text-input content (text/selectedText) is not ported. The Swift VelocityPage promptDraft model is a different surface; S047 was considered and does not establish the QML text observation.
 Original expression:
   QCOMPARE(cappedInput->property("text").toString(), QStringLiteral("127"))
 
 A103 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:644
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: clamped step-key editing (Up/Ctrl+Up) inside the prompt is not ported; no executing Swift predicate. Open obligation.
 Original expression:
   QVERIFY2(doc.smf().write() == beforeClamp && doc.undoStack()->index() == clampUndo &&
                    doc.undoStack()->count() == clampUndoCount && doc.revision() == clampRevision,
                "clamped step keys wrote to the song")
 
 A104 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:649
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "Escape did not close the clamped prompt")
 
 A105 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:653
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: suite-teardown byte-restoration epilogue with no executing Swift predicate. Open obligation.
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
@@ -1018,3 +1026,78 @@ Swift expression:
   report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0),
                          cppID: drawerVelocityPromptID,
                          what: "the note the prompt never captured keeps its own velocity")
+
+S047 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift:194
+Swift expression:
+    report.expect(fixture.page.openSelectedVelocityPrompt() &&
+                  fixture.page.promptInitialValue == 73 && fixture.page.promptDraft == "73",
+                  cppID: id, message: "A004: the selected note seeds the prompt with velocity 73")
+
+S048 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift:198
+Swift expression:
+    report.expect(coreTimeBytes(fixture.document) == before &&
+                  fixture.document.revision == revision &&
+                  fixture.document.history.currentIdentity == identity,
+                  cppID: id, message: "A007: drafting 95 does not write song bytes or history")
+
+S049 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift:202
+Swift expression:
+    report.expect(fixture.page.acceptPrompt() &&
+                  fixture.document.note(noteID)?.velocity == 95 &&
+                  fixture.document.revision == revision + 1 &&
+                  fixture.document.history.currentIdentity != identity,
+                  cppID: id, message: "A010: accepting 95 changes the captured note in one edit")
+
+S050 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift:207
+Swift expression:
+    report.expect(acceptedValues == [95], cppID: id,
+                  message: "accepting 95 latches the velocity for subsequent drawing")
+
+S051 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift:210
+Swift expression:
+    report.expect(undone &&
+                  fixture.document.note(noteID)?.velocity == 73 &&
+                  coreTimeBytes(fixture.document) == before,
+                  cppID: id, message: "A012: one undo restores the original 73-velocity song bytes")
+
+S052 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift:216
+Swift expression:
+    report.expect(fixture.page.openSelectedVelocityPrompt() && fixture.page.acceptPrompt() &&
+                  drawerVelocityDocumentSnapshot(fixture.document) == afterUndo &&
+                  acceptedValues == [95, 73],
+                  cppID: id, message: "A018: accepting unchanged 73 relatches without a document edit")
+
+S053 | checkVelocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.swift:235
+Swift expression:
+    report.expect(!fixture.page.openSelectedVelocityPrompt() &&
+                  drawerVelocityDocumentSnapshot(fixture.document) == before,
+                  cppID: id, message: "A024: opening without a selected note writes nothing")
+
+S054 | checkVelocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.swift:243
+Swift expression:
+    report.expect(!fixture.page.promptOpen &&
+                  drawerVelocityDocumentSnapshot(fixture.document) == before,
+                  cppID: id, message: "A029: cancelling a 20 draft leaves history and notes untouched")
+
+S055 | checkVelocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.swift:252
+Swift expression:
+    report.expect(!fixture.page.acceptPrompt() && !fixture.page.promptOpen &&
+                  fixture.document.note(noteID)?.velocity == 40 &&
+                  drawerVelocityDocumentSnapshot(fixture.document) == afterForeignWrite,
+                  cppID: id, message: "A039: a stale 30 draft never overwrites the foreign 40 edit")
+
+S056 | checkVelocityPromptBounds | src/checks/rollcheck/velocity_prompt.swift:273
+Swift expression:
+    report.expect(!fixture.page.acceptPrompt() && fixture.page.promptOpen &&
+                  drawerVelocityDocumentSnapshot(fixture.document) == before,
+                  cppID: id, message: "invalid 999 leaves the prompt open and the song unchanged")
+
+S057 | checkVelocityPromptBounds | src/checks/rollcheck/velocity_prompt.swift:277
+Swift expression:
+    report.expect(fixture.page.acceptPrompt() && fixture.document.note(noteID)?.velocity == 1,
+                  cppID: id, message: "valid lower-bound velocity 1 commits")
+
+S058 | checkVelocityPromptBounds | src/checks/rollcheck/velocity_prompt.swift:281
+Swift expression:
+    report.expect(fixture.page.acceptPrompt() && fixture.document.note(noteID)?.velocity == 127,
+                  cppID: id, message: "valid upper-bound velocity 127 commits")

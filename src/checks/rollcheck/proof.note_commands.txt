@@ -5,27 +5,45 @@ Original: src/checks/rollcheck/note_commands.cpp
 Original SHA-256: e9083e9d41a8aa34a5e93d88056383343f408d7d473c49b66eab0aa964969b97
 Swift counterpart: src/checks/rollcheck/note_commands.swift
 Swift SHA-256: 5cacc138997ef46d430435cf9547c9fadda41b30ebe25898f6a3d804300dc4f4
-Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
-Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
 S identifiers identify exact counterpart predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
+MATCHED identifies equivalent Swift predicates executed by the swiftcore suite.
 PARTIAL identifies related counterpart predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift surface.
+NATIVE identifies retained native popup-window/menu obligations; it does not establish
+coverage of the converted Swift surface.
 GAP identifies an original predicate without a replacement assertion.
-Disposition totals: MATCHED 22, PARTIAL 0, GAP 38, NATIVE 4. Swift command assertions cover the specific seeded-note, selection, split-fragment, no-op bytes, join-survivor and fixture-unwind predicates cited below. Exact history-index increments, native popup clicks and fixture guards without a Swift report.expect remain GAP. Four native popup-window observations remain NATIVE.
+runNoteCommandChecks executes the nine command scenarios in note_commands.swift against
+NoteCommandFixture, growToThreeCells, PianoGrid.performCommand and EditorCommandRouter.
+The Swift predicates cover the seeded-note, copy, split-fragment, join-survivor,
+no-op-byte and fixture-unwind observables. Sites whose original expression asserts an
+exact undo index/count stay PARTIAL because the Swift predicate proves the history
+identity and bytes instead. The native note-menu session (open, typed row, real row
+click, close) stays NATIVE. Disposition tally: 64 sites: 50 MATCHED, 9 PARTIAL, 1 GAP,
+4 NATIVE.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS (controller, 10.17s); runNoteCommandChecks executed its Swift report.expect predicates. The original native popup interaction and exact C++ history-index predicates are not covered by this evidence.
+Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore
+projectSession suite executed runNoteCommandChecks and the S001-S056 predicates.
+Command: deno task verify:qml-roll --verbose
+Result: PASS — 1/1 ok (controller-recorded post-change run); no note-command site
+depends on the roll QML lane.
+Command: deno task verify:shell --verbose
+Result: PASS — 11/11 ok (controller-recorded post-change run); no note-command site
+depends on the shell lane. The shell and roll QML runs predate only a
+swiftcore-checks-only commit; no production or QML source changed after them.
 
 Execution and ownership
-runNoteCommandChecks in src/checks/rollcheck/note_commands.swift runs nine command scenarios through NoteCommandFixture, PianoGrid.performCommand, and EditorCommandRouter for time-selection precedence. The existing gated C++ routing checks S001-S022 cover other commands, not these original split/join/duplicate predicates. The Swift popup scenario invokes the command handler directly rather than opening and clicking a native menu.
+runNoteCommandChecks in src/checks/rollcheck/note_commands.swift runs nine command
+scenarios through NoteCommandFixture, PianoGrid.performCommand and EditorCommandRouter
+(for the time-selection precedence scenario) in the projectSession Swift suite. The
+retired gated C++ routing checks are dead citations and are no longer indexed. The Swift
+popup scenario invokes the command handler directly rather than opening and clicking a
+native menu, so the menu-session sites stay NATIVE.
 
 Fixture, sequence and row constraints
 keyboardNoteCommandPopupActivation expands over three data rows (duplicate/split/join); per-fragment and per-offset loops re-execute split sites; every slot unwinds through the unwindTo helper (A001) to its local SMF baseline. keyboardNoteCommandPopupActivation_data carries no assertions.
@@ -36,7 +54,7 @@ Original assertion inventory and source sequence
 
 A001 | ? | src/checks/rollcheck/note_commands.cpp:85
 Disposition: MATCHED
-Mapping: S023 src/checks/rollcheck/note_commands.swift:111 compares restored MIDI bytes and history identity after each fixture unwind.
+Mapping: S003 (src/checks/rollcheck/note_commands.swift:111-113) drains NoteCommandFixture back to the original identity and asserts the encoded document bytes equal the captured originals — the helper unwindTo's restored-bytes guard.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -126,8 +144,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before);
 
 A002 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:128
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Disposition: MATCHED
+Mapping: S001 (note_commands.swift:131) fails the scenario when the free grid-aligned seed note cannot be created (withNoteCommandFixture guard), the Swift form of the seed precondition.
 Source context since previous assertion:
   }
 
@@ -176,7 +194,7 @@ Original expression:
 
 A003 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:137
 Disposition: MATCHED
-Mapping: S024 src/checks/rollcheck/note_commands.swift:154 asserts the seeded note exists by tick, pitch and ID before duplication.
+Mapping: S004 (note_commands.swift:154-155) asserts the duplicate-notes seed note is present at the fixture tick/pitch.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -191,8 +209,8 @@ Original expression:
                "duplicate-notes seed note was not found");
 
 A004 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:143
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S005 (note_commands.swift:160-162) asserts the duplicate copy one span later with a new identity and a history entry, and S002 (note_commands.swift:99-103) asserts one undo restores the exact pre-command bytes. Unproved: the exact undo index +1 / count increment that this original expression pins; the Swift predicate proves the history identity and bytes instead.
 Source context since previous assertion:
       view.selectionModel().setNoteSelection({source.noteId});
       const int duplicateUndoIndex = doc.undoStack()->index();
@@ -206,7 +224,7 @@ Original expression:
 
 A005 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:148
 Disposition: MATCHED
-Mapping: S025 src/checks/rollcheck/note_commands.swift:163 asserts only the duplicated note is selected.
+Mapping: S006 (note_commands.swift:163-164) asserts the duplicate selects only its copy.
 Source context since previous assertion:
       const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
 Original expression:
@@ -215,7 +233,7 @@ Original expression:
 
 A006 | PianoRollTest::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.cpp:150
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: PianoGrid has no time-selection state (the automation page owns time selection separately), so no Swift predicate observes that note duplication left the roll time selection inactive.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -223,8 +241,8 @@ Original expression:
                "note duplication leaked into the time selection");
 
 A007 | PianoRollTest::keyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.cpp:159
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Disposition: MATCHED
+Mapping: S007 (note_commands.swift:176-177) asserts the duplicate-precedence seed note is present.
 Source context since previous assertion:
       unwindTo(doc, undo, before);
   }
@@ -238,7 +256,7 @@ Original expression:
 
 A008 | PianoRollTest::keyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.cpp:169
 Disposition: MATCHED
-Mapping: S026 src/checks/rollcheck/note_commands.swift:176 asserts the seeded note is present before the time-selection duplicate.
+Mapping: S007 (note_commands.swift:176-177) asserts the duplicate-precedence seed note is present.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -254,8 +272,8 @@ Original expression:
                "duplicate-precedence seed note was not found");
 
 A009 | PianoRollTest::keyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.cpp:179
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S008 (note_commands.swift:189-194) asserts the time range advances by one span, the copy exists and the edit cursor advances, and S002 (note_commands.swift:99-103) asserts one undo restores the pre-command bytes. Unproved: the exact undo index +1 that this original expression pins.
 Source context since previous assertion:
       view.selectionModel().setNoteSelection({source.noteId});
       view.selectionModel().setTimeSelection(
@@ -274,8 +292,8 @@ Original expression:
                "Ctrl+D with both selections did not run the time-range arm");
 
 A010 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:192
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Disposition: MATCHED
+Mapping: S010 (note_commands.swift:209-210) asserts the grown split seed spans three grid cells at the fixture tick (growToThreeCells).
 Source context since previous assertion:
       unwindTo(doc, undo, before);
   }
@@ -289,7 +307,7 @@ Original expression:
 
 A011 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:202
 Disposition: MATCHED
-Mapping: S027 src/checks/rollcheck/note_commands.swift:209 checks the grid-aligned split source starts at the fixture tick and spans three grid cells.
+Mapping: S010 (note_commands.swift:209-210) asserts the aligned three-cell split seed exists (the growToThreeCells guard fails otherwise, note_commands.swift:206).
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -304,8 +322,8 @@ Original expression:
   QVERIFY2(alignedSeed.has_value(), qUtf8Printable(seedDiagnostic));
 
 A012 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:210
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S011 (note_commands.swift:218-220) asserts three grid-length fragments and a history entry, and S002 (note_commands.swift:99-103) asserts one undo restores the pre-command bytes. Unproved: the exact undo index +1 that this original expression pins.
 Source context since previous assertion:
       const DocNote &source = *alignedSeed;
       const Tick start = source.tick;
@@ -323,7 +341,7 @@ Original expression:
 
 A013 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:216
 Disposition: MATCHED
-Mapping: S028 src/checks/rollcheck/note_commands.swift:221 asserts three selected IDs exactly match the three split fragments.
+Mapping: S012 (note_commands.swift:221-223) asserts the split reselects exactly its three fragments.
 Source context since previous assertion:
       const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
 Original expression:
@@ -331,7 +349,7 @@ Original expression:
 
 A014 | PianoRollTest::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.cpp:218
 Disposition: MATCHED
-Mapping: S029 src/checks/rollcheck/note_commands.swift:225 resolves each selected note and checks its tick inside the source span, once per fragment.
+Mapping: S013 (note_commands.swift:225-227) asserts every selected fragment lies inside the source span.
 Source context since previous assertion:
       for (NoteId id : selection) {
 Original expression:
@@ -339,8 +357,8 @@ Original expression:
                    "the split selection contains a note outside the fragments");
 
 A015 | PianoRollTest::keyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.cpp:228
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Disposition: MATCHED
+Mapping: S015 (note_commands.swift:241-242) asserts the split-cursor seed note is present.
 Source context since previous assertion:
       }
       unwindTo(doc, undo, before);
@@ -355,7 +373,7 @@ Original expression:
 
 A016 | PianoRollTest::keyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.cpp:237
 Disposition: MATCHED
-Mapping: S030 src/checks/rollcheck/note_commands.swift:241 checks the seed note exists by tick, pitch and ID before cursor split.
+Mapping: S015 (note_commands.swift:241-242) asserts the split-cursor seed note is present.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -370,8 +388,8 @@ Original expression:
                "split-cursor seed note was not found");
 
 A017 | PianoRollTest::keyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.cpp:244
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S016 (note_commands.swift:248-252) asserts the unselected note splits at the edit cursor into the two exact-duration pieces with a history entry, and S002 (note_commands.swift:99-103) asserts one undo restores the pre-command bytes. Unproved: the exact undo index +1.
 Source context since previous assertion:
       const Tick cursorTick = d.tick + source.duration / 2;
       view.setEditCursorTick(cursorTick);
@@ -387,8 +405,8 @@ Original expression:
                "Ctrl+E did not split the unselected note at the edit cursor in one undo step");
 
 A018 | PianoRollTest::keyboardSplitNoop | src/checks/rollcheck/note_commands.cpp:257
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Disposition: MATCHED
+Mapping: S001 (note_commands.swift:131) fails the scenario when the free grid-aligned seed note cannot be created, the Swift form of the no-op-split seed precondition.
 Source context since previous assertion:
       unwindTo(doc, undo, before);
   }
@@ -401,8 +419,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A019 | PianoRollTest::keyboardSplitNoop | src/checks/rollcheck/note_commands.cpp:269
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S018 (note_commands.swift:269-270) asserts the split outside every note records no undo entry (history identity unchanged). Unproved: the exact undo index equality that this original expression pins; the Swift predicate proves no entry through identity equality.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -420,15 +438,15 @@ Original expression:
 
 A020 | PianoRollTest::keyboardSplitNoop | src/checks/rollcheck/note_commands.cpp:270
 Disposition: MATCHED
-Mapping: S031 src/checks/rollcheck/note_commands.swift:271 compares encoded MIDI bytes before and after the no-op split at timeline end.
+Mapping: S019 (note_commands.swift:271-273) asserts the no-op split leaves the encoded document bytes unchanged and the selection empty.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
   QCOMPARE(doc.smf().write(), before);
 
 A021 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:277
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Disposition: MATCHED
+Mapping: S001 (note_commands.swift:131) fails the scenario when the free grid-aligned join seed cannot be created.
 Source context since previous assertion:
   }
 
@@ -441,7 +459,7 @@ Original expression:
 
 A022 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:286
 Disposition: MATCHED
-Mapping: S032 src/checks/rollcheck/note_commands.swift:282 asserts the first join note exists by tick, pitch and ID before adding its partner.
+Mapping: S020 (note_commands.swift:282-283) asserts the join seed note is present.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -455,8 +473,8 @@ Original expression:
   QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &first), "join seed note was not found");
 
 A023 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:290
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S021 (note_commands.swift:289) fails the scenario when the second join note does not land at its tick.
 Source context since previous assertion:
       const Tick secondTick = d.tick + 2 * first.duration;
       doc.addNotes(track, {{secondTick, uint8_t(d.key), first.duration, first.velocity}});
@@ -466,8 +484,8 @@ Original expression:
                "the second join note did not land");
 
 A024 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:296
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S022 (note_commands.swift:297-299) asserts the one-span join with a history entry, and S002 (note_commands.swift:99-103) asserts one undo restores both original notes. Unproved: the exact undo index +1.
 Source context since previous assertion:
       view.selectionModel().setNoteSelection({first.noteId, second.noteId});
       const int joinUndoIndex = doc.undoStack()->index();
@@ -481,7 +499,7 @@ Original expression:
 
 A025 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:300
 Disposition: MATCHED
-Mapping: S033 src/checks/rollcheck/note_commands.swift:300 asserts the second same-key note is absent after join.
+Mapping: S023 (note_commands.swift:300-301) asserts the join removed its second note.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -490,7 +508,7 @@ Original expression:
 
 A026 | PianoRollTest::keyboardJoinNotes | src/checks/rollcheck/note_commands.cpp:303
 Disposition: MATCHED
-Mapping: S034 src/checks/rollcheck/note_commands.swift:302 asserts only the newly joined note ID remains selected.
+Mapping: S024 (note_commands.swift:302-303) asserts the join selects only the joined note.
 Source context since previous assertion:
       const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
 Original expression:
@@ -498,8 +516,8 @@ Original expression:
                "Ctrl+J did not reselect the joined note");
 
 A027 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:313
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Disposition: MATCHED
+Mapping: S001 (note_commands.swift:131) fails the scenario when the free grid-aligned mixed-join seed cannot be created.
 Source context since previous assertion:
       unwindTo(doc, undo, before);
   }
@@ -513,8 +531,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A028 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:324
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S001 (note_commands.swift:131) fails the scenario when the free grid-aligned mixed-join seed cannot be created, the Swift form of the seed precondition.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -531,8 +549,8 @@ Original expression:
                "the mixed-join seed note was not found");
 
 A029 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:329
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S026 (note_commands.swift:327-328) fails the scenario when the mixed-join pair partner does not land, the Swift form of the partner-landing precondition.
 Source context since previous assertion:
       const Tick pairEndTick = d.tick + 2 * grid;
       doc.addNotes(track, {{pairEndTick, uint8_t(d.key), grid, 44}});
@@ -542,8 +560,8 @@ Original expression:
                "the mixed-join pair partner did not land");
 
 A030 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:336
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S026 (note_commands.swift:327-328) fails the scenario when the mixed-join singleton does not land, the Swift form of the singleton-landing precondition.
 Source context since previous assertion:
       const Tick singletonTick = d.tick + grid;
       const uint8_t singletonKey = uint8_t(d.key == 24 ? 25 : 24);
@@ -554,8 +572,8 @@ Original expression:
                "the mixed-join singleton did not land");
 
 A031 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:342
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S027 (note_commands.swift:335-336) fails the scenario when no free pitch exists for the unterminated join group.
 Source context since previous assertion:
       // A raw note-on detects accidental end synthesis when rebuilding skipped groups.
       const Tick openTick = d.tick + 8 * grid;
@@ -564,8 +582,8 @@ Original expression:
   QVERIFY2(openKeyInt < 128, "no free pitch for the unterminated join group");
 
 A032 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:352
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S028 (note_commands.swift:346-347) fails the scenario when the unterminated join group does not land as an unterminated note with the assigned ID.
 Source context since previous assertion:
       const uint8_t openKey = uint8_t(openKeyInt);
       const uint8_t openChannel = doc.channelFor(track);
@@ -581,8 +599,8 @@ Original expression:
                "the unterminated join group did not land");
 
 A033 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:361
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S029 (note_commands.swift:354-356) asserts the three-cell join preserving the first velocity with a history entry, and S002 (note_commands.swift:99-103) asserts one undo restores every mixed-join group. Unproved: the exact undo index +1.
 Source context since previous assertion:
       view.selectionModel().setNoteSelection(
           {first.noteId, second.noteId, singleton.noteId, open.noteId});
@@ -598,7 +616,7 @@ Original expression:
 
 A034 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:365
 Disposition: MATCHED
-Mapping: S035 src/checks/rollcheck/note_commands.swift:357 asserts the same-key pair partner is removed by mixed join.
+Mapping: S030 (note_commands.swift:357-358) asserts the mixed join removed the same-key partner.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -607,7 +625,7 @@ Original expression:
 
 A035 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:368
 Disposition: MATCHED
-Mapping: S036 src/checks/rollcheck/note_commands.swift:360 compares the surviving other-pitch singleton identity, tick, duration and velocity with its pre-join note.
+Mapping: S031 (note_commands.swift:360-364) asserts the other-pitch singleton keeps its identity, tick, duration and velocity.
 Source context since previous assertion:
       DocNote singletonAfter;
 Original expression:
@@ -619,7 +637,7 @@ Original expression:
 
 A036 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:374
 Disposition: MATCHED
-Mapping: S037 src/checks/rollcheck/note_commands.swift:365 checks the raw other-pitch note remains unterminated after the join.
+Mapping: S032 (note_commands.swift:365-366) asserts the mixed join does not synthesize an end for the unterminated note.
 Source context since previous assertion:
       DocNote openAfter;
 Original expression:
@@ -628,7 +646,7 @@ Original expression:
 
 A037 | PianoRollTest::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.cpp:377
 Disposition: MATCHED
-Mapping: S038 src/checks/rollcheck/note_commands.swift:367 asserts three selected notes include the joined note, other-pitch singleton and unterminated group.
+Mapping: S033 (note_commands.swift:367-370) asserts the join selects the joined and surviving notes (three IDs).
 Source context since previous assertion:
       const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
 Original expression:
@@ -637,8 +655,8 @@ Original expression:
                "Ctrl+J did not reselect the joined and surviving notes");
 
 A038 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:389
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Disposition: MATCHED
+Mapping: S035 (note_commands.swift:385-386) fails the scenario when the combined-split seed does not grow to three cells.
 Source context since previous assertion:
       unwindTo(doc, undo, before);
   }
@@ -652,8 +670,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A039 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:400
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S035 (note_commands.swift:385-386) fails the scenario when the aligned three-cell combined-split seed is unavailable.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -669,8 +687,8 @@ Original expression:
   QVERIFY2(alignedSeed.has_value(), qUtf8Printable(seedDiagnostic));
 
 A040 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:408
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S036 (note_commands.swift:401-402) fails the scenario when the cursor straddler does not land.
 Source context since previous assertion:
       const DocNote &source = *alignedSeed;
       const Tick start = source.tick;
@@ -684,8 +702,8 @@ Original expression:
                "the cursor straddler did not land");
 
 A041 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:415
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S036 (note_commands.swift:401-402) fails the scenario when the bystander note does not land.
 Source context since previous assertion:
       const Tick bystanderTick = straddlerTick + 5 * grid;
       const uint8_t bystanderKey = uint8_t(d.key == 30 ? 31 : 30);
@@ -696,8 +714,8 @@ Original expression:
                "the untouched bystander note did not land");
 
 A042 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:426
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S037 (note_commands.swift:410-411) asserts both split arms commit as one transaction (identity change), and S045 (note_commands.swift:440-443) asserts one undo restores both arms. Unproved: the exact undo index +1 that this original expression pins.
 Source context since previous assertion:
       const Tick cursorTick = straddlerTick + grid;
       view.setEditCursorTick(cursorTick);
@@ -713,7 +731,7 @@ Original expression:
 
 A043 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:429
 Disposition: MATCHED
-Mapping: S039 src/checks/rollcheck/note_commands.swift:416 checks each of three grid offsets contains a grid-duration fragment of the selected source.
+Mapping: S038 (note_commands.swift:416-417) asserts each source fragment is split along every grid line with duration grid.
 Source context since previous assertion:
       for (int offset = 0; offset < 3; ++offset) {
 Original expression:
@@ -723,7 +741,7 @@ Original expression:
 
 A044 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:433
 Disposition: MATCHED
-Mapping: S040 src/checks/rollcheck/note_commands.swift:419 asserts a grid-duration left fragment at the straddler start and pitch.
+Mapping: S039 (note_commands.swift:419-420) asserts the straddler's left half stays in place with duration grid.
 Source context since previous assertion:
       }
 Original expression:
@@ -732,7 +750,7 @@ Original expression:
 
 A045 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:435
 Disposition: MATCHED
-Mapping: S041 src/checks/rollcheck/note_commands.swift:421 asserts a grid-duration right fragment at the edit cursor and straddler pitch.
+Mapping: S040 (note_commands.swift:421-422) asserts the straddler splits at the edit cursor.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -741,7 +759,7 @@ Original expression:
 
 A046 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:438
 Disposition: MATCHED
-Mapping: S042 src/checks/rollcheck/note_commands.swift:423 asserts exactly four selected IDs equal the three source fragments plus the bystander.
+Mapping: S041 (note_commands.swift:423-425) asserts only the source fragments plus the bystander remain selected (four IDs).
 Source context since previous assertion:
       const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
 Original expression:
@@ -751,7 +769,7 @@ Original expression:
 
 A047 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:444
 Disposition: MATCHED
-Mapping: S043 src/checks/rollcheck/note_commands.swift:427 resolves every selected non-bystander ID and checks source pitch and three-cell tick span.
+Mapping: S042 (note_commands.swift:427-430) asserts every selected non-bystander note is a source fragment inside the source span.
 Source context since previous assertion:
       for (NoteId id : selection) {
           if (id == bystander.noteId)
@@ -763,7 +781,7 @@ Original expression:
 
 A048 | PianoRollTest::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.cpp:449
 Disposition: MATCHED
-Mapping: S044 src/checks/rollcheck/note_commands.swift:433 compares the bystander ID, tick, duration and velocity after the combined split with its pre-split values.
+Mapping: S043 (note_commands.swift:433-437) asserts the also-selected bystander keeps its identity, tick, duration and velocity.
 Source context since previous assertion:
       }
       DocNote untouched;
@@ -774,8 +792,8 @@ Original expression:
                "Ctrl+E disturbed the also-selected bystander note");
 
 A049 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:472
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per data row (duplicate/split/join).
+Disposition: MATCHED
+Mapping: S001 (note_commands.swift:131) fails the scenario when the free grid-aligned popup-activation seed cannot be created for each command row.
 Source context since previous assertion:
       unwindTo(doc, undo, before);
   }
@@ -800,8 +818,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A050 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:484
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per data row (duplicate/split/join).
+Disposition: MATCHED
+Mapping: S001 (note_commands.swift:131) fails the scenario when the popup-activation seed note cannot be created.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -819,8 +837,8 @@ Original expression:
                "the popup-activation seed note was not found");
 
 A051 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:491
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per data row (duplicate/split/join).
+Disposition: MATCHED
+Mapping: S046 (note_commands.swift:457-458) fails the scenario when the popup split seed does not grow to three cells.
 Source context since previous assertion:
       const Tick grid = view.grid().gridTicksAt(d.tick);
       const Tick secondTick = d.tick + 2 * grid;
@@ -831,8 +849,8 @@ Original expression:
   QVERIFY2(alignedSeed.has_value(), qUtf8Printable(seedDiagnostic));
 
 A052 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:496
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per data row (duplicate/split/join).
+Disposition: MATCHED
+Mapping: S047 (note_commands.swift:471-472) fails the scenario when the popup-join partner does not land.
 Source context since previous assertion:
           source = *alignedSeed;
       } else if (command == songview::pianoroll_detail::NoteMenuAction::Join) {
@@ -844,7 +862,7 @@ Original expression:
 
 A053 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:505
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation. Runs once per data row (duplicate/split/join).
+Mapping/reason: Original native popup obligation: the Quick note menu session must open on a right click. The Swift check invokes the command handler directly and opens no menu.
 Source context since previous assertion:
           view.selectionModel().setNoteSelection({source.noteId, partner.noteId});
       }
@@ -858,7 +876,7 @@ Original expression:
 
 A054 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:507
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation. Runs once per data row (duplicate/split/join).
+Mapping/reason: Original native popup obligation: the typed command row must exist in the Quick note menu model.
 Source context since previous assertion:
       const int row = noteRow(*opened.model, command);
 Original expression:
@@ -866,7 +884,7 @@ Original expression:
 
 A055 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:509
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation. Runs once per data row (duplicate/split/join).
+Mapping/reason: Original native popup obligation: a real click on the command's note-menu row must dispatch. The Swift check calls PianoGrid.performCommand(command:) without menu delivery.
 Source context since previous assertion:
       const int commandUndoIndex = doc.undoStack()->index();
 Original expression:
@@ -875,7 +893,7 @@ Original expression:
 
 A056 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:512
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation. Runs once per data row (duplicate/split/join).
+Mapping/reason: Original native popup obligation: the Quick note menu must close after the row activation.
 Source context since previous assertion:
       QCoreApplication::processEvents();
 Original expression:
@@ -883,8 +901,8 @@ Original expression:
                "the command's note menu activation left the menu open");
 
 A057 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:517
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per data row (duplicate/split/join).
+Disposition: MATCHED
+Mapping: S048 (note_commands.swift:485-486) asserts the Duplicate command creates a same-length copy one span later (menu rows and keyboard commands share PianoGrid.performCommand).
 Source context since previous assertion:
       DocNote observed;
       if (command == songview::pianoroll_detail::NoteMenuAction::Duplicate) {
@@ -894,8 +912,8 @@ Original expression:
                    "the Duplicate row did not duplicate the selected note one span later");
 
 A058 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:521
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per data row (duplicate/split/join).
+Disposition: MATCHED
+Mapping: S049 (note_commands.swift:487-488) asserts the Duplicate command selects its copy.
 Source context since previous assertion:
           const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
 Original expression:
@@ -903,8 +921,8 @@ Original expression:
                    "the Duplicate row did not reselect the copy");
 
 A059 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:526
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per data row (duplicate/split/join).
+Disposition: MATCHED
+Mapping: S050 (note_commands.swift:494-495) asserts the Split command yields a grid-length piece for each offset.
 Source context since previous assertion:
       } else if (command == songview::pianoroll_detail::NoteMenuAction::Split) {
           const Tick start = source.tick;
@@ -915,8 +933,8 @@ Original expression:
                        "the Split row did not split the note into grid pieces");
 
 A060 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:531
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per data row (duplicate/split/join).
+Disposition: MATCHED
+Mapping: S051 (note_commands.swift:497-499) asserts the Split command selects all three pieces.
 Source context since previous assertion:
           }
           const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
@@ -924,8 +942,8 @@ Original expression:
   QVERIFY2(selection.size() == 3, "the Split row did not keep every piece selected");
 
 A061 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:533
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per data row (duplicate/split/join).
+Disposition: MATCHED
+Mapping: S052 (note_commands.swift:502-503) asserts the Join command spans the same-key pair into three grid cells.
 Source context since previous assertion:
       } else {
 Original expression:
@@ -934,8 +952,8 @@ Original expression:
                    "the Join row did not join the same-key pair into one span");
 
 A062 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:536
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per data row (duplicate/split/join).
+Disposition: MATCHED
+Mapping: S053 (note_commands.swift:504-505) asserts the Join command removes its partner.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -943,16 +961,16 @@ Original expression:
                    "the Join row left the second note behind");
 
 A063 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:539
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per data row (duplicate/split/join).
+Disposition: MATCHED
+Mapping: S054 (note_commands.swift:506-507) asserts the Join command selects only the merged note.
 Source context since previous assertion:
           const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
 Original expression:
   QVERIFY2(selection.size() == 1, "the Join row did not leave only the joined note selected");
 
 A064 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:541
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Runs once per data row (duplicate/split/join).
+Disposition: PARTIAL
+Mapping/reason: S055 (note_commands.swift:511-512) asserts the command records a history entry, and S056 (note_commands.swift:513-516) asserts one undo restores the pre-menu document. Unproved: the exact undo index +1 that this original expression pins.
 Source context since previous assertion:
       }
 Original expression:
@@ -963,225 +981,262 @@ Remaining original source (closing sequence and helper bodies):
       unwindTo(doc, undo, before);
   }
 
-Counterpart executable predicate index
-S001-S022 retain the gated C++ QTest routing predicates; they do not close these note-command A sites. S023-S044 record the Swift report.expect predicates executed by the green swiftcore run. Each MATCHED mapping cites its exact counterpart; history-index and popup-activation obligations remain open.
+Swift assertion predicates
+The S entries are exact report.expect/fail predicates already executed by
+runNoteCommandChecks in the swiftcore projectSession suite (deno task verify --filter
+swiftcore --verbose, PASS 1/14 ok, controller-recorded).
 
-S001 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:587
-Counterpart expression:
-  QSKIP("focused-grid command routing belongs to selectionkey");
+S001 | withNoteCommandFixture fixture guard | src/checks/rollcheck/note_commands.swift:131
+  report.fail(id, "could not seed a free grid-aligned note")
 
-S002 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:590
-Counterpart expression:
-  QVERIFY2(fixture.open(&error), qPrintable(error));
+S002 | NoteCommandFixture.expectOneUndo | src/checks/rollcheck/note_commands.swift:99
+  report.expect(document.history.undoDocument(), cppID: id,
+                message: "one undo reverses the command")
+  report.expect((try? document.state.file.encoded()) == baselineBytes &&
+                    document.history.currentIdentity == baselineIdentity,
+                cppID: id, message: "one undo restores the exact pre-command document")
 
-S003 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:592
-Counterpart expression:
-  QVERIFY2(target.has_value(), qPrintable(error));
-
-S004 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:594
-Counterpart expression:
-  QVERIFY(item != nullptr);
-
-S005 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:598
-Counterpart expression:
-  QVERIFY(nudge != nullptr);
-
-S006 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:599
-Counterpart expression:
-  QTRY_VERIFY_WITH_TIMEOUT(nudge->isEnabled(), kSettleTimeoutMs);
-
-S007 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:600
-Counterpart expression:
-  QVERIFY(sendShortcut(fixture.view(), nudge));
-
-S008 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:601
-Counterpart expression:
-  QVERIFY(QTest::qWaitFor(
-          [&] {
-              QString ignored;
-              const auto moved = noteWithId(fixture.notes(&ignored), target->id);
-              return moved && moved->tick == target->tick + fixture.snap() &&
-                     moved->pitch == target->pitch;
-          },
-          kSettleTimeoutMs));
-
-S009 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:611
-Counterpart expression:
-  QVERIFY(pencil != nullptr && sendShortcut(fixture.view(), pencil));
-
-S010 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:612
-Counterpart expression:
-  QVERIFY(fixture.grid()->property("pencilMode").toBool());
-
-S011 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:616
-Counterpart expression:
-  QVERIFY(fixture.grid()->property("pencilMode").toBool());
-
-S012 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:618
-Counterpart expression:
-  QVERIFY(deleteNotes != nullptr && deleteNotes->isEnabled());
-
-S013 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:623
-Counterpart expression:
-  QVERIFY(movedItem != nullptr);
-
-S014 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:631
-Counterpart expression:
-  QVERIFY(sendShortcut(fixture.view(), deleteNotes));
-
-S015 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:632
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
-
-S016 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:635
-Counterpart expression:
-  QVERIFY(sendShortcut(fixture.view(), pencil));
-
-S017 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:636
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("pencilMode").toBool(), !pencilBefore);
-
-S018 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:637
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
-
-S019 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:638
-Counterpart expression:
-  QVERIFY(sendShortcut(fixture.view(), pencil));
-
-S020 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:639
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("pencilMode").toBool(), pencilBefore);
-
-S021 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:640
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
-
-S022 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:642
-Counterpart expression:
-  QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
-
-S023 | NoteCommandFixture.restore | src/checks/rollcheck/note_commands.swift:111
-Counterpart expression:
+S003 | NoteCommandFixture.restore | src/checks/rollcheck/note_commands.swift:111
   report.expect((try? document.state.file.encoded()) == originalBytes &&
                     document.history.currentIdentity == originalIdentity,
                 cppID: id, message: "fixture unwinds to the exact original MIDI bytes")
 
-S024 | checkKeyboardDuplicateNotes | src/checks/rollcheck/note_commands.swift:154
-Counterpart expression:
+S004 | swiftcore/PianoRoll::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.swift:154
   report.expect(fixture.note(at: fixture.tick)?.id == source.id,
                 cppID: id, message: "the duplicate-notes seed is present")
 
-S025 | checkKeyboardDuplicateNotes | src/checks/rollcheck/note_commands.swift:163
-Counterpart expression:
+S005 | swiftcore/PianoRoll::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.swift:160
+  report.expect(document.history.currentIdentity != before &&
+                    copy?.duration == source.duration && copy?.id != source.id,
+                cppID: id, message: "duplicate creates one equal-length copy one span later")
+
+S006 | swiftcore/PianoRoll::keyboardDuplicateNotes | src/checks/rollcheck/note_commands.swift:163
   report.expect(copy.map { session.selectedNoteOrder == [$0.id] } == true,
                 cppID: id, message: "duplicate selects only its copy")
 
-S026 | checkKeyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.swift:176
-Counterpart expression:
+S007 | swiftcore/PianoRoll::keyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.swift:176
   report.expect(fixture.note(at: source.tick)?.id == source.id, cppID: id,
                 message: "the duplicate-precedence seed is present")
 
-S027 | checkKeyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift:209
-Counterpart expression:
+S008 | swiftcore/PianoRoll::keyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.swift:189
+  report.expect(session.document.history.currentIdentity != before &&
+                    page.selection?.range == TimeRange(
+                        startTick: source.tick + fixture.step,
+                        endTick: source.tick + 2 * fixture.step) &&
+                    copy != nil && session.editCursor == source.tick + 2 * fixture.step,
+                cppID: id, message: "active time range owns duplicate and advances the cursor")
+
+S009 | swiftcore/PianoRoll::keyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.swift:195
+  report.expect(session.selectedNoteOrder == [source.id], cppID: id,
+                message: "time-range duplication leaves the note selection on its source")
+
+S010 | swiftcore/PianoRoll::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift:209
   report.expect(source.tick == fixture.tick && source.duration == 3 * fixture.step,
                 cppID: id, message: "the split seed spans three grid cells")
 
-S028 | checkKeyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift:221
-Counterpart expression:
+S011 | swiftcore/PianoRoll::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift:218
+  report.expect(session.document.history.currentIdentity != before &&
+                    pieces.count == 3 && pieces.allSatisfy { $0.duration == fixture.step },
+                cppID: id, message: "split commits three grid-length fragments")
+
+S012 | swiftcore/PianoRoll::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift:221
   report.expect(session.selectedNoteOrder.count == 3 &&
                     Set(session.selectedNoteOrder) == Set(pieces.map(\.id)),
                 cppID: id, message: "split reselects exactly its three fragments")
 
-S029 | checkKeyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift:225
-Counterpart expression:
+S013 | swiftcore/PianoRoll::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift:225
   report.expect(session.document.note(selected).map {
       $0.tick >= fixture.tick && $0.tick < fixture.tick + 3 * fixture.step
   } == true, cppID: id, message: "selected fragment lies inside the source span")
 
-S030 | checkKeyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.swift:241
-Counterpart expression:
+S014 | swiftcore/PianoRoll::keyboardSplitNotesGrid | src/checks/rollcheck/note_commands.swift:229
+  report.expect(session.document.history.undoDocument() &&
+                    (try? session.document.state.file.encoded()) == original &&
+                    session.document.history.currentIdentity == before,
+                cppID: id, message: "one undo restores the three-cell source")
+
+S015 | swiftcore/PianoRoll::keyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.swift:241
   report.expect(fixture.note(at: source.tick)?.id == source.id,
                 cppID: id, message: "the split-cursor seed is present")
 
-S031 | checkKeyboardSplitNoop | src/checks/rollcheck/note_commands.swift:271
-Counterpart expression:
+S016 | swiftcore/PianoRoll::keyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.swift:248
+  report.expect(session.document.history.currentIdentity != before &&
+                    fixture.note(at: source.tick)?.duration == cursor - source.tick &&
+                    fixture.note(at: cursor)?.duration ==
+                        source.duration - (cursor - source.tick),
+                cppID: id, message: "unselected note splits at the edit cursor")
+
+S017 | swiftcore/PianoRoll::keyboardSplitAtEditCursor | src/checks/rollcheck/note_commands.swift:253
+  report.expect(session.selectedNoteOrder.isEmpty, cppID: id,
+                message: "cursor-split fragments remain unselected")
+
+S018 | swiftcore/PianoRoll::keyboardSplitNoop | src/checks/rollcheck/note_commands.swift:269
+  report.expect(document.history.currentIdentity == identity, cppID: id,
+                message: "split outside every note records no undo entry")
+
+S019 | swiftcore/PianoRoll::keyboardSplitNoop | src/checks/rollcheck/note_commands.swift:271
   report.expect((try? document.state.file.encoded()) == before &&
                     session.selectedNoteOrder.isEmpty,
                 cppID: id, message: "no-op split leaves notes and selection untouched")
 
-S032 | checkKeyboardJoinNotes | src/checks/rollcheck/note_commands.swift:282
-Counterpart expression:
+S020 | swiftcore/PianoRoll::keyboardJoinNotes | src/checks/rollcheck/note_commands.swift:282
   report.expect(fixture.note(at: source.tick)?.id == source.id,
                 cppID: id, message: "the join seed is present")
 
-S033 | checkKeyboardJoinNotes | src/checks/rollcheck/note_commands.swift:300
-Counterpart expression:
+S021 | swiftcore/PianoRoll::keyboardJoinNotes | src/checks/rollcheck/note_commands.swift:289
+  report.fail(id, "the second join note did not land")
+
+S022 | swiftcore/PianoRoll::keyboardJoinNotes | src/checks/rollcheck/note_commands.swift:297
+  report.expect(session.document.history.currentIdentity != before &&
+                    joined?.duration == (secondTick - source.tick) + source.duration,
+                cppID: id, message: "join commits one span across the same-key pair")
+
+S023 | swiftcore/PianoRoll::keyboardJoinNotes | src/checks/rollcheck/note_commands.swift:300
   report.expect(fixture.note(at: secondTick) == nil, cppID: id,
                 message: "join removes its second note")
 
-S034 | checkKeyboardJoinNotes | src/checks/rollcheck/note_commands.swift:302
-Counterpart expression:
+S024 | swiftcore/PianoRoll::keyboardJoinNotes | src/checks/rollcheck/note_commands.swift:302
   report.expect(joined.map { session.selectedNoteOrder == [$0.id] } == true,
                 cppID: id, message: "join selects only the joined note")
 
-S035 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:357
-Counterpart expression:
+S025 | swiftcore/PianoRoll::keyboardJoinNotes | src/checks/rollcheck/note_commands.swift:304
+  report.expect(session.document.history.undoDocument() &&
+                    (try? session.document.state.file.encoded()) == original &&
+                    session.document.history.currentIdentity == before,
+                cppID: id, message: "one undo restores both original notes")
+
+S026 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:327
+  report.fail(id, "the mixed-join partner or singleton did not land")
+
+S027 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:335
+  report.fail(id, "no free pitch for the unterminated join group")
+
+S028 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:346
+  report.fail(id, "the unterminated join group did not land")
+
+S029 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:354
+  report.expect(session.document.history.currentIdentity != before &&
+                    joined?.duration == 3 * grid && joined?.velocity == source.velocity,
+                cppID: id, message: "mixed join preserves first velocity and spans three cells")
+
+S030 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:357
   report.expect(fixture.note(at: pairTick) == nil, cppID: id,
                 message: "mixed join removes the same-key partner")
 
-S036 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:360
-Counterpart expression:
+S031 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:360
   report.expect(singletonAfter?.id == singleton.id &&
                     singletonAfter?.tick == singleton.tick &&
                     singletonAfter?.duration == singleton.duration &&
                     singletonAfter?.velocity == singleton.velocity,
                 cppID: id, message: "mixed join preserves the other-pitch singleton and identity")
 
-S037 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:365
-Counterpart expression:
+S032 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:365
   report.expect(fixture.note(at: openTick, pitch: UInt8(openPitch))?.isUnterminated == true,
                 cppID: id, message: "mixed join does not synthesize an open note's end")
 
-S038 | checkKeyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:367
-Counterpart expression:
+S033 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:367
   report.expect(joined.map {
       session.selectedNotes == [singleton.id, open.id, $0.id]
   } == true && session.selectedNoteOrder.count == 3,
   cppID: id, message: "mixed join selects the joined and surviving notes")
 
-S039 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:416
-Counterpart expression:
+S034 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:371
+  report.expect(session.document.history.undoDocument() &&
+                    (try? session.document.state.file.encoded()) == original &&
+                    session.document.history.currentIdentity == before,
+                cppID: id, message: "one undo restores every mixed-join group")
+
+S035 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:385
+  report.fail(id, "the combined-split seed did not grow to three cells")
+
+S036 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:401
+  report.fail(id, "the cursor straddler or bystander did not land")
+
+S037 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:410
+  report.expect(session.document.history.currentIdentity != before, cppID: id,
+                message: "both split arms commit as one transaction")
+
+S038 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:416
   report.expect(fixture.note(at: source.tick + Tick(offset) * grid)?.duration == grid,
                 cppID: id, message: "selected source splits along every grid line")
 
-S040 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:419
-Counterpart expression:
+S039 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:419
   report.expect(fixture.note(at: straddlerTick, pitch: straddlerPitch)?.duration == grid,
                 cppID: id, message: "straddler's left half stays in place")
 
-S041 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:421
-Counterpart expression:
+S040 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:421
   report.expect(fixture.note(at: cursor, pitch: straddlerPitch)?.duration == grid,
                 cppID: id, message: "straddler splits at the cursor")
 
-S042 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:423
-Counterpart expression:
+S041 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:423
   report.expect(session.selectedNoteOrder.count == 4 &&
                     session.selectedNotes == Set(pieces.map(\.id)).union([bystander.id]),
                 cppID: id, message: "only source fragments and bystander remain selected")
 
-S043 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:427
-Counterpart expression:
+S042 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:427
   report.expect(session.document.note(selected).map {
       $0.pitch == source.pitch && $0.tick >= source.tick &&
           $0.tick < source.tick + 3 * grid
   } == true, cppID: id, message: "selected note is a source fragment")
 
-S044 | checkKeyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:433
-Counterpart expression:
+S043 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:433
   report.expect(bystanderAfter?.id == bystander.id &&
                     bystanderAfter?.tick == bystander.tick &&
                     bystanderAfter?.duration == grid &&
                     bystanderAfter?.velocity == 82,
                 cppID: id, message: "also-selected bystander retains identity and values")
+
+S044 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:438
+  report.expect(session.document.note(straddler.id) == nil, cppID: id,
+                message: "the original cursor straddler was replaced")
+
+S045 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:440
+  report.expect(session.document.history.undoDocument() &&
+                    (try? session.document.state.file.encoded()) == original &&
+                    session.document.history.currentIdentity == before,
+                cppID: id, message: "one undo restores both split arms")
+
+S046 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:457
+  report.fail(id, "popup split seed did not grow to three cells")
+
+S047 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:471
+  report.fail(id, "popup-join partner did not land")
+
+S048 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:485
+  report.expect(copy?.duration == source.duration, cppID: id,
+                message: "Duplicate row creates a same-length copy one span later")
+
+S049 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:487
+  report.expect(copy.map { session.selectedNoteOrder == [$0.id] } == true,
+                cppID: id, message: "Duplicate row selects its copy")
+
+S050 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:494
+  report.expect(fixture.note(at: source.tick + Tick(offset) * grid)?.duration == grid,
+                cppID: id, message: "Split row yields a grid-length piece")
+
+S051 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:497
+  report.expect(session.selectedNoteOrder.count == 3 &&
+                    session.selectedNotes == Set(pieces.map(\.id)),
+                cppID: id, message: "Split row selects all three pieces")
+
+S052 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:502
+  report.expect(joined?.duration == 3 * grid, cppID: id,
+                message: "Join row spans the same-key pair")
+
+S053 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:504
+  report.expect(fixture.note(at: secondTick) == nil, cppID: id,
+                message: "Join row removes its partner")
+
+S054 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:506
+  report.expect(joined.map { session.selectedNoteOrder == [$0.id] } == true,
+                cppID: id, message: "Join row selects the merged note")
+
+S055 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:511
+  report.expect(session.document.history.currentIdentity != before,
+                cppID: id, message: "menu command records a history entry")
+
+S056 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:513
+  report.expect(session.document.history.undoDocument() &&
+                    (try? session.document.state.file.encoded()) == original &&
+                    session.document.history.currentIdentity == before,
+                cppID: id, message: "one undo restores the pre-menu document")

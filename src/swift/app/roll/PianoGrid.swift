@@ -52,8 +52,9 @@ public final class PianoGrid {
     @QtIgnored private var rightBandDemoted = false
     @QtIgnored private var suppressedLeftRelease = false
     @QtIgnored private var pendingDrawInterrupted = false
-    @QtIgnored private var bandAuditioned: Set<NoteID> = []
+    @QtIgnored private var bandAuditioned: [NoteID: (track: Int, pitch: Int)] = [:]
     @QtIgnored private var pendingControlToggle: NoteID?
+    @QtIgnored private var pendingVelocityReanchor: NoteID?
     @QtIgnored private var selectionAtRightPress: [NoteID] = []
     @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
     /// The Set Velocity row's dispatch: the document-bound page opens its own
@@ -400,6 +401,7 @@ public final class PianoGrid {
         guard gesture == nil else { return }
         suppressedLeftRelease = false
         pendingDrawInterrupted = false
+        pendingVelocityReanchor = nil
         let pressTick = session.camera.tickAtContentX(x)
         let pressKey = pitch(atY: y)
         guard pressKey >= 0 else { return }
@@ -412,6 +414,12 @@ public final class PianoGrid {
             if control && hit.zone == .body {
                 gesture = .velocity(GridGesture.Velocity(
                     noteId: note.noteId, pressY: y, original: note.velocity))
+                pendingVelocityReanchor =
+                    session.selectedNotes.contains(note.noteId) ? nil : note.noteId
+                if hoverKey != note.pitch {
+                    hoverKey = note.pitch
+                    scene.rebuildHover(sceneInput())
+                }
             } else {
                 applyPressSelection(note.noteId, modifiers: modifiers)
                 switch hit.zone {
@@ -430,7 +438,7 @@ public final class PianoGrid {
                 rightGesture = .pendingMenu(GridGesture.PendingMenu(
                     pressX: band.pressX, pressY: band.pressY,
                     threshold: .infinity, hitNoteId: NoteID()))
-                bandAuditioned.removeAll()
+                releaseBandAudition()
             }
         } else {
             if modifiers & (QtFact.shiftModifier | QtFact.controlModifier) == 0 {
@@ -477,7 +485,10 @@ public final class PianoGrid {
         self.gesture = gesture.updated(
             x: x, y: y, metrics: metrics, camera: session.camera)
         if case .velocity(let state) = self.gesture {
-            if !session.selectedNotes.contains(state.noteId) {
+            if let reanchor = pendingVelocityReanchor {
+                pendingVelocityReanchor = nil
+                session.setSelectedNotes([reanchor])
+            } else if !session.selectedNotes.contains(state.noteId) {
                 session.setSelectedNotes([state.noteId])
             }
             pendingControlToggle = nil
@@ -517,6 +528,7 @@ public final class PianoGrid {
             addSelectedNoteFromLeftPointer(state.noteId)
         }
         pendingControlToggle = nil
+        pendingVelocityReanchor = nil
         self.gesture = nil
         activeNoteId = 0
         refreshFromSession()
@@ -528,7 +540,7 @@ public final class PianoGrid {
         if case .pendingDraw = gesture { pendingDrawInterrupted = true }
         selectionAtRightPress = session.selectedNoteOrder
         rightBandDemoted = false
-        bandAuditioned.removeAll()
+        releaseBandAudition()
         let hit = hitNote(x: x, y: y)
         let blockedByLeft: Bool
         switch gesture {
@@ -570,6 +582,7 @@ public final class PianoGrid {
         } else if gesture != nil {
             gesture = nil
             suppressedLeftRelease = true
+            pendingVelocityReanchor = nil
         }
         let updated = rightBandDemoted ? rightGesture : rightGesture.updated(
             x: x, y: y, metrics: metrics, camera: session.camera)
@@ -585,8 +598,9 @@ public final class PianoGrid {
         }
         self.rightGesture = nil
         if gesture == nil { activeNoteId = 0 }
-        bandAuditioned.removeAll()
+        releaseBandAudition()
         pendingControlToggle = nil
+        pendingVelocityReanchor = nil
         publishOutputs()
         refreshNotes()
     }
@@ -602,9 +616,21 @@ public final class PianoGrid {
     public func updateHover(x: Double, y: Double) {
         let key = pitch(atY: y)
         let next = key >= 0 ? key : -1
-        guard next != hoverKey else { return }
-        hoverKey = next
-        scene.rebuildHover(sceneInput())
+        if next != hoverKey {
+            hoverKey = next
+            scene.rebuildHover(sceneInput())
+        }
+        guard gesture == nil else { return }
+        let hovered: GridCursorKind
+        if let hit = hitNote(x: x, y: y),
+           hit.zone == .leftEdge || hit.zone == .rightEdge {
+            hovered = .sizeHorizontal
+        } else {
+            hovered = .arrow
+        }
+        if cursorKind != hovered.rawValue {
+            cursorKind = hovered.rawValue
+        }
     }
 
     public func clearKeyboardHover() {
@@ -662,10 +688,11 @@ public final class PianoGrid {
             session.setSelectedNotes(selectionAtRightPress)
         }
         stopAudition()
+        releaseBandAudition()
         pendingControlToggle = nil
+        pendingVelocityReanchor = nil
         gesture = nil
         rightGesture = nil
-        bandAuditioned.removeAll()
         pendingDrawInterrupted = false
         suppressedLeftRelease = false
         activeNoteId = 0
@@ -723,9 +750,18 @@ public final class PianoGrid {
             addNote(tick: state.tick, duration: state.duration, pitch: state.key)
         case .velocity(let state):
             if let preview = state.preview, preview != state.original {
+                let delta = preview - state.original
+                var changes: [NoteVelocity] = []
+                for id in session.selectedNoteOrder {
+                    guard let current = session.document.note(id) else { continue }
+                    changes.append(NoteVelocity(
+                        noteID: id, velocity: Int(current.velocity) + delta))
+                }
+                if changes.isEmpty {
+                    changes.append(NoteVelocity(noteID: state.noteId, velocity: preview))
+                }
                 _ = session.document.setVelocities(
-                    [NoteVelocity(noteID: state.noteId, velocity: preview)],
-                    expectedRevision: session.document.revision)
+                    changes, expectedRevision: session.document.revision)
             }
         case .move(let state):
             session.document.moveNotes(ids, byTicks: Int64(state.dTick), byKeys: state.dKey)
@@ -773,7 +809,7 @@ public final class PianoGrid {
     @QtIgnored
     private func auditionBandEntrants() {
         guard let band = selectionBand else { return }
-        var covered: Set<NoteID> = []
+        var covered: [NoteID: (track: Int, pitch: Int)] = [:]
         for note in notes {
             let rect = metrics.noteRect(
                 camera: session.camera,
@@ -783,13 +819,24 @@ public final class PianoGrid {
                 pitch: note.pitch)
             if rect.x < band.x + band.w, rect.x + rect.w > band.x,
                rect.y < band.y + band.h, rect.y + rect.h > band.y {
-                covered.insert(note.noteId)
-                if !bandAuditioned.contains(note.noteId) {
+                covered[note.noteId] = (note.track, note.pitch)
+                if bandAuditioned[note.noteId] == nil {
                     onAudition?(note.track, note.pitch, note.velocity)
                 }
             }
         }
+        for (id, entry) in bandAuditioned where covered[id] == nil {
+            onAudition?(entry.track, entry.pitch, 0)
+        }
         bandAuditioned = covered
+    }
+
+    @QtIgnored
+    private func releaseBandAudition() {
+        for (_, entry) in bandAuditioned {
+            onAudition?(entry.track, entry.pitch, 0)
+        }
+        bandAuditioned.removeAll()
     }
 
     @QtIgnored
@@ -1018,6 +1065,8 @@ public final class PianoGrid {
             case .pan:
                 statusText = "Panning"
             }
+        } else if case .band = rightGesture {
+            statusText = "Selecting \(session.selectedNotes.count) note(s)"
         } else {
             statusText = "\(notes.count) notes, \(session.selectedNotes.count) selected"
         }
