@@ -4,7 +4,7 @@ Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/clipboard/selectioncheck_core.cpp
 Original SHA-256: 6ce29f432dbc1378d18cfbd24b1b4a03699ad616cd0781a4d16da021faa6f6a3
 Swift counterpart: src/checks/editcheck/SelectionChecks.swift
-Swift SHA-256: c16412db06cd49c7daef980860375fb759340f29f6ce6bd6b77396b16be34e97
+Swift SHA-256: 7371e9f4f9e9267a778392fe52356c06f6781e769a061c527c6b3c8feb71e25b
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -13,7 +13,7 @@ including notification-transition guards. Source context preserves setup and
 guards between assertions verbatim. The current Swift counterpart is
 src/checks/editcheck/SelectionChecks.swift :: clipboardNoteSelectionChecks; its
 executed predicates cover the note-selection sanitization, clear and
-reconciliation observables of this file and are indexed as S001-S015 below.
+reconciliation observables of this file and are indexed as S001-S016 below.
 Sites whose only observable is the unified note/time selection model stay GAP:
 Swift keeps note selection (DocumentSession.selectedNoteOrder/selectedNotes) and
 the AutomationPage time selection (AutomationTimeSelection) as separate owners,
@@ -26,18 +26,19 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted check.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 15, PARTIAL 0, GAP 37, NATIVE 0.
+Tally: MATCHED 15, PARTIAL 1, GAP 36, NATIVE 0.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS on this worktree: build ok; "ok: swiftcore (10.58s)";
-"verify: 1/6 ok (10.61s, 5 skipped)"; "run_checks: PASS (all harnesses in 10.61s)".
-Provenance: recorded by the lane controller after every lane edit settled (CC21,
-Tempo, reversed-order, clipboard velocity, MIDI A320); this proof-only
-reconciliation did not rebuild or re-run the suite. LSP diagnostics were clean
-on all touched files. The Swift SHA-256 above is the final checked-in
-counterpart source; no native run and no differential comparison against the
-C++ original is claimed.
+Result: PASS: build ok; "ok: swiftcore (10.20s)"; "verify: 1/6 ok (5 skipped)";
+"run_checks: PASS".
+Provenance: observed verification reported for this round-2 re-pin; this
+proof-only reconciliation did not rebuild or re-run any suite. LSP diagnostics
+were clean on all touched files. The Swift SHA-256 above is the final
+checked-in counterpart source; no native run and no differential comparison
+against the C++ original is claimed.
+Command: deno task verify:shell --filter shell-clipboard --verbose
+Result: PASS: "ok: shell-clipboard (1.15s)"; "verify: 1/11 ok"; "run_checks: PASS".
 
 Execution ownership
 The executing entry point is runClipboardSelectionChecks
@@ -563,8 +564,8 @@ Original expression:
   QVERIFY(received(notifications, 0, kNoteSelection));
 
 A050 | SelectionCheckTest::reconciliationPreservesSelectionOrder | src/checks/clipboard/selectioncheck_core.cpp:171
-Disposition: GAP
-Mapping/reason: GAP: the idempotent reconcile (reconcileNoteSelection with an unchanged valid set publishing nothing) has no equivalent Swift predicate. The renameTrack predicate in clipboardNoteSelectionChecks (SelectionChecks.swift:83-85) asserts that a document edit preserving valid notes emits no separate selection change; that is corroboration for the reconciliation discipline, not the same observable. Unproved: idempotent-reconcile suppression.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S016 (SelectionChecks.swift:83-85) executes the A050-tagged rename-track predicate: a document edit preserving valid notes publishes exactly one document change and leaves the note order untouched. It is not the original observable: the original reconciles an unchanged valid set and asserts zero new transitions (idempotent-reconcile suppression), which no Swift predicate executes. Unproved: idempotent reconcileNoteSelection with an unchanged set publishing nothing.
 Source context since previous assertion:
       const size_t beforeSame = notifications.transitions.size();
       const std::vector<NoteId> sameValid = {NoteId{3}, NoteId{1}, NoteId{3}};
@@ -716,6 +717,14 @@ Covers: A052
 Swift expression:
   report.expect(changes.count == 1 && changes[0].contains(.selection), cppID: reconcile,
                 message: "A052 reconciliation to empty publishes once")
+
+S016 | clipboardNoteSelectionChecks | src/checks/editcheck/SelectionChecks.swift:83-85
+cppID: clipboard/SelectionCheckTest::reconciliationPreservesSelectionOrder
+Covers: A050
+Swift expression:
+  report.expect(changes.count == 1 && changes[0].contains(.document)
+                && session.selectedNoteOrder == [ids[2], ids[0]], cppID: reconcile,
+                message: "A050 document edit preserving valid notes emits no separate selection change")
 
 Shared helpers
 None: the fixture above is local to the counterpart function and carries no

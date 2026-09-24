@@ -4,7 +4,7 @@ Reference revision: f7a01dba0d8595d9fc4070f1767d69d8d9ed76a8
 Original: src/checks/midi/tst_midiroundtrip.cpp
 Original SHA-256: 5569d902b961eac8d872144d27ded4a9fc75c4609d2bcb4a5052f3f8274fa66f
 Swift counterpart: src/checks/midi/MidiChecks.swift
-Swift SHA-256: b6da19e467b226ad8c2e9d1956095bf7f57691640f791152a4b6ec2ff7a8a26d
+Swift SHA-256: 5d9a117c9b98b1c32c568358e5f91b3f319f560f4f4869dc69e822dd1de2527c
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -24,10 +24,11 @@ Result: not runnable. src/checks/midi/tst_midiroundtrip.cpp appears in no CMake
 target and in no check catalog or registry, so the original is uncompiled and
 unregistered; its remaining PARTIAL/GAP sites have no executing native lane.
 Swift pairing command: deno task verify --filter swiftcore --verbose
-Result: controller-observed run 2026-09-24 — SwiftCoreTest::midiCodec PASS,
-which executes runMidiCodecSuite and therefore runMidiExportEquivalence
-(called at src/checks/midi/MidiChecks.swift:283). This reconciliation did not
-re-run the lane.
+Result: controller-observed run 2026-09-24 — build ok; ok: swiftcore (10.20s);
+verify: 1/6 ok (5 skipped); run_checks: PASS, which executes
+runMidiCodecSuite and therefore runMidiExportEquivalence (called at
+src/checks/midi/MidiChecks.swift:283). This reconciliation did not re-run the
+lane.
 The swiftcore lane executes runMidiCodecSuite (per-song codec rows) and
 runMidiExportEquivalence (per-song mid2agb assembly comparison plus the XCMD
 traffic predicates) with the same song fixtures and the same mid2agb binary.

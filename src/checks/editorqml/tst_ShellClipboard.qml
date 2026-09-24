@@ -98,6 +98,12 @@ TestCase {
 
     function gridNotes(grid) { return JSON.parse(grid.noteSummary) }
 
+    function noteFacts(grid) {
+        return gridNotes(grid).map(function(note) {
+            return [note.id, note.track, note.tick, note.pitch, note.duration, note.velocity].join(":")
+        }).join(";")
+    }
+
     function noteById(grid, id) {
         var list = gridNotes(grid)
         for (var i = 0; i < list.length; ++i)
@@ -291,6 +297,73 @@ TestCase {
             return shell.shellPresenter.actionEnabled("edit.undo")
         }, 5000), "Undo returns after Redo")
         compare(shell.shellPresenter.actionEnabled("edit.redo"), false, "Redo returns disabled")
+
+        var sourceNotesBeforeTrackSwitch = noteFacts(grid)
+        var destinationTrack = source.track === 0 ? 1 : 0
+        grid.setTrack(destinationTrack)
+        verify(waitForNative(function() {
+            return grid.trackIndex === destinationTrack
+        }, 5000), "the destination track is presented")
+        var destinationBefore = gridNotes(grid)
+        var destinationFacts = noteFacts(grid)
+        var destinationEnd = 0
+        for (var di = 0; di < destinationBefore.length; ++di)
+            destinationEnd = Math.max(destinationEnd,
+                                      destinationBefore[di].tick + destinationBefore[di].duration)
+        var destinationCursor = (Math.floor((destinationEnd + snap - 1) / snap) + 2) * snap
+        grid.setEditCursorTick(destinationCursor)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        compare(clipProbe.readClipJson(), copiedPayload, "the copied bytes survive the track switch")
+        keySequence(StandardKey.Paste)
+        var crossFirst = null
+        var crossSecond = null
+        verify(waitForNative(function() {
+            if (gridNotes(grid).length !== destinationBefore.length + 2)
+                return false
+            crossFirst = tileOn(grid, destinationCursor + source.tick - copiedOrigin,
+                                source.pitch, source.duration, destinationTrack, source.velocity)
+            crossSecond = tileOn(grid, destinationCursor + secondSource.tick - copiedOrigin,
+                                 secondSource.pitch, secondSource.duration, destinationTrack,
+                                 secondSource.velocity)
+            return crossFirst && crossFirst.selected && crossSecond && crossSecond.selected
+                && crossFirst.id !== crossSecond.id && selectedCount(grid) === 2
+                && grid.editCursorTick === destinationCursor + copiedEnd
+        }, 5000), "real Paste retargets both selected notes and advances the destination cursor")
+        grid.setTrack(source.track)
+        verify(waitForNative(function() {
+            return grid.trackIndex === source.track
+        }, 5000), "the source track is presented again")
+        compare(noteFacts(grid), sourceNotesBeforeTrackSwitch,
+                "cross-track Paste keeps source notes intact")
+        grid.setTrack(destinationTrack)
+        verify(waitForNative(function() {
+            return grid.trackIndex === destinationTrack
+        }, 5000), "the destination is presented for Undo")
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return noteFacts(grid) === destinationFacts
+                && noteById(grid, crossFirst.id) === null
+                && noteById(grid, crossSecond.id) === null
+        }, 5000), "one real Undo removes the cross-track paste")
+        keySequence(StandardKey.Redo)
+        verify(waitForNative(function() {
+            return gridNotes(grid).length === destinationBefore.length + 2
+                && tileOn(grid, destinationCursor + source.tick - copiedOrigin, source.pitch,
+                          source.duration, destinationTrack, source.velocity) !== null
+                && tileOn(grid, destinationCursor + secondSource.tick - copiedOrigin,
+                          secondSource.pitch, secondSource.duration, destinationTrack,
+                          secondSource.velocity) !== null
+                && grid.editCursorTick === destinationCursor + copiedEnd
+        }, 5000), "real Redo restores the destination notes and cursor")
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return noteFacts(grid) === destinationFacts
+        }, 5000), "cross-track Undo restores the destination baseline")
+        grid.setTrack(source.track)
+        verify(waitForNative(function() {
+            return grid.trackIndex === source.track
+        }, 5000), "the source track returns before the reload")
 
         // In-place reload through the dirty gate: the same label opens again at
         // its index, the mounted window survives, only the tab's page and grid

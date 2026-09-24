@@ -648,7 +648,7 @@ private func engineMappingProjection(_ report: CheckReport) {
         .channel(status: 0xA0, data0: 60, data1: 30),
     ], endTick: 8)
     for chunk in 3...18 {
-        let channel = UInt8(chunk == 4 ? 1 : chunk == 3 ? 1 : chunk - 3)
+        let channel = UInt8(chunk == 3 || chunk == 4 ? 1 : chunk - 3)
         let name = chunk == 3 ? "Alpha" : chunk == 4 ? "Beta" :
             chunk == 18 ? "DroppedTail" : "T\(chunk)"
         let key = UInt8(chunk == 3 ? 60 : chunk == 4 ? 61 :

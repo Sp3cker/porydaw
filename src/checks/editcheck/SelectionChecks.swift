@@ -26,8 +26,8 @@ func runClipboardSelectionChecks(_ report: CheckReport, suite: DocumentSession,
         return
     }
     clipboardLaneSelectionChecks(report, session: session)
-    clipboardTrackSelectionChecks(report, session: session)
     clipboardNoteSelectionChecks(report, session: session)
+    clipboardTrackSelectionChecks(report, session: session)
 }
 
 @MainActor
@@ -82,7 +82,7 @@ private func clipboardNoteSelectionChecks(_ report: CheckReport, session: Docume
     document.renameTrack(0, to: "selection-reconcile")
     report.expect(changes.count == 1 && changes[0].contains(.document)
                   && session.selectedNoteOrder == [ids[2], ids[0]], cppID: reconcile,
-                  message: "a document edit preserving valid notes emits no separate selection change")
+                  message: "A050 document edit preserving valid notes emits no separate selection change")
     changes.removeAll()
     document.deleteNotes([ids[0], ids[2]])
     report.expect(session.selectedNoteOrder.isEmpty && session.selectedNotes.isEmpty,
@@ -168,6 +168,39 @@ private func clipboardTrackSelectionChecks(_ report: CheckReport, session: Docum
                        what: "A060 out-of-range track cannot join the scope")
     report.expect(changes.isEmpty, cppID: bounds,
                   message: "A061 ignored out-of-range action publishes nothing")
+    let remapID = "clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection"
+    session.selectedTrack = 1
+    session.adjustTrackScope(track: 0, action: .toggle)
+    session.setSelectedNotes([note])
+    changes.removeAll()
+    guard session.withStateChanges({
+        document.moveTrack(1, to: 4) && document.moveTrack(0, to: 2)
+    }) else {
+        report.fail(remapID, "selection remap fixture could not move tracks 1 and 0")
+        return
+    }
+    report.expectEqual(4, session.selectedTrack, cppID: remapID,
+                       what: "A080 primary follows track 1 to track 4")
+    report.expectEqual(Set([2, 4]), session.selectedTracks, cppID: remapID,
+                       what: "A081 scope follows tracks 0 and 1 to tracks 2 and 4")
+    report.expectEqual([note], session.selectedNoteOrder, cppID: remapID,
+                       what: "A082 selected note identity survives structural track moves")
+    report.expect(changes.count == 1 && changes[0].contains(.document)
+                  && changes[0].contains(.selection), cppID: remapID,
+                  message: "A083 remap and selected scope publish one coalesced change")
+
+    session.clearSelectedNotes()
+    session.selectedTrack = 2
+    session.adjustTrackScope(track: 0, action: .toggle)
+    changes.removeAll()
+    document.deleteTrack(2)
+    report.expectEqual(2, session.selectedTrack, cppID: remapID,
+                       what: "deleting a primary track falls back to its numeric position")
+    report.expectEqual(Set([0, 2]), session.selectedTracks, cppID: remapID,
+                       what: "deleting a primary track keeps surviving remapped scope plus fallback primary")
+    report.expect(changes.count == 1 && changes[0].contains(.selection)
+                  && changes[0].contains(.document), cppID: remapID,
+                  message: "deleted-primary remap publishes one coalesced selection and document change")
 }
 
 @MainActor
@@ -186,6 +219,9 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
                                  ready: ready, songEndTick: 96)
     }
     let empty = stack(nil)
+    func visibleSelectedLanes(_ rows: AutomationRowStack) -> [AutomationParameter] {
+        rows.visibleRows.filter { !$0.parameter.isTempo && $0.coversLane }.map(\.parameter)
+    }
     report.expect(empty.activeTickRange == nil, cppID: emptyID,
                   message: "A002 empty selection has no active tick range")
     for (site, parameter) in [("A003-A004", AutomationParameter.tempo),
@@ -196,6 +232,8 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
     }
     report.expect(empty.row(for: .controlChange(track: 0, controller: 99)) == nil,
                   cppID: emptyID, message: "A007-A008 unsupported controller covers nothing")
+    report.expect(visibleSelectedLanes(empty).isEmpty, cppID: emptyID,
+                  message: "A009 empty selection exposes no selected visible lanes")
     let range = TimeRange(startTick: 24, endTick: 48)
     let selection = AutomationTimeSelection(range: range, scope: .lanes,
                                             lanes: [volume, modulation], tempo: true)
@@ -213,6 +251,8 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
                   cppID: lanesID, message: "A020-A021 unselected supported controller stays uncovered")
     report.expect(covered.row(for: .controlChange(track: 0, controller: 99)) == nil,
                   cppID: lanesID, message: "A022-A023 unsupported controller has no row")
+    report.expectEqual([volume, modulation], visibleSelectedLanes(covered), cppID: lanesID,
+                       what: "A024 only selected supported lanes are visible in catalog order")
     let noTempo = stack(AutomationTimeSelection(range: range, scope: .lanes,
                                                  lanes: [volume], tempo: false))
     report.expect(noTempo.row(for: .tempo)?.coversLane == false
@@ -238,6 +278,20 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
     report.expect(partial.row(for: .tempo)?.coversNodes == false,
                   cppID: tracksID, message: "A034 partial track scope excludes Tempo nodes")
 
+    let ready = stack(AutomationTimeSelection(range: range, scope: .lanes,
+                                               lanes: [volume, .controlChange(track: 0,
+                                                   controller: 99)]))
+    report.expect(ready.row(for: volume)?.coversLane == true, cppID: hiddenID,
+                  message: "A036 ready selected CC7 lane is covered")
+    report.expect(ready.row(for: volume)?.coversNodes == true, cppID: hiddenID,
+                  message: "A037 ready selected CC7 nodes are covered")
+    report.expect(ready.row(for: pan)?.coversLane == false, cppID: hiddenID,
+                  message: "A038 ready unselected CC10 lane is uncovered")
+    report.expect(ready.row(for: pan)?.coversNodes == false, cppID: hiddenID,
+                  message: "A039 ready unselected CC10 nodes are uncovered")
+    report.expectEqual([volume], visibleSelectedLanes(ready), cppID: hiddenID,
+                       what: "A042 ready model exposes only selected supported lanes")
+
     let hidden = stack(AutomationTimeSelection(range: range, scope: .lanes,
                                                 lanes: [volume, .controlChange(track: 0,
                                                     controller: 99)]), ready: false)
@@ -248,6 +302,8 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
                   cppID: hiddenID, message: "A044-A045 hidden row covers nothing")
     report.expect(hidden.row(for: .controlChange(track: 0, controller: 99)) == nil,
                   cppID: hiddenID, message: "A040-A041 unsupported controller stays absent")
+    report.expect(visibleSelectedLanes(hidden).isEmpty, cppID: hiddenID,
+                  message: "A046 page-not-ready exposes no selected visible lanes")
     let prior = stack(selection).row(for: volume)?.eventCount
     document.writeLane(track: 0, lane: .controller(7), from: 0,
                        through: TimeDefaults.noTick, points: [LaneWrite(tick: 24, value: 64)])
