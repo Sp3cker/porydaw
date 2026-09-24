@@ -335,14 +335,11 @@ private func checkKeyboardJoinMixedSpread(_ report: CheckReport, session: Docume
             report.fail(id, "no free pitch for the unterminated join group")
             return
         }
-        // Raw note-ons need an assigned public ID to participate in session
-        // selection; MIDI serialization itself never contains that identity.
-        let openID = NoteID(UInt64.max)
         session.document.insertRawEvent(chunk: source.chunk,
             event: .channel(tick: openTick, status: 0x90 | source.channel,
-                            data0: UInt8(openPitch), data1: 66, noteID: openID))
+                            data0: UInt8(openPitch), data1: 66))
         guard let open = fixture.note(at: openTick, pitch: UInt8(openPitch)),
-              open.isUnterminated && open.id == openID else {
+              open.isUnterminated else {
             report.fail(id, "the unterminated join group did not land")
             return
         }

@@ -276,6 +276,24 @@ private func eventViewsSameTickReorder(_ report: CheckReport) {
     }
     report.expect(document.note(mintedID) != nil, cppID: id,
                   message: "inserted note-on resolves by its minted identity")
+    let preset = NoteID(UInt64.max)
+    let presetTick = tick + 50
+    let presetOn = MidiEvent.channel(tick: presetTick, status: 0x90, data0: 62, data1: 90, noteID: preset)
+    document.insertRawEvent(chunk: 0, event: presetOn)
+    guard let presetIndex = document.rawChunks[0].events.firstIndex(where: {
+        $0.tick == presetTick && $0.isNoteOn
+    }) else {
+        report.fail(id, "inserted preset note-on is absent")
+        return
+    }
+    guard let fresh = document.rawChunks[0].events[presetIndex].noteID else {
+        report.fail(id, "inserted preset note-on carries no minted identity")
+        return
+    }
+    report.expect(fresh != preset, cppID: id,
+                  message: "inserted preset note-on mints a fresh identity")
+    report.expect(document.note(fresh) != nil, cppID: id,
+                  message: "preset insert resolves by its fresh identity")
     guard let first = document.rawChunks[0].events.firstIndex(of: ccA) else {
         report.fail(id, "first controller is absent")
         return

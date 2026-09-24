@@ -207,7 +207,7 @@ extension SongDocument {
         guard history.acceptsDocumentMutation else { return }
         guard state.file.chunks.indices.contains(chunk), !isTempo(event) else { return }
         var stored = event
-        if stored.isNoteOn, stored.noteID == nil { stored.noteID = mintNoteID() }
+        if stored.isNoteOn { stored.noteID = mintNoteID() }
         var mutation = DocumentMutation(state)
         mutation.insert(stored, chunk: chunk)
         commit(mutation, group: nil, operation: .insertRawEvent)

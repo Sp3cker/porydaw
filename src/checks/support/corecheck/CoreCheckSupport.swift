@@ -97,7 +97,10 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
             runMidiCodecSuite(boxedMidi.report)
         }
     case 2:
-        runMusicalSemanticsSuite(report)
+        let boxedSemantics = ReportBox(report)
+        MainActor.assumeIsolated {
+            runMusicalSemanticsSuite(boxedSemantics.report)
+        }
     case 3:
         runPlaybackSuite(report)
         runAudioControllerChecks(report)

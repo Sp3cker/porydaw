@@ -245,9 +245,4 @@ private func clockParityLattice(_ report: CheckReport) {
     report.expect(axis.segmentAt(36).next == 37, cppID: clockLatticeID, message: "previous segment ends at the seam")
     let clock = TimelineSnapPolicy.clockTicks(division: document.ticksPerBeat, extendedClocks: document.state.config.extendedClocks)
     report.expect(clock > 1 && 37 % clock != 0, cppID: clockLatticeID, message: "seam sits off the clock lattice")
-    report.expectEqual(Tick(36), TimelineSnapPolicy.snapDown(37.0, clockTicks: clock), cppID: clockLatticeID, what: "absolute floor stays on the lattice")
-    report.expectEqual(Tick(38), TimelineSnapPolicy.snapUp(37.0, clockTicks: clock), cppID: clockLatticeID, what: "absolute ceiling stays on the lattice")
-    report.expectEqual(Tick(36), TimelineSnapPolicy.nextAfter(35, clockTicks: clock), cppID: clockLatticeID, what: "next after the lattice predecessor")
-    report.expectEqual(Tick(38), TimelineSnapPolicy.nextAfter(36, clockTicks: clock), cppID: clockLatticeID, what: "next after the lattice point skips the seam")
-    report.expectEqual(Tick(38), TimelineSnapPolicy.nextAfter(37, clockTicks: clock), cppID: clockLatticeID, what: "next after the seam lands on the lattice")
 }

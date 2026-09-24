@@ -4,19 +4,19 @@ Reference revision: 60ff8b12d2515cbebc56aa87e171f74f9a6565dd
 Original: src/checks/eventviews/viewbuckets_grid.cpp
 Original SHA-256: d3ad829216699fa3927ce6e77368ef530c2472a66f89163fee74290a1823fe91
 Swift counterpart: src/checks/editcheck/EventViewsRemapBucketsParity.swift
-Swift SHA-256: 9bea9876318abc8b883722392dcc4fa03c20f7c71f76b6890e8e54f34d2ca74d
+Swift SHA-256: 32493219bd91ccbd1b891301c7aacbdc54641b16fc8ccfea9f265c0e077e07d4
 Additional Swift counterpart: src/swift/app/timeline/TimelineSnapPolicy.swift
-Additional Swift SHA-256: 52d8f4145e5e887f0cafe280c613d718ede7c0dc6790097582c9f35179a73e43
+Additional Swift SHA-256: 72209a4a6101efa697d7388bd601855133376e9c5a0b2fb0a1affdae3bb99bb9 (absolute snapDown/snapUp/nextAfter helpers removed; file now ends after fineSnap)
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including fixture guards and the per-line loop predicate. PARTIAL identifies document-operation effects with related Swift document-level predicates and an explicit unproved condition (the SongViewModel strip composition and sum-identity equation: no Swift predicate projects SongViewModel strip buckets from the document or asserts the bucketSum composition sum). bucketSum component sites A002/A003/A005/A006/A007/A008/A011 are PARTIAL: Swift bucketParitySum (S001-S010) proves the document-level outcomes (chunk presence, timebase, synthetic tempo default, note/lane/voice/unterminated/totals/otherEvents/pairedOffs counts) but never the strip composition; A004/A009/A010 stay GAP (feature not yet ported: SongViewModel strip/orphan buckets) and A001 stays GAP as a fixture guard. clockLattice seam sites A027-A033/A035 are MATCHED by Swift clockParityLattice (S011-S018) via TimeAxis.segmentAt, TimelineSnapPolicy.clockTicks, snapDown/snapUp, and nextAfter; A034 stays GAP (no session-free Swift subdivision ingress; the duplicate hand-rolled line was deleted) and A026 stays GAP as a fixture guard; A036/A037 stay GAP (feature not yet ported: Clock absolute painted sub-grid). All other slots (quirkProjection, snapLadder, gridLinesSnappable, fixedGridPaintDensityGuard, paintSmoke) are untouched: still GAP except the two NATIVE paint-observation sites. EditorGridCameraChecks was considered and rejected as a counterpart: it reads grid.snapTicks only as drag-distance input, never as an asserted value. None of these labels authorizes deletion or claims whole-case equivalence.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS (1/6 ok, 10.33s), zero failures with `deno task proof check` PASS (suite-level); source hashes pin the tree inspected here.
+Result: PASS (1/6 ok, 10.32s), zero failures with `deno task verify:qml --verbose` PASS (1/1 ok, 33.87s, velocity-lane profiles verified) and `deno task proof check` PASS (224 files) on the frozen post-fix tree; focused thermo re-review verdict PASS, zero blocking findings; source hashes pin the tree inspected here.
 
 Execution and ownership
-Swift execution: runEventEditsSuite (src/checks/editcheck/EventChecks.swift, suite 6) calls runEventViewsRemapBucketsParityChecks, which runs bucketParitySum (S001-S010) and clockParityLattice (S011-S018). Narrow runs proved the eventEdits slot (all eventviews predicates incl. B1 mint lines). Native ownership: runViewBucketsGridCheck in this file drives ViewBucketsGridTest (bucketSum, quirkProjection, snapLadder, gridLinesSnappable, clockLatticeCrossesSignatureSeam, fixedGridPaintDensityGuard, paintSmoke). The Basic/Signatures rig/tab fixtures live in src/checks/eventviews/eventview_fixture.h and src/checks/eventviews/eventview_fixture.cpp.
+Swift execution: runEventEditsSuite (src/checks/editcheck/EventChecks.swift, suite 6) calls runEventViewsRemapBucketsParityChecks, which runs bucketParitySum (S001-S010) and clockParityLattice (S011-S013; the five snapDown/snapUp/nextAfter predicates S014-S018 were deleted with the unwired helpers). Narrow runs proved the eventEdits slot (all eventviews predicates incl. B1 mint lines). Native ownership: runViewBucketsGridCheck in this file drives ViewBucketsGridTest (bucketSum, quirkProjection, snapLadder, gridLinesSnappable, clockLatticeCrossesSignatureSeam, fixedGridPaintDensityGuard, paintSmoke). The Basic/Signatures rig/tab fixtures live in src/checks/eventviews/eventview_fixture.h and src/checks/eventviews/eventview_fixture.cpp.
 
 Fixture, sequence and row constraints
 Data rows expand single sites into many cases: bucketSum_data emits 3 ledger rows (ordinary events, unterminated note, orphan note off); snapLadder_data emits 7 zoom/selection/feel rows (straight below/threshold, triplet, triplet-eighth fixed, straight sixteenth/quarter fixed, clock fixed); gridLinesSnappable_data emits 3 shapes (flat quarter grid, mid-song signature restart, denominator rescale). The bucketSum accounting loop sums lane points across model.lanes; the clockLattice per-line loop re-verifies each painted sub-grid tick; fixedGridPaintDensityGuard sequences eighth-note and clock selections across three zoom levels while asserting the editing snap lattice stays put.
@@ -496,8 +496,8 @@ Original expression:
 QVERIFY2(clock > 1 && 37 % clock != 0, "the seam must sit off the clock lattice")
 
 A030 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:248
-Disposition: MATCHED
-Mapping/reason: Swift S014 asserts the same observable via TimelineSnapPolicy.snapDown: the absolute floor of 37.0 stays on the lattice (Tick 36).
+Disposition: GAP
+Mapping/reason: No production ingress: absolute TimelineSnapPolicy.snapDown helper deleted as unwired scaffolding; Swift absolute snapping survives only in camera-gated grid paths and fineSnap rounding, neither serving this site.
 Source context since previous assertion:
 ;
     // The painted clock sub-grid needs its cells at least one grid-line
@@ -513,8 +513,8 @@ Original expression:
 QCOMPARE(view.grid().snapTickDown(37.0), Tick(36))
 
 A031 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:249
-Disposition: MATCHED
-Mapping/reason: Swift S015 asserts the same observable via TimelineSnapPolicy.snapUp: the absolute ceiling of 37.0 stays on the lattice (Tick 38).
+Disposition: GAP
+Mapping/reason: No production ingress: absolute TimelineSnapPolicy.snapUp helper deleted as unwired scaffolding; Swift absolute snapping survives only in camera-gated grid paths and fineSnap rounding, neither serving this site.
 Source context since previous assertion:
 ;
 
@@ -522,8 +522,8 @@ Original expression:
 QCOMPARE(view.grid().snapTickUp(37.0), Tick(38))
 
 A032 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:250
-Disposition: MATCHED
-Mapping/reason: Swift S016 asserts the same observable via TimelineSnapPolicy.nextAfter: next after the lattice predecessor 35 is Tick 36.
+Disposition: GAP
+Mapping/reason: No production ingress: absolute TimelineSnapPolicy.nextAfter helper deleted as unwired scaffolding; Swift absolute snapping survives only in camera-gated grid paths and fineSnap rounding, neither serving this site.
 Source context since previous assertion:
 ;
 
@@ -531,8 +531,8 @@ Original expression:
 QCOMPARE(view.grid().nextSnapTickAfter(Tick(35)), Tick(36))
 
 A033 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:251
-Disposition: MATCHED
-Mapping/reason: Swift S017 asserts the same observable via TimelineSnapPolicy.nextAfter: next after the lattice point 36 skips the seam to Tick 38.
+Disposition: GAP
+Mapping/reason: No production ingress: absolute TimelineSnapPolicy.nextAfter helper deleted as unwired scaffolding; Swift absolute snapping survives only in camera-gated grid paths and fineSnap rounding, neither serving this site.
 Source context since previous assertion:
 ;
 
@@ -549,8 +549,8 @@ Original expression:
 QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(36)), Tick(38))
 
 A035 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:253
-Disposition: MATCHED
-Mapping/reason: Swift S018 asserts the same observable via TimelineSnapPolicy.nextAfter: next after the seam 37 lands on the lattice at Tick 38.
+Disposition: GAP
+Mapping/reason: No production ingress: absolute TimelineSnapPolicy.nextAfter helper deleted as unwired scaffolding; Swift absolute snapping survives only in camera-gated grid paths and fineSnap rounding, neither serving this site.
 Source context since previous assertion:
 ;
 
@@ -798,18 +798,3 @@ S012 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.sw
 
 S013 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.swift:247
   report.expect(clock > 1 && 37 % clock != 0, cppID: clockLatticeID, message: "seam sits off the clock lattice")
-
-S014 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.swift:248
-  report.expectEqual(Tick(36), TimelineSnapPolicy.snapDown(37.0, clockTicks: clock), cppID: clockLatticeID, what: "absolute floor stays on the lattice")
-
-S015 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.swift:249
-  report.expectEqual(Tick(38), TimelineSnapPolicy.snapUp(37.0, clockTicks: clock), cppID: clockLatticeID, what: "absolute ceiling stays on the lattice")
-
-S016 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.swift:250
-  report.expectEqual(Tick(36), TimelineSnapPolicy.nextAfter(35, clockTicks: clock), cppID: clockLatticeID, what: "next after the lattice predecessor")
-
-S017 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.swift:251
-  report.expectEqual(Tick(38), TimelineSnapPolicy.nextAfter(36, clockTicks: clock), cppID: clockLatticeID, what: "next after the lattice point skips the seam")
-
-S018 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.swift:252
-  report.expectEqual(Tick(38), TimelineSnapPolicy.nextAfter(37, clockTicks: clock), cppID: clockLatticeID, what: "next after the seam lands on the lattice")
