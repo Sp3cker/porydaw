@@ -1,8 +1,5 @@
 import PorydawApp
 
-// Existing scenarios paired with drawer.cpp.
-// Entry order remains in EditorDrawerChecks.swift.
-
 @MainActor
 func drawerLayoutCheckDrawerResizeClampsAndSessions(_ report: CheckReport) {
     let harness = drawerLayoutMakeStoredDrawerHarness().harness
@@ -123,15 +120,18 @@ func drawerLayoutCheckDrawerResizeClampsAndSessions(_ report: CheckReport) {
 
     let atMax = drawerLayoutMakeStoredDrawerHarness().harness
     atMax.apply { $0.setSectionBodyHeight(.voiceChanges, height: 110) }
-    atMax.apply { $0.adjustResizeHandle(.voiceChanges, direction: 1) }
-    report.expect(atMax.layout.storedBodyHeight(.voiceChanges) == 110 &&
+    let steppedToMax = atMax.apply { $0.adjustResizeHandle(.voiceChanges, direction: 1) }
+    report.expect(steppedToMax.published &&
+                  atMax.layout.storedBodyHeight(.voiceChanges) == 110 &&
                   atMax.layout.snapshot[.voiceChanges].bodyHeight == 110,
                   cppID: drawerLayoutResizeID,
-                  message: "a step at the declared maximum keeps the capped body at its maximum")
-    atMax.apply { $0.adjustResizeHandle(.voiceChanges, direction: 1) }
-    report.expect(atMax.layout.snapshot[.voiceChanges].bodyHeight == 110,
+                  message: "a step at the declared maximum keeps the stored height and the capped body at its maximum")
+    let pastMax = atMax.apply { $0.adjustResizeHandle(.voiceChanges, direction: 1) }
+    report.expect(pastMax.published &&
+                  atMax.layout.storedBodyHeight(.voiceChanges) == 110 &&
+                  atMax.layout.snapshot[.voiceChanges].bodyHeight == 110,
                   cppID: drawerLayoutResizeID,
-                  message: "a further step past the declared maximum leaves the capped body unchanged")
+                  message: "a further step past the declared maximum publishes the spill while the capped body and its stored height stay at the maximum")
 }
 
 @MainActor

@@ -901,9 +901,6 @@ TestCase {
         testCase.verifyGripAccessibility(testCase.voiceChangesKind, "Resize voice-change drawer")
         testCase.verifyGripAccessibility(testCase.automationKind, "Resize automation drawer")
 
-        // Hovering a handle highlights it; leaving returns the outline. Color
-        // spellings differ in case between the drawn item and the palette, so
-        // the comparison normalizes both sides.
         var hoverGrip = testCase.grip(testCase.velocityKind)
         mouseMove(hoverGrip, hoverGrip.width / 2, hoverGrip.height / 2)
         tryVerify(function() {
@@ -1093,8 +1090,6 @@ TestCase {
         fuzzyCompare(testCase.section(kind).bodyHeight, applied, 0.01,
                      "releasing after a cancellation keeps the applied height")
 
-        // A right-button press never starts a session: press, move and
-        // release change nothing.
         testCase.awaitRenderedLayout()
         var rightStart = testCase.section(kind).bodyHeight
         var rightGrip = testCase.grip(kind)
@@ -3430,6 +3425,20 @@ TestCase {
         compare(String(findChild(page, "voiceReadout").text).length > 0, true,
                 "the readout draws the presented track's context")
         testCase.auditVisibleTextInk(page, "voice page")
+        var readout = findChild(page, "voiceReadout")
+        verify(readout.width > 0 && readout.height > 0,
+               "the readout draws a usable rect")
+        compare(readout.horizontalAlignment, Text.AlignRight,
+                "the readout draws right-aligned")
+        var hoverInput = testCase.voicePlotInput()
+        var hoverColumn = testCase.freeVoiceColumn(120)
+        verify(hoverColumn >= 0, "the lane leaves a free column to hover")
+        mouseMove(hoverInput, hoverColumn, hoverInput.height / 2)
+        var hoverLabel = findChild(page, "voiceHoverLabel")
+        tryVerify(function() { return hoverLabel.visible }, 1000,
+                  "the background hover draws its label")
+        verify(hoverLabel.width > 0 && hoverLabel.height > 0,
+               "the hover draws a usable label rect")
     }
 
     // Real pointer input on the drawn composition: the double-click picker entry,

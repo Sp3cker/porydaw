@@ -2,9 +2,6 @@ import Foundation
 import PorydawApp
 import PorydawCore
 
-// Existing scenarios paired with voice.cpp.
-// Entry order remains in VoiceChangesPageChecks.swift.
-
 @MainActor
 func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
                               service: ProjectService, programs: [Int]) {
@@ -38,9 +35,6 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
         report.expect(!marker.offscreen, cppID: drawerVoiceProjectionID,
                       message: "marker \(tick) is inside the visible plot")
     }
-    // The span walk closes each section at the next change and runs the last one
-    // to the timeline's end, so the tail exists only when the song extends past
-    // the final change.
     let tail = fixture.session.timeline.lengthTicks > 120 ? 1 : 0
     report.expectEqual(2 + tail, page.heldSpans.count, cppID: drawerVoiceProjectionID,
                        what: "each program section publishes one held span "
@@ -51,14 +45,13 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
                   message: "the context readout names the program at the context tick")
     report.expect(page.readoutVisible, cppID: drawerVoiceProjectionID,
                   message: "the readout is published for a presented track")
-    report.expect((page.readoutRect["width"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
+    report.expect((page.readoutRect["width"] as? Double ?? 0) > 0 &&
+                  (page.readoutRect["height"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
                   message: "the context readout publishes a usable rect")
     report.expectEqual(VoiceChangesPagePolicy.readoutAlignment, page.readoutAlignment,
                        cppID: drawerVoiceProjectionID,
                        what: "the readout publishes the legacy right alignment the composition draws")
 
-    // The hit radius is the legacy font-relative one: a press inside it takes
-    // that marker, a press beyond it takes none.
     let hitX = fixture.markerX(48)
     _ = page.pointerPress(x: hitX + 9, y: 10, surface: 1, button: 1, modifiers: 0)
     report.expectEqual(48, page.frozenOccurrence?.tick, cppID: drawerVoiceProjectionID,
@@ -69,8 +62,6 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
                   message: "a press beyond the marker hit radius starts no marker gesture")
     _ = page.pointerRelease(x: hitX + 12, y: 10, button: 1)
 
-    // A hover over the empty lane publishes the snapped tick's slot label and
-    // leaves the marker texts alone.
     let before = page.publishedMarkers.map(\.label)
     _ = page.pointerMove(x: fixture.markerX(96), y: 10, buttons: 0)
     report.expect(page.hoverVisible, cppID: drawerVoiceProjectionID,
@@ -79,7 +70,8 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
                   message: "the hover label keeps the legacy arrow prefix")
     report.expectEqual(before, page.publishedMarkers.map(\.label), cppID: drawerVoiceProjectionID,
                        what: "a hover repaints no marker label")
-    report.expect((page.hoverLabelRect["width"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
+    report.expect((page.hoverLabelRect["width"] as? Double ?? 0) > 0 &&
+                  (page.hoverLabelRect["height"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
                   message: "the background hover publishes a usable label rect")
 
     // A hover directly over a marker publishes its tick and no label.

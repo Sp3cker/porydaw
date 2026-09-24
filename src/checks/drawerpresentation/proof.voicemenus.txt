@@ -310,6 +310,7 @@ Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresenta
 Swift counterpart expression (S045):
   expect(!page.menuOpen, 156)
 Original expression:
+  QVERIFY2(!deleteMenu.session->isOpen(), "the Delete pick left the voice menu open");
 
 A024 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:157
 Disposition: MATCHED
@@ -333,6 +334,7 @@ Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresenta
 Swift counterpart expression (S048):
   expect(bytes() == changedBytes && document.history.currentIdentity == changed.identity, 159)
 Original expression:
+  QCOMPARE(fixture.document().undoStack()->index(), changedAgain.undoIndex + 1);
 
 A027 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:163
 Disposition: MATCHED
@@ -537,7 +539,7 @@ Original expression:
 
 A058 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:284
 Disposition: PARTIAL
-Mapping/reason: Native band-focus staging: the original stages the voice band active focus before the dismissal so the restore can be observed. The Swift page has no timeline-band focus item; the passing QML cases assert focus return only to the page own plot item (test_productionVoiceChangesPickerKeyboardAndCancellation at src/checks/editorqml/tst_EditorDrawer.qml:3591). Unproved: timeline-band focus staging at Qt-item level.
+Mapping/reason: Native band-focus staging: the original stages the voice band active focus before the dismissal so the restore can be observed. The Swift page has no timeline-band focus item; the passing QML cases assert focus return only to the page own plot item (test_productionVoiceChangesPickerKeyboardAndCancellation at src/checks/editorqml/tst_EditorDrawer.qml:3600). Unproved: timeline-band focus staging at Qt-item level.
 Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::OtherFocusReason))
 
@@ -561,7 +563,7 @@ Original expression:
 
 A062 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:295
 Disposition: MATCHED
-Mapping/reason: S009 asserts the dismissal closes the page menu on the same fixture (hasMenu and menuOpen mirror menu != nil) and S010 that it releases the interaction gate; the passing QML case dismisses through a real outside press on voiceMenuUnderlay (tst_EditorDrawer.qml:3527, S059). The Swift scenario dismisses by explicit call rather than a pointer press.
+Mapping/reason: S009 asserts the dismissal closes the page menu on the same fixture (hasMenu and menuOpen mirror menu != nil) and S010 that it releases the interaction gate; the passing QML case dismisses through a real outside press on voiceMenuUnderlay (tst_EditorDrawer.qml:3536, S059). The Swift scenario dismisses by explicit call rather than a pointer press.
 Original expression:
   QVERIFY2(!menu.session->isOpen(), "an outside right press did not dismiss the voice menu")
 
@@ -991,23 +993,23 @@ These entries record the passing production-composition case that drives real Qt
 through the drawer pages; they are the QML half of the row-click, dismissal and
 modal-ownership mappings above.
 
-S057 | test_productionVoiceChangesPointerAndMenuTransactions | src/checks/editorqml/tst_EditorDrawer.qml:3495
+S057 | test_productionVoiceChangesPointerAndMenuTransactions | src/checks/editorqml/tst_EditorDrawer.qml:3504
 QML expression:
-  mouseClick(input, markerPoint.x, markerPoint.y, Qt.RightButton) at :3495 opens the
-  context menu (tryVerify(model.menuOpen, 1000) at :3496) on the production page, whose
-  rendered delegate rows resolve by typed action id (menuRowByAction at :3504 and :3505
-  through panel.rowItem(i).model.actionId at :2657) and publish the popup-menu role at
-  :3502 and menu-item roles at :3507.
+  mouseClick(input, markerPoint.x, markerPoint.y, Qt.RightButton) at :3504 opens the
+  context menu (tryVerify(model.menuOpen, 1000) at :3505) on the production page, whose
+  rendered delegate rows resolve by typed action id (menuRowByAction at :3513 and :3514
+  through panel.rowItem(i).model.actionId at :2652) and publish the popup-menu role at
+  :3511 and menu-item roles at :3516.
 
-S058 | test_productionVoiceChangesPointerAndMenuTransactions | src/checks/editorqml/tst_EditorDrawer.qml:3511
+S058 | test_productionVoiceChangesPointerAndMenuTransactions | src/checks/editorqml/tst_EditorDrawer.qml:3520
 QML expression:
-  mouseClick(deleteRow, deleteRow.width / 2, deleteRow.height / 2, Qt.LeftButton) at :3511
-  with tryVerify(voiceMarkerLines().length === drawnBefore, 1000) at :3512 and
-  awaitVoiceModal("voiceChangeMenu", false) at :3514: the rendered Delete row removes
+  mouseClick(deleteRow, deleteRow.width / 2, deleteRow.height / 2, Qt.LeftButton) at :3520
+  with tryVerify(voiceMarkerLines().length === drawnBefore, 1000) at :3521 and
+  awaitVoiceModal("voiceChangeMenu", false) at :3523: the rendered Delete row removes
   exactly the captured occurrence and the page-owned modal retires.
 
-S059 | test_productionVoiceChangesPointerAndMenuTransactions | src/checks/editorqml/tst_EditorDrawer.qml:3527
+S059 | test_productionVoiceChangesPointerAndMenuTransactions | src/checks/editorqml/tst_EditorDrawer.qml:3536
 QML expression:
-  mouseClick(underlay, 4, 4, Qt.LeftButton) at :3527 on voiceMenuUnderlay with
-  tryVerify(!model.menuOpen, 1000) at :3528 and voiceMarkerLines().length === settled at
-  :3530: the outside press dismisses the menu without a write.
+  mouseClick(underlay, 4, 4, Qt.LeftButton) at :3536 on voiceMenuUnderlay with
+  tryVerify(!model.menuOpen, 1000) at :3537 and voiceMarkerLines().length === settled at
+  :3539: the outside press dismisses the menu without a write.

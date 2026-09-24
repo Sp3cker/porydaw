@@ -1,8 +1,5 @@
 import PorydawApp
 
-// Existing scenarios paired with drawer.cpp.
-// Entry order remains in EditorDrawerChecks.swift.
-
 @MainActor
 func drawerLayoutCheckDrawerMetricsAndKinds(_ report: CheckReport) {
     let metrics = drawerLayoutDrawerMetrics()
@@ -126,6 +123,15 @@ func drawerLayoutCheckDrawerNoPageAndAvailability(_ report: CheckReport) {
                   message: "detaching cancels its page synchronously and drops its controls while stored visibility and height survive")
     drawerLayoutExpectNoDrawerRecords(report, cppID: drawerLayoutAvailabilityID, detached,
                           message: "detaching records no preference change")
+
+    let fresh = drawerLayoutMakeDrawerHarness()
+    fresh.apply {
+        $0.attachPage(drawerLayoutDrawerStubPage(kind: .velocity, url: drawerLayoutDrawerVelocityUrl,
+                                     policy: drawerLayoutDrawerStubPolicy(divisor: 6), harness: fresh))
+    }
+    report.expect(!fresh.layout.isVisible(.velocity),
+                  cppID: drawerLayoutAvailabilityID,
+                  message: "an attached velocity section keeps its hidden default until restored or shown")
 }
 
 @MainActor

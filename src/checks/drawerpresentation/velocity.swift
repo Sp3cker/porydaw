@@ -2,9 +2,6 @@ import Foundation
 import PorydawApp
 import PorydawCore
 
-// Existing scenarios paired with velocity.cpp.
-// Entry order remains in VelocityPageChecks.swift.
-
 @MainActor
 func drawerVelocityValueAxisLadder(_ report: CheckReport) {
     var geometry = VelocityAxisGeometry()

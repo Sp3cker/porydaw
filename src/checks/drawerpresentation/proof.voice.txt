@@ -4,13 +4,15 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/drawerpresentation/voice.cpp
 Original SHA-256: 04bbd1e55a88644cc282ac56db873f1b027b9cbac8d7456456524e81184373f1
 Swift counterpart: src/checks/drawerpresentation/voice_projection.swift
-Swift SHA-256: db26a9353b8d41b0f03f931cf0df947514242620eb3a960b410966e613584842
+Swift SHA-256: ca29d1134c8d6dc32cfad25fe7a0db1dfd1b5e943b02403ec55713e64d6ea009
 Swift counterpart: src/checks/drawerpresentation/voice_picker.swift
 Swift SHA-256: 460ab3d90da9857cb3da46d6e9ba7b1deb5c81f825bd7143c8d6e8e00da6c058
 Swift counterpart: src/checks/drawerpresentation/voice_interaction.swift
 Swift SHA-256: 97cb8d8afce68b22bcf551446e61d50034d959648ccb427514cc5b3263cab618
 Swift counterpart: src/checks/drawerpresentation/voice_lifecycle.swift
 Swift SHA-256: e7a97f7fab6e5d3ea60e5333f20719c19d3c995c1111b4cb9fa49f6802b43d63
+Converted-window counterpart: src/checks/editorqml/tst_EditorDrawer.qml
+QML SHA-256: 819923b2a7855cb9c4497b6cbc295958a1afbddab5144e38f9cf2a6bd82626f5
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -41,6 +43,13 @@ VoicePickerPointerAudition, VoiceChangesPlayheadPerformance, VoiceChangesModalLa
 VoiceChangesSpacePriority); reference profiles verified.
 Not run here: no build, formatter, linter or project-wide check ran for this ledger pass; the
 dispositions below cite predicates under this evidence and claim no further execution.
+Review-fix re-run (lane owner, after the strengthened readout/hover rect predicates and the
+drawn composition asserts landed): deno task verify --filter swiftcore --verbose PASS
+(1/14 ok, 13 skipped; swiftcore 10.17 s), with the new predicate strings confirmed in the test
+binary by the lane owner. Targeted run of test_productionVoiceChangesPageMountsAndRenders PASS
+(3/3), including the new drawn readout and hover asserts. Neither run was repeated by this
+ledger pass; both are recorded here as lane-owner observations. Those drawn predicates live in
+src/checks/editorqml/tst_EditorDrawer.qml under the QML SHA-256 recorded above.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -360,7 +369,7 @@ Original expression:
 
 A026 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:152
 Disposition: MATCHED
-Mapping/reason: Matched by S314 (drawerVoiceMarkerProjection): the context readout publishes a usable rect, the same publication the original validates.
+Mapping/reason: Matched by S314 (drawerVoiceMarkerProjection): the context readout publishes a rect whose width and height are both > 0 — QRectF::isValid parity at model level, the same publication the original validates; S317 (EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders) asserts the drawn readout rect is likewise usable.
 Original expression:
   QVERIFY(readoutRect.isValid())
 
@@ -440,7 +449,7 @@ Original expression:
 
 A039 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:197
 Disposition: MATCHED
-Mapping/reason: Matched by S316 (drawerVoiceMarkerProjection): the background hover publishes a usable label rect, the same publication the original validates.
+Mapping/reason: Matched by S316 (drawerVoiceMarkerProjection): the background hover label publishes a rect whose width and height are both > 0 — QRectF::isValid parity at model level, the same publication the original validates; S319 (EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders) drives the background hover and asserts the drawn label visible with a usable rect.
 Original expression:
   QVERIFY(hoverRect.isValid())
 
@@ -585,7 +594,7 @@ Original expression:
 
 A063 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:254
 Disposition: MATCHED
-Mapping/reason: Matched by S315 (drawerVoiceMarkerProjection): the page publishes the legacy right readout alignment that the mounted composition binds its drawn alignment to.
+Mapping/reason: Matched by S315 (drawerVoiceMarkerProjection) and S318 (EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders): the page publishes the legacy right readout alignment and the mounted composition draws the readout right-aligned; S317 asserts that drawn readout rect is usable. The Swift predicate alone compares the published policy to itself, so the drawn QML right-alignment is the executing observation that answers the tautology.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels, Qt::AlignRight), voiceTexts(labels))
 
@@ -609,7 +618,7 @@ Original expression:
 
 A067 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:262
 Disposition: MATCHED
-Mapping/reason: Matched by S315 and S059: the readout publishes the legacy right alignment and names the context slot's label.
+Mapping/reason: Matched by S315, S318 (drawerVoiceMarkerProjection / EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders) and S059 (drawerVoiceCurrentVoiceContext): the readout publishes the legacy right alignment, the mounted composition draws it right-aligned, and the readout names the context slot's label; S317 asserts the drawn readout rect is usable. S315's policy self-comparison is answered by the drawn QML observation.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels, Qt::AlignRight), QStringList{track0.at(0)})
 
@@ -1154,411 +1163,414 @@ Mapping/reason: Retained native harness guard; the production Qt object/device/w
 Original expression:
   qFatal("%s", qPrintable(error))
 
-Swift executable assertion index
-The S entries are exact predicates already called by the suite. Their presence alone
-does not close any A entry. Preserve their surrounding setup and order in the paired sources.
+Executable assertion index
+The S entries are exact predicates already called by the suite: S001-S313 are paired Swift
+counterpart predicates, S314-S316 are the lane-added projection predicates on the final
+voice_projection.swift, and S317-S319 are the drawn production-QML predicates of
+test_productionVoiceChangesPageMountsAndRenders. Their presence alone does not close any A
+entry. Preserve their surrounding setup and order in the paired sources.
 
-S001 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:13
+S001 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:10
 Swift expression:
   report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceProjectionID,
                          what: "every DOC_CC_VOICE event of the primary track publishes a marker")
 
-S002 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:15
+S002 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:12
 Swift expression:
   report.expectEqual(3, page.publishedMarkers.count, cppID: drawerVoiceProjectionID,
                          what: "the projection keeps one marker per change")
 
-S003 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:17
+S003 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:14
 Swift expression:
   report.expect(page.publishedMarkers.allSatisfy { !$0.identity.isEmpty }, cppID: drawerVoiceProjectionID,
                     message: "every marker carries its occurrence identity")
 
-S004 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:19
+S004 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:16
 Swift expression:
   report.expectEqual(3, Set(page.markerIdentities).count, cppID: drawerVoiceProjectionID,
                          what: "the identities are distinct per occurrence")
 
-S005 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:26
+S005 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:23
 Swift expression:
   report.expectEqual(fixture.markerX(tick), marker.x, cppID: drawerVoiceProjectionID,
                              what: "marker \(tick) draws at the shared camera's projection")
 
-S006 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:28
+S006 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:25
 Swift expression:
   report.expect(marker.label.hasPrefix(String(format: "%03d", expectedProgram)),
                         cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) labels its own program slot "
                             + "(\"\(marker.label)\")")
 
-S007 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:32
+S007 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:29
 Swift expression:
   report.expect(marker.lineBottom > marker.lineTop, cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) draws a vertical rule")
 
-S008 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:34
+S008 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:31
 Swift expression:
   report.expect(marker.lineWidth > 0, cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) draws a rule of a real width")
 
-S009 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:36
+S009 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:33
 Swift expression:
   report.expect((marker.labelRect["width"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) publishes a label box with a real width")
 
-S010 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:38
+S010 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:35
 Swift expression:
   report.expect(!marker.offscreen, cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) is inside the visible plot")
 
-S011 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:45
+S011 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:39
 Swift expression:
   report.expectEqual(2 + tail, page.heldSpans.count, cppID: drawerVoiceProjectionID,
                          what: "each program section publishes one held span "
                              + "(timeline ends at \(fixture.session.timeline.lengthTicks))")
 
-S012 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:48
+S012 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:42
 Swift expression:
   report.expect(page.trackAvailable, cppID: drawerVoiceProjectionID,
                     message: "a resolved track publishes the band's tracking facts")
 
-S013 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:50
+S013 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:44
 Swift expression:
   report.expect(!page.readoutText.isEmpty, cppID: drawerVoiceProjectionID,
                     message: "the context readout names the program at the context tick")
 
-S014 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:52
+S014 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:46
 Swift expression:
   report.expect(page.readoutVisible, cppID: drawerVoiceProjectionID,
                     message: "the readout is published for a presented track")
 
-S015 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:64
+S015 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:57
 Swift expression:
   report.expectEqual(48, page.frozenOccurrence?.tick, cppID: drawerVoiceProjectionID,
                          what: "a press inside the marker hit radius takes that marker")
 
-S016 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:68
+S016 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:61
 Swift expression:
   report.expect(!page.hasGesture, cppID: drawerVoiceProjectionID,
                     message: "a press beyond the marker hit radius starts no marker gesture")
 
-S017 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:76
+S017 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:67
 Swift expression:
   report.expect(page.hoverVisible, cppID: drawerVoiceProjectionID,
                     message: "a background hover publishes its slot label")
 
-S018 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:78
+S018 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:69
 Swift expression:
   report.expect(page.hoverText.hasPrefix("→ "), cppID: drawerVoiceProjectionID,
                     message: "the hover label keeps the legacy arrow prefix")
 
-S019 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:80
+S019 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:71
 Swift expression:
   report.expectEqual(before, page.publishedMarkers.map(\.label), cppID: drawerVoiceProjectionID,
                          what: "a hover repaints no marker label")
 
-S020 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:87
+S020 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:79
 Swift expression:
   report.expect(!page.hoverVisible, cppID: drawerVoiceProjectionID,
                     message: "a marker hover publishes no background label")
 
-S021 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:89
+S021 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:81
 Swift expression:
   report.expectEqual(48, Tick(page.hoverTick), cppID: drawerVoiceProjectionID,
                          what: "the marker hover publishes its own tick")
 
-S022 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:97
+S022 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:89
 Swift expression:
   report.expect(!page.hoverVisible, cppID: drawerVoiceProjectionID,
                     message: "leaving the plot clears the hover")
 
-S023 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:103
+S023 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:95
 Swift expression:
   report.expect(!page.trackAvailable, cppID: drawerVoiceProjectionID,
                     message: "no selected track publishes the unavailable state")
 
-S024 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:105
+S024 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:97
 Swift expression:
   report.expectEqual(0, page.markerIdentities.count, cppID: drawerVoiceProjectionID,
                          what: "no selected track publishes no marker")
 
-S025 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:107
+S025 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:99
 Swift expression:
   report.expectEqual("No track selected", page.plotMessage, cppID: drawerVoiceProjectionID,
                          what: "the plot names the missing track")
 
-S026 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:117
+S026 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:109
 Swift expression:
   report.expect(label.hasPrefix(String(format: "%03d ", slot)), cppID: drawerVoiceLabelID,
                     message: "a slot label starts with its zero-padded program number "
                         + "(\"\(label)\")")
 
-S027 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:122
+S027 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:114
 Swift expression:
   report.expect(label.contains(symbol), cppID: drawerVoiceLabelID,
                         message: "a named slot label carries its source symbol")
 
-S028 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:124
+S028 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:116
 Swift expression:
   report.expect(label.contains("(\(type))"), cppID: drawerVoiceLabelID,
                         message: "a named slot label carries its declared type in parentheses")
 
-S029 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:127
+S029 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:119
 Swift expression:
   report.expect(label.contains(type), cppID: drawerVoiceLabelID,
                         message: "a slot with no source symbol names its declared type "
                             + "(\"\(label)\")")
 
-S030 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:131
+S030 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:123
 Swift expression:
   report.expectEqual("→ \(label)", VoiceLanePolicy.hoverLabel(label), cppID: drawerVoiceLabelID,
                          what: "the hover spelling is the label with the legacy arrow")
 
-S031 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:133
+S031 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:125
 Swift expression:
   report.expectEqual("", VoiceLanePolicy.hoverLabel(""), cppID: drawerVoiceLabelID,
                          what: "an unresolvable slot publishes no hover label at all")
 
-S032 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:136
+S032 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:128
 Swift expression:
   report.expectEqual("Sample", voiceTypeName(macro: BankVoiceMacro.directSound),
                          cppID: drawerVoiceLabelID, what: "Direct Sound is the Sample type")
 
-S033 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:138
+S033 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:130
 Swift expression:
   report.expectEqual("Sample (fixed pitch)",
                          voiceTypeName(macro: BankVoiceMacro.directSoundNoResample),
                          cppID: drawerVoiceLabelID, what: "the no-resample form names its fixed pitch")
 
-S034 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:141
+S034 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:133
 Swift expression:
   report.expectEqual("Sample (reverse)", voiceTypeName(macro: BankVoiceMacro.directSoundAlt),
                          cppID: drawerVoiceLabelID, what: "the alternate form names its reverse playback")
 
-S035 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:143
+S035 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:135
 Swift expression:
   report.expectEqual("Square 1", voiceTypeName(macro: BankVoiceMacro.square1), cppID: drawerVoiceLabelID,
                          what: "the square-1 macro names Square 1")
 
-S036 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:145
+S036 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:137
 Swift expression:
   report.expectEqual("Square 2", voiceTypeName(macro: BankVoiceMacro.square2), cppID: drawerVoiceLabelID,
                          what: "the square-2 macro names Square 2")
 
-S037 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:147
+S037 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:139
 Swift expression:
   report.expectEqual("Wave", voiceTypeName(macro: BankVoiceMacro.programmableWave),
                          cppID: drawerVoiceLabelID, what: "the wave macro names Wave")
 
-S038 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:149
+S038 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:141
 Swift expression:
   report.expectEqual("Noise", voiceTypeName(macro: BankVoiceMacro.noise), cppID: drawerVoiceLabelID,
                          what: "the noise macro names Noise")
 
-S039 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:151
+S039 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:143
 Swift expression:
   report.expectEqual("Drumkit", voiceTypeName(macro: BankVoiceMacro.keysplitAll),
                          cppID: drawerVoiceLabelID, what: "the drumkit macro names Drumkit")
 
-S040 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:153
+S040 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:145
 Swift expression:
   report.expectEqual("", voiceTypeName(macro: nil), cppID: drawerVoiceLabelID,
                          what: "no macro names no type")
 
-S041 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:158
+S041 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:150
 Swift expression:
   report.expectEqual(String(format: "%03d", 7), VoiceLanePolicy.label(slot: 7, view: blank),
                          cppID: drawerVoiceLabelID,
                          what: "a blank slot publishes only its program number")
 
-S042 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:161
+S042 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:153
 Swift expression:
   report.expectEqual("", VoiceLanePolicy.label(slot: -1, view: blank), cppID: drawerVoiceLabelID,
                          what: "a missing slot publishes no label at all")
 
-S043 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:163
+S043 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:155
 Swift expression:
   report.expectEqual("", VoiceLanePolicy.label(slot: session.bankSlots.count, view: nil),
                          cppID: drawerVoiceLabelID, what: "an out-of-range slot publishes no label")
 
-S044 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:171
+S044 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:163
 Swift expression:
   report.expect(true, cppID: drawerVoiceLabelID,
                         message: "the staged bank publishes no blank slot to drive")
 
-S045 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:178
+S045 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:170
 Swift expression:
   report.fail(drawerVoiceLabelID, "the blank-slot fixture published no marker at tick 48")
 
-S046 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:181
+S046 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:173
 Swift expression:
   report.expect(marker.slotBlank, cppID: drawerVoiceLabelID,
                     message: "a change into a blank slot publishes blank truth")
 
-S047 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:183
+S047 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:175
 Swift expression:
   report.expectEqual("", marker.symbol, cppID: drawerVoiceLabelID,
                          what: "a blank slot publishes no symbol")
 
-S048 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:185
+S048 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:177
 Swift expression:
   report.expectEqual(String(format: "%03d", blankIndex), marker.label, cppID: drawerVoiceLabelID,
                          what: "a blank slot's marker label is its program number")
 
-S049 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:188
+S049 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:180
 Swift expression:
   report.expect(fixture.page.contextBlank, cppID: drawerVoiceLabelID,
                     message: "the context readout publishes the blank truth too")
 
-S050 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:190
+S050 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:182
 Swift expression:
   report.expectEqual(blankIndex, fixture.page.contextSlot, cppID: drawerVoiceLabelID,
                          what: "the blank context names the blank slot")
 
-S051 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:192
+S051 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:184
 Swift expression:
   report.expectEqual("", fixture.page.contextSymbol, cppID: drawerVoiceLabelID,
                          what: "the blank context publishes no symbol")
 
-S052 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:203
+S052 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:195
 Swift expression:
   report.expectEqual(programs[0], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 0,
                                                            points: points),
                          cppID: drawerVoiceContextID, what: "tick 0 resolves the opening program")
 
-S053 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:206
+S053 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:198
 Swift expression:
   report.expectEqual(programs[1], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 48,
                                                            points: points),
                          cppID: drawerVoiceContextID, what: "a change takes effect at its own tick")
 
-S054 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:209
+S054 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:201
 Swift expression:
   report.expectEqual(programs[1], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 119,
                                                            points: points),
                          cppID: drawerVoiceContextID, what: "the context holds until the next change")
 
-S055 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:212
+S055 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:204
 Swift expression:
   report.expectEqual(programs[2], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 120,
                                                            points: points),
                          cppID: drawerVoiceContextID, what: "the late change takes effect at its tick")
 
-S056 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:215
+S056 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:207
 Swift expression:
   report.expectEqual(48, VoiceLanePolicy.endTick(after: 0, points: points), cppID: drawerVoiceContextID,
                          what: "the opening span ends at the first change")
 
-S057 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:217
+S057 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:209
 Swift expression:
   report.expectEqual(nil, VoiceLanePolicy.endTick(after: 120, points: points), cppID: drawerVoiceContextID,
                          what: "the last span runs to the song's end")
 
-S058 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:225
+S058 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:217
 Swift expression:
   report.expectEqual(programs[1], page.contextSlot, cppID: drawerVoiceContextID,
                          what: "the stopped context resolves at the published edit cursor")
 
-S059 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:227
+S059 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:219
 Swift expression:
   report.expectEqual(VoiceLanePolicy.label(slot: programs[1],
                                                view: fixture.session.bankSlots[programs[1]]),
                          page.readoutText, cppID: drawerVoiceContextID,
                          what: "the readout names the edit cursor's program")
 
-S060 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:231
+S060 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:223
 Swift expression:
   report.expectEqual(cursorBuilds, page.contentBuildCount, cppID: drawerVoiceContextID,
                          what: "cursor-only publication rebuilds no marker content")
 
-S061 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:233
+S061 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:225
 Swift expression:
   report.expectEqual(cursorDocument, fixture.snapshot, cppID: drawerVoiceContextID,
                          what: "cursor-only publication changes no document or history state")
 
-S062 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:238
+S062 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:230
 Swift expression:
   report.expectEqual(programs[0], page.presentedContextSlot, cppID: drawerVoiceContextID,
                          what: "the playing context resolves at the shared tick, not the cursor")
 
-S063 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:240
+S063 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:232
 Swift expression:
   report.expect(page.presentedPlaying, cppID: drawerVoiceContextID,
                     message: "the presentation publishes its own playing state")
 
-S064 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:243
+S064 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:235
 Swift expression:
   report.expectEqual(programs[1], page.presentedContextSlot, cppID: drawerVoiceContextID,
                          what: "a rounded playing tick crosses into the next span")
 
-S065 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:245
+S065 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:237
 Swift expression:
   report.expectEqual(96, page.presentedContextTick, cppID: drawerVoiceContextID,
                          what: "the presented tick is the rounded shared tick")
 
-S066 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:250
+S066 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:242
 Swift expression:
   report.expectEqual(programs[1], page.contextSlot, cppID: drawerVoiceContextID,
                          what: "the stopped context returns to the edit cursor")
 
-S067 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:254
+S067 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:246
 Swift expression:
   report.expectEqual(programs[2], page.contextSlot, cppID: drawerVoiceContextID,
                          what: "a moved edit cursor re-resolves the stopped context")
 
-S068 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:256
+S068 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:248
 Swift expression:
   report.expectEqual(laterCursorBuilds, page.contentBuildCount, cppID: drawerVoiceContextID,
                          what: "a later cursor-only publication remains readout-only")
 
-S069 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:262
+S069 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:254
 Swift expression:
   report.expectEqual([0], page.markerTicks, cppID: drawerVoiceContextID,
                          what: "the secondary track publishes only its own change")
 
-S070 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:264
+S070 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:256
 Swift expression:
   report.expectEqual(programs[2], page.contextSlot, cppID: drawerVoiceContextID,
                          what: "the readout follows the newly selected track")
 
-S071 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:268
+S071 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:260
 Swift expression:
   report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceContextID,
                          what: "returning to the primary track restores its markers")
 
-S072 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:278
+S072 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:270
 Swift expression:
   report.expectEqual(points.map { VoiceOccurrence($0).text }, page.markerIdentities,
                          cppID: drawerVoiceIdentityID,
                          what: "a marker's identity is its lane occurrence's own identity")
 
-S073 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:281
+S073 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:273
 Swift expression:
   report.expect(page.markerIdentities.allSatisfy {
           $0.split(separator: ".").count == 4
       }, cppID: drawerVoiceIdentityID,
                     message: "an identity names chunk, event index, tick and value")
 
-S074 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:290
+S074 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:282
 Swift expression:
   report.expectEqual(VoiceOccurrence(first),
                          VoiceLanePolicy.occurrence(VoiceOccurrence(first), in: [first, second]),
                          cppID: drawerVoiceIdentityID,
                          what: "the identity resolves the occurrence it names")
 
-S075 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:294
+S075 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:286
 Swift expression:
   report.expectEqual(VoiceOccurrence(second),
                          VoiceLanePolicy.occurrence(at: 48, in: [first, second]),
                          cppID: drawerVoiceIdentityID,
                          what: "the tick lookup takes the document's last event at that tick")
 
-S076 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:300
+S076 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:292
 Swift expression:
   report.expect(VoiceLanePolicy.occurrence(mutated, in: [first, second]) == nil,
                     cppID: drawerVoiceIdentityID,
                     message: "a different value is never accepted as the frozen occurrence")
 
-S077 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:303
+S077 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:295
 Swift expression:
   report.expectEqual(first.eventIndex,
                          VoiceLanePolicy.occurrence(VoiceOccurrence(first),
@@ -1566,47 +1578,47 @@ Swift expression:
                          cppID: drawerVoiceIdentityID,
                          what: "the resolved occurrence keeps the document's event index")
 
-S078 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:314
+S078 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:306
 Swift expression:
   report.expectEqual(VoiceOccurrence(points[1]), frozen, cppID: drawerVoiceIdentityID,
                          what: "the press freezes the marker's own occurrence")
 
-S079 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:317
+S079 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:309
 Swift expression:
   report.expectEqual(before, page.markerIdentities, cppID: drawerVoiceIdentityID,
                          what: "a camera scroll changes no marker identity")
 
-S080 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:319
+S080 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:311
 Swift expression:
   report.expect(page.publishedMarkers[1].x != x, cppID: drawerVoiceIdentityID,
                     message: "a camera scroll does move the projection")
 
-S081 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:321
+S081 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:313
 Swift expression:
   report.expectEqual(frozen, page.frozenOccurrence, cppID: drawerVoiceIdentityID,
                          what: "the frozen occurrence survives a camera scroll")
 
-S082 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:324
+S082 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:316
 Swift expression:
   report.expect(!page.hasGesture, cppID: drawerVoiceIdentityID,
                     message: "the release ends the gesture without a draft")
 
-S083 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:334
+S083 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:326
 Swift expression:
   report.expect(page.acceptPicker(), cppID: drawerVoiceIdentityID,
                     message: "an insertion between the changes lands in the document")
 
-S084 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:336
+S084 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:328
 Swift expression:
   report.expectEqual(4, page.markerIdentities.count, cppID: drawerVoiceIdentityID,
                          what: "the inserted occurrence joins the projection")
 
-S085 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:338
+S085 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:330
 Swift expression:
   report.expectEqual(4, Set(page.markerIdentities).count, cppID: drawerVoiceIdentityID,
                          what: "the inserted occurrence has an identity of its own")
 
-S086 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:340
+S086 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:332
 Swift expression:
   report.expectEqual(earlier,
                          page.publishedMarkers.filter { Tick($0.tick) <= 48 }.map(\.identity),
@@ -2790,21 +2802,45 @@ dispositions cite the S predicates under that evidence; the native rendering, pi
 QSignalSpy and key/wheel delivery obligations recorded as NATIVE remain native.
 
 Lane-added projection predicates on the final voice_projection.swift (readout rect,
-published readout alignment, hover label rect). They are appended after the scenario groups
-above rather than renumbered into it.
+published readout alignment, hover label rect) plus the drawn production-QML predicates of
+test_productionVoiceChangesPageMountsAndRenders (drawn readout rect, drawn readout
+right-alignment, drawn hover label rect). They are appended after the scenario groups above
+rather than renumbered into it. Every Swift file:line anchor in the index above was
+re-derived against this final voice_projection.swift after the lane deleted its stale
+comments; voice_picker.swift, voice_interaction.swift and voice_lifecycle.swift are
+unchanged, and their anchors and hashes were left as recorded.
 
-S314 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:54
+S314 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:48
 Swift expression:
-  report.expect((page.readoutRect["width"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
-                    message: "the context readout publishes a usable rect")
+  report.expect((page.readoutRect["width"] as? Double ?? 0) > 0 &&
+                (page.readoutRect["height"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
+                message: "the context readout publishes a usable rect")
 
-S315 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:56
+S315 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:51
 Swift expression:
   report.expectEqual(VoiceChangesPagePolicy.readoutAlignment, page.readoutAlignment,
                          cppID: drawerVoiceProjectionID,
                          what: "the readout publishes the legacy right alignment the composition draws")
 
-S316 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:82
+S316 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:73
 Swift expression:
-  report.expect((page.hoverLabelRect["width"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
-                    message: "the background hover publishes a usable label rect")
+  report.expect((page.hoverLabelRect["width"] as? Double ?? 0) > 0 &&
+                (page.hoverLabelRect["height"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
+                message: "the background hover publishes a usable label rect")
+
+S317 | EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3429
+QML expression:
+  verify(readout.width > 0 && readout.height > 0,
+         "the readout draws a usable rect")
+
+S318 | EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3431
+QML expression:
+  compare(readout.horizontalAlignment, Text.AlignRight,
+          "the readout draws right-aligned")
+
+S319 | EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3438
+QML expression:
+  tryVerify(function() { return hoverLabel.visible }, 1000,
+            "the background hover draws its label")
+  verify(hoverLabel.width > 0 && hoverLabel.height > 0,
+         "the hover draws a usable label rect")
