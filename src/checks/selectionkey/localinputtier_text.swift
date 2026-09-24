@@ -225,6 +225,14 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                        what: "changing the primary track selects track zero")
     report.expectEqual([SessionChangeDomains.selection], publications, cppID: lifetimeID,
                        what: "changing the primary track publishes one selection change")
+
+    second.session.setSelectedNotes(pairT1)
+    publications.removeAll()
+    let primaryBeforeOutOfRange = second.session.selectedTrack
+    second.session.selectPrimaryTrack(-1)
+    second.session.selectPrimaryTrack(second.document.engineTracks.usedTrackCount)
+    report.expect(second.session.selectedNotes == Set(pairT1) && second.session.selectedTrack == primaryBeforeOutOfRange && publications.isEmpty, cppID: lifetimeID,
+                  message: "out-of-range primary-track selects keep the track, notes, and publications")
     second.session.onChange = priorChange
 
 }

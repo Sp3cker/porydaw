@@ -4,7 +4,7 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/selectionkey/windowtier_lifetime.cpp
 Original SHA-256: 47d589471dbc0075cb36225ef0f79df0eb818a96a61bfc963a79ab67f4e8d8d6
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: de186cca17a2016a3baed5cd9e0f9bef563297256f96a0be49ae52a1ff674c4a
+Swift SHA-256: aef988778b56b851301cff37fb9ad9781de638aa4cba36e5f24511baf13103e8
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
@@ -19,11 +19,13 @@ Result: PASS; build ok (0.15 s), ok swiftcore (10.38 s); verify 1/6 ok (5 skippe
 Command: deno task verify:shell --filter shellwindow --verbose (controller-observed)
 Result: PASS; build ok (0.16 s), ok shellwindow (3.74 s); verify 1/11 ok (10 skipped); run_checks PASS. That run executes the shellwindow predicates S018-S024 through the shellwindow entry of ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift:46).
 Command: deno task verify --filter swiftcore (writer-observed)
-Result: PASS; build ok (6.40 s); verify 1/6 ok (5 skipped, 10.33 s); run_checks PASS. That run executes drawerOriginalNumericPromptTransaction via the swiftcore session suite (src/checks/workspace/SessionChecks.swift:72), covering the lifetime rows S025-S050 including the A029 PianoGrid.setTrack predicates S040-S041. Production reroute preserved: PianoGrid.setTrack calls session.adjustTrackScope(track: index, action: .plain) (src/swift/app/roll/PianoGrid.swift:239), TrackHeaders.selectTrack remaps through .plain (src/swift/app/headers/TrackHeaders.swift:397), EventListPresenter follows through .plain (src/swift/app/eventlist/EventListPresenter.swift:146); the .plain scope setter clears the note selection and retargets the primary track, and PianoGrid.refreshFromSession refreshes after the switch.
+Result: PASS; build ok (6.40 s); verify 1/6 ok (5 skipped, 10.33 s); run_checks PASS. That run executes drawerOriginalNumericPromptTransaction via the swiftcore session suite (src/checks/workspace/SessionChecks.swift:72), covering the lifetime rows S025-S050 including the A029 PianoGrid.setTrack predicates S040-S041. Production reroute preserved through selectPrimaryTrack: PianoGrid.setTrack calls session.selectPrimaryTrack(index) (src/swift/app/roll/PianoGrid.swift:239), TrackHeaders.selectTrack remaps through it (src/swift/app/headers/TrackHeaders.swift:397), EventListPresenter follows through it (src/swift/app/eventlist/EventListPresenter.swift:146); the .plain scope setter clears the note selection and retargets the primary track, and PianoGrid.refreshFromSession refreshes after the switch.
 Command: deno task verify --filter swiftcore (writer-observed, post-fix)
 Result: PASS; verify 1/6 ok (5 skipped, 10.66 s); run_checks PASS. That run executes the extended drawerOriginalNumericPromptTransaction including the S051-S055 selectPrimaryTrack guard rows.
 Command: deno task verify:shell --filter shellwindow (writer-observed, post-fix)
 Result: PASS; verify 1/11 ok (10 skipped, 3.93 s); run_checks PASS. That run executes the shellwindow predicates S018-S024, unaffected by the B1 message fix (same line, no shift).
+Command: deno task verify --filter swiftcore (writer-observed, out-of-range row)
+Result: PASS; verify 1/6 ok (5 skipped, 10.16 s); run_checks PASS. That run executes the extended entry including the S056 out-of-range selectPrimaryTrack row and the reworded S041 message.
 The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
 
 Execution ownership
@@ -451,8 +453,8 @@ Original expression:
 
 A029 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:160
 Disposition: MATCHED
-Mapping/reason: The original primary-track change clears the note selection; the Swift predicates drive the live production gesture site PianoGrid.setTrack(index: 1) (src/swift/app/roll/PianoGrid.swift:239) via session.adjustTrackScope(track: 1, action: .plain) and observe the cleared selection with selectedTrack 1. Production reroute preserved: DocumentSession.adjustTrackScope clears notes on .plain, TrackHeaders.selectTrack remaps through .plain (src/swift/app/headers/TrackHeaders.swift:397), EventListPresenter follows through .plain (src/swift/app/eventlist/EventListPresenter.swift:146), and PianoGrid.refreshFromSession refreshes after the switch. Supplemental guard property (not C++ parity): the new DocumentSession.selectPrimaryTrack (src/swift/app/DocumentSession.swift:151) routes the same .plain path, and the S051-S055 rows pin its contract — reselecting the primary track preserves notes and publishes nothing, changing it clears notes, selects the track, and publishes one selection change.
-Swift counterpart expression (S040, S041; guard rows S051-S055):
+Mapping/reason: The original primary-track change clears the note selection; the Swift predicates drive the live production gesture site PianoGrid.setTrack(index: 1) (src/swift/app/roll/PianoGrid.swift:239) via session.selectPrimaryTrack(1), which guards range and identity before routing adjustTrackScope(track: 1, action: .plain), and observe the cleared selection with selectedTrack 1. Production reroute preserved through selectPrimaryTrack: TrackHeaders.selectTrack remaps through it (src/swift/app/headers/TrackHeaders.swift:397), EventListPresenter follows through it (src/swift/app/eventlist/EventListPresenter.swift:146), and PianoGrid.refreshFromSession refreshes after the switch. Header-gesture distinction: a header tap is a user gesture that clears via selectPrimaryTrack; the remap, refresh, and .plain setter paths preserve that behavior. Supplemental guard property (not C++ parity): the S051-S055 rows pin the selectPrimaryTrack contract — reselecting the primary track preserves notes and publishes nothing, changing it clears notes, selects the track, and publishes one selection change — with S056 covering out-of-range selects.
+Swift counterpart expression (S040, S041; guard rows S051-S056):
   report.expect(second.session.selectedTrack == 1, cppID: lifetimeID, ...)
   report.expect(second.session.selectedNotes.isEmpty, cppID: lifetimeID, ...)
 Source context since previous assertion:
@@ -921,7 +923,7 @@ S040 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
 
 S041 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:177
   report.expect(second.session.selectedNotes.isEmpty, cppID: lifetimeID,
-                message: "the primary-track change did not clear the note selection")
+                message: "the primary-track change clears the note selection")
 
 S042 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:180
   report.expectEqual(trackOnePan, second.page.activeParameter, cppID: lifetimeID,
@@ -980,6 +982,10 @@ S054 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
 S055 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:226
   report.expectEqual([SessionChangeDomains.selection], publications, cppID: lifetimeID,
                      what: "changing the primary track publishes one selection change")
+
+S056 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:234
+  report.expect(second.session.selectedNotes == Set(pairT1) && second.session.selectedTrack == primaryBeforeOutOfRange && publications.isEmpty, cppID: lifetimeID,
+                message: "out-of-range primary-track selects keep the track, notes, and publications")
 
 S018 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:405
   compare(selected.length, 1, "one source note is selected")

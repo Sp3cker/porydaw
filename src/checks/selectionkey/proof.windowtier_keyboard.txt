@@ -4,7 +4,7 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/selectionkey/windowtier_keyboard.cpp
 Original SHA-256: f00861f60ece3fc2b9de78b2c6b886d6139a71f79c7c07aeb5d1c8a69a5730d0
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: de186cca17a2016a3baed5cd9e0f9bef563297256f96a0be49ae52a1ff674c4a
+Swift SHA-256: aef988778b56b851301cff37fb9ad9781de638aa4cba36e5f24511baf13103e8
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift SHA-256: 39595ccddb010182c8e01df9f89ba18a8a00adcb9d060200bc1776197b566bb2
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
