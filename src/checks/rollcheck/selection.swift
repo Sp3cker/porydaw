@@ -375,6 +375,12 @@ private func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSe
                   cppID: id, message: "the modifier press pins the hover mark to the anchor row")
     let preCount = session.document.history.undoCount
     grid.updatePointer(x: aX, y: aY + 15)
+    report.expect(grid.previewVelocity(seed.ids[0]) == 78, cppID: id,
+                  message: "the drag previews 78 before release")
+    report.expect(grid.statusText.contains("Changing velocity"), cppID: id,
+                  message: "the velocity drag publishes its preview status")
+    report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 93, cppID: id,
+                  message: "the velocity preview commits nothing before release")
     grid.endPointer(x: aX, y: aY + 15)
     report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78, cppID: id,
                   message: "a 15px modifier drag lands the anchor at 78 from 93")
