@@ -2,7 +2,7 @@
 import Foundation
 import QtBridge
 
-enum PaletteMath {
+public enum PaletteMath {
 
     struct Oklab {
         var lightness: Double
@@ -52,7 +52,7 @@ enum PaletteMath {
               b: from.b + (to.b - from.b) * t)
     }
 
-    static func hex(r: Int, g: Int, b: Int, a: Int = 255) -> String {
+    public static func hex(r: Int, g: Int, b: Int, a: Int = 255) -> String {
         a == 255
             ? String(format: "#%02X%02X%02X", r, g, b)
             : String(format: "#%02X%02X%02X%02X", a, r, g, b)
@@ -63,7 +63,7 @@ enum PaletteMath {
         return hex(r: c.r, g: c.g, b: c.b, a: alpha)
     }
 
-    static func channels(_ hex: String) -> (r: Int, g: Int, b: Int, a: Int) {
+    public static func channels(_ hex: String) -> (r: Int, g: Int, b: Int, a: Int) {
         var value: UInt64 = 0
         Scanner(string: String(hex.dropFirst())).scanHexInt64(&value)
         if hex.count == 9 {
@@ -79,7 +79,7 @@ enum PaletteMath {
         return hex(r: base.r, g: base.g, b: base.b, a: a)
     }
 
-    static func noteFill(track: Int, velocity: Int, zeroColor: String) -> String {
+    public static func noteFill(track: Int, velocity: Int, zeroColor: String) -> String {
         let v = min(127, max(0, velocity))
         if v == 0 { return zeroColor }
         let identity = trackIdentityOklab(track)
