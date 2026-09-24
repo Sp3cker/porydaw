@@ -7,6 +7,9 @@ import QtBridge
 func runSelectionChecks(_ report: CheckReport, session: DocumentSession) {
     checkSelectionBandSweep(report, session: session)
     checkSelectionNonScaleMove(report, session: session)
+    checkSelectionBandAudition(report, session: session)
+    checkGroupedVelocityDrag(report, session: session)
+    checkThresholdDrawCell(report, session: session)
 }
 
 @MainActor
@@ -195,4 +198,300 @@ private func selectionRect(_ id: NoteID, in model: QListModel<SceneRect>) -> Sce
         return model[index]
     }
     return nil
+}
+@MainActor
+private func selectionGrid(session: DocumentSession) -> PianoGrid {
+    let grid = PianoGrid(session: session)
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    grid.resetCameraScroll()
+    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    grid.refreshCamera()
+    return grid
+}
+
+@MainActor
+private func velocityPairSeed(session: DocumentSession, grid: PianoGrid)
+    -> (ids: [NoteID], rects: [SceneRect])?
+{
+    let tick = 240
+    let duration = 4 * grid.snapTicks
+    var pitches: [Int] = []
+    for y in [160.0, 200.0, 120.0, 240.0, 80.0] {
+        guard let candidate = session.camera.projection.pitch(
+            atY: y, keyHeight: session.camera.snapshot.keyHeight,
+            scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
+        else { continue }
+        let clash = session.document.notes(in: grid.trackIndex).contains {
+            Int($0.pitch) == candidate && Int($0.tick) < tick + 2 * duration
+                && Int($0.tick) + Int($0.duration) > tick - duration
+        }
+        if !clash { pitches.append(candidate) }
+        if pitches.count == 2 { break }
+    }
+    guard pitches.count == 2,
+        let added = try? session.document.addNotes([
+            NewNote(track: grid.trackIndex, tick: Tick(tick), pitch: UInt8(pitches[0]),
+                    duration: Tick(duration), velocity: 93),
+            NewNote(track: grid.trackIndex, tick: Tick(tick), pitch: UInt8(pitches[1]),
+                    duration: Tick(duration), velocity: 100),
+        ]), added.count == 2
+    else { return nil }
+    grid.refreshFromSession()
+    let rects = added.compactMap { selectionRect($0, in: grid.scene.pianoNoteFills) }
+    guard rects.count == 2 else { return nil }
+    return (added, rects)
+}
+
+@MainActor
+private func selectionRestore(
+    _ report: CheckReport, id: String, session: DocumentSession,
+    baseline: SaveSnapshot, selection: [NoteID], message: String
+) {
+    let document = session.document
+    var steps = 0
+    while document.history.currentIdentity != baseline.identity
+        && document.history.canUndo && steps < 32 {
+        guard document.history.undoDocument() else {
+            report.fail(id, "a non-document history entry interrupted the selection undo drain")
+            return
+        }
+        steps += 1
+    }
+    do {
+        let restored = try document.captureSave()
+        report.expect(document.history.currentIdentity == baseline.identity
+            && restored.bytes == baseline.bytes, cppID: id, message: message)
+    } catch {
+        report.fail(id, "could not encode the restored MIDI document: \(error)")
+    }
+    session.setSelectedNotes(selection)
+}
+
+@MainActor
+private func checkSelectionBandAudition(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::selectionBandSweep"
+    let initialSelection = session.selectedNoteOrder
+    let grid = selectionGrid(session: session)
+    guard let baseline = try? session.document.captureSave() else {
+        report.fail(id, "could not capture the pre-band MIDI bytes")
+        return
+    }
+    defer {
+        selectionRestore(report, id: id, session: session, baseline: baseline,
+                         selection: initialSelection,
+                         message: "band audition unwinds to the pre-seed MIDI bytes and history")
+    }
+    guard let seed = velocityPairSeed(session: session, grid: grid) else {
+        report.fail(id, "could not seed the two band-audition notes")
+        return
+    }
+    guard let planted = try? session.document.captureSave() else {
+        report.fail(id, "could not capture the planted MIDI bytes")
+        return
+    }
+    let revision = session.document.revision
+    let history = session.document.history.currentIdentity
+    var auditions: [(track: Int, pitch: Int, velocity: Int)] = []
+    grid.onAudition = { auditions.append(($0, $1, $2)) }
+    defer { grid.onAudition = nil }
+    guard let first = session.document.note(seed.ids[0]),
+          let second = session.document.note(seed.ids[1])
+    else {
+        report.fail(id, "band-audition seed notes disappeared")
+        return
+    }
+    let p0 = Int(first.pitch)
+    let p1 = Int(second.pitch)
+    session.clearSelectedNotes()
+    let ax = seed.rects[0].x + seed.rects[0].width / 2
+    let ay = seed.rects[0].y + seed.rects[0].height / 2
+    let endX = max(seed.rects[0].x + seed.rects[0].width,
+                   seed.rects[1].x + seed.rects[1].width) + 4
+    let endY = max(seed.rects[0].y + seed.rects[0].height,
+                   seed.rects[1].y + seed.rects[1].height) + 4
+    let shrinkX = min(seed.rects[0].x, seed.rects[1].x) - 8
+    guard shrinkX >= 7 else {
+        report.fail(id, "band-audition notes sit too close to the plot origin to shrink past")
+        return
+    }
+    grid.beginRightPointer(x: 1, y: 0)
+    grid.updateRightPointer(x: ax, y: ay)
+    report.expect(auditions.contains { $0.pitch == p0 && $0.velocity == 93 }, cppID: id,
+                  message: "covering a note starts its band audition at the document velocity")
+    grid.updateRightPointer(x: shrinkX, y: 4)
+    report.expect(auditions.contains { $0.pitch == p0 && $0.velocity == 0 }, cppID: id,
+                  message: "shrinking the band past a note releases its audition immediately")
+    grid.updateRightPointer(x: endX, y: endY)
+    grid.endRightPointer(x: endX, y: endY)
+    report.expect(auditions.filter { $0.pitch == p0 && $0.velocity > 0 }.count >= 2, cppID: id,
+                  message: "re-covering a note re-auditions it")
+    report.expect(auditions.contains { $0.pitch == p1 && $0.velocity == 0 }, cppID: id,
+                  message: "the drag end releases every auditioned key")
+    report.expect(session.selectedNotes.isSuperset(of: Set(seed.ids)), cppID: id,
+                  message: "band release selects every swept note identity")
+    report.expect(session.document.revision == revision
+        && session.document.history.currentIdentity == history, cppID: id,
+        message: "band audition changes no document revision or undo entry")
+    do {
+        let after = try session.document.captureSave()
+        report.expect(after.bytes == planted.bytes, cppID: id,
+                      message: "band audition leaves the planted MIDI bytes untouched")
+    } catch {
+        report.fail(id, "could not encode the post-band MIDI document: \(error)")
+    }
+}
+
+@MainActor
+private func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::selectionModifierVelocity"
+    let initialSelection = session.selectedNoteOrder
+    let grid = selectionGrid(session: session)
+    guard let baseline = try? session.document.captureSave() else {
+        report.fail(id, "could not capture the pre-drag MIDI bytes")
+        return
+    }
+    defer {
+        selectionRestore(report, id: id, session: session, baseline: baseline,
+                         selection: initialSelection,
+                         message: "velocity drags unwind to the pre-seed MIDI bytes and history")
+    }
+    guard let seed = velocityPairSeed(session: session, grid: grid) else {
+        report.fail(id, "could not seed the velocity-drag note pair")
+        return
+    }
+    guard let plantedBytes = try? session.document.captureSave().bytes else {
+        report.fail(id, "could not capture the planted MIDI bytes")
+        return
+    }
+    let plantedIdentity = session.document.history.currentIdentity
+    let control = 0x0400_0000
+    let aX = seed.rects[0].x + seed.rects[0].width / 2
+    let aY = seed.rects[0].y + seed.rects[0].height / 2
+    session.setSelectedNotes(seed.ids)
+    grid.beginPointer(x: aX, y: aY, modifiers: control)
+    report.expect(Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
+                  message: "Ctrl press on a grouped anchor preserves the selection")
+    report.expect(session.document.note(seed.ids[0]).map { grid.hoverKey == Int($0.pitch) } == true,
+                  cppID: id, message: "the modifier press pins the hover mark to the anchor row")
+    let preCount = session.document.history.undoCount
+    grid.updatePointer(x: aX, y: aY + 15)
+    grid.endPointer(x: aX, y: aY + 15)
+    report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78, cppID: id,
+                  message: "a 15px modifier drag lands the anchor at 78 from 93")
+    report.expect(session.document.note(seed.ids[1]).map { Int($0.velocity) } == 85, cppID: id,
+                  message: "the grouped drag applies the same delta to the other selected note")
+    report.expect(Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
+                  message: "a grouped velocity drag preserves the selected notes")
+    report.expect(session.document.history.undoCount == preCount + 1, cppID: id,
+                  message: "one grouped velocity drag commits one undo entry")
+    report.expect(session.document.history.undoDocument()
+        && session.document.history.currentIdentity == plantedIdentity
+        && (try? session.document.captureSave().bytes) == plantedBytes, cppID: id,
+        message: "undo restores both fixture velocities at once")
+    session.setSelectedNotes(seed.ids)
+    grid.beginPointer(x: aX, y: aY, modifiers: control)
+    grid.updatePointer(x: aX, y: aY + 15)
+    grid.endPointer(x: aX, y: aY + 15)
+    report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78
+        && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 85, cppID: id,
+        message: "dragging down again reaches the same grouped velocities")
+    grid.beginPointer(x: aX, y: aY, modifiers: control)
+    grid.updatePointer(x: aX, y: aY - 15)
+    grid.endPointer(x: aX, y: aY - 15)
+    report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 93
+        && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 100, cppID: id,
+        message: "repeating the grouped drag the other way restores both velocities")
+    report.expect(Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
+                  message: "the repeated grouped drag preserves the selected notes")
+    let chordCount = session.document.history.undoCount
+    session.setSelectedNotes([seed.ids[1]])
+    grid.beginPointer(x: aX, y: aY, modifiers: control)
+    grid.updatePointer(x: aX, y: aY + 15)
+    grid.endPointer(x: aX, y: aY + 15)
+    report.expect(session.selectedNoteOrder == [seed.ids[0]], cppID: id,
+                  message: "a chord-held drag on another note re-anchors the selection to the grabbed note")
+    report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78, cppID: id,
+                  message: "the chord-held drag adjusts the grabbed note")
+    report.expect(session.document.note(seed.ids[1]).map { Int($0.velocity) } == 100, cppID: id,
+                  message: "the chord-held drag leaves the prior note untouched")
+    report.expect(session.document.history.undoCount == chordCount + 1, cppID: id,
+                  message: "the chord-held drag commits one undo entry")
+}
+
+@MainActor
+private func selectionFreeCell(session: DocumentSession, grid: PianoGrid, span: Int) -> (tick: Int, pitch: Int, y: Double)? {
+    let camera = session.camera
+    let snapshot = camera.snapshot
+    for pitch in stride(from: 115, through: 24, by: -1) {
+        let row = camera.projection.row(forPitch: pitch)
+        guard let top = camera.projection.rowTop(
+            row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
+            let bottom = camera.projection.rowBottom(
+                row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
+            top >= 0, bottom <= snapshot.rollHeight else { continue }
+        for probe in stride(from: 40, to: Int(snapshot.viewportWidth) - 80, by: 24) {
+            let tick = grid.snapTickDown(camera.tickAtContentX(Double(probe)))
+            let occupied = session.document.notes(in: grid.trackIndex).contains {
+                Int($0.pitch) == pitch && Int($0.tick) < tick + span
+                    && Int($0.tick) + Int($0.duration) > tick
+            }
+            if !occupied {
+                return (tick, pitch, (top + bottom) / 2)
+            }
+        }
+    }
+    return nil
+}
+
+@MainActor
+private func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::selectionMinimumDrawDistance"
+    let initialSelection = session.selectedNoteOrder
+    let oldCamera = session.camera
+    let grid = selectionGrid(session: session)
+    _ = session.mutateCamera { _ = $0.setTimeZoom(140) }
+    grid.refreshCamera()
+    for _ in 0..<3 {
+        if grid.snapTicks >= 12 { break }
+        grid.performCommand(command: EditCommand.gridWiden.rawValue)
+    }
+    defer { session.mutateCamera { $0 = oldCamera } }
+    guard let baseline = try? session.document.captureSave() else {
+        report.fail(id, "could not capture the pre-draw MIDI bytes")
+        return
+    }
+    defer {
+        selectionRestore(report, id: id, session: session, baseline: baseline,
+                         selection: initialSelection,
+                         message: "threshold draws unwind to the pre-seed MIDI bytes and history")
+    }
+    let snap = grid.snapTicks
+    guard snap >= 8 else {
+        report.fail(id, "the widened grid never reaches a drawable snap (snap=\(snap))")
+        return
+    }
+    guard let cell = selectionFreeCell(session: session, grid: grid, span: snap) else {
+        report.fail(id, "no free grid cell for the threshold draw")
+        return
+    }
+    let pressX = session.camera.displayX(tick: Double(cell.tick), origin: 0,
+                                         dpr: grid.devicePixelRatio) + 2
+    let dragX = pressX + 8
+    guard pressX >= 4,
+          dragX <= session.camera.snapshot.viewportWidth - 4,
+          session.camera.tickAtContentX(dragX) < Double(cell.tick + snap)
+    else {
+        report.fail(id, "the threshold drag escapes its snap cell at this zoom")
+        return
+    }
+    grid.beginPointer(x: pressX, y: cell.y, modifiers: 0)
+    grid.updatePointer(x: dragX, y: cell.y)
+    report.expect(grid.statusText.contains("Drawing"), cppID: id,
+                  message: "crossing the draw threshold enters the draw gesture")
+    grid.endPointer(x: dragX, y: cell.y)
+    let drawn = session.document.notes(in: grid.trackIndex).filter {
+        Int($0.tick) == cell.tick && Int($0.pitch) == cell.pitch
+    }
+    report.expect(drawn.count == 1 && drawn.first.map { Int($0.duration) == snap } == true,
+                  cppID: id, message: "a threshold drag draws one snap cell")
 }

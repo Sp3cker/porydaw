@@ -21,6 +21,7 @@ func runResizeChecks(_ report: CheckReport, session: DocumentSession) {
     checkResizeSelection(report, session: session)
     checkResizeMinimum(report, session: session)
     checkResizeAbutting(report, session: session)
+    checkResizeHoverCursor(report, session: session)
 }
 
 private struct ResizeCell {
@@ -334,4 +335,47 @@ private func checkResizeAbutting(_ report: CheckReport, session: DocumentSession
     report.expect(resizeUndoTo(planted, session: session)
                       && (try? document.captureSave().bytes) == before,
                   cppID: id, message: "Undo restores the planted abutting pair MIDI bytes")
+}
+@MainActor
+private func checkResizeHoverCursor(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::resizeOffGrid"
+    let document = session.document
+    let start = document.history.currentIdentity
+    defer { _ = resizeUndoTo(start, session: session); session.clearSelectedNotes() }
+    let grid = resizeGrid(session)
+    guard let d = resizeFreeCell(grid, session: session, firstProbe: 88) else {
+        report.fail(id, "no free grid cell for the hover cursor")
+        return
+    }
+    let span = 4 * d.duration
+    let clash = session.document.notes(in: grid.trackIndex).contains {
+        Int($0.pitch) == d.pitch && Int($0.tick) < d.tick + span
+            && Int($0.tick) + Int($0.duration) > d.tick
+    }
+    guard !clash else {
+        report.fail(id, "no free four-cell span for the hover cursor")
+        return
+    }
+    guard let noteID = try? document.addNotes([
+        NewNote(track: grid.trackIndex, tick: Tick(d.tick), pitch: UInt8(d.pitch),
+                duration: Tick(span), velocity: 100)
+    ]).first else {
+        report.fail(id, "hover-cursor note could not be planted")
+        return
+    }
+    grid.refreshFromSession()
+    guard let rect = resizeHandle(noteID, grid: grid), rect.width >= 16 else {
+        report.fail(id, "hover-cursor note is not projected wide enough")
+        return
+    }
+    let y = rect.y + rect.height / 2
+    grid.updateHover(x: rect.x + rect.width - 1, y: y)
+    report.expect(grid.cursorKind == 3, cppID: id,
+                  message: "the right edge grip publishes the horizontal resize cursor")
+    grid.updateHover(x: rect.x, y: y)
+    report.expect(grid.cursorKind == 3, cppID: id,
+                  message: "the left edge grip publishes the horizontal resize cursor")
+    grid.updateHover(x: rect.x + rect.width / 2, y: y)
+    report.expect(grid.cursorKind == 0, cppID: id,
+                  message: "the note body publishes the arrow cursor")
 }
