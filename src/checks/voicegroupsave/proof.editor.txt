@@ -45,8 +45,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:36
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The C++ DragSpinBox pointer has no QML object counterpart; VoiceEditor.qml owns a Qt Quick SpinBox and tst_ShellVoicegroup.qml exercises its edited release value.
 Source context since previous assertion:
 #include "checks/voicegroupsave/tst_voicegroupsave.h"
 
@@ -88,8 +88,8 @@ Original expression:
 QVERIFY(spin)
 
 A002 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:37
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QML Qt Quick SpinBox has no inspectable QWidget QLineEdit pointer; release edits are asserted at the published bank state instead.
 Source context since previous assertion:
 ;
 
@@ -118,8 +118,8 @@ QVERIFY2(settle([this] {
                  "drag baseline did not reach the voicegroup worker")
 
 A004 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:59
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The DragSpinBox child QLineEdit and its mouse-press focus state are retired QWidget internals; the QML editor uses a Qt Quick SpinBox.
 Source context since previous assertion:
 ;
         const QPoint start = field->rect().center();
@@ -135,8 +135,8 @@ Original expression:
 QVERIFY(!field->hasFocus())
 
 A005 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:66
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QWidget browserMinimumSizeHint during a DragSpinBox gesture has no Qt Quick equivalent; the QML pane geometry is compared with the widget reference profile instead.
 Source context since previous assertion:
 ;
         events::sendMouse(*field, QEvent::MouseMove, QPointF(activated), Qt::NoButton,
@@ -150,8 +150,8 @@ Original expression:
 QCOMPARE(m_browser->browserMinimumSizeHint(), minimumBefore)
 
 A006 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:68
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: tst_ShellVoicegroup.qml::test_editorAndUndo commits the selected editor draft's release and observes bankDirty plus the changed published release; runVoiceListSessionChecks confirms bank edit and fresh row after refresh; widget DragSpinBox precision gestures are not reproduced.
 Source context since previous assertion:
 ;
     }
@@ -170,8 +170,8 @@ Original expression:
 QCOMPARE(spin->value(), target)
 
 A008 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:72
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: tst_ShellVoicegroup.qml::test_editorAndUndo invokes app.requestUndo and observes the selected editor draft's release restored; runVoiceListSessionChecks also asserts bank lease voice restoration, but engine output and drag-variant parity remain unproved.
 Source context since previous assertion:
 ;
     requestUndo();

@@ -57,6 +57,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private let playheadGuides: PlayheadGuidesPresenter
     private let eventList: EventListPresenter
     private let transportBar: TransportBarPresenter
+    private let voiceList = VoiceListController()
     private let mouseHints = MouseHints()
     /// The workspaces whose rows have left the strip and whose pages have not
     /// reported their destruction yet. The page holds the C++ proxy for every
@@ -69,8 +70,18 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private var isDisposed = false
     private var hasReleased = false
     private var activeReplacementTask: Task<Void, Never>?
-    private var pendingProjectSwitch: (path: String, label: String?,
-                                       service: ProjectService, labels: [String])?
+    private var pendingProjectSwitch: ProjectSwitchCandidate?
+
+    /// A fully read project waiting to replace the open one: everything that can
+    /// fail is read before any live tab is released.
+    private struct ProjectSwitchCandidate {
+        let path: String
+        let label: String?
+        let service: ProjectService
+        let labels: [String]
+        let voicegroupArgs: [String]
+        let voicegroupCatalog: VoicegroupCatalog
+    }
 
     public required init() {
         let palette = GridPalette()
@@ -100,6 +111,26 @@ public final class ApplicationSession: QmlInstantiableStatus {
             }
             session.editCursor = tick
             _ = session.mutateCamera { $0.ensureTickVisible(UInt64(tick), dpr: dpr) }
+        }
+        voiceList.onAuditionVoice = { [weak self] voice, key, velocity in
+            guard (0..<128).contains(voice), (0..<128).contains(key),
+                  (0..<128).contains(velocity) else { return }
+            self?.audio?.previewVoice(program: UInt8(voice), key: UInt8(key),
+                                      velocity: UInt8(velocity))
+        }
+        voiceList.onVoicegroupChangeRequested = { [weak self] arg in
+            guard let self, let session = self.selectedDocument else { return }
+            Task { [weak self, weak session] in
+                guard let session else { return }
+                do {
+                    try await session.selectVoicegroup(arg)
+                } catch {
+                    self?.lastSaveError = String(describing: error)
+                }
+                if self?.selectedDocument === session {
+                    self?.voiceList.refresh(from: session)
+                }
+            }
         }
         songTabs.attach(app: self)
         transportBar.attach(session: self)
@@ -224,6 +255,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public var selectedDocument: DocumentSession? { workspace?.session }
     @QtIgnored
     internal var transportAudio: NativeAudio? { audio }
+    public func voiceListController() -> VoiceListController { voiceList }
 
     public func isDocumentDirty() -> Bool { documentDirty }
     public func songCount() -> Int { labels.count }
@@ -486,6 +518,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     func tabsDidChange() {
         polyphony.setContext(session: workspace?.session)
         refreshDocumentState()
+        refreshVoicegroupDock()
         // The selected workspace's grid owns command availability; switching
         // tabs swaps it, so the window's Edit-menu enabled states must refresh.
         gridCommandAvailabilityChanged()
@@ -584,6 +617,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private func tabStateChanged() {
         songTabs.refreshDirty()
         refreshDocumentState()
+        refreshVoicegroupDock()
+    }
+
+    private func refreshVoicegroupDock() {
+        if let session = selectedDocument {
+            voiceList.refresh(from: session)
+        } else {
+            voiceList.bindBank(slots: nil)
+        }
     }
 
     /// Retires one tab: releases the workspace's presenters and closes its
@@ -638,11 +680,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
             do {
                 try await service.open(root: path)
                 let labels = try await service.songLabels()
+                let voicegroupArgs = try await service.voicegroupArgs()
+                let voicegroupCatalog = try await service.voicegroupCatalog()
                 guard !self.isDisposed, !Task.isCancelled else {
                     await service.close()
                     return
                 }
-                let candidate = (path: path, label: label, service: service, labels: labels)
+                let candidate = ProjectSwitchCandidate(
+                    path: path, label: label, service: service, labels: labels,
+                    voicegroupArgs: voicegroupArgs, voicegroupCatalog: voicegroupCatalog)
                 if self.songTabs.tabCount == 0 {
                     await self.finishProjectSwitch(candidate)
                 } else {
@@ -805,9 +851,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         playhead.refreshImmediate()
     }
 
-    private func finishProjectSwitch(
-        _ candidate: (path: String, label: String?, service: ProjectService, labels: [String])
-    ) async {
+    private func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {
         await releaseTabs()
         await catalogService?.close()
         guard !isDisposed, !Task.isCancelled else {
@@ -817,6 +861,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
         catalogService = candidate.service
         projectRoot = candidate.path
         labels = candidate.labels
+        let catalog = candidate.voicegroupCatalog
+        voiceList.setVoicegroupChoices(candidate.voicegroupArgs)
+        voiceList.sampleChoices = catalog.samples
+        voiceList.waveSymbols = catalog.waves
+        voiceList.drumkitSymbols = catalog.drumkits
+        voiceList.keysplitTables = catalog.keysplits
+        voiceList.synthSymbols = Set(catalog.synths)
+        voiceList.adsrDefaults = catalog.defaults
+        voiceList.catalogRevision += 1
         projectOpen = true
         if let label = candidate.label { await openTab(label: label, at: nil) }
     }

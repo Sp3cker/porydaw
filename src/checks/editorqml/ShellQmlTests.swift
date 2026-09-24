@@ -73,6 +73,8 @@ enum ShellQmlLane {
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-polyphony", inputFileName: "tst_ShellPolyphony.qml",
               fixtureFiles: songs("mus_route101")),
+        Entry(name: "shell-voicegroup", inputFileName: "tst_ShellVoicegroup.qml",
+              fixtureFiles: songs("mus_route101")),
     ]
 
     private static var manifestLine: String {
@@ -200,6 +202,16 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
         guard let store = UserDefaults(suiteName: domain) else { return false }
         store.removePersistentDomain(forName: domain)
         return store.synchronize()
+    }
+
+    /// Widget oracle geometry for the standalone production voicegroup panel.
+    public func voicegroupReferenceJson(variant: String) -> String {
+        guard ["", "editor-square1", "editor-readonly"].contains(variant) else { return "" }
+        let fixtures = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
+            .deletingLastPathComponent().appendingPathComponent("fixtures/visual")
+        let file = fixtures.appendingPathComponent("macos-dpr1-font12/voicegroupbrowser")
+            .appendingPathComponent(variant).appendingPathComponent("vanilla.json")
+        return (try? String(contentsOf: file, encoding: .utf8)) ?? ""
     }
 
     /// Qt Quick Test's wait() pumps Qt but does not service Swift's main-actor

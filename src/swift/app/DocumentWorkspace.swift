@@ -319,6 +319,13 @@ public final class DocumentWorkspace {
             grid.refreshCursorPresentation()
         }
 
+        if isActive && change.domains.contains(.bank) {
+            do {
+                try audio.updateVoicegroup(session.bankLease)
+            } catch {
+                callbacks.publicationFailed(String(describing: error))
+            }
+        }
         if change.domains.contains(.bank) {
             velocityPage.cancelSectionInteraction()
         }

@@ -126,15 +126,20 @@ public struct BankSlotView: Equatable, Sendable {
     /// The loaded bank's tone when the slot has no parsed voice and is not
     /// blank; nil for editable and blank slots.
     public var tone: BankTone?
+    /// Loader-confirmed synth descriptor, including in-memory minted symbols
+    /// absent from the current on-disk catalog.
+    public var isSynth: Bool
     /// Native split facts copied once at publication; -1 is an invalid child.
     public var subvoiceMacros: [Int32]?
 
     public init(kind: Int32 = BankSlotKind.none, voice: BankVoice? = nil,
-                tone: BankTone? = nil, subvoiceMacros: [Int32]? = nil) {
+                tone: BankTone? = nil, subvoiceMacros: [Int32]? = nil,
+                isSynth: Bool = false) {
         self.kind = kind
         self.voice = voice
         self.tone = tone
         self.subvoiceMacros = subvoiceMacros
+        self.isSynth = isSynth
     }
 
     public func subvoiceMacro(forKey key: Int) -> Int32? {
@@ -326,6 +331,7 @@ public struct SongDeletionPlan: Equatable, Sendable {
 public actor ProjectService {
     private var store: ProjectStore?
     private var snapshot: ProjectSnapshot?
+    private var projectRoot = ""
     private var closed = false
 
     public init() {}
@@ -347,6 +353,7 @@ public actor ProjectService {
             guard !closed else { throw ProjectServiceError.serviceClosed }
             store = candidate
             snapshot = opened
+            projectRoot = root
         } catch {
             throw projectFailure(error)
         }
@@ -440,6 +447,47 @@ public actor ProjectService {
         let store = try requireStore()
         do { return try await store.voicegroupArgs() }
         catch { throw projectFailure(error) }
+    }
+
+    /// Loads another voicegroup without reopening the song. The returned lease
+    /// owns its bank independently of the currently presented lease.
+    public func loadBank(voicegroupArg: String) async throws -> AppliedBankEdit {
+        let store = try requireStore()
+        do {
+            let bank = try await store.loadBank(voicegroupArg: voicegroupArg)
+            return AppliedBankEdit(lease: NativeBankLease(handle: bank),
+                                   slots: copySlots(bank), dirty: bank.dirty,
+                                   loadName: bank.loadName, materializationToken: nil)
+        } catch {
+            throw projectFailure(error)
+        }
+    }
+
+    /// Reads the editor's symbol catalogs from the root supplying the bank.
+    public func voicegroupCatalog() async throws -> VoicegroupCatalog {
+        let store = try requireStore()
+        let root = projectRoot
+        return try await store.run {
+            let groups = VoicegroupSource.catalogScan(root)
+            let direct = VoicegroupSource.directSoundCatalog(root)
+            let defaults = VoiceListAdsrDefaults(
+                bySymbol: groups.typicalAdsr.bySymbol.mapValues {
+                    VoiceListAdsr(attack: Int32($0.attack), decay: Int32($0.decay),
+                                  sustain: Int32($0.sustain), release: Int32($0.release))
+                },
+                byFamily: Dictionary(uniqueKeysWithValues:
+                    groups.typicalAdsr.byFamily.map { key, adsr in
+                        (Int32(key), VoiceListAdsr(
+                            attack: Int32(adsr.attack), decay: Int32(adsr.decay),
+                            sustain: Int32(adsr.sustain), release: Int32(adsr.release)))
+                    }))
+            return VoicegroupCatalog(
+                samples: direct.directSound, waves: VoicegroupSource.progWaveSymbols(root),
+                drumkits: groups.drumkits,
+                keysplits: Dictionary(groups.keysplits.map { ($0.symbol, $0.table) },
+                                      uniquingKeysWith: { _, latest in latest }),
+                synths: direct.synths.defs.map(\.symbol), defaults: defaults)
+        }
     }
 
     /// Opens a playable song: raw MIDI bytes, metadata and the owned bank lease.
@@ -578,11 +626,17 @@ private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
         let bank = nativeLease.pointee.__getUnsafe()
         return lease.slotViews.enumerated().map { index, slot in
             let voice = slot.voice.map(copyVoice)
-            let tone: BankTone? = bank.flatMap { storage in
-                guard voice == nil, slot.kind != .none, index < 128 else { return nil }
-                let loaded = withUnsafePointer(to: storage.pointee.voices) {
+            let loaded: ToneData? = bank.flatMap { storage in
+                guard slot.kind != .none, index < 128 else { return nil }
+                return withUnsafePointer(to: storage.pointee.voices) {
                     $0.withMemoryRebound(to: ToneData.self, capacity: 128) { $0[index] }
                 }
+            }
+            let synth = loaded.map {
+                $0.type & 0xE7 == 0 && $0.wav?.pointee.size == 0 && $0.wav?.pointee.data != nil
+            } ?? false
+            let tone: BankTone? = bank.flatMap { storage in
+                guard voice == nil, let loaded else { return nil }
                 let name = withUnsafePointer(to: storage.pointee.voiceNames) {
                     $0.withMemoryRebound(to: CChar.self,
                                          capacity: 128 * Int(VG_VOICE_NAME_LEN)) { names in
@@ -599,20 +653,11 @@ private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
                     || loaded.type == UInt8(VOICE_KEYSPLIT_ALL) ? nil
                     : BankToneAdsr(attack: Int32(loaded.attack), decay: Int32(loaded.decay),
                                    sustain: Int32(loaded.sustain), release: Int32(loaded.release))
-                let synth = loaded.type & 0xE7 == 0
-                    && loaded.wav?.pointee.size == 0 && loaded.wav?.pointee.data != nil
                 return BankTone(name: name, type: Int32(loaded.type), isSynth: synth, adsr: adsr)
             }
-            let subvoices = bank.flatMap { storage -> [Int32]? in
-                guard index < 128 else { return nil }
-                return withUnsafePointer(to: storage.pointee.voices) {
-                    $0.withMemoryRebound(to: ToneData.self, capacity: 128) {
-                        copySubvoiceMacros($0[index])
-                    }
-                }
-            }
+            let subvoices = loaded.flatMap(copySubvoiceMacros)
             return BankSlotView(kind: slot.kind.rawValue, voice: voice, tone: tone,
-                                subvoiceMacros: subvoices)
+                                subvoiceMacros: subvoices, isSynth: synth)
         }
     }
 }

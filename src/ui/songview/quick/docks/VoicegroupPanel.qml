@@ -1,0 +1,239 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import QtQuick.Effects
+
+ColumnLayout {
+    id: panel
+    objectName: "voicegroupPanel"
+    required property QtObject applicationSession
+    required property QtObject controller
+    readonly property var grid: applicationSession.songOpen
+                                ? applicationSession.gridPresenter() : null
+    readonly property var palette: grid ? grid.palette : fallbackPalette
+    readonly property real baseFontPx: grid ? grid.baseFontPx : 12
+    readonly property int rowHeight: Math.round(baseFontPx * 1.33)
+    readonly property int headerHeight: Math.round(baseFontPx * 1.83)
+    readonly property int typeWidth: Math.round(baseFontPx * 3.75)
+    readonly property int adsrWidth: Math.round(baseFontPx * 8.33)
+    readonly property var iconNames: ["waveform.svg", "waveform.svg",
+                                      "wave-square.svg", "wave-triangle.svg",
+                                      "wave-sine.svg", "waveform-path.svg",
+                                      "piano-keyboard.svg", "drum.svg"]
+    spacing: 0
+
+    QtObject {
+        id: fallbackPalette
+        readonly property color windowBackground: "#e0dedb"
+        readonly property color chromeBackground: "#e0dedb"
+        readonly property color primaryText: "#292929"
+        readonly property color secondaryText: "#666666"
+        readonly property color selectionRing: "#abd9e3"
+        readonly property color outline: "#999999"
+    }
+
+    RowLayout {
+        Layout.fillWidth: true
+        Layout.preferredHeight: panel.baseFontPx * 2.17
+        Layout.leftMargin: Math.round(panel.baseFontPx * 0.33)
+        Layout.rightMargin: Math.round(panel.baseFontPx * 0.33)
+        spacing: Math.round(panel.baseFontPx * 0.16)
+        Label {
+            text: qsTr("voicegroup_")
+            Layout.preferredWidth: Math.round(panel.baseFontPx * 6.08)
+            font.pixelSize: panel.baseFontPx
+            color: panel.palette.primaryText
+        }
+        ComboBox {
+            id: selector
+            objectName: "vgArgCombo"
+            Layout.fillWidth: true
+            Layout.preferredHeight: panel.baseFontPx * 1.83
+            editable: true
+            enabled: panel.controller.selectorEnabled
+            model: panel.controller.argChoices
+            textRole: "name"
+            font.pixelSize: panel.baseFontPx
+            editText: panel.controller.selectorText
+            onActivated: {
+                panel.controller.selectorText = editText
+                panel.controller.commitVoicegroupSelection()
+            }
+            onAccepted: {
+                panel.controller.selectorText = editText
+                panel.controller.commitVoicegroupSelection()
+            }
+            ToolTip.text: qsTr("The song's voicegroup (-G). Changing it is undoable.")
+            ToolTip.visible: hovered
+        }
+    }
+
+    Rectangle {
+        id: tree
+        objectName: "voicegroupTree"
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.minimumHeight: panel.rowHeight * 3
+        color: panel.palette.windowBackground
+        border.width: 1
+        border.color: panel.palette.outline
+
+        Rectangle {
+            id: treeHeader
+            objectName: "voicegroupTreeHeader"
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 1
+            anchors.rightMargin: Math.round(panel.baseFontPx * 0.58)
+            height: panel.headerHeight
+            color: panel.palette.chromeBackground
+            RowLayout {
+                anchors.fill: parent
+                spacing: 0
+                Label {
+                    text: qsTr("Voice")
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Math.round(panel.baseFontPx * 0.25)
+                    font.pixelSize: panel.baseFontPx
+                    color: panel.palette.primaryText
+                }
+                Label {
+                    text: qsTr("Type")
+                    Layout.preferredWidth: panel.typeWidth
+                    font.pixelSize: panel.baseFontPx
+                    color: panel.palette.primaryText
+                }
+                Label {
+                    text: qsTr("ADSR")
+                    Layout.preferredWidth: panel.adsrWidth
+                    font.pixelSize: panel.baseFontPx
+                    color: panel.palette.primaryText
+                }
+            }
+        }
+        Rectangle {
+            anchors.left: treeHeader.left
+            anchors.right: treeHeader.right
+            anchors.top: treeHeader.bottom
+            height: 1
+            color: panel.palette.outline
+        }
+        ListView {
+            id: voiceList
+            objectName: "voicegroupRows"
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: treeHeader.bottom
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: 1
+            anchors.rightMargin: 1
+            anchors.bottomMargin: 1
+            clip: true
+            model: panel.controller.rows
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+            delegate: Rectangle {
+                id: row
+                required property int slot
+                required property string title
+                required property string typeName
+                required property string adsr
+                required property int typeIconKey
+                required property bool altChip
+                required property bool used
+                objectName: "voicegroupRow_" + slot
+                width: voiceList.width - Math.round(panel.baseFontPx * 0.67)
+                height: panel.rowHeight
+                color: panel.controller.currentSlot === slot ? panel.palette.selectionRing
+                       : used ? Qt.tint(panel.palette.windowBackground, "#22b4e4ee")
+                              : panel.palette.windowBackground
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 0
+                    Label {
+                        text: row.title
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Math.round(panel.baseFontPx * 0.25)
+                        font.pixelSize: panel.baseFontPx
+                        font.bold: row.used
+                        color: panel.palette.primaryText
+                        elide: Text.ElideRight
+                    }
+                    Item {
+                        objectName: "voicegroupTypeIcon_" + row.slot
+                        Layout.preferredWidth: panel.typeWidth
+                        Layout.fillHeight: true
+                        HoverHandler { id: iconHover }
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: panel.baseFontPx * 1.25
+                            height: width
+                            radius: height * 0.25
+                            color: Qt.tint(panel.palette.windowBackground, "#59666666")
+                            visible: row.altChip
+                        }
+                        Image {
+                            id: sourceGlyph
+                            anchors.centerIn: parent
+                            width: panel.baseFontPx * 1.25
+                            height: width
+                            sourceSize: Qt.size(width, height)
+                            source: row.typeIconKey < 0 ? ""
+                                    : "qrc:/porydaw/voiceicons/"
+                                      + panel.iconNames[Math.floor(row.typeIconKey / 2)]
+                            rotation: Math.floor(row.typeIconKey / 2) === 1 ? 180 : 0
+                            visible: false
+                        }
+                        MultiEffect {
+                            anchors.fill: sourceGlyph
+                            source: sourceGlyph
+                            visible: row.typeIconKey >= 0
+                            colorization: 1
+                            colorizationColor: row.altChip ? panel.palette.windowBackground
+                                                           : panel.palette.primaryText
+                        }
+                        ToolTip.text: row.typeName
+                        ToolTip.visible: iconHover.hovered && row.typeName.length > 0
+                    }
+                    Label {
+                        objectName: "voicegroupAdsr_" + row.slot
+                        Layout.preferredWidth: panel.adsrWidth
+                        text: row.adsr
+                        font.pixelSize: panel.baseFontPx
+                        font.bold: row.used
+                        color: panel.palette.primaryText
+                        elide: Text.ElideRight
+                    }
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton
+                    onPressed: {
+                        panel.controller.selectSlot(row.slot)
+                        panel.controller.pressVoice(row.slot)
+                    }
+                    onReleased: panel.controller.releaseVoice()
+                    onCanceled: panel.controller.releaseVoice()
+                }
+            }
+        }
+        Connections {
+            target: panel.controller
+            function onRevealRequestChanged() {
+                voiceList.positionViewAtIndex(panel.controller.revealSlotId, ListView.Contain)
+            }
+        }
+    }
+
+    VoiceEditor {
+        id: voiceEditor
+        objectName: "voicegroupEditorSurface"
+        Layout.fillWidth: true
+        controller: panel.controller
+        palette: panel.palette
+        baseFontPx: panel.baseFontPx
+    }
+}
