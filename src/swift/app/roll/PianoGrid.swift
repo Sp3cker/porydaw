@@ -134,8 +134,10 @@ public final class PianoGrid {
 
     @QtIgnored
     public func previewVelocity(_ id: NoteID) -> Int? {
-        guard case .velocity(let state) = gesture, state.noteId == id else { return nil }
-        return state.preview
+        guard case .velocity(let state) = gesture, let preview = state.preview else { return nil }
+        if state.noteId == id { return preview }
+        guard session.selectedNotes.contains(id), let note = session.document.note(id) else { return nil }
+        return min(127, max(1, Int(note.velocity) + state.delta))
     }
 
     /// Creates the roll presenter for `session`.
@@ -749,16 +751,16 @@ public final class PianoGrid {
         case .draw(let state):
             addNote(tick: state.tick, duration: state.duration, pitch: state.key)
         case .velocity(let state):
-            if let preview = state.preview, preview != state.original {
-                let delta = preview - state.original
+            if state.delta != 0 {
                 var changes: [NoteVelocity] = []
                 for id in session.selectedNoteOrder {
                     guard let current = session.document.note(id) else { continue }
                     changes.append(NoteVelocity(
-                        noteID: id, velocity: Int(current.velocity) + delta))
+                        noteID: id, velocity: Int(current.velocity) + state.delta))
                 }
                 if changes.isEmpty {
-                    changes.append(NoteVelocity(noteID: state.noteId, velocity: preview))
+                    changes.append(NoteVelocity(
+                        noteID: state.noteId, velocity: state.original + state.delta))
                 }
                 _ = session.document.setVelocities(
                     changes, expectedRevision: session.document.revision)

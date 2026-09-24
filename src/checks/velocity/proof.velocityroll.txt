@@ -10,7 +10,7 @@ Additional Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5a
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
 Additional Swift SHA-256: 04386e845a0fc186c7ec5336906c1f2e96e0dffcad6af8e6deeba39f5f829ccf
 Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
-Additional Swift SHA-256: 32986d8646ef96c6c49749f5d0eedeea025ac18a89ff2027900f96ae396267e2
+Additional Swift SHA-256: 683e47a7dc048626180d7d0c8a0643753020c6759ab2d24ef21389351fa2e0cc
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -40,15 +40,24 @@ and gesture state live in the paired Swift sources. Their helper expectations ex
 on every call and are inventoried below.
 
 Verification
-Command: deno task verify --filter swiftcore
-Result: PASS - the swiftcore harness ran 1/14 selected; 13 sibling harnesses were
-skipped by the filter.
-Command: deno task verify:qml
-Result: PASS - editorqml-drawer ran 1/1 ok.
-Provenance: both results were provided by the controller as the settled final run for
-this snapshot; the ledger writer re-ran only deno task proof check (structure) and did
-not rebuild or re-run the check lanes. Unknown: per-harness timings. The source hashes
-below pin the tree these mappings were reconciled against.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS - swiftcore 1/6 ok, 5 skipped; rollSurfaceDrag and grouped modifier
+velocity predicates executed in projectSession (10.28s).
+Command: deno task verify:qml-roll --verbose
+Result: PASS - swiftroll-window 1/1 ok (21.73s).
+Both results were observed after the Swift roll-source and check changes; the
+Swift check hash above pins the executing check source.
+
+Historical roll behavior: at reference 7607c6d7, velocityroll.cpp:71 selects the
+quiet stacked note and the later anchor; :129-141 presses/moves with the configured
+roll.velocity_drag chord and expects previews on both selected IDs; :199-205 expects
+both committed velocities and an unchanged unselected duplicate. At reference
+a1244957, rollcheck/selection.cpp:473-497 selects A+B, Ctrl-drags the selected A,
+and requires both velocities to change together with one command.
+At both references ui/songview/pianoroll_gestures.cpp:229-251 retains an already
+selected anchor group, and viewstate.cpp:30-61 begins/updates the gesture for
+all selected notes. These originals agree; the old S145/S154 assertions
+instead described the incomplete Swift port, not a distinct gesture mode.
 
 Fixture, sequence and row constraints
 No QTest data rows; each method runs once.
@@ -95,7 +104,7 @@ src/checks/velocity/velocityroll.cpp:286 | QSignalSpy edited(m_tab.get(), &SongT
 src/checks/velocity/velocityroll.cpp:290 | focusVelocityBand();
 src/checks/velocity/velocityroll.cpp:294 | QTest::keyClick(m_quickWindow, Qt::Key_Up, Qt::ShiftModifier);
 
-Tally: MATCHED 52, PARTIAL 32, GAP 5, NATIVE-SETUP 0, RETIRED-REPRESENTATION 21
+Tally: MATCHED 61, PARTIAL 28, GAP 0, NATIVE-SETUP 0, RETIRED-REPRESENTATION 21
 
 Original assertion inventory
 
@@ -302,8 +311,8 @@ Original expression:
   QVERIFY(m_rollInput->bounds().contains(rollDragLocal))
 
 A014 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:106
-Disposition: GAP
-Mapping/reason: Feature not yet ported: multi-note roll-surface velocity drag. This site is the unpressed companion note's unsaturated staged-preview sum; the Swift roll path stages a preview for the pressed note only (S143) and asserts the companion stages none (S145), so no predicate covers the companion's expected value. The drawer-surface engine stages a preview for every selected note (S088/S091) but that is a different gesture engine and does not establish the roll-surface pair preview.
+Disposition: MATCHED
+Mapping/reason: S145 (VelocityRollCoreChecks.swift:215) checks the selected companion preview equals its literal 64 + the integral 11px delta, a sum inside 1...127; unlike the previous stale mapping, S145 now runs on the grouped roll path. At 7607c6d7 velocityroll.cpp:106 the selected companion is likewise expected to remain unsaturated.
 Source context since previous assertion:
 ;
 
@@ -413,8 +422,8 @@ Original expression:
   QTRY_COMPARE(m_quickWindow->mouseGrabberItem(), static_cast<QQuickItem *>(m_rollInput.data()))
 
 A024 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:139
-Disposition: GAP
-Mapping/reason: Feature not yet ported: multi-note roll-surface velocity drag. This site is the unpressed companion note's staged preview; the Swift roll path stages a preview for the pressed note only (S143) and asserts the companion selected note stages none (S145). The drawer engine's paired staging (S088) is a different gesture engine and does not establish the roll-surface companion preview.
+Disposition: MATCHED
+Mapping/reason: S145 (VelocityRollCoreChecks.swift:215) requires the selected companion roll preview to equal its literal 64 + 11; nil cannot satisfy that equality. The fixture selects notes[0]+notes[1] and presses notes[0] at :206-212, matching the selected-companion role at 7607c6d7 velocityroll.cpp:138-139.
 Source context since previous assertion:
 ;
     mouseMove(session->dragWindow, velocityDragModifiers);
@@ -439,8 +448,8 @@ Original expression:
   QVERIFY(laterPreview.has_value())
 
 A026 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:141
-Disposition: GAP
-Mapping/reason: Feature not yet ported: multi-note roll-surface velocity drag. The companion note's exact staged preview value has no Swift counterpart: the roll path stages only the pressed note (S143/S145) and the companion's expected sum is never produced. S090/S091 assert a shared relative delta for the drawer engine's pair, which is a different gesture engine.
+Disposition: MATCHED
+Mapping/reason: S145 (VelocityRollCoreChecks.swift:215) asserts the roll companion preview equals its own original velocity 64 + 11; S143 at :213 separately asserts the pressed preview equals 100 + 11. Both observe the same integral upward delta in the staged roll gesture from 7607c6d7 velocityroll.cpp:141.
 Source context since previous assertion:
 ;
 
@@ -457,8 +466,8 @@ Original expression:
   QCOMPARE(int(*laterPreview), session->expectedLater)
 
 A028 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:143
-Disposition: PARTIAL
-Mapping/reason: S089 asserts the unselected fixture note stages no preview for the staged drawer-surface velocity drag and S145 shows the roll engine's selected companion stages none either, but no Swift predicate observes an unselected note during the roll-surface staging itself; that specific observation is unproved (the multi-note staging gap is recorded at A024/A026).
+Disposition: MATCHED
+Mapping/reason: S145 (VelocityRollCoreChecks.swift:215) explicitly requires grid.previewVelocity(notes[2].id) == nil during the staged roll drag; notes[2] is the unselected fixture note and notes[0]+notes[1] are selected at :206. This matches the unselected stacked sibling role at 7607c6d7 velocityroll.cpp:143 despite the non-stacked Swift fixture.
 Source context since previous assertion:
 ;
 
@@ -511,8 +520,8 @@ Original expression:
   QCOMPARE(session->edited->count(), 0)
 
 A034 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:149
-Disposition: PARTIAL
-Mapping/reason: S095 asserts the staged drawer-surface velocity drag leaves the companion selected note's document value alone, but no Swift predicate observes the companion note's document value while the roll-surface drag is staged; the roll-path equivalent is unproved.
+Disposition: MATCHED
+Mapping/reason: S148 (VelocityRollCoreChecks.swift:218) asserts document.note(notes[1].id) retains its literal velocity 64 during the staged roll drag, alongside the unchanged pressed and unselected values; the selected companion is frozen before release as at 7607c6d7 velocityroll.cpp:149.
 Source context since previous assertion:
 ;
 
@@ -529,8 +538,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(m_later.velocity))
 
 A036 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:151
-Disposition: PARTIAL
-Mapping/reason: S096 asserts the unselected note's document value is untouched by the staged drawer-surface drag, but the roll-surface staging itself does not assert the unselected note; the roll-path equivalent is unproved.
+Disposition: MATCHED
+Mapping/reason: S148 (VelocityRollCoreChecks.swift:218) asserts document.note(notes[2].id) retains the unselected literal velocity 32 during roll staging, matching the unselected sibling document value at 7607c6d7 velocityroll.cpp:151.
 Source context since previous assertion:
 ;
 
@@ -557,7 +566,7 @@ Original expression:
 
 A039 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:154
 Disposition: PARTIAL
-Mapping/reason: As A037 for the unselected note: no Swift predicate reads the timeline projection value, and no document-value predicate covers that note during the roll staging (see A036).
+Mapping/reason: S148 (VelocityRollCoreChecks.swift:218) now asserts the unselected note remains unchanged in the staged roll document, but no Swift predicate reads its playback timeline projection; that projection value is unproved.
 Source context since previous assertion:
 ;
 
@@ -575,7 +584,7 @@ Original expression:
 
 A041 | VelocityEditingTest::verifyCancelledRollDragIdle | src/checks/velocity/velocityroll.cpp:164
 Disposition: MATCHED
-Mapping/reason: S176 (controller cancellation) and S164 (Escape) assert every roll preview is cleared, including the selected companion note's; the Swift companion staged no preview beforehand (recorded at A024/A026).
+Mapping/reason: S164 (VelocityRollCoreChecks.swift:259) and S176 (:295) assert cancellation clears every roll preview, including the selected companion; S145 (:215) now proves that companion previously staged a preview under the grouped roll drag.
 Source context since previous assertion:
 ;
 }
@@ -774,8 +783,8 @@ Original expression:
   QVERIFY(m_tab->history().canUndo())
 
 A061 | VelocityEditingTest::rollDragCommitsOnce | src/checks/velocity/velocityroll.cpp:196
-Disposition: PARTIAL
-Mapping/reason: S152 asserts the pressed note's preview is cleared on release and S145 that the companion never staged one, but the roll path does not assert the companion note's preview state after the release; that specific observation is unproved.
+Disposition: MATCHED
+Mapping/reason: S152 (VelocityRollCoreChecks.swift:224) asserts the selected companion preview is nil after roll release and the interaction is idle; S145 (:215) establishes that same companion had a non-nil staged value beforehand. This is the companion-clear observable at 7607c6d7 velocityroll.cpp:196.
 Source context since previous assertion:
 ;
 
@@ -792,8 +801,8 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A063 | VelocityEditingTest::rollDragCommitsOnce | src/checks/velocity/velocityroll.cpp:198
-Disposition: PARTIAL
-Mapping/reason: S152 asserts the pressed note's preview cleared, and the drawer-surface release asserts a fully empty preview map (S105), but the roll path does not assert the unselected note's preview state on release.
+Disposition: MATCHED
+Mapping/reason: S152 (VelocityRollCoreChecks.swift:224) asserts the unselected notes[2] preview is nil after roll release; S145 (:215) asserts that note had no preview while staged. This matches the unselected sibling roll-release observation at 7607c6d7 velocityroll.cpp:198.
 Source context since previous assertion:
 ;
 
@@ -801,8 +810,8 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A064 | VelocityEditingTest::rollDragCommitsOnce | src/checks/velocity/velocityroll.cpp:199
-Disposition: GAP
-Mapping/reason: Feature not yet ported: multi-note roll-surface velocity drag pair commit. This site is the companion selected note's committed value; the Swift roll commit writes the pressed note only (S153) and asserts the companion keeps its literal (S154), so the pair-commit observable does not exist in the roll port. The drawer engine commits both selected notes (S101/S102), but that is a different gesture engine.
+Disposition: MATCHED
+Mapping/reason: S154 (VelocityRollCoreChecks.swift:226) asserts that the selected companion commits its own original velocity 64 + 11 after the roll release; S153 (:225) checks 100 + 11 on the pressed anchor and S151 (:223) checks one history entry. At 7607c6d7 velocityroll.cpp:199 the selected companion likewise commits its grouped delta; at a1244957 rollcheck/selection.cpp:495 the same rule applies to selected B.
 Source context since previous assertion:
 ;
 
@@ -828,8 +837,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A067 | VelocityEditingTest::rollDragCommitsOnce | src/checks/velocity/velocityroll.cpp:202
-Disposition: GAP
-Mapping/reason: Feature not yet ported: multi-note roll-surface velocity drag pair commit observed through the playback timeline. No Swift predicate rebuilds the timeline for the companion note, the companion is not committed at all (S154), and the drawer engine's paired commit (S102) is a different gesture engine.
+Disposition: PARTIAL
+Mapping/reason: S154 (VelocityRollCoreChecks.swift:226) now asserts the selected companion commits 64 + 11 in the roll document, but no Swift predicate observes its rebuilt playback timeline projection. The original at 7607c6d7 velocityroll.cpp:202 checks that separate timeline value; that observation remains unproved.
 Source context since previous assertion:
 ;
 
@@ -865,7 +874,7 @@ Original expression:
 
 A071 | VelocityEditingTest::controllerCancellationStopsRollDrag | src/checks/velocity/velocityroll.cpp:222
 Disposition: MATCHED
-Mapping/reason: S176 asserts controller cancellation clears every roll preview, including the selected companion note's; the Swift companion staged no preview beforehand (recorded at A024/A026).
+Mapping/reason: S176 (VelocityRollCoreChecks.swift:295) asserts controller cancellation clears all roll previews including the selected companion, whose prior staged value S145 (:215) checks during the roll drag.
 Source context since previous assertion:
 ;
 }
@@ -953,7 +962,7 @@ Original expression:
 
 A076 | VelocityEditingTest::escapeStopsRollDrag | src/checks/velocity/velocityroll.cpp:255
 Disposition: MATCHED
-Mapping/reason: S164 asserts Escape clears every roll preview, including the selected companion note's (S162 asserts the gesture was staged first); the Swift companion staged no preview beforehand (recorded at A024/A026).
+Mapping/reason: S164 (VelocityRollCoreChecks.swift:259) asserts Escape clears every roll preview including the selected companion; S145 (:215) separately checks its staged value on the grouped roll path before release.
 Source context since previous assertion:
 ;
     QTest::keyClick(m_quickWindow, Qt::Key_Escape);
@@ -1829,7 +1838,7 @@ S144 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreCh
   report.expect(original + 11 > 1 && original + 11 < 127, cppID: drawerVelocityRollCoreRollID, message: "the staged preview stays exact inside the domain")
 
 S145 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift:215
-  report.expect(grid.previewVelocity(notes[1].id) == nil, cppID: drawerVelocityRollCoreRollID, message: "the companion selected note stages no roll preview")
+  report.expect(grid.previewVelocity(notes[1].id) == Int(notes[1].velocity) + 11 && grid.previewVelocity(notes[2].id) == nil, cppID: drawerVelocityRollCoreRollID, message: "the selected companion previews its integral delta while the unselected note stages nothing")
 
 S146 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift:216
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreRollID, message: "the staged roll drag writes no document state")
@@ -1838,7 +1847,7 @@ S147 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreCh
   report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreRollID, message: "the staged roll drag leaves history depth and song bytes frozen")
 
 S148 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift:218
-  report.expectEqual(original, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the staged drag leaves the pressed document value alone")
+  report.expect(Int(document.note(notes[0].id)?.velocity ?? 0) == original && Int(document.note(notes[1].id)?.velocity ?? 0) == Int(notes[1].velocity) && Int(document.note(notes[2].id)?.velocity ?? 0) == Int(notes[2].velocity), cppID: drawerVelocityRollCoreRollID, message: "the staged drag leaves all three document values alone")
 
 S149 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift:221
   report.expectEqual(baseline.revision + 1, committed.revision, cppID: drawerVelocityRollCoreRollID, what: "one roll release advances the revision once")
@@ -1850,13 +1859,13 @@ S151 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreCh
   report.expect(document.history.undoCount == baselineCount + 1, cppID: drawerVelocityRollCoreRollID, message: "one roll release records one history entry")
 
 S152 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift:224
-  report.expect(grid.previewVelocity(notes[0].id) == nil && !grid.interactionActive, cppID: drawerVelocityRollCoreRollID, message: "the released roll gesture clears its preview")
+  report.expect(grid.previewVelocity(notes[0].id) == nil && grid.previewVelocity(notes[1].id) == nil && grid.previewVelocity(notes[2].id) == nil && !grid.interactionActive, cppID: drawerVelocityRollCoreRollID, message: "the released roll gesture clears every preview")
 
 S153 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift:225
   report.expectEqual(original + 11, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the roll commit wrote the staged value")
 
 S154 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift:226
-  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the companion note keeps its literal velocity")
+  report.expectEqual(Int(notes[1].velocity) + 11, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the selected companion commits the same delta")
 
 S155 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift:227
   report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the unselected note keeps its literal velocity")
@@ -1865,13 +1874,13 @@ S156 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreCh
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreRollID, message: "the roll commit preserves the selection")
 
 S157 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift:230
-  report.expectEqual(original, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "undo restores the pressed literal")
+  report.expect(Int(document.note(notes[0].id)?.velocity ?? 0) == original && Int(document.note(notes[1].id)?.velocity ?? 0) == Int(notes[1].velocity), cppID: drawerVelocityRollCoreRollID, message: "undo restores both selected literals")
 
 S158 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift:231
   report.expect(coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreRollID, message: "undo restores the exact pre-drag song bytes")
 
 S159 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift:233
-  report.expectEqual(original + 11, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "redo reapplies the staged value")
+  report.expect(Int(document.note(notes[0].id)?.velocity ?? 0) == original + 11 && Int(document.note(notes[1].id)?.velocity ?? 0) == Int(notes[1].velocity) + 11, cppID: drawerVelocityRollCoreRollID, message: "redo reapplies both selected deltas")
 
 S160 | drawerVelocityRollCoreRollEscape | src/checks/velocity/VelocityRollCoreChecks.swift:241
   report.fail(drawerVelocityRollCoreRollID, "the synthetic fixture published fewer than three notes")

@@ -212,25 +212,25 @@ func drawerVelocityRollCoreRollCommit(_ report: CheckReport, session: DocumentSe
     grid.updatePointer(x: center.0, y: center.1 - 11)
     report.expectEqual(original + 11, grid.previewVelocity(notes[0].id) ?? -1, cppID: drawerVelocityRollCoreRollID, what: "the roll drag stages the integral pixel delta on the pressed note")
     report.expect(original + 11 > 1 && original + 11 < 127, cppID: drawerVelocityRollCoreRollID, message: "the staged preview stays exact inside the domain")
-    report.expect(grid.previewVelocity(notes[1].id) == nil, cppID: drawerVelocityRollCoreRollID, message: "the companion selected note stages no roll preview")
+    report.expect(grid.previewVelocity(notes[1].id) == Int(notes[1].velocity) + 11 && grid.previewVelocity(notes[2].id) == nil, cppID: drawerVelocityRollCoreRollID, message: "the selected companion previews its integral delta while the unselected note stages nothing")
     report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreRollID, message: "the staged roll drag writes no document state")
     report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreRollID, message: "the staged roll drag leaves history depth and song bytes frozen")
-    report.expectEqual(original, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the staged drag leaves the pressed document value alone")
+    report.expect(Int(document.note(notes[0].id)?.velocity ?? 0) == original && Int(document.note(notes[1].id)?.velocity ?? 0) == Int(notes[1].velocity) && Int(document.note(notes[2].id)?.velocity ?? 0) == Int(notes[2].velocity), cppID: drawerVelocityRollCoreRollID, message: "the staged drag leaves all three document values alone")
     grid.endPointer(x: center.0, y: center.1 - 11)
     let committed = drawerVelocityDocumentSnapshot(document)
     report.expectEqual(baseline.revision + 1, committed.revision, cppID: drawerVelocityRollCoreRollID, what: "one roll release advances the revision once")
     report.expect(committed.identity != baseline.identity && committed.canUndo && !baseline.canUndo, cppID: drawerVelocityRollCoreRollID, message: "one roll release makes exactly one undoable history entry")
     report.expect(document.history.undoCount == baselineCount + 1, cppID: drawerVelocityRollCoreRollID, message: "one roll release records one history entry")
-    report.expect(grid.previewVelocity(notes[0].id) == nil && !grid.interactionActive, cppID: drawerVelocityRollCoreRollID, message: "the released roll gesture clears its preview")
+    report.expect(grid.previewVelocity(notes[0].id) == nil && grid.previewVelocity(notes[1].id) == nil && grid.previewVelocity(notes[2].id) == nil && !grid.interactionActive, cppID: drawerVelocityRollCoreRollID, message: "the released roll gesture clears every preview")
     report.expectEqual(original + 11, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the roll commit wrote the staged value")
-    report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the companion note keeps its literal velocity")
+    report.expectEqual(Int(notes[1].velocity) + 11, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the selected companion commits the same delta")
     report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the unselected note keeps its literal velocity")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreRollID, message: "the roll commit preserves the selection")
     _ = try? drawerVelocityRunBlocking { try await fixture.session.undo() }
-    report.expectEqual(original, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "undo restores the pressed literal")
+    report.expect(Int(document.note(notes[0].id)?.velocity ?? 0) == original && Int(document.note(notes[1].id)?.velocity ?? 0) == Int(notes[1].velocity), cppID: drawerVelocityRollCoreRollID, message: "undo restores both selected literals")
     report.expect(coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreRollID, message: "undo restores the exact pre-drag song bytes")
     _ = try? drawerVelocityRunBlocking { try await fixture.session.redo() }
-    report.expectEqual(original + 11, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "redo reapplies the staged value")
+    report.expect(Int(document.note(notes[0].id)?.velocity ?? 0) == original + 11 && Int(document.note(notes[1].id)?.velocity ?? 0) == Int(notes[1].velocity) + 11, cppID: drawerVelocityRollCoreRollID, message: "redo reapplies both selected deltas")
 }
 
 @MainActor

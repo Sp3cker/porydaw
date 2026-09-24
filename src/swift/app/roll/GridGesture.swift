@@ -44,6 +44,7 @@ enum GridGesture {
         var noteId: NoteID
         var pressY: Double
         var original: Int
+        var delta: Int = 0
         var preview: Int? = nil
     }
 
@@ -133,7 +134,8 @@ enum GridGesture {
             if key >= 0 { state.dKey = key - state.pressKey }
             return .move(state)
         case .velocity(var state):
-            state.preview = min(127, max(1, state.original + Int((state.pressY - y).rounded())))
+            state.delta = Int((state.pressY - y).rounded())
+            state.preview = min(127, max(1, state.original + state.delta))
             return .velocity(state)
         case .resize(var state):
             let tick = camera.tickAtContentX(x)
