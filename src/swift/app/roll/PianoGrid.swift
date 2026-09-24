@@ -524,6 +524,8 @@ public final class PianoGrid {
                 releaseBandAudition()
             }
         } else {
+            guard !session.scaleProjection.fold || session.scaleProjection.contains(pressKey)
+            else { return }
             if modifiers & (QtFact.shiftModifier | QtFact.controlModifier) == 0 {
                 session.clearSelectedNotes()
             }
@@ -543,7 +545,8 @@ public final class PianoGrid {
     public func updatePan(x: Double, y: Double) {
         guard let gesture, case .pan = gesture else { return }
         let updated = gesture.updated(
-            x: x, y: y, metrics: metrics, camera: session.camera)
+            x: x, y: y, metrics: metrics, camera: session.camera,
+            scale: session.scaleProjection)
         guard case .pan(let state) = updated else { return }
         if state.deltaX != 0 || state.deltaY != 0 {
             session.mutateCamera { camera in
@@ -566,7 +569,8 @@ public final class PianoGrid {
         if case .velocity(let state) = gesture,
            abs(y - state.pressY) < 10 { return }
         self.gesture = gesture.updated(
-            x: x, y: y, metrics: metrics, camera: session.camera)
+            x: x, y: y, metrics: metrics, camera: session.camera,
+            scale: session.scaleProjection)
         if case .velocity(let state) = self.gesture {
             if let reanchor = pendingVelocityReanchor {
                 pendingVelocityReanchor = nil
@@ -592,7 +596,8 @@ public final class PianoGrid {
             // A stationary modifier press is a deferred selection click.
         } else {
             self.gesture = gesture.updated(
-                x: x, y: y, metrics: metrics, camera: session.camera)
+                x: x, y: y, metrics: metrics, camera: session.camera,
+                scale: session.scaleProjection)
             if !suppressedLeftRelease { commitGesture() }
         }
         if let pendingControlToggle, !suppressedLeftRelease {
@@ -648,7 +653,8 @@ public final class PianoGrid {
             }
             if leftAllowsBand {
                 self.rightGesture = rightGesture.updated(
-                    x: x, y: y, metrics: metrics, camera: session.camera)
+                    x: x, y: y, metrics: metrics, camera: session.camera,
+                    scale: session.scaleProjection)
             }
         }
         if case .band = self.rightGesture, !rightBandDemoted {
@@ -668,7 +674,8 @@ public final class PianoGrid {
             pendingVelocityReanchor = nil
         }
         let updated = rightBandDemoted ? rightGesture : rightGesture.updated(
-            x: x, y: y, metrics: metrics, camera: session.camera)
+            x: x, y: y, metrics: metrics, camera: session.camera,
+            scale: session.scaleProjection)
         self.rightGesture = updated
         if case .band = updated, !rightBandDemoted {
             applyBandSelection()
@@ -847,7 +854,15 @@ public final class PianoGrid {
                     changes, expectedRevision: session.document.revision)
             }
         case .move(let state):
-            session.document.moveNotes(ids, byTicks: Int64(state.dTick), byKeys: state.dKey)
+            if session.scaleProjection.fold && state.dKey != 0 {
+                let selected = ids.compactMap { session.document.note($0) }
+                if let pitches = session.scaleProjection.destinations(for: selected, steps: state.dKey) {
+                    _ = session.document.moveNotes(
+                        selected.map(\.id), toPitches: pitches, byTicks: Int64(state.dTick))
+                }
+            } else {
+                session.document.moveNotes(ids, byTicks: Int64(state.dTick), byKeys: state.dKey)
+            }
         case .resize(let state):
             session.document.resizeNotes(ids, edge: state.leading ? .leading : .trailing,
                                          byTicks: Int64(state.delta))
@@ -940,7 +955,8 @@ public final class PianoGrid {
     private func sceneInput() -> GridSceneInput {
         GridSceneInput(
             metrics: metrics, palette: palette, camera: session.camera,
-            contentEndTick: contentEndTick, rulerHeight: rulerHeight,
+            contentEndTick: contentEndTick, scale: session.scaleProjection,
+            rulerHeight: rulerHeight,
             typography: typography, fontSpec: { self.fontSpec($0) }, notes: notes,
             displayedNote: { self.displayedNote($0) },
             isSelected: { self.session.selectedNotes.contains($0) },
@@ -1071,7 +1087,13 @@ public final class PianoGrid {
         case .move(let state):
             tick = max(0, tick + state.dTick)
             end = max(tick + 1, end + state.dTick)
-            pitch = min(127, max(0, pitch + state.dKey))
+            if session.scaleProjection.fold && state.dKey != 0 {
+                let destination = session.scaleProjection.scale.pitch(
+                    pitch, steps: state.dKey, root: session.scaleProjection.root)
+                if destination >= 0 { pitch = destination }
+            } else {
+                pitch = min(127, max(0, pitch + state.dKey))
+            }
         case .resize(let state):
             end = max(tick + 1, end + state.delta)
         default:

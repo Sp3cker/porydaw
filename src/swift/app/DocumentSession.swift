@@ -19,6 +19,7 @@ public struct SessionChangeDomains: OptionSet, Sendable {
     public static let bank = SessionChangeDomains(rawValue: 1 << 4)
     public static let cursor = SessionChangeDomains(rawValue: 1 << 5)
     public static let mixState = SessionChangeDomains(rawValue: 1 << 6)
+    public static let scale = SessionChangeDomains(rawValue: 1 << 7)
 }
 
 /// What the session publishes after reconciling a completed state change.
@@ -69,10 +70,12 @@ public final class DocumentSession {
         didSet {
             if selectedTrack != oldValue {
                 selectedTracks = selectedTrack.map { [$0] } ?? []
+                if scaleProjection.fold { refreshScaleProjection() }
                 publishChange([.selection])
             }
         }
     }
+    public private(set) var scaleProjection = ScaleProjection()
     public var editCursor: Tick = 0 {
         didSet {
             if editCursor != oldValue { publishChange([.cursor]) }
@@ -243,6 +246,57 @@ public final class DocumentSession {
         onCameraChange?(newSnapshot)
         onCameraChangeDetailed?(newSnapshot, change)
         return true
+    }
+
+    /// Changes one tab's display state without changing MIDI or song history.
+    public func setScale(root: Int) {
+        var next = scaleProjection
+        next.setRoot(root)
+        applyScale(next)
+    }
+
+    public func setScale(type: ScaleID) {
+        var next = scaleProjection
+        next.setScale(type)
+        applyScale(next)
+    }
+
+    public func setScale(highlight: Bool) {
+        var next = scaleProjection
+        next.highlight = highlight
+        applyScale(next)
+    }
+
+    public func setScale(fold: Bool) {
+        var next = scaleProjection
+        next.fold = fold
+        applyScale(next)
+    }
+
+    private func applyScale(_ next: ScaleProjection) {
+        guard next != scaleProjection else { return }
+        let foldChanged = next.fold != scaleProjection.fold
+        scaleProjection = next
+        if foldChanged { refreshScaleProjection() }
+        publishChange([.scale])
+    }
+
+    private func refreshScaleProjection() {
+        let notes = selectedTrack.map { document.notes(in: $0) } ?? []
+        let rows = scaleProjection.projection(notes: notes)
+        guard rows != camera.projection else { return }
+        let before = camera.snapshot
+        let centeredPitch = camera.projection.pitch(
+            atY: before.rollHeight / 2, keyHeight: before.keyHeight,
+            scrollY: before.scrollY, dpr: 1)
+        mutateCamera {
+            $0.updateProjection(rows)
+            if let centeredPitch, let nearest = rows.nearestVisiblePitch(to: centeredPitch) {
+                _ = $0.setVScroll(
+                    Double(rows.row(forPitch: nearest)) * before.keyHeight
+                        - before.rollHeight / 2)
+            }
+        }
     }
 
     /// Opens a song through the service, adopts it as the document (tempo
@@ -518,6 +572,7 @@ public final class DocumentSession {
                 })
                 if let selectedTrack { selectedTracks.insert(selectedTrack) }
             }
+            if scaleProjection.fold { refreshScaleProjection() }
             timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
             camera.updateTimeDomain(
                 ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),

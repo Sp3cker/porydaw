@@ -147,10 +147,16 @@ final class NoteCommands {
 
     private func transpose(_ semitones: Int) {
         let notes = selectedNotes()
-        guard !notes.isEmpty,
-              notes.allSatisfy({ (0...127).contains(Int($0.pitch) + semitones) })
-        else { return }
-        session.document.nudgeNotes(notes.map(\.id), byTicks: 0, byKeys: semitones)
+        guard !notes.isEmpty else { return }
+        if session.scaleProjection.fold && abs(semitones) == 1 {
+            guard let pitches = session.scaleProjection.destinations(for: notes, steps: semitones)
+            else { return }
+            _ = session.document.nudgeNotes(notes.map(\.id), toPitches: pitches)
+        } else {
+            guard notes.allSatisfy({ (0...127).contains(Int($0.pitch) + semitones) })
+            else { return }
+            session.document.nudgeNotes(notes.map(\.id), byTicks: 0, byKeys: semitones)
+        }
     }
 
     private func nudge(_ direction: Int, snapTicks: Tick) {

@@ -92,7 +92,7 @@ enum GridGesture {
     }
 
     func updated(x: Double, y: Double, metrics: GridMetrics,
-                 camera: EditorCamera) -> GridGesture {
+                 camera: EditorCamera, scale: ScaleProjection) -> GridGesture {
         func pitch(_ y: Double) -> Int {
             camera.projection.pitch(
                 atY: y, keyHeight: camera.snapshot.keyHeight,
@@ -101,7 +101,7 @@ enum GridGesture {
         switch self {
         case .pendingDraw(var state):
             let key = pitch(y)
-            if key >= 0 { state.pressKey = key }
+            if key >= 0 && (!scale.fold || scale.contains(key)) { state.pressKey = key }
             guard abs(x - state.pressX) >= metrics.drawThreshold else {
                 return .pendingDraw(state)
             }
@@ -110,7 +110,7 @@ enum GridGesture {
                 anchorTick: anchor, tick: anchor,
                 duration: metrics.snapTicks(camera: camera), key: state.pressKey)
             return GridGesture.draw(draw).updated(
-                x: x, y: y, metrics: metrics, camera: camera)
+                x: x, y: y, metrics: metrics, camera: camera, scale: scale)
         case .draw(var state):
             let tick = camera.tickAtContentX(x)
             let grid = metrics.snapTicks(camera: camera)
@@ -124,14 +124,39 @@ enum GridGesture {
                 state.duration = state.anchorTick + grid - state.tick
             }
             let key = pitch(y)
-            if key >= 0 { state.key = key }
+            if key >= 0 && (!scale.fold || scale.contains(key)) { state.key = key }
             return .draw(state)
         case .move(var state):
             let tick = camera.tickAtContentX(x)
             let grid = metrics.snapTicks(camera: camera)
             state.dTick = Int(((tick - state.pressTick) / Double(grid)).rounded()) * grid
-            let key = pitch(y)
-            if key >= 0 { state.dKey = key - state.pressKey }
+            if scale.fold {
+                let projection = camera.projection
+                let currentRow = projection.row(atY: y, keyHeight: camera.snapshot.keyHeight,
+                                                  scrollY: camera.snapshot.scrollY, dpr: metrics.dpr)
+                let grabRow = projection.row(forPitch: state.pressKey)
+                if currentRow != PitchProjection.hiddenRow,
+                   grabRow != PitchProjection.hiddenRow {
+                    var degrees = 0
+                    if currentRow < grabRow {
+                        for row in currentRow..<grabRow {
+                            if let pitch = projection.visiblePitch(at: row), scale.contains(pitch) {
+                                degrees += 1
+                            }
+                        }
+                    } else if currentRow > grabRow {
+                        for row in (grabRow + 1)...currentRow {
+                            if let pitch = projection.visiblePitch(at: row), scale.contains(pitch) {
+                                degrees -= 1
+                            }
+                        }
+                    }
+                    state.dKey = degrees
+                }
+            } else {
+                let key = pitch(y)
+                if key >= 0 { state.dKey = key - state.pressKey }
+            }
             return .move(state)
         case .velocity(var state):
             state.delta = Int((state.pressY - y).rounded())

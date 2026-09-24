@@ -64,9 +64,17 @@ private func checkScaleProjectionInvariants(_ report: CheckReport, session: Docu
                   message: "A001 Off projects all 128 pitches")
     report.expect((0..<128).allSatisfy { chromatic.row(forPitch: $0) != PitchProjection.hiddenRow },
                   cppID: id, message: "A002 Off hides no pitch")
-    // PitchProjection has no root or scale argument; the root-change path remains unproved.
-    report.expect(PitchProjection().visibleRowCount == chromatic.visibleRowCount, cppID: id,
-                  message: "A003 related chromatic construction remains 128 rows")
+    let originalScale = session.scaleProjection
+    session.setScale(fold: false)
+    session.setScale(root: 2)
+    session.setScale(type: .dorian)
+    report.expect(session.camera.projection.visibleRowCount == 128
+                  && (0..<128).allSatisfy {
+                      session.camera.projection.row(forPitch: $0) != PitchProjection.hiddenRow
+                  }, cppID: id, message: "A003 Off remains chromatic after root and type change")
+    session.setScale(type: originalScale.scale)
+    session.setScale(root: originalScale.root)
+    session.setScale(fold: originalScale.fold)
     let track = session.selectedTrack ?? 0
     let notes = session.document.notes(in: track)
     let occupied = Set(notes.map(\.pitch))

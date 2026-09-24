@@ -147,6 +147,9 @@ public final class GridPalette {
     public var windowBackground: String = "#C9C1BB"
     public var rollBackground: String = "#D4CCC7"
     public var accidentalLane: String = "#B4ACA6"
+    /// Twenty-percent scale tint (#b595fc) over natural and accidental lanes.
+    public var scaleHighlight: String = "#CEC1D2"
+    public var accidentalScaleHighlight: String = "#B4A7B7"
     public var chromeBackground: String = "#BDB5AF"
     public var separator: String = "#5B5652"
     public var outline: String = "#8C857F"

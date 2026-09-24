@@ -517,6 +517,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     func tabsDidChange() {
         polyphony.setContext(session: workspace?.session)
+        transportBar.refresh()
         refreshDocumentState()
         refreshVoicegroupDock()
         // The selected workspace's grid owns command availability; switching
@@ -617,6 +618,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private func tabStateChanged() {
         songTabs.refreshDirty()
         refreshDocumentState()
+        transportBar.refresh()
         refreshVoicegroupDock()
     }
 

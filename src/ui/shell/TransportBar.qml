@@ -176,38 +176,101 @@ Rectangle {
             }
         }
 
-        // transportScaleSlot: the later scale lane replaces this passive,
-        // baseline-sized key-signature display with its four interactive controls.
         Item {
             id: transportScaleSlot
             objectName: "transportScaleSlot"
             readonly property int rootWidth: Math.round(bar.baseFontPx * 4 + 7)
             readonly property int typeWidth: Math.round(bar.baseFontPx * 13 + 22)
             readonly property int foldWidth: Math.round(bar.baseFontPx * 2.5 + 14)
-            // Combo-box text metrics plus native chrome, measured at the widget's
-            // two reference fonts; the scale-selector lane replaces this slot.
+            readonly property int comboHeight: bar.baseFontPx + 10
             Layout.maximumWidth: rootWidth + typeWidth + bar.toolExtent + foldWidth + 3
-            Layout.preferredWidth: rootWidth + typeWidth + bar.toolExtent + foldWidth + 3
+            Layout.preferredWidth: Layout.maximumWidth
             Layout.preferredHeight: bar.toolExtent
-            Text {
-                objectName: "transportKeySignature"
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                leftPadding: bar.inset
-                text: bar.presenter.keySignature
+
+            Basic.ComboBox {
+                id: scaleRoot
+                objectName: "transportScaleRoot"
+                x: 0
+                y: Math.round((transportScaleSlot.height - height) / 2)
                 width: transportScaleSlot.rootWidth
+                height: transportScaleSlot.comboHeight
+                model: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+                currentIndex: bar.presenter.scaleRoot
+                onActivated: index => bar.presenter.setScaleRoot(index)
+                enabled: bar.songAvailable
+                activeFocusOnTab: false
                 font: bar.toolbarFont
-                color: bar.presenter.state === 0 ? bar.colors.disabledText : bar.colors.windowText
-                Accessible.role: Accessible.StaticText
-                Accessible.name: qsTr("Key signature")
+                Basic.ToolTip.text: qsTr("Scale root note")
+                Accessible.name: qsTr("Scale root note")
+                background: Rectangle {
+                    color: bar.colors.buttonBackground
+                    border.color: bar.colors.outline
+                    radius: bar.inset / 2
+                }
             }
-            Text {
-                anchors.left: parent.left
-                anchors.leftMargin: transportScaleSlot.rootWidth + 1
-                anchors.verticalCenter: parent.verticalCenter
-                text: bar.presenter.keySignature.endsWith("m") ? qsTr("Minor") : qsTr("Major")
+            Basic.ComboBox {
+                id: scaleType
+                objectName: "transportScaleType"
+                x: transportScaleSlot.rootWidth + 1
+                y: scaleRoot.y
+                width: transportScaleSlot.typeWidth
+                height: transportScaleSlot.comboHeight
+                model: bar.presenter.scaleNames
+                currentIndex: bar.presenter.scaleType
+                onActivated: index => bar.presenter.setScaleType(index)
+                enabled: bar.songAvailable
+                activeFocusOnTab: false
                 font: bar.toolbarFont
-                color: bar.presenter.state === 0 ? bar.colors.disabledText : bar.colors.windowText
+                Basic.ToolTip.text: qsTr("Scale type")
+                Accessible.name: qsTr("Scale type")
+                background: Rectangle {
+                    color: bar.colors.buttonBackground
+                    border.color: bar.colors.outline
+                    radius: bar.inset / 2
+                }
+            }
+            TransportButton {
+                id: highlight
+                objectName: "transportScaleHighlight"
+                x: scaleType.x + scaleType.width + 1
+                y: 0
+                colors: bar.colors
+                baseFontPx: bar.baseFontPx
+                label: qsTr("Highlight")
+                symbol: ""
+                iconSource: "qrc:/icons/flat-music.svg"
+                checked: bar.presenter.scaleHighlight
+                actionable: bar.songAvailable
+                activeFocusOnTab: false
+                onActivated: bar.presenter.setScaleHighlight(!bar.presenter.scaleHighlight)
+            }
+            Rectangle {
+                id: fold
+                objectName: "transportScaleFold"
+                x: highlight.x + highlight.width + 1
+                y: Math.round((transportScaleSlot.height - height) / 2)
+                width: transportScaleSlot.foldWidth
+                height: bar.baseFontPx + 11
+                radius: bar.inset / 2
+                color: bar.presenter.scaleFold ? bar.colors.buttonPressedBackground
+                       : foldHover.hovered ? bar.colors.buttonHoverBackground : "transparent"
+                enabled: bar.songAvailable
+                activeFocusOnTab: false
+                Accessible.role: Accessible.CheckBox
+                Accessible.name: qsTr("Fold")
+                Accessible.checked: bar.presenter.scaleFold
+                Basic.ToolTip.text: qsTr("Fold piano roll to pitches used by the selected track")
+                Text {
+                    anchors.centerIn: parent
+                    text: qsTr("Fold")
+                    font: bar.toolbarFont
+                    color: fold.enabled ? bar.colors.buttonText : bar.colors.disabledText
+                }
+                HoverHandler { id: foldHover }
+                TapHandler {
+                    enabled: fold.enabled
+                    onTapped: bar.presenter.setScaleFold(!bar.presenter.scaleFold)
+                }
             }
         }
         Item {

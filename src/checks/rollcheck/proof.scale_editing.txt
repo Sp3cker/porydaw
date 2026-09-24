@@ -3,7 +3,7 @@ Assertion correspondence: rollcheck/scale_editing.cpp
 Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/rollcheck/scale_editing.cpp
 Original SHA-256: cbe3d727ae2a6731de8863136f0bfc86e412d5ebbe1bf645aa0138153b3f9b2f
-Swift counterpart: none identified
+Swift counterpart: src/checks/rollcheck/scale_editing.swift (runScaleEditingChecks, runFoldScaleIntegrationChecks)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -13,22 +13,18 @@ loops, and guards between assertions verbatim. MATCHED identifies an equivalent
 Swift predicate with execution; PARTIAL a related predicate with an explicit
 unproved condition; NATIVE a retained native-window/rendering/input or harness
 obligation a presenter-level Swift check cannot establish; GAP an original
-predicate without a replacement assertion. No same-dir Swift counterpart exists
-and no Swift file covering this suite was identified, so this file lists no S
-predicates: every site is GAP or NATIVE. None of these labels authorizes deletion
-or claims whole-case equivalence.
-Nine slots cover Fold keyboard nudges (plus a _data table), multi-note and
-repeated-pitch mapping, exception nudge/draw/audition, pointer drag, horizontal
-exception moves, and out-of-range nudges. Document-outcome sites (mapped pitches,
-draw rejection, drag commits, undo-count holds, smf restoration) are GAP; the
-sounding-preview and probe-guard sites are NATIVE.
+predicate without a replacement assertion. S001-S004 execute live production-grid
+commands for chromatic, Fold-degree, octave, repeated-pitch, and exception
+outcomes, but do not deliver QML key events. Pointer drag, draw rejection,
+sounding preview and their undo-lifecycle checks remain GAP. No disposition
+claims whole-case or pixel equivalence.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Command: deno task verify --filter swiftcore
+Result: verify: 1/31 ok (35.15s, 30 skipped); run_checks: PASS (all harnesses in 35.15s).
 
 Execution and ownership
-No Swift entry point executes these checks. The original slots run under
+SwiftCoreCheck executes runScaleEditingChecks and runFoldScaleIntegrationChecks, using PianoGrid.performCommand. The original slots run under
 PianoRollTest (checks/rollcheck/tst_pianoroll.h): scaleFoldKeyboardNudges
 (plus scaleFoldKeyboardNudges_data), scaleFoldMultiNoteMapping,
 scaleFoldRepeatedPitchMapping, scaleFoldExceptionNudge, scaleFoldExceptionDraw,
@@ -51,8 +47,8 @@ lookups in order.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::scaleFoldKeyboardNudges | src/checks/rollcheck/scale_editing.cpp:71
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: PARTIAL
+Mapping/reason: Executed S001-S003 in scale_editing.swift verify chromatic Up, Fold-degree Up and exact octave Shift+Up through production PianoGrid commands. Original QML keyboard-event delivery is untested.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -152,8 +148,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A004 | PianoRollTest::scaleFoldMultiNoteMapping | src/checks/rollcheck/scale_editing.cpp:118
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: PARTIAL
+Mapping/reason: Executed S002 in scale_editing.swift transposes selected C60/C-sharp61/C60 to D62/E64/D62 as one batch via production PianoGrid; original key event delivery remains untested.
 Source context since previous assertion:
   ;
   }
@@ -221,8 +217,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A007 | PianoRollTest::scaleFoldRepeatedPitchMapping | src/checks/rollcheck/scale_editing.cpp:167
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: PARTIAL
+Mapping/reason: Executed S002 checks two distinct selected C60 notes share D62 after the same batch edit. The original keyboard input event and text selection path were not reproduced.
 Source context since previous assertion:
   ;
   }
@@ -291,8 +287,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A010 | PianoRollTest::scaleFoldExceptionNudge | src/checks/rollcheck/scale_editing.cpp:213
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
+Disposition: PARTIAL
+Mapping/reason: Executed S004 verifies production grid command moves occupied off-scale C-sharp61 to next C-Major degree D62; original keyboard input delivery remains untested.
 Source context since previous assertion:
   ;
   }
@@ -880,3 +876,27 @@ Original expression:
 Remaining original source (closing sequence and helper bodies):
   ;
   }
+
+Swift assertion predicates
+
+S001 | runScaleEditingChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "Off Up moved C up a semitone to C#"
+        report.expect(document.note(noteID)?.pitch == 61, cppID: keyboardID,
+                      message: "Off Up moved C up a semitone to C#")
+
+S002 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "folded Up maps exceptions to distinct degrees and repeated C to D"
+    report.expect(document.note(ids[0])?.pitch == 62
+                  && document.note(ids[1])?.pitch == 64
+                  && document.note(ids[2])?.pitch == 62,
+                  cppID: id, message: "folded Up maps exceptions to distinct degrees and repeated C to D")
+
+S003 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "folded Shift+Up moves an exact octave"
+    report.expect(document.note(ids[0])?.pitch == 72, cppID: id,
+                  message: "folded Shift+Up moves an exact octave")
+
+S004 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "occupied off-scale exception nudges to the next scale degree"
+    report.expect(document.note(ids[1])?.pitch == 62, cppID: id,
+                  message: "occupied off-scale exception nudges to the next scale degree")

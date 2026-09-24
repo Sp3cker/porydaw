@@ -301,7 +301,7 @@ public final class DocumentWorkspace {
             pitchBend.documentDidChange()
         }
         let headerDomains: SessionChangeDomains = [.selection, .bank, .cursor, .mixState]
-        let applicationStateDomains: SessionChangeDomains = [.document, .dirty, .history, .bank]
+        let applicationStateDomains: SessionChangeDomains = [.document, .dirty, .history, .bank, .scale]
         playheadGuides.sessionDidChange(change)
         eventList.documentDidChange(change)
 
@@ -312,7 +312,7 @@ public final class DocumentWorkspace {
             trackHeaders.refreshFromDocument()
         }
 
-        if documentChanged || change.domains.contains(.selection) {
+        if documentChanged || !change.domains.intersection([.selection, .scale]).isEmpty {
             if change.domains.contains(.selection) { pitchBend.cancelAndClose() }
             grid.refreshFromSession()
         } else if change.domains.contains(.cursor) {
