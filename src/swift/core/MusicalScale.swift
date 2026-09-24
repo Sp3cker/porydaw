@@ -32,7 +32,7 @@ public enum ScaleID: Int, CaseIterable, Sendable {
     public static let rootCount = 12
     public static let defaultScale: ScaleID = .major
     public static let defaultRoot = 0
-    public static var displayOrder: [ScaleID] { allCases }
+    public static let displayOrder: [ScaleID] = allCases
 
     public var mask: UInt16 { Self.masks[rawValue] }
     public var displayName: String { Self.names[rawValue] }

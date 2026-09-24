@@ -59,9 +59,9 @@ Inherited native fixture assertions (not Swift parity credit)
 Source: src/checks/playback/tst_transport.cpp
 SHA-256: 9ae0f5a1037fd587686246459ae09086ee4c235e27ba5b9a60a391376296570f
 init:29 -- QVERIFY2(m_engine->init(&error), ...): forced-null initialization
-must succeed. NATIVE-SETUP: direct Swift renderer checks bypass the device.
+must succeed. Retired with the deleted native path (see proof.tst_transport.txt A001): direct Swift renderer checks bypass the device.
 init:31 -- QVERIFY2(m_engine->usingNullBackend() && m_engine->nullBackendForced(), ...):
-forced-null selection must be reported. NATIVE-SETUP: bypassed by direct rendering.
+forced-null selection must be reported. Retired with the deleted native path (see proof.tst_transport.txt A002): bypassed by direct rendering.
 loadedSong:48 -- returns an empty pointer on encoding/write/load/publication
 failure; the per-case timeline assertions below check that return value.
 
@@ -82,7 +82,7 @@ Original expression:
 
 A003 | TransportTest::engageSuppressorWithNoteSong | src/checks/playback/settle.cpp:79
 Disposition: MATCHED
-Mapping/reason: suppressionEngage (S001) asserts applied Playing via one-frame renders bounded by one second on a fresh rig per caller, matching renderUntilApplied; the original velocity127/release254 fixture parameters are now used. The parked-device precondition stays NATIVE-SETUP.
+Mapping/reason: suppressionEngage (S001) asserts applied Playing via one-frame renders bounded by one second on a fresh rig per caller, matching renderUntilApplied; the original velocity127/release254 fixture parameters are now used. The parked-device precondition is retired with the deleted native path (see A001).
 Original expression:
   QTest::qFail("initial play was not applied", __FILE__, __LINE__)
 

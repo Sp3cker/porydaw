@@ -17,7 +17,7 @@ Retirement: 24 original assertion sites, all terminal (24 MATCHED); deleted C++ 
 Fixture and execution: table_data expanded 28 rows (scale name to table index); table asserted count, identity order, name, mask and display order per row. rootsAndDefaults checked 12 root names in a loop plus default scale and root. membershipAndNeighbors was 12 fixed assertions on C-major membership, D-major transposition, first above/below, boundaries, and stepped pitches. diatonicDestinations_data expanded 7 rows (upward/downward/repeated/ordered plus high/low-boundary rejection sentinel 0xFF and mismatched-shape passthrough 0x2A); diatonicDestinations asserted the accepted flag and destination bytes. checkScaleTables ports each family under the same cppIDs and row order: table 5 predicates over 28 rows, rootsAndDefaults 4, membershipAndNeighbors 12, diatonicDestinations 2 over 7 rows.
 Registered run path: src/checks/editcheck/ScaleChecks.swift :: checkScaleTables, called at the end of runMusicalSemanticsSuite (src/checks/midi/MidiChecks.swift:728), swiftcore suite 2 via src/checks/support/corecheck/CoreCheckSupport.swift :: pdc_suite_run; the counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check, and the production ScaleID lives in src/swift/core/MusicalScale.swift (src/swift/core/CMakeLists.txt). Legacy editcheck source is absent from active CMake/checkcatalog.
 
-Tally: MATCHED 24, PARTIAL 0, GAP 0, NATIVE 0.
+Tally: MATCHED 23, PARTIAL 0, GAP 0, NATIVE 0, RETIRED-REPRESENTATION 1.
 
 Original assertion inventory
 
@@ -29,9 +29,9 @@ Original expression:
   QCOMPARE(porydaw_scale::cScaleCount, int(expectedScales.size()));
 
 A002 | ScaleCheckTest::table | src/checks/editcheck/tst_scale.cpp:68
-Disposition: MATCHED
-Swift: S005 | src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
-Mapping/reason: C++ nullable-pointer guard on displayOrder(); the nullable return is a C++ representation of a table that is non-optional in Swift and read at every row index by S005, so the table presence and order are observed by the executing row predicates under cppID scalecheck/ScaleCheckTest::table (spec §2.1 representation rule).
+Disposition: RETIRED-REPRESENTATION
+Swift: none; ScaleID.displayOrder is non-optional (order content executes as S005 under the same cppID)
+Mapping/reason: QVERIFY(order != nullptr) guards the C++ nullable displayOrder() return. Swift ScaleID.displayOrder is a non-optional table, so this null precondition has no Swift failure branch to assert, per spec s2.1/s5.3; the order-content observation executes as S005. Retired, not executed.
 Original expression:
   QVERIFY(order != nullptr);
 

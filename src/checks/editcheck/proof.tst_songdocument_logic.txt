@@ -11,10 +11,10 @@ Swift SHA-256: 52513cd651c0e220145da4c8c78667e3429d86c90416f205d0a83d4176a5c696
 Covered native implementation: src/core/noteid.h, src/core/miditimeline.cpp :: note ID assignment, adoption reminting, timeline transport.
 Native engine status: C++ implementation remains on disk, but current CMake targets do not build these legacy src/core sources; no active native bridge is claimed. Active checks use Swift PorydawCore.
 
-Retirement: 60 original assertion sites, all terminal (MATCHED 28, RETIRED-REPRESENTATION 32); deleted C++ check recoverable from Reference revision and Original SHA-256. No live native run or differential comparison is claimed. Scale duplicates are retired only from this uncompiled file; registered native scalecheck and proof.tst_scale.txt retain their own GAP accounting.
-Fixture and execution: duplicateNoteFile constructs one format-1 MIDI chunk with duplicate note-ons 60/100 at tick 24, one note-off at tick 48 and end tick 72. Throwing encode/decode tests raw event roles and identity, then PlaybackTimeline.build(state:sampleRate:) projects the decoded file at 48,000 Hz. SongDocument(file:) assigns per-document IDs; constructing a second document from the first state and inserting one note tests its intra-document distinctness. Two stamped note-ons test identity-blind event equality and encoded bytes, and timeline delivery of stamped note-ons but unassigned note-end. ScaleCheckTest's 24 identical source sites remain executed by the separate registered native scalecheck lane; no Swift scale parity is claimed.
+Retirement: 60 original assertion sites, all terminal (MATCHED 28, RETIRED-REPRESENTATION 32); deleted C++ check recoverable from Reference revision and Original SHA-256. No live native run or differential comparison is claimed. Scale duplicates are retired only from this uncompiled file; the identical sites are MATCHED (A002 retired) in proof.tst_scale.txt, which holds the executed Swift accounting.
+Fixture and execution: duplicateNoteFile constructs one format-1 MIDI chunk with duplicate note-ons 60/100 at tick 24, one note-off at tick 48 and end tick 72. Throwing encode/decode tests raw event roles and identity, then PlaybackTimeline.build(state:sampleRate:) projects the decoded file at 48,000 Hz. SongDocument(file:) assigns per-document IDs; constructing a second document from the first state and inserting one note tests its intra-document distinctness. Two stamped note-ons test identity-blind event equality and encoded bytes, and timeline delivery of stamped note-ons but unassigned note-end. ScaleCheckTest's 24 identical source sites are executed by checkScaleTables in src/checks/editcheck/ScaleChecks.swift (swiftcore suite 2), accounted in proof.tst_scale.txt.
 History caveat: no undo/redo or history-depth predicate is involved; no test-only history accessor. NoteID numeric values are per-document and may repeat between documents; Swift offers no same-instance adoptSmf mutation.
-Registered run path: src/checks/editcheck/NoteChecks.swift :: runNoteEditsSuite -> src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts, swiftcore suite 4 via src/checks/support/corecheck/CoreCheckSupport.swift :: pdcSuiteRun; both Swift counterparts compiled in src/checks/CMakeLists.txt :: swift_core_check. Legacy logic C++ check is absent from active CMake targets and checkcatalog.cpp. Native src/checks/editcheck/tst_scale.cpp stays compiled and registered as scalecheck.
+Registered run path: src/checks/editcheck/NoteChecks.swift :: runNoteEditsSuite -> src/checks/editcheck/NoteIdentityChecks.swift :: noteIdentityContracts, swiftcore suite 4 via src/checks/support/corecheck/CoreCheckSupport.swift :: pdcSuiteRun; both Swift counterparts compiled in src/checks/CMakeLists.txt :: swift_core_check. Legacy logic C++ check is absent from active CMake targets and checkcatalog.cpp. Native src/checks/editcheck/tst_scale.cpp was deleted in the gaps-audio-scale lane (deletion certificate in proof.tst_scale.txt); no scalecheck registration remains in src/checks/checkcatalog.cpp.
 
 Original assertion inventory
 No-ingress: the legacy logic file is absent from every current CMake target and unregistered in checkcatalog.cpp (§7). The Swift suite decodes in-memory bytes, never opens QTemporaryDir/QTemporaryFile; its nonthrowing SongDocument(file:) and PlaybackTimeline.build factories have no nullable/error branch. A new SongDocument creates a fresh per-document ID namespace and cannot adopt into the same document through any public API.
@@ -22,169 +22,169 @@ No-ingress: the legacy logic file is absent from every current CMake target and 
 
 A001 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:86
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:66 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A001 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A001 via S001 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:66 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A001, executed by S001. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(porydaw_scale::cScaleCount, int(expectedScales.size()));
 
 A002 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:88
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:68 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A002 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A002 (RETIRED-REPRESENTATION) via S005 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:68 in this uncompiled and unregistered C++ file (§7); the identical source site is retired in proof.tst_scale.txt A002 (non-optional ScaleID.displayOrder has no null ingress), while the order-content observation executes as S005. This file's copy stays retired with the uncompiled check.
 Original expression:
   QVERIFY(order != nullptr);
 
 A003 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:90
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:70 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A003 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A003 via S002 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:70 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A003, executed by S002. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(static_cast<int>(expected.id), index);
 
 A004 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:91
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:71 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A004 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A004 via S003 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:71 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A004, executed by S003. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(std::strcmp(porydaw_scale::scaleDisplayName(expected.id), expected.name), 0);
 
 A005 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:92
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:72 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A005 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A005 via S004 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:72 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A005, executed by S004. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(porydaw_scale::scaleMask(expected.id), expected.mask);
 
 A006 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:93
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:73 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A006 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A006 via S005 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:73 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A006, executed by S005. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(order[index], expected.id);
 
 A007 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_songdocument_logic.cpp:100
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:80 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A007 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A007 via S006 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:80 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A007, executed by S006. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(porydaw_scale::cRootCount, int(rootNames.size()));
 
 A008 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_songdocument_logic.cpp:102
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:82 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A008 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A008 via S007 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:82 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A008, executed by S007. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(std::strcmp(porydaw_scale::rootDisplayName(index), rootNames[size_t(index)]), 0);
 
 A009 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_songdocument_logic.cpp:103
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:83 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A009 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A009 via S008 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:83 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A009, executed by S008. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(porydaw_scale::defaultScale(), porydaw_scale::ScaleId::major);
 
 A010 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_songdocument_logic.cpp:104
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:84 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A010 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A010 via S009 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:84 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A010, executed by S009. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(porydaw_scale::defaultRoot(), 0);
 
 A011 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:110
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:90 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A011 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A011 via S010 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:90 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A011, executed by S010. This file's copy stays retired with the uncompiled check.
 Original expression:
   QVERIFY(isScalePitch(ScaleId::major, 0, 60));
 
 A012 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:111
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:91 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A012 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A012 via S011 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:91 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A012, executed by S011. This file's copy stays retired with the uncompiled check.
 Original expression:
   QVERIFY(!isScalePitch(ScaleId::major, 0, 61));
 
 A013 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:112
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:92 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A013 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A013 via S012 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:92 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A013, executed by S012. This file's copy stays retired with the uncompiled check.
 Original expression:
   QVERIFY(isScalePitch(ScaleId::major, 2, 62));
 
 A014 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:113
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:93 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A014 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A014 via S013 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:93 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A014, executed by S013. This file's copy stays retired with the uncompiled check.
 Original expression:
   QVERIFY(!isScalePitch(ScaleId::major, 2, 60));
 
 A015 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:114
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:94 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A015 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A015 via S014 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:94 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A015, executed by S014. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(firstScalePitchAbove(ScaleId::major, 0, 61), 62);
 
 A016 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:115
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:95 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A016 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A016 via S015 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:95 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A016, executed by S015. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(firstScalePitchBelow(ScaleId::major, 0, 61), 60);
 
 A017 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:116
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:96 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A017 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A017 via S016 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:96 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A017, executed by S016. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(firstScalePitchAbove(ScaleId::major, 0, 127), -1);
 
 A018 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:117
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:97 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A018 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A018 via S017 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:97 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A018, executed by S017. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(firstScalePitchBelow(ScaleId::major, 0, 0), -1);
 
 A019 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:118
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:98 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A019 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A019 via S018 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:98 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A019, executed by S018. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(nextScalePitch(ScaleId::major, 0, 60, 1), 62);
 
 A020 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:119
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:99 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A020 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A020 via S019 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:99 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A020, executed by S019. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(nextScalePitch(ScaleId::major, 0, 62, -1), 60);
 
 A021 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:120
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:100 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A021 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A021 via S020 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:100 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A021, executed by S020. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(nextScalePitch(ScaleId::major, 0, 60, 3), 65);
 
 A022 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:121
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:101 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A022 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A022 via S021 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:101 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A022, executed by S021. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(nextScalePitch(ScaleId::major, 0, 67, -3), 62);
 
 A023 | ScaleCheckTest::diatonicDestinations | src/checks/editcheck/tst_songdocument_logic.cpp:169
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:149 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A023 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A023 via S022 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:149 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A023, executed by S022. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(result, accepted);
 
 A024 | ScaleCheckTest::diatonicDestinations | src/checks/editcheck/tst_songdocument_logic.cpp:170
 Disposition: RETIRED-REPRESENTATION
-Swift: none; registered native scalecheck retains this assertion
-Mapping/reason: Verbatim duplicate of tst_scale.cpp:150 in this uncompiled and unregistered C++ file (§7); the live native scalecheck lane executes it (proof.tst_scale.txt A024 remains GAP), with no Swift scale parity claimed.
+Swift: proof.tst_scale.txt A024 via S023 in src/checks/editcheck/ScaleChecks.swift :: checkScaleTables
+Mapping/reason: Verbatim duplicate of tst_scale.cpp:150 in this uncompiled and unregistered C++ file (§7); the identical source site is MATCHED in proof.tst_scale.txt A024, executed by S023. This file's copy stays retired with the uncompiled check.
 Original expression:
   QCOMPARE(
           QByteArray(reinterpret_cast<const char *>(destination.data()), int(destination.size())),
