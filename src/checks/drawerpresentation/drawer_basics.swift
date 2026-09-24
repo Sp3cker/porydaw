@@ -275,4 +275,68 @@ func drawerLayoutCheckDrawerVisibilityAndStoredHeights(_ report: CheckReport) {
                   harness.layout.snapshot[.velocity].bodyHeight == drawerLayoutDrawerMinimumBody,
                   cppID: drawerLayoutVisibilityID,
                   message: "a drawn body never falls below the font-relative minimum body")
+
+    let zeroed = harness.apply { $0.setSectionBodyHeight(.velocity, height: 0) }
+    report.expect(zeroed.published && harness.layout.storedBodyHeight(.velocity) == nil &&
+                  harness.layout.snapshot[.velocity].bodyHeight == 66,
+                  cppID: drawerLayoutVisibilityID,
+                  message: "a zero height clears the stored height and the page default takes over")
+    drawerLayoutExpectDrawerPreference(report, cppID: drawerLayoutVisibilityID, zeroed, .velocity, visible: true,
+                           storedBodyHeight: nil,
+                           message: "a cleared height is recorded as the unset marker")
+    harness.apply { $0.toggleSection(.velocity, drawerOwnsFocus: false) }
+    let zeroedShown = harness.apply { $0.toggleSection(.velocity, drawerOwnsFocus: false) }
+    report.expect(zeroedShown.published && harness.layout.isVisible(.velocity) &&
+                  harness.layout.snapshot[.velocity].bodyHeight == 66,
+                  cppID: drawerLayoutVisibilityID,
+                  message: "re-showing a zeroed section restores the page default body, not the cleared height")
+
+    harness.apply { $0.setSectionVisible(.velocity, visible: false, drawerOwnsFocus: false) }
+    report.expect(harness.layout.snapshot.detentSize == 0,
+                  cppID: drawerLayoutVisibilityID,
+                  message: "a hidden velocity section publishes no detent")
+    harness.apply { $0.setSectionVisible(.velocity, visible: true, drawerOwnsFocus: false) }
+    let detent = harness.layout.snapshot
+    report.expect(detent.detentSize == 16 && detent.detentX == 0 &&
+                  detent.detentY == detent[.velocity].bodyY + detent[.velocity].bodyHeight - 16,
+                  cppID: drawerLayoutVisibilityID,
+                  message: "a shown velocity section returns the detent to the body's lower-left corner")
+
+    harness.apply { $0.toggleSection(.velocity, drawerOwnsFocus: false) }
+    harness.apply { $0.toggleSection(.voiceChanges, drawerOwnsFocus: false) }
+    let collapsed = harness.apply { $0.toggleSection(.automation, drawerOwnsFocus: false) }
+    report.expect(!harness.layout.isVisible(.velocity) && !harness.layout.isVisible(.voiceChanges) &&
+                  !harness.layout.isVisible(.automation) &&
+                  harness.layout.snapshot.height == drawerLayoutDrawerBarHeight &&
+                  harness.layout.snapshot.barVisible &&
+                  harness.layout.activePage == .automation &&
+                  harness.layout.storedBodyHeight(.velocity) == nil &&
+                  harness.layout.storedBodyHeight(.voiceChanges) == 50 &&
+                  harness.layout.storedBodyHeight(.automation) == nil,
+                  cppID: drawerLayoutVisibilityID,
+                  message: "hiding every section leaves the bar row, keeps every stored height and the active page")
+    report.expect(collapsed.activePagePreference == .automation,
+                  cppID: drawerLayoutVisibilityID,
+                  message: "hiding the last section records the active page it keeps")
+    let reopened = harness.apply { $0.toggleSection(.automation, drawerOwnsFocus: false) }
+    report.expect(reopened.published && harness.layout.isVisible(.automation) &&
+                  harness.layout.snapshot[.automation].bodyHeight == 80,
+                  cppID: drawerLayoutVisibilityID,
+                  message: "re-showing after a collapse restores the default body for a cleared height")
+    let voiceRestored = harness.apply { $0.toggleSection(.voiceChanges, drawerOwnsFocus: false) }
+    report.expect(voiceRestored.published &&
+                  harness.layout.snapshot[.voiceChanges].bodyHeight == 50,
+                  cppID: drawerLayoutVisibilityID,
+                  message: "re-showing after a collapse restores the retained stored height")
+
+    let voiceHidden = harness.apply { $0.toggleSection(.voiceChanges, drawerOwnsFocus: false) }
+    report.expect(voiceHidden.published && !harness.layout.isVisible(.voiceChanges) &&
+                  harness.layout.storedBodyHeight(.voiceChanges) == 50,
+                  cppID: drawerLayoutVisibilityID,
+                  message: "toggling hides the voice-changes section and keeps its stored height")
+    let voiceShown = harness.apply { $0.toggleSection(.voiceChanges, drawerOwnsFocus: false) }
+    report.expect(voiceShown.published && harness.layout.isVisible(.voiceChanges) &&
+                  harness.layout.snapshot[.voiceChanges].bodyHeight == 50,
+                  cppID: drawerLayoutVisibilityID,
+                  message: "re-showing the voice-changes section restores its stored height")
 }

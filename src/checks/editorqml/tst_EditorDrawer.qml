@@ -901,6 +901,21 @@ TestCase {
         testCase.verifyGripAccessibility(testCase.voiceChangesKind, "Resize voice-change drawer")
         testCase.verifyGripAccessibility(testCase.automationKind, "Resize automation drawer")
 
+        // Hovering a handle highlights it; leaving returns the outline. Color
+        // spellings differ in case between the drawn item and the palette, so
+        // the comparison normalizes both sides.
+        var hoverGrip = testCase.grip(testCase.velocityKind)
+        mouseMove(hoverGrip, hoverGrip.width / 2, hoverGrip.height / 2)
+        tryVerify(function() {
+            return String(hoverGrip.color).toUpperCase()
+                === String(testCase.drawerPalette().selectionRing).toUpperCase()
+        }, 1000, "a hovered handle highlights")
+        mouseMove(testCase.bar(), 2, 2)
+        tryVerify(function() {
+            return String(hoverGrip.color).toUpperCase()
+                === String(testCase.drawerPalette().outline).toUpperCase()
+        }, 1000, "leaving the handle returns its outline")
+
         // Return and Enter activate a focused toggle and are claimed by it.
         testCase.focusControl(testCase.toggle(testCase.voiceChangesKind))
         testCase.returnPropagations = 0
@@ -1077,6 +1092,18 @@ TestCase {
         testCase.releaseGrip(kind)
         fuzzyCompare(testCase.section(kind).bodyHeight, applied, 0.01,
                      "releasing after a cancellation keeps the applied height")
+
+        // A right-button press never starts a session: press, move and
+        // release change nothing.
+        testCase.awaitRenderedLayout()
+        var rightStart = testCase.section(kind).bodyHeight
+        var rightGrip = testCase.grip(kind)
+        mousePress(rightGrip, rightGrip.width / 2, rightGrip.height / 2, Qt.RightButton)
+        var rightLocal = rightGrip.mapFromItem(null, 0, testCase.dragSceneY - 40)
+        mouseMove(rightGrip, rightLocal.x, rightLocal.y, Qt.RightButton)
+        mouseRelease(rightGrip, rightLocal.x, rightLocal.y, Qt.RightButton)
+        fuzzyCompare(testCase.section(kind).bodyHeight, rightStart, 0.01,
+                     "a right-button drag on the handle resizes nothing")
 
         // The host shrink re-clamps the drawn body and keeps the stored height.
         testCase.surface.height = host - 250

@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/drawerpresentation/velocity.cpp
 Original SHA-256: 04258c2fe60a26ad1d11f8457296b0150ed1890a4d3bf09626f8775af7fff1cc
 Swift counterpart: src/checks/drawerpresentation/velocity.swift
-Swift SHA-256: 0377880eedfe6537c922ab8b81f4d2f41d1550f1c996b652a1fd3ee861fc8a80
+Swift SHA-256: d71c1f93239c4178d247cf41d5fce1b8585cda8cc7de673a8f0f2d96efcabb26
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,7 +23,19 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+`deno task verify --filter swiftcore --verbose` PASS (1/14 ok, 13 skipped, swiftcore 16.06s),
+recorded by the drawer lane owner for this tree; production velocity QML cases PASS
+(test_productionVelocityPageMountsAndRenders, test_productionVelocityPointerEdit,
+test_productionVelocityPromptTransaction, test_productionVelocityNumericInput,
+test_productionVelocityCancellation, test_productionVelocityPlayheadPerformance,
+test_productionVelocityContextIsExact and test_velocityHintsResumeAfterOutsideRelease)
+plus reference profiles verified. Converted-window predicates:
+src/checks/editorqml/tst_EditorDrawer.qml, SHA-256
+9f6d32838f67d4c2db01aa30de9a55c0e0642784950e70cff4f362f28725e8bf.
+That evidence is reused as given; this ledger ran no build, suite, formatter or lint.
+Re-run after the noise row predicate landed: `deno task verify --filter swiftcore --verbose`
+PASS (1/14 ok, swiftcore 10.14s), with the new Noise predicate string confirmed in the test
+binary by the lane owner. Neither run was repeated by this ledger.
 
 Additional conversion regression (not credited as an original C++ assertion match)
 drawerVelocityProjectionRefresh now exercises the selected note's voice-context cache
@@ -39,11 +51,12 @@ across an unresolved program change and session undo. Exact predicates, in order
 Both gesture attempts are cancelled explicitly; the successful prompt is cancelled.
 This isolates the model/projection seam implicated by the integration failure where
 the preceding header test left program 127 active. It does not establish shown-window
-undo dispatch, focus, numeric input, or popup event delivery. Central verification
-command `deno task verify --filter swiftcore --verbose` passed swiftcore (1.92s),
-recorded in /tmp/drawer-cpp-proxy-swift.log; the checked
-Swift SHA-256 is 3c715cd0e1fa78d3285a766475e3a261d546c471a14322a22e273fc8c2d03ce0.
-Existing original-site status below is unchanged; QML/native execution is separate.
+undo dispatch, focus, numeric input, or popup event delivery. The central command
+`deno task verify --filter swiftcore --verbose` covers these predicates (see
+Verification evidence); the checked
+Swift SHA-256 is d71c1f93239c4178d247cf41d5fce1b8585cda8cc7de673a8f0f2d96efcabb26.
+Original-site dispositions below are reconciled against this counterpart; QML/native
+execution is separate.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -328,243 +341,243 @@ Original expression:
   qFatal("%s", qPrintable(error))
 
 A003 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML production page-mount case composes the page over the same staged route-101 project; the native ProjectFixture copy guard itself is unproved. [S092]
 Original expression:
   QVERIFY2(project, qPrintable(error))
 
 A004 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:88
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The page-mount case loads the same staged song; the native LoadedSong::load guard for this fixture is unproved. [S092]
 Original expression:
   QVERIFY2(song, qPrintable(error))
 
 A005 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:90
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The page-mount case mounts the page against the same fixture; the native 48kHz buildTimeline guard is unproved. [S092]
 Original expression:
   QVERIFY(timeline)
 
 A006 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:96
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The page-mount case composes the production page in the lane's own window; the named timelineQuickCanvas quick view object for this fixture is unproved. [S092]
 Original expression:
   QVERIFY(quick)
 
 A007 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:101
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The page-mount case mounts the composition in the lane's window; the native showQuickViewport 960x480 show and its device pixel ratio are unproved. [S092]
 Original expression:
   QVERIFY(checks::support::showQuickViewport(view, QSize(960, 480)))
 
 A008 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML page-mount case finds and clicks the composed drawer's detent control; the editor drawer object for this fixture is unproved. [S099]
 Original expression:
   QVERIFY(drawer)
 
 A009 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:111
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML pointer-edit case drives the production velocity plot input with real mouse delivery; the named timelineVelocityInput item for this fixture is unproved. [S102]
 Original expression:
   QVERIFY(input)
 
 A010 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The page-mount case reads the ruler column beside the plot; the named timelineVelocityGutterInput item is unproved. [S093]
 Original expression:
   QVERIFY(gutter)
 
 A011 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The velocity band's layout geometry object has no converted predicate; the QML cases read the composed ruler and plot parts directly. [S092]
 Original expression:
   QVERIFY(geometry)
 
 A012 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML case asserts the plot spans the body beside the ruler; the named input item's bounds equality with the band's plotRect size is unproved. [S095]
 Original expression:
   QCOMPARE(input->bounds(), QRectF(QPointF{}, geometry->plotRect.size()))
 
 A013 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML case asserts the ruler is the shared gutter column and the plot starts at its width; the gutter input's bounds derivation from the band rect is unproved. [S093]
 Original expression:
   QCOMPARE(gutter->bounds(), QRectF(QPointF{}, QSizeF(geometry->plotRect.x() - geometry->rect.x(),
                                                           geometry->rect.height())))
 
 A014 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML cases read the grid's own notes and require at least one; the route-101 song's note list non-emptiness for this fixture is unproved. [S101]
 Original expression:
   QVERIFY(!notes.empty())
 
 A015 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:128
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift projection predicate zooms the shared camera directly and moves the handle; the wheel event that raises this page camera's pxPerBeat is unproved. [S070]
 Original expression:
   QVERIFY(view.camera().pxPerBeat() > zoom)
 
 A016 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:129
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift projection predicate asserts the handle follows camera.displayX after a direct zoom; the wheel anchor's held display position is unproved. [S070]
 Original expression:
   QVERIFY(std::abs(view.camera().displayX(tick, 0.0, input->devicePixelRatio()) - anchor.x()) <=
               1.0 / input->devicePixelRatio())
 
 A017 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The ladder's unresolved voice publishes VelocityAxisModel.Mode.continuous, the continuous 1-127 ruler mode asserted here. [S001]
 Original expression:
   QCOMPARE(drawer->velocityArea()->axis().mode(), VelocityAxis::Mode::Continuous)
 
 A018 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The ladder collapses equal displayed values to one marker; one selected note is one displayed value here. [S009]
 Original expression:
   QCOMPARE(drawer->velocityArea()->axis().markerCount(), size_t(1))
 
 A019 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The ladder names each marker with its displayed value; this site's single selected note supplies that displayed value. [S006]
 Original expression:
   QCOMPARE(drawer->velocityArea()->axis().markers()[0].velocity, notes.front().velocity)
 
 A020 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:134
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The ladder asserts only that a lower displayed velocity draws lower; the marker y equal to velocityToY of its own displayed value is unproved. [S008]
 Original expression:
   QVERIFY(std::abs(drawer->velocityArea()->axis().markers()[0].y -
                        drawer->velocityArea()->axis().velocityToY(notes.front().velocity)) <=
               1.0 / input->devicePixelRatio())
 
 A021 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:145
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML drawer case finds and clicks the composed detent control; the drawer bar item's visibility for this fixture is unproved. [S099]
 Original expression:
   QVERIFY(fixture.barItem->isVisible())
 
 A022 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML drawer case routes a real click to the composed detent control; the bar item's interaction pointer identity with the chrome Bar target is unproved. [S100]
 Original expression:
   QCOMPARE(fixture.barItem->interaction(), &chrome.interaction(DrawerChromeTarget::Bar))
 
 A023 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:147
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML drawer case clicks the composed detent control at its center; bar/toggle rectangle containment in the chrome bar rect is unproved. [S100]
 Original expression:
   QVERIFY(chrome.barRect().contains(chrome.velocityToggleRect()))
 
 A024 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML drawer composes the detent control beside the toggles; the toggle row's spacing from the automation toggle is unproved. [S099]
 Original expression:
   QCOMPARE(chrome.velocityToggleRect().x(), chrome.automationToggleRect().x() +
                                                     chrome.automationToggleRect().width() +
                                                     layout::space(layout::Space::One))
 
 A025 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML drawer case clicks the composed toggle control through the bar; the bar bounds hosting the toggle center are unproved. [S100]
 Original expression:
   QVERIFY(fixture.barItem->bounds().contains(chrome.velocityToggleRect().center() -
                                                  chrome.barRect().topLeft()))
 
 A026 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift key-split predicate asserts a continuous context publishes no available detents; the composed drawer item's hidden state for this fixture is unproved. [S058]
 Original expression:
   QVERIFY(!fixture.detentItem->isVisible())
 
 A027 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift key-split predicate asserts the continuous context's !detentsAvailable; the chrome-level detentVisible flag behind the composed item is unproved. [S058]
 Original expression:
   QVERIFY(!chrome.detentVisible())
 
 A028 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The ladder's unresolved voice publishes the continuous axis mode asserted here. [S001]
 Original expression:
   QCOMPARE(fixture.area->axis().mode(), VelocityAxis::Mode::Continuous)
 
 A029 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:156
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native focus-item obligation: VelocityAxis::nodesFocusable is a Qt focus-item policy. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(!VelocityAxis::nodesFocusable())
 
 A030 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native focus-item obligation: VelocityAxis::graduationLabelsFocusable is a Qt focus-item policy. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(!VelocityAxis::graduationLabelsFocusable())
 
 A031 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:163
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML cancellation case toggles the section off and verifies it is hidden; the native drawer section visibility flag for this fixture is unproved. [S104]
 Original expression:
   QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A032 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:164
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML cancellation case asserts only the section's hidden and visible flags; the drawer section height retained while hidden is unproved. [S104]
 Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Velocity), height)
 
 A033 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:167
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML cancellation case toggles the section back on and verifies it is visible; the native visibility flag for this fixture is unproved. [S105]
 Original expression:
   QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A034 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:178
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The mid density band publishes 9 ticks and 5 labels in the ladder predicate. [S002]
 Original expression:
   QCOMPARE(fixture.area->axis().tickCount(), 9)
 
 A035 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The mid density band publishes 5 labels in the ladder predicate. [S002]
 Original expression:
   QCOMPARE(fixture.area->axis().labelCount(), 5)
 
 A036 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The ladder predicate's density band labels descend from 127, the first label asserted here. [S003]
 Original expression:
   QCOMPARE(labels[0].velocity, 127)
 
 A037 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:182
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The ladder predicate's second band label is 96. [S003]
 Original expression:
   QCOMPARE(labels[1].velocity, 96)
 
 A038 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:183
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The ladder predicate's third band label is 64. [S003]
 Original expression:
   QCOMPARE(labels[2].velocity, 64)
 
 A039 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The ladder predicate's fourth band label is 32. [S003]
 Original expression:
   QCOMPARE(labels[3].velocity, 32)
 
 A040 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:185
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The ladder predicate's last band label is 1. [S003]
 Original expression:
   QCOMPARE(labels[4].velocity, 1)
 
 A041 | VelocityPageTest::gridAndPanClamp | src/checks/drawerpresentation/velocity.cpp:205
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: VelocityGrid ink at the past-end grid point. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(std::any_of(colors.cbegin(), colors.cend(), [&](const QColor &color) {
           return layerTouches(
@@ -574,79 +587,79 @@ Original expression:
 
 A042 | VelocityPageTest::gridAndPanClamp | src/checks/drawerpresentation/velocity.cpp:222
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: pointer-camera behavior not owned by velocity page.
 Original expression:
   QCOMPARE(view.camera().scrollX(), scroll)
 
 A043 | VelocityPageTest::gridAndPanClamp | src/checks/drawerpresentation/velocity.cpp:223
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native framebuffer obligation: samePixels over captured quick bands. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(samePixels(before, checks::support::captureQuickBand(view, fixture.bandRect())))
 
 A044 | VelocityPageTest::psgAxisContexts | src/checks/drawerpresentation/velocity.cpp:243
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The PSG ladder predicate publishes Mode.intrinsic for a PSG voice. [S022]
 Original expression:
   QCOMPARE(fixture.area->axis().mode(), VelocityAxis::Mode::Intrinsic)
 
 A045 | VelocityPageTest::psgAxisContexts | src/checks/drawerpresentation/velocity.cpp:244
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The ladder predicate asserts the square row's 16 (S023), the wave row's 5 (S024) and the noise row's 16 (S108) graduations, so every data row this site executes is asserted. [S023][S024][S108]
 Original expression:
   QCOMPARE(fixture.area->axis().graduationCount(), graduations)
 
 A046 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:256
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The drag's arming press is exercised only through the sibling transaction predicate's page.pointerPress: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QVERIFY(view.beginVelocityGesture({fixture.notes[1]}))
 
 A047 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The drag's update is exercised only through the sibling transaction predicate's page.pointerMove and frozenPreview: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QVERIFY(view.updateVelocityGesture({{fixture.notes[1].noteId, 74}}))
 
 A048 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:271
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The key-split predicate moves the pointer onto a published handle and asserts the axis map resolves the hovered note key's own map. [S060]
 Original expression:
   QCOMPARE(fixture.area->axis().map(), noiseMap)
 
 A049 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Graduation 9's active flag is asserted for a displayed value supplied as activeValues [76]; the hover input that publishes the hovered level is unproved. [S027]
 Original expression:
   QVERIFY(fixture.area->axis().graduations()[9].active)
 
 A050 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:285
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The drag's arming press is exercised only through the sibling transaction predicate's page.pointerPress: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QVERIFY(view.beginVelocityGesture({fixture.notes[1]}))
 
 A051 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:286
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The drag's update is exercised only through the sibling transaction predicate's page.pointerMove and frozenPreview: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QVERIFY(view.updateVelocityGesture({{fixture.notes[1].noteId, 74}}))
 
 A052 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:294
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The PSG ladder predicate asserts level 9's representative velocity is 76. [S026]
 Original expression:
   QCOMPARE(map.representative(9), 76)
 
 A053 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:295
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicate asserts detentsAvailable for a per-key PSG context; the enabled useDetents preference is asserted only by the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here. [S057]
 Original expression:
   QVERIFY(fixture.area->useDetents())
 
 A054 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:296
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Graduation 9's active flag is asserted for a displayed value supplied as activeValues [76]; the single active graduation count after the hover is unproved. [S027]
 Original expression:
   QCOMPARE(
           std::count_if(fixture.area->axis().graduations().cbegin(),
@@ -656,51 +669,51 @@ Original expression:
           1)
 
 A055 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:302
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Graduation 9's active flag is asserted for a displayed value supplied as activeValues [76]; the hover input that publishes the hovered level is unproved. [S027]
 Original expression:
   QVERIFY(fixture.area->axis().graduations()[9].active)
 
 A056 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:307
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: VelocityAxis accent ink at the gutter separator. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityAxis,
                            accentProbe, fixture.gutterItem->palette().highlight().color()))
 
 A057 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:311
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The ladder predicate names markers with their displayed values from its own activeValues; the marker value under the live 74 gesture preview is unproved. [S006]
 Original expression:
   QCOMPARE(fixture.area->axis().markers()[0].velocity, 74)
 
 A058 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:312
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native framebuffer obligation: captured quick-band pixel inequality across the detent toggle. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(checks::support::captureQuickBand(view, fixture.bandRect()) != snapped)
 
 A059 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:315
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native framebuffer obligation: captured quick-band pixel equality once the detent toggle is restored. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(samePixels(snapped, checks::support::captureQuickBand(view, fixture.bandRect())))
 
 A060 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:319
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The key-split predicate resolves each selected note's own level through VelocityMap.level(of:) and places its handle at that level. [S059]
 Original expression:
   QVERIFY(selectedLevel)
 
 A061 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:320
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The key-split predicate resolves each selected note's own level through VelocityMap.level(of:) and places its handle at that level. [S059]
 Original expression:
   QVERIFY(outsiderLevel)
 
 A062 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:332
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: VelocityStems stem ink for the outsider note. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(
           stems,
@@ -710,248 +723,248 @@ Original expression:
           stemColor))
 
 A063 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:338
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: VelocityNodes highlight ink on the selected node. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(nodes, selectedProbe,
                                                fixture.inputItem->palette().highlight().color()))
 
 A064 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:340
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: VelocityNodes base ink on the outsider node. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(nodes, outsiderProbe, Qt::black))
 
 A065 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: VelocityNodes track-fill ink on the outsider node. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(nodes, outsiderProbe, trackFill))
 
 A066 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:346
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: VelocityNodes dimmed ink on the deselected node. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(dimmedNodes, outsiderProbe,
                                                fixture.inputItem->palette().mid().color()))
 
 A067 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:348
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: absence of the base ink on the dimmed node. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(!checks::support::layerHasColorIn(dimmedNodes, outsiderProbe, Qt::black))
 
 A068 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:354
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicate asserts detentsAvailable for a per-key PSG context; the composed drawer item's visible state for the wave context is unproved. [S057]
 Original expression:
   QVERIFY(fixture.detentItem->isVisible())
 
 A069 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:355
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicate asserts the PSG context's detentsAvailable; the chrome-level detentVisible flag behind the composed item is unproved. [S057]
 Original expression:
   QVERIFY(fixture.drawerChrome->detentVisible())
 
 A070 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:356
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML drawer case clicks the composed detent control; the detent item's interaction pointer identity with the chrome Detent target is unproved. [S100]
 Original expression:
   QCOMPARE(fixture.detentItem->interaction(),
                &fixture.drawerChrome->interaction(DrawerChromeTarget::Detent))
 
 A071 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:358
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML drawer case clicks the composed detent control at its center; the detent item's bounds equality with the chrome detentRect size is unproved. [S100]
 Original expression:
   QCOMPARE(fixture.detentItem->bounds(),
                QRectF(QPointF{}, fixture.drawerChrome->detentRect().size()))
 
 A072 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML case asserts the ruler is the shared gutter column; the detent rect's left edge alignment with the band's left edge is unproved. [S093]
 Original expression:
   QVERIFY(std::abs(detentRect.left() - band.left()) <= layout::singlePixel())
 
 A073 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:363
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML case asserts the plot spans the body height; the detent rect's bottom edge alignment with the band's bottom edge is unproved. [S096]
 Original expression:
   QVERIFY(std::abs(detentRect.bottom() - band.bottom()) <= layout::singlePixel())
 
 A074 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:364
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML case asserts the plot starts at the ruler width; the detent rect lying left of the plot is unproved. [S094]
 Original expression:
   QVERIFY(detentRect.right() < fixture.plotRect().left())
 
 A075 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:365
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML case asserts the ruler rendered its value ladder; the detent rect avoiding the first graduation row is unproved. [S098]
 Original expression:
   QVERIFY(!detentRect.contains(
           QPointF(detentRect.center().x(), fixture.area->axis().graduations()[0].y)))
 
 A076 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:377
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML drawer case clicks the composed detent control and asserts the page's toggled preference in the converted slice. [S100]
 Original expression:
   QVERIFY(!fixture.drawerChrome->detentChecked())
 
 A077 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:378
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML drawer case's click on the composed detent control flips the page's own detent preference. [S100]
 Original expression:
   QVERIFY(!fixture.area->useDetents())
 
 A078 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:383
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native framebuffer obligation: ruler-band pixel equality between the continuous and direct-sound captures. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(samePixels(continuousBand.copy(rulerBounds), directSoundBand.copy(rulerBounds)))
 
 A079 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:384
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML drawer case asserts the toggled preference; the chrome icon revision that repaints the detent icon is unproved. [S100]
 Original expression:
   QVERIFY(fixture.drawerChrome->iconRevision() > checkedIconRevision)
 
 A080 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:389
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML drawer case's second click on the composed detent control restores the preference it started from. [S100]
 Original expression:
   QVERIFY(fixture.drawerChrome->detentChecked())
 
 A081 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:390
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML drawer case's second click restores the page's own detent preference. [S100]
 Original expression:
   QVERIFY(fixture.area->useDetents())
 
 A082 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:391
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML drawer case asserts the restored preference; the chrome icon revision bump after the second click is unproved. [S100]
 Original expression:
   QVERIFY(fixture.drawerChrome->iconRevision() > uncheckedIconRevision)
 
 A083 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:393
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift key-split predicate asserts the direct-sound context is continuous with !detentsAvailable; the deferred native visibility of the composed detent item is unproved. [S058]
 Original expression:
   QTRY_VERIFY(!fixture.detentItem->isVisible())
 
 A084 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:403
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML lane mounts the production composition and reads its drawn parts; the named timelineQuickCanvas quick view object for this fixture is unproved. [S092]
 Original expression:
   QVERIFY(quick)
 
 A085 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:409
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift diagnostics predicate publishes an edit cursor through the session and asserts the stopped context consumes it; the edit cursor's own visibility is unproved. [S079]
 Original expression:
   QVERIFY(quick->editVisible())
 
 A086 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:410
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicate asserts the context slot follows the published edit cursor; the edit root content x movement between cursor ticks is unproved. [S079]
 Original expression:
   QVERIFY(first != quick->editRootContentX())
 
 A087 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:412
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicate asserts the selected count of a hand-picked note set; the empty selection after clearTrackHeaderSelection is unproved. [S081]
 Original expression:
   QVERIFY(view.selectionModel().noteSelection().empty())
 
 A088 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:422
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicates assert the presented context tick is the rounded playhead tick and the slot at that tick; the .5 rounding boundary (0.49/0.5/0.51) and the negative clamp (-1.0) are unproved. [S075][S076]
 Original expression:
   QCOMPARE(view.voiceContext(expected[index]).voice, &fixture.voicegroup.voices[0])
 
 A089 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:446
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: VelocityTransient fill ink over the dragged selector. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(),
                            songview::TimelineQuickLayer::VelocityTransient, selector, fill))
 
 A090 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:448
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: VelocityTransient edge ink over the dragged selector. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(),
                            songview::TimelineQuickLayer::VelocityTransient, selector, edge))
 
 A091 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:453
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: the VelocityTransient layer empties after the band release. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(
           layerEmpty(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityTransient))
 
 A092 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:458
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicates resolve notes by id in their own synthetic fixture; this fixture's first-note lookup guard is unproved. [S064]
 Original expression:
   QVERIFY(fixture.document.findNote(fixture.notes[0].noteId, &first))
 
 A093 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:465
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The added overlapping note's presence in the track's note list is unproved; the Swift predicate resolves its own fixture's notes by id. [S064]
 Original expression:
   QVERIFY(overlap != notes.cend())
 
 A094 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:468
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift key-split predicate resolves each selected note's own level through VelocityMap.level(of:); the added overlapping note's level resolution is unproved. [S059]
 Original expression:
   QVERIFY(overlapLevel)
 
 A095 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:474
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: VelocityNodes highlight ink on the stacked node under the press. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityNodes,
                            QRectF(stacked - QPointF(3, 3), QSizeF(6, 6)),
                            fixture.inputItem->palette().highlight().color()))
 
 A096 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:481
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The key-split predicate resolves each selected note's own level through VelocityMap.level(of:) and places its handle at that level. [S059]
 Original expression:
   QVERIFY(selectedLevel)
 
 A097 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:487
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Original native quick-scene layer obligation: VelocityNodes highlight ink on the right-pressed selected node. A page-level Swift predicate cannot establish this observation.
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityNodes,
                            QRectF(selected - QPointF(3, 3), QSizeF(6, 6)),
                            fixture.inputItem->palette().highlight().color()))
 
 A098 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:503
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicates resolve notes by id in their own synthetic fixture; this fixture's first-note lookup guard is unproved. [S064]
 Original expression:
   QVERIFY(fixture.document.findNote(fixture.notes[0].noteId, &first))
 
 A099 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:504
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicates resolve notes by id in their own synthetic fixture; this fixture's third-note lookup guard is unproved. [S064]
 Original expression:
   QVERIFY(fixture.document.findNote(fixture.notes[2].noteId, &third))
 
 A100 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:511
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The added ramp midpoint note's presence in the track's note list is unproved; the Swift predicate resolves its own fixture's notes by id. [S064]
 Original expression:
   QVERIFY(middle != notes.cend())
 
 A101 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:523
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shift-ramp preview outline is a scene-layer observation and the ramp's frozen preview values are asserted only by the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/velocitydetentdragging.swift:drawerVelocityFrozenGesturePolicy; representation/ownership unproved here.
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(),
                            songview::TimelineQuickLayer::VelocityTransient,
@@ -960,152 +973,156 @@ Original expression:
 
 A102 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:534
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: roll-surface velocity drag owned by roll lane (src/checks/rollcheck/velocity_prompt.swift).
 Original expression:
   QVERIFY(roll)
 
 A103 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:537
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: keybinding registry owned by keybinding lane.
 Original expression:
   QVERIFY(modifiers != Qt::NoModifier)
 
 A104 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:544
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: roll-surface velocity drag owned by roll lane (src/checks/rollcheck/velocity_prompt.swift).
 Original expression:
   QVERIFY(view.previewVelocity(first.noteId).has_value())
 
 A105 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:561
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The live drag's active interaction is asserted by the QML pointer-edit case and its preview by the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here. [S102]
 Original expression:
   QVERIFY(view.previewVelocity(fixture.notes[0].noteId).has_value())
 
 A106 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:562
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The no-write state while the drag previews is asserted only by the sibling's document snapshot equality: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QVERIFY(fixture.snapshot() == baseline)
 
 A107 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:564
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Escape's cancel outcome is asserted only by the sibling, which calls page.handleEscape() directly and compares document snapshots; the native Escape key delivery into the page is unproved. executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QVERIFY(fixture.snapshot() == baseline)
 
 A108 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:565
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The cleared preview after Escape is asserted only by the sibling operating on its own gesture: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QVERIFY(!view.previewVelocity(fixture.notes[0].noteId).has_value())
 
 A109 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:571
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: One released drag advancing the document revision once is asserted by the QML pointer-edit case and the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here. [S103]
 Original expression:
   QCOMPARE(committed.revision, baseline.revision + 1)
 
 A110 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:572
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Private undo-stack index inspection is replaced by history identity in the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QCOMPARE(committed.undoIndex, baseline.undoIndex + 1)
 
 A111 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:573
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The commit reaching the document is asserted by the QML pointer-edit case and the sibling's value inequality: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here. [S103]
 Original expression:
   QVERIFY(committed.smf != baseline.smf)
 
 A112 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:576
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: One undo restoring the captured values is asserted by the sibling; snapshot byte equality is unproved. executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QCOMPARE(undone.smf, baseline.smf)
 
 A113 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:577
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Private undo-stack index inspection is replaced by history identity in the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QCOMPARE(undone.undoIndex, baseline.undoIndex)
 
 A114 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:578
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The undone revision advance is asserted only by the sibling's snapshot comparison: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QCOMPARE(undone.revision, committed.revision + 1)
 
 A115 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:581
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Redo restoring the committed history identity is asserted by the sibling; snapshot byte equality is unproved. executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QCOMPARE(redone.smf, committed.smf)
 
 A116 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:582
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Private undo-stack index inspection is replaced by history identity in the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QCOMPARE(redone.undoIndex, committed.undoIndex)
 
 A117 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:583
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The redone revision advance is asserted only by the sibling's snapshot comparison: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
 Original expression:
   QCOMPARE(redone.revision, undone.revision + 1)
 
 A118 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:592
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML page-mount case reads the page's drawn nodes and asserts every note of the primary track published one. [S097]
 Original expression:
   QVERIFY(text)
 
 A119 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:594
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML pointer-edit case requires the grid to publish its notes and the mount case requires one node per published note. [S097][S101]
 Original expression:
   QVERIFY(rows > 0)
 
 A120 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:605
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted lane asserts no velocity content rebuild across playhead presentations; the songChanged/refresh trigger that must not churn rows is unproved. [S107]
 Original expression:
   QCOMPARE(churn, 0)
 
 A121 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:608
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The converted lane asserts no velocity content rebuild across playhead presentations; the editor horizontal scroll trigger that must not churn rows is unproved. [S107]
 Original expression:
   QCOMPARE(churn, 0)
 
 A122 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:612
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicate preserves the published handle count across playhead movement; the row count preserved across a drawer hide and re-show is unproved. [S077]
 Original expression:
   QCOMPARE(text->rowCount(), rows)
 
 A123 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:621
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The converted playhead case asserts 128 shared-playhead presentations rebuilt no velocity content, the retention rule asserted here across its own tick loop. [S107]
 Original expression:
   QCOMPARE(fixture.area->diagnostics().contentBuildCount, warm.contentBuildCount)
 
 A124 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:622
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift predicate asserts the presented context tick published by the last playhead presentation through the same rounding rule. [S075]
 Original expression:
   QCOMPARE(fixture.area->diagnostics().presentedPlayheadTick, 120.0)
 
 A125 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:623
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The converted playhead case asserts every published presentation reached the page's diagnostics, the count rule asserted here. [S106]
 Original expression:
   QCOMPARE(fixture.area->diagnostics().playheadPresentationCount,
                warm.playheadPresentationCount + 120)
 
-Swift executable assertion index
-The S entries are exact predicates already called by the suite. Their presence alone
-does not close any A entry. Preserve their surrounding setup and order in the paired source.
+Executable assertion index
+The S entries are exact predicates already called by the suite: S001-S084 and S108 are paired
+counterpart predicates, S085-S091 are the context-invalidation predicates of the same
+counterpart, and S092-S107 are converted editor-QML predicates from
+src/checks/editorqml/tst_EditorDrawer.qml. S108 is the later-added noise row predicate of
+drawerVelocityPsgIntrinsicRows. Their presence alone does not close any A entry.
+Preserve their surrounding setup and order in the paired source.
 
 S001 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:20
 Swift expression:
@@ -1228,205 +1245,205 @@ Swift expression:
   report.expectEqual(5, wave.graduations.count, cppID: drawerVelocityPsgID,
                          what: "Programmable Wave publishes five volume levels")
 
-S025 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:96
+S025 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:99
 Swift expression:
   report.expectEqual("Vol 10", square.graduations[9].text, cppID: drawerVelocityPsgID,
                          what: "a graduation names its own level")
 
-S026 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:98
+S026 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:101
 Swift expression:
   report.expectEqual(76, square.graduations[9].velocity, cppID: drawerVelocityPsgID,
                          what: "level 9's representative velocity is 76")
 
-S027 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:100
+S027 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:103
 Swift expression:
   report.expect(square.graduations[9].active, cppID: drawerVelocityPsgID,
                     message: "the displayed value marks its own graduation active")
 
-S028 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:102
+S028 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:105
 Swift expression:
   report.expect(square.graduations[9].audible, cppID: drawerVelocityPsgID,
                     message: "an audible level is not the silent level")
 
-S029 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:104
+S029 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:107
 Swift expression:
   report.expect(!square.graduations[0].audible, cppID: drawerVelocityPsgID,
                     message: "level 0 is the silent level")
 
-S030 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:106
+S030 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:109
 Swift expression:
   report.expect(square.levelToY(0) > square.levelToY(15), cppID: drawerVelocityPsgID,
                     message: "lower levels draw lower")
 
-S031 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:108
+S031 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:111
 Swift expression:
   report.expectEqual(9, square.yToLevel(square.levelToY(9)), cppID: drawerVelocityPsgID,
                          what: "a level center maps back to its own level")
 
-S032 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:111
+S032 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:114
 Swift expression:
   report.expect(boundary < square.levelToY(8) && boundary > square.levelToY(9), cppID: drawerVelocityPsgID,
                     message: "a level boundary sits between the two row centers")
 
-S033 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:113
+S033 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:116
 Swift expression:
   report.expectEqual(76, square.rulerVelocityAt(y: square.levelToY(9), labelHeight: 14),
                          cppID: drawerVelocityPsgID, what: "an intrinsic ruler press takes the level's value")
 
-S034 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:115
+S034 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:118
 Swift expression:
   report.expect(square.accessibleDescription.contains("Square 1"), cppID: drawerVelocityPsgID,
                     message: "the accessible description names the voice")
 
-S035 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:135
+S035 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:138
 Swift expression:
   report.expect(VelocityContextPolicy.voiceKind(macro: macro) == expected, cppID: drawerVelocityContextID,
                         message: "macro \(macro) names \(expected)")
 
-S036 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:138
+S036 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:141
 Swift expression:
   report.expect(VelocityContextPolicy.voiceKind(macro: BankVoiceMacro.keysplit) == nil,
                     cppID: drawerVelocityContextID, message: "a keysplit macro names no exact top-level map")
 
-S037 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:140
+S037 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:143
 Swift expression:
   report.expect(VelocityContextPolicy.voiceKind(macro: BankVoiceMacro.keysplitAll) == nil,
                     cppID: drawerVelocityContextID, message: "a drumkit macro names no exact top-level map")
 
-S038 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:148
+S038 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:151
 Swift expression:
   report.expectEqual(5, early.slot, cppID: drawerVelocityContextID,
                          what: "the last voice change at or before the tick wins")
 
-S039 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:150
+S039 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:153
 Swift expression:
   report.expectEqual(Tick(96), early.endTick ?? 0, cppID: drawerVelocityContextID,
                          what: "the section ends at the next voice change")
 
-S040 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:153
+S040 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:156
 Swift expression:
   report.expectEqual(2, late.slot, cppID: drawerVelocityContextID, what: "the later change takes over")
 
-S041 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:154
+S041 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:157
 Swift expression:
   report.expect(late.endTick == nil, cppID: drawerVelocityContextID,
                     message: "a context with no later change runs to the song's end")
 
-S042 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:157
+S042 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:160
 Swift expression:
   report.expectEqual(7, opening.slot, cppID: drawerVelocityContextID,
                          what: "an unchanged program is the track's first program")
 
-S043 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:170
+S043 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:173
 Swift expression:
   report.expectEqual(VelocityContextStatus.resolved.rawValue, square.status.rawValue,
                          cppID: drawerVelocityContextID, what: "an editable square-1 slot resolves exactly")
 
-S044 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:172
+S044 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:175
 Swift expression:
   report.expect(square.map == VelocityMap(voiceKind: .square1), cppID: drawerVelocityContextID,
                     message: "the resolved map is the slot's top-level voice")
 
-S045 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:174
+S045 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:177
 Swift expression:
   report.expectEqual(Tick(96), square.endTick ?? 0, cppID: drawerVelocityContextID,
                          what: "the context keeps its section boundary")
 
-S046 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:176
+S046 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:179
 Swift expression:
   report.expect(square.editable, cppID: drawerVelocityContextID, message: "a resolved context is editable")
 
-S047 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:178
+S047 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:181
 Swift expression:
   report.expectEqual(VelocityContextStatus.unresolvedVoice.rawValue, readOnly.status.rawValue,
                          cppID: drawerVelocityContextID,
                          what: "a slot that publishes no parsed voice is unresolved")
 
-S048 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:181
+S048 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:184
 Swift expression:
   report.expect(!readOnly.editable && !readOnly.diagnostic.isEmpty, cppID: drawerVelocityContextID,
                     message: "an unresolved voice publishes a diagnostic and refuses editing")
 
-S049 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:184
+S049 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:187
 Swift expression:
   report.expectEqual(VelocityContextStatus.unresolvedVoice.rawValue, missing.status.rawValue,
                          cppID: drawerVelocityContextID, what: "a program outside the bank is unresolved")
 
-S050 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:188
+S050 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:191
 Swift expression:
   report.expect(firstEditable >= 0, cppID: drawerVelocityContextID,
                     message: "the staged bank publishes at least one parsed voice")
 
-S051 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:192
+S051 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:195
 Swift expression:
   report.expectEqual(VelocityContextStatus.resolved.rawValue, real.status.rawValue, cppID: drawerVelocityContextID,
                          what: "the staged bank's first parsed slot resolves exactly")
 
-S052 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:194
+S052 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:197
 Swift expression:
   report.expectEqual(BankSlotKind.editable, session.bankSlots[firstEditable].kind, cppID: drawerVelocityContextID,
                          what: "the resolved slot is the editable line kind")
 
-S053 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:210
+S053 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:213
 Swift expression:
   report.expect(keyless.map == VelocityMap(voiceKind: .keyless) && !keyless.editable,
                     cppID: drawerVelocityKeysplitID, message: "a split without a note key remains keyless")
 
-S054 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:213
+S054 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:216
 Swift expression:
   report.expect(invalid.map == VelocityMap(voiceKind: .invalid) && !invalid.editable,
                     cppID: drawerVelocityKeysplitID, message: "invalid child facts never borrow another key")
 
-S055 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:217
+S055 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:220
 Swift expression:
   report.expect(context.editable && context.map == VelocityMap(voiceKind: kind),
                         cppID: drawerVelocityKeysplitID, message: "key \(key) resolves its own child map")
 
-S056 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:220
+S056 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:223
 Swift expression:
   report.expect(split.subvoiceMacro(forKey: -1) == nil
                         && split.subvoiceMacro(forKey: 128) == nil,
                     cppID: drawerVelocityKeysplitID, message: "out-of-domain keys do not resolve")
 
-S057 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:239
+S057 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:242
 Swift expression:
   report.expect(page.detentsAvailable && !page.contextUnsupported
                         && page.axisMode == VelocityAxisModel.Mode.intrinsic.rawValue,
                     cppID: drawerVelocityKeysplitID, message: "compatible per-key PSG notes retain detents")
 
-S058 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:244
+S058 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:247
 Swift expression:
   report.expect(!page.detentsAvailable && !page.contextUnsupported
                         && page.axisMode == VelocityAxisModel.Mode.continuous.rawValue,
                     cppID: drawerVelocityKeysplitID, message: "mixed PSG maps remain editable and continuous")
 
-S059 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:252
+S059 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:255
 Swift expression:
   report.expect(handle?.y == noteAxis.levelToY(map.level(of: Int(note.velocity))!),
                         cppID: drawerVelocityKeysplitID,
                         message: "mixed selection places each handle using its own level boundaries")
 
-S060 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:258
+S060 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:261
 Swift expression:
   report.expect(page.axisModel.map == VelocityMap(voiceKind: .wave),
                         cppID: drawerVelocityKeysplitID, message: "hover resolves the hovered note key")
 
-S061 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:263
+S061 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:266
 Swift expression:
   report.expect(page.openSelectedVelocityPrompt(), cppID: drawerVelocityKeysplitID,
                     message: "mixed per-key selection opens its prompt")
 
-S062 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:266
+S062 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:269
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == before, cppID: drawerVelocityKeysplitID,
                     message: "per-key prompt drafts never mutate history")
 
-S063 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:268
+S063 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:271
 Swift expression:
   report.expect(page.acceptPrompt(), cppID: drawerVelocityKeysplitID,
                     message: "per-key prompt accepts one captured transaction")
 
-S064 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:271
+S064 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:274
 Swift expression:
   report.expect(document.note(notes[0].id)?.velocity == 127
                         && document.note(notes[1].id)?.velocity == 127
@@ -1434,111 +1451,240 @@ Swift expression:
                         && accepted.revision == before.revision + 1,
                     cppID: drawerVelocityKeysplitID, message: "acceptance changes only captured notes once")
 
-S065 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:276
+S065 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:279
 Swift expression:
   report.expect(!page.acceptPrompt() && drawerVelocityDocumentSnapshot(document) == accepted,
                     cppID: drawerVelocityKeysplitID, message: "repeated acceptance cannot duplicate a transaction")
 
-S066 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:279
+S066 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:282
 Swift expression:
   report.expect(document.note(notes[0].id)?.velocity == notes[0].velocity
                         && document.note(notes[1].id)?.velocity == notes[1].velocity,
                     cppID: drawerVelocityKeysplitID, message: "one undo restores both captured values")
 
-S067 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:290
+S067 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:293
 Swift expression:
   report.expect(page.contextUnsupported, cppID: drawerVelocityKeysplitID,
                     message: "the invalid bank context advertises that velocity editing is unavailable")
 
-S068 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:295
+S068 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:298
 Swift expression:
   report.expect(!page.interactionActive, cppID: drawerVelocityKeysplitID,
                     message: "an unsupported paint press never suspends follow or owns Escape")
 
-S069 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:299
+S069 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:302
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == invalidBefore, cppID: drawerVelocityKeysplitID,
                     message: "dragging an unsupported velocity context cannot change notes or history")
 
-S070 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:320
+S070 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:323
 Swift expression:
   report.expect(moved.x == expectedX && moved.x != oldX && moved.y == oldY
                         && moved.value == oldValue,
                     cppID: drawerVelocityProjectionID, message: "camera refresh moves the handle without changing its value axis")
 
-S071 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:324
+S071 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:327
 Swift expression:
   report.expect(row.x == expectedX, cppID: drawerVelocityProjectionID,
                     message: "the QML model receives the moved handle")
 
-S072 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:327
+S072 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:330
 Swift expression:
   report.expect(page.hoveredNoteText == "\(note.id.rawValue)", cppID: drawerVelocityProjectionID,
                     message: "hit testing follows the camera-refreshed handle")
 
-S073 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:333
+S073 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:336
 Swift expression:
   report.expect(fixture.handle(note)?.value == 127, cppID: drawerVelocityProjectionID,
                     message: "document edits invalidate cached note values")
 
-S074 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:337
+S074 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:340
 Swift expression:
   report.expect(fixture.handle(note)?.value == oldValue, cppID: drawerVelocityProjectionID,
                     message: "undo invalidates cached note values again")
 
-S075 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:395
+S075 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:398
 Swift expression:
   report.expectEqual(Tick(16), page.presentedContextTick, cppID: drawerVelocityDiagnosticsID,
                          what: "the presented context tick is the rounded playhead tick")
 
-S076 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:397
+S076 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:400
 Swift expression:
   report.expectEqual(0, page.presentedContextSlot, cppID: drawerVelocityDiagnosticsID,
                          what: "the presented context slot is the bank slot at that tick")
 
-S077 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:399
+S077 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:402
 Swift expression:
   report.expectEqual(handleCount, fixture.handles.count, cppID: drawerVelocityDiagnosticsID,
                          what: "playhead movement preserves the displayed note count")
 
-S078 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:404
+S078 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:407
 Swift expression:
   report.expectEqual(2, page.presentedContextSlot, cppID: drawerVelocityDiagnosticsID,
                          what: "the new section resolves the slot of its own tick")
 
-S079 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:418
+S079 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:421
 Swift expression:
   report.expectEqual(2, page.context.slot, cppID: drawerVelocityDiagnosticsID,
                          what: "the stopped velocity context consumes the published edit cursor")
 
-S080 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:420
+S080 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:423
 Swift expression:
   report.expectEqual(cursorDocument, drawerVelocityDocumentSnapshot(fixture.document), cppID: drawerVelocityDiagnosticsID,
                          what: "cursor-only publication changes no document or history state")
 
-S081 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:425
+S081 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:428
 Swift expression:
   report.expectEqual(1, page.selectedCount, cppID: drawerVelocityProjectionID,
                          what: "the selected handle publishes its own count")
 
-S082 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:430
+S082 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:433
 Swift expression:
   report.expectEqual(fixture.handle(fixture.notes[0])?.label ?? "", page.readoutText,
                          cppID: drawerVelocityProjectionID,
                          what: "the hovered handle publishes its displayed value as the readout")
 
-S083 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:433
+S083 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:436
 Swift expression:
   report.expectEqual("\(fixture.notes[0].id.rawValue)", page.hoveredNoteText, cppID: drawerVelocityProjectionID,
                          what: "the hovered handle publishes its own identity")
 
-S084 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:436
+S084 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:439
 Swift expression:
   report.expect(!page.readoutVisible, cppID: drawerVelocityProjectionID,
                     message: "hover leaving every handle hides the readout")
+
+S085 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:353
+Swift expression:
+  report.expect(!page.contextUnsupported && page.contextSlot == 0,
+                    cppID: drawerVelocityProjectionID,
+                    message: "the selected note starts with a parsed, editable opening voice")
+
+S086 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:359
+Swift expression:
+  report.expect(page.contextUnsupported && page.contextSlot == 127,
+                    cppID: drawerVelocityProjectionID,
+                    message: "an unresolved program change invalidates the selected velocity context")
+
+S087 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:362
+Swift expression:
+  report.expect(!page.openSelectedVelocityPrompt(), cppID: drawerVelocityProjectionID,
+                    message: "an unresolved selected voice cannot open the velocity prompt")
+
+S088 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:365
+Swift expression:
+  report.expect(!page.interactionActive, cppID: drawerVelocityProjectionID,
+                    message: "an unresolved selected voice cannot start a velocity drag")
+
+S089 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:375
+Swift expression:
+  report.expect(!page.contextUnsupported && page.contextSlot == 0,
+                    cppID: drawerVelocityProjectionID,
+                    message: "undo restores the parsed context rather than retaining the unresolved projection")
+
+S090 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:378
+Swift expression:
+  report.expect(page.openSelectedVelocityPrompt(), cppID: drawerVelocityProjectionID,
+                    message: "the restored voice makes the selected velocity prompt available again")
+
+S091 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:382
+Swift expression:
+  report.expect(page.interactionActive, cppID: drawerVelocityProjectionID,
+                    message: "the restored voice makes the selected velocity drag available again")
+
+S092 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2268
+QML expression:
+  verify(ruler && plot, "the page composed its ruler and plot")
+
+S093 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2269
+QML expression:
+  fuzzyCompare(ruler.width, testCase.surface.timelineSplitX, 0.01,
+               "the ruler is the shared gutter column")
+
+S094 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2271
+QML expression:
+  fuzzyCompare(plot.x, ruler.width, 0.01, "the plot starts at the shared origin")
+
+S095 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2272
+QML expression:
+  fuzzyCompare(plot.width, page.width - ruler.width, 0.01,
+               "the plot spans the body beside the ruler")
+
+S096 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2274
+QML expression:
+  fuzzyCompare(plot.height, page.height, 0.01, "the plot spans the body height")
+
+S097 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2277
+QML expression:
+  compare(nodes.length, testCase.gridNotes().length,
+          "every note of the primary track published a node")
+
+S098 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2279
+QML expression:
+  verify(testCase.collectByName(ruler, "velocityTick", []).length
+             + testCase.collectByName(ruler, "velocityGraduation", []).length > 0,
+         "the ruler rendered its value ladder")
+
+S099 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2283
+QML expression:
+  verify(detent, "the drawer composed its original detent control")
+  compare(detent.Accessible.role, Accessible.CheckBox, "the original detent control is a checkbox")
+  compare(detent.Accessible.checkable, true, "the detent control is checkable")
+  compare(detent.Accessible.checked, testCase.velocityModel().detentsEnabled,
+          "the detent control shows the page's own preference")
+
+S100 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2290
+QML expression:
+  mouseClick(detent, detent.width / 2, detent.height / 2, Qt.LeftButton)
+  compare(testCase.velocityModel().detentsEnabled, !enabledBefore,
+          "the drawer control toggles the velocity preference")
+  mouseClick(detent, detent.width / 2, detent.height / 2, Qt.LeftButton)
+  compare(testCase.velocityModel().detentsEnabled, enabledBefore)
+
+S101 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml:2327
+QML expression:
+  compare(notes.length > 0, true, "the grid published its notes")
+
+S102 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml:2342
+QML expression:
+  compare(testCase.velocityModel().interactionActive, true,
+          "a live drag reports an active interaction to the container")
+
+S103 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml:2345
+QML expression:
+  tryVerify(function() {
+      return testCase.noteVelocity(targetId) !== before
+  }, 1000, "the released drag committed one velocity change")
+
+S104 | test_productionVelocityCancellation | src/checks/editorqml/tst_EditorDrawer.qml:2513
+QML expression:
+  tryVerify(function() { return !testCase.section(testCase.velocityKind).visible }, 1000,
+            "the section hid")
+  compare(model.interactionActive, false, "hiding the section cancelled the gesture")
+
+S105 | test_productionVelocityCancellation | src/checks/editorqml/tst_EditorDrawer.qml:2519
+QML expression:
+  tryVerify(function() { return testCase.section(testCase.velocityKind).visible }, 1000,
+            "the section is visible again")
+
+S106 | test_productionVelocityPlayheadPerformance | src/checks/editorqml/tst_EditorDrawer.qml:2556
+QML expression:
+  tryVerify(function() {
+      return bootstrap.velocityPlayheadPresentations() === presented + updates
+  }, 2000, "every published presentation reached the page's diagnostics")
+
+S107 | test_productionVelocityPlayheadPerformance | src/checks/editorqml/tst_EditorDrawer.qml:2563
+QML expression:
+  compare(bootstrap.velocityContentBuilds(), builds,
+          "128 shared-playhead presentations rebuilt no velocity content")
+
+S108 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:97
+Swift expression:
+  report.expectEqual(16, noise.graduations.count, cppID: drawerVelocityPsgID,
+                         what: "Noise publishes sixteen volume levels")
 
 OMP structural correction checkpoint
 The context-invalidating supplementary assertions now belong to drawerVelocityVoiceContextInvalidation, called explicitly immediately after drawerVelocityProjectionRefresh in runVelocityPageChecks. It owns a fresh identical velocity fixture; projection/camera cache checks retain their separate fixture. All original assertion expressions remain unchanged.
 Suite order is explicit; no generic fixture abstraction was introduced.
 Static diff check passed; Debug execution of this refactor is pending root.
-Existing assertion dispositions are unchanged; this is not a completion claim.
+Original-site dispositions below are reconciled against the current counterpart; this is not a completion claim.

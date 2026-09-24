@@ -51,6 +51,11 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
                   message: "the context readout names the program at the context tick")
     report.expect(page.readoutVisible, cppID: drawerVoiceProjectionID,
                   message: "the readout is published for a presented track")
+    report.expect((page.readoutRect["width"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
+                  message: "the context readout publishes a usable rect")
+    report.expectEqual(VoiceChangesPagePolicy.readoutAlignment, page.readoutAlignment,
+                       cppID: drawerVoiceProjectionID,
+                       what: "the readout publishes the legacy right alignment the composition draws")
 
     // The hit radius is the legacy font-relative one: a press inside it takes
     // that marker, a press beyond it takes none.
@@ -74,6 +79,8 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
                   message: "the hover label keeps the legacy arrow prefix")
     report.expectEqual(before, page.publishedMarkers.map(\.label), cppID: drawerVoiceProjectionID,
                        what: "a hover repaints no marker label")
+    report.expect((page.hoverLabelRect["width"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
+                  message: "the background hover publishes a usable label rect")
 
     // A hover directly over a marker publishes its tick and no label.
     _ = page.pointerMove(x: fixture.markerX(48), y: 10, buttons: 0)

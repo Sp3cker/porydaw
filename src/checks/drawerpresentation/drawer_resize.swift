@@ -120,6 +120,18 @@ func drawerLayoutCheckDrawerResizeClampsAndSessions(_ report: CheckReport) {
                   flooredStep.layout.storedBodyHeight(.automation) == drawerLayoutDrawerMinimumBody,
                   cppID: drawerLayoutResizeID,
                   message: "a handle step that resolves to the drag start publishes nothing")
+
+    let atMax = drawerLayoutMakeStoredDrawerHarness().harness
+    atMax.apply { $0.setSectionBodyHeight(.voiceChanges, height: 110) }
+    atMax.apply { $0.adjustResizeHandle(.voiceChanges, direction: 1) }
+    report.expect(atMax.layout.storedBodyHeight(.voiceChanges) == 110 &&
+                  atMax.layout.snapshot[.voiceChanges].bodyHeight == 110,
+                  cppID: drawerLayoutResizeID,
+                  message: "a step at the declared maximum keeps the capped body at its maximum")
+    atMax.apply { $0.adjustResizeHandle(.voiceChanges, direction: 1) }
+    report.expect(atMax.layout.snapshot[.voiceChanges].bodyHeight == 110,
+                  cppID: drawerLayoutResizeID,
+                  message: "a further step past the declared maximum leaves the capped body unchanged")
 }
 
 @MainActor
@@ -256,4 +268,14 @@ func drawerLayoutCheckDrawerHostClampAndAllocation(_ report: CheckReport) {
                       drawerLayoutDrawerBarHeight + drawerLayoutDrawerHandleHeight + drawerLayoutDrawerMinimumBody,
                   cppID: drawerLayoutClampID,
                   message: "a short host keeps the default body at its minimum instead of the reserve bound")
+
+    let narrow = drawerLayoutMakeDrawerHarness()
+    narrow.apply {
+        $0.configureHost(hostWidth: drawerLayoutDrawerGutterWidth - 1,
+                         hostHeight: drawerLayoutDrawerHostHeight,
+                         gutterWidth: drawerLayoutDrawerGutterWidth)
+    }
+    report.expect(narrow.layout.snapshot.plotWidth == 0,
+                  cppID: drawerLayoutClampID,
+                  message: "a host narrower than the plot origin publishes no plot width")
 }
