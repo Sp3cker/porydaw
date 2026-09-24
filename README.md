@@ -27,17 +27,17 @@ Read [INSTALL.md](INSTALL.md) for instructions on how to compile Porydaw from so
 
 ## Architecture
 
-Porydaw is a Swift 6 + QML application. Swift owns behavior and exposes it to
-QML through QtBridge; there are no QWidgets and no new C++ outside the native
-boundaries (`src/app/clipboard_host.cpp`, `font_metrics.cpp`, `src/project/`).
+Porydaw is a Swift 6.4 + QML application. Swift owns behavior and exposes it to
+QML through QtBridge; there are no QWidgets. Native boundaries include
+`src/app/`, `font_metrics.cpp`, and `src/project/`.
 The application entry point is the Swift shell
 (`src/swift/app/shell/PorydawShellApp.swift`), which loads
 `src/ui/shell/PorydawApplication.qml` and `ShellWindow.qml`.
 
 Builds run through Deno tasks against a checkout-local Qt 6.11. On macOS the
 Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
-macOS is currently the only platform that builds the Swift app; Windows and
-Linux Swift build support is pending.
+The Swift app builds on macOS and Linux. Linux ARM64 has been validated with
+Swift 6.4.0 and Qt 6.11.2; Windows Swift build support is pending.
 
 ## Contributing
 

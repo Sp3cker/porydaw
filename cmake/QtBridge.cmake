@@ -59,3 +59,42 @@ if(APPLE)
         target_link_directories(QtBridge INTERFACE "${qtbridge_runtime_path}")
     endforeach()
 endif()
+
+function(porydaw_link_linux_swift_runtime target)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        return()
+    endif()
+    execute_process(
+        COMMAND "${CMAKE_Swift_COMPILER}" -print-target-info
+        OUTPUT_VARIABLE swift_target_info
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    string(JSON runtime_path_count LENGTH "${swift_target_info}" paths runtimeLibraryPaths)
+    math(EXPR runtime_path_last "${runtime_path_count} - 1")
+    foreach(index RANGE ${runtime_path_last})
+        string(JSON runtime_path GET "${swift_target_info}" paths runtimeLibraryPaths ${index})
+        target_link_directories(${target} PRIVATE "${runtime_path}")
+        set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${runtime_path}")
+    endforeach()
+    string(JSON resource_path GET "${swift_target_info}" paths runtimeResourcePath)
+    string(JSON swift_arch GET "${swift_target_info}" target arch)
+    target_sources(${target} PRIVATE "${resource_path}/linux/${swift_arch}/swiftrt.o")
+    get_filename_component(swift_bin "${CMAKE_Swift_COMPILER}" DIRECTORY)
+    find_program(swift_autolink_extract swift-autolink-extract HINTS "${swift_bin}" REQUIRED)
+    set(archives "")
+    foreach(library IN LISTS ARGN)
+        list(APPEND archives "$<TARGET_FILE:${library}>")
+        target_link_directories(${target} PRIVATE "$<TARGET_FILE_DIR:${library}>")
+    endforeach()
+    set(autolink_file "${CMAKE_CURRENT_BINARY_DIR}/${target}-swift-autolink.rsp")
+    add_custom_command(
+        OUTPUT "${autolink_file}"
+        COMMAND "${swift_autolink_extract}" ${archives} -o "${autolink_file}"
+        DEPENDS ${ARGN}
+        VERBATIM
+    )
+    add_custom_target(${target}_swift_autolink DEPENDS "${autolink_file}")
+    add_dependencies(${target} ${target}_swift_autolink)
+    set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS "${autolink_file}")
+    target_link_libraries(${target} PRIVATE "-Wl,@${autolink_file}")
+endfunction()

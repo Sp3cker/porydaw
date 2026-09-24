@@ -60,6 +60,7 @@ function nativeToolHints(): string[] {
     `download CMake 3.24+ manually: ${cmakeDownload}`,
     `download Ninja manually: ${ninjaDownload}`,
     `download Python 3 manually: ${pythonDownload}`,
+    "install a working Swift 6.4 toolchain: https://www.swift.org/install/",
   ];
   switch (Deno.build.os) {
     case "darwin":
@@ -91,7 +92,7 @@ function manualInstallHints(stage: SetupStage | undefined): string[] {
     case "qt":
       return [
         `download a matching Qt ${qtVersion} desktop kit: ${qtInstallerDownload}`,
-        "then configure CMake manually with -DCMAKE_PREFIX_PATH=<Qt prefix>",
+        `select a published patch release with deno task setup --qt-version ${qtVersion}.<patch>`,
       ];
     case "configure":
       return [
@@ -104,7 +105,7 @@ function manualInstallHints(stage: SetupStage | undefined): string[] {
 
 export class SetupProgress {
   #active: ActiveStage | undefined;
-  #heartbeat: number | undefined;
+  #heartbeat: ReturnType<typeof setInterval> | undefined;
   #live = false;
   #startedAt = performance.now();
   #ranStage = false;
