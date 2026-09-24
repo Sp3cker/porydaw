@@ -143,6 +143,21 @@ void SwiftCoreTest::voicegroupBankLogic()
     pdc_suite_run(PDC_SUITE_VOICE_BANKLOGIC, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::projectStoreActor()
+{
+    pdc_suite_run(PDC_SUITE_PROJECTSTORE_ACTOR, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::projectStoreOpen()
+{
+    pdc_suite_run(PDC_SUITE_PROJECTSTORE_OPEN, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::projectStoreReads()
+{
+    pdc_suite_run(PDC_SUITE_PROJECTSTORE_READS, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);

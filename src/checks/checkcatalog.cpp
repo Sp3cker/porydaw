@@ -167,7 +167,9 @@ const std::vector<CheckDefinition> &catalog()
                                                    "test_midis/smf/valid/note_lifecycle.mid",
                                                    "test_midis/smf/malformed/duplicate_eot.mid",
                                                    "test_midis/smf/stress/automation_burst.mid"}) +
-                                          rich + editor});
+                                          rich + editor +
+                                          strings({"include/constants/songs.h",
+                                                   "sound/music_player_table.inc"})});
         result.push_back(
             {.name = "projectidentitycheck",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectIdentity"}),
@@ -227,12 +229,22 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = project + editor});
         result.push_back(
-            {.name = "projectstore-open",
+            {.name = "projectstore-incopen",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupEditing"}),
              .handler = swiftCore,
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = project + editor});
+        result.push_back(
+            {.name = "projectstore-open",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreOpen"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles =
+                 project + editor +
+                 strings({"include/constants/songs.h", "sound/music_player_table.inc"}) +
+                 fixtures::decompMidiFiles()});
         result.push_back(
             {.name = "projectstore-edits",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupEditing"}),
@@ -281,6 +293,23 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = project + editor});
+        result.push_back(
+            {.name = "projectstore-actor",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreActor"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project});
+        result.push_back(
+            {.name = "projectstore-reads",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreReads"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles =
+                 project + editor +
+                 strings({"include/constants/songs.h", "sound/music_player_table.inc"}) +
+                 fixtures::decompMidiFiles()});
         // Swift grid input/raster and cross-surface routing. swiftrollgated also
         // covers standalone Quick drawer hover/drag pixels and Tab/arrow ownership.
         for (const char *name : {"swiftrollgated", "swiftbandkeys", "swiftqtml", "selectionkey"}) {

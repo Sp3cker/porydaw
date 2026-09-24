@@ -168,6 +168,12 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         runVoicegroupContextSuite(report)
     case 24:
         runVoicegroupBankLogicSuite(report)
+    case 25:
+        runProjectStoreActorSuite(report)
+    case 26:
+        runProjectStoreOpenSuite(report)
+    case 27:
+        runProjectStoreReadSuite(report)
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

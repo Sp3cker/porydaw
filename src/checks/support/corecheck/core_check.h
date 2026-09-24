@@ -31,6 +31,9 @@ enum PdcSuite {
     PDC_SUITE_PROJECTSTORE_CHECKS = 22,
     PDC_SUITE_VOICE_CONTEXT = 23,
     PDC_SUITE_VOICE_BANKLOGIC = 24,
+    PDC_SUITE_PROJECTSTORE_ACTOR = 25,
+    PDC_SUITE_PROJECTSTORE_OPEN = 26,
+    PDC_SUITE_PROJECTSTORE_READS = 27,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);

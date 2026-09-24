@@ -37,6 +37,9 @@ class SwiftCoreTest final : public QObject
     void projectStoreChecks();
     void voicegroupContext();
     void voicegroupBankLogic();
+    void projectStoreActor();
+    void projectStoreOpen();
+    void projectStoreReads();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

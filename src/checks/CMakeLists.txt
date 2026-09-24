@@ -206,6 +206,10 @@ if(APPLE)
         projectstore/VoicegroupCatalogAbsentChecks.swift
         projectstore/VoicegroupContextChecks.swift
         projectstore/VoicegroupBankLogicChecks.swift
+        projectstore/ProjectStoreActorChecks.swift
+        projectstore/ProjectStoreCheckSupport.swift
+        projectstore/ProjectStoreOpenChecks.swift
+        projectstore/ProjectStoreReadChecks.swift
         workspace/session_support.swift
         workspace/session_fixtures.swift
         workspace/session_editor_semantics.swift

@@ -13,6 +13,9 @@ add_library(PorydawProject STATIC
     VoicegroupSave.swift
     SynthCatalog.swift
     VoicegroupStore.swift
+    ProjectStore.swift
+    ProjectStore+Open.swift
+    ProjectStore+Reads.swift
 )
 
 configure_file(
