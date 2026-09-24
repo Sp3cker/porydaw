@@ -731,11 +731,6 @@ ThemedWindow {
         onAccepted: shell.chooseProject(selectedFolder.toString())
     }
     MessageDialog {
-        id: informationDialog
-        objectName: "shellInformationDialog"
-        buttons: MessageDialog.Ok
-    }
-    MessageDialog {
         id: criticalDialog
         objectName: "shellCriticalDialog"
         buttons: MessageDialog.Ok

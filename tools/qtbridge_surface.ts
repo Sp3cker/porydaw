@@ -275,7 +275,14 @@ function qmlReachability(
   if (
     !shell || !appName.includes(shell.split("/").at(-1)!.replace(/\.qml$/, ""))
   ) {
-    throw new Error("shell_qml does not match the Swift app's qmlFileName");
+    console.error(
+      `CMakeLists.txt shell_qml (${
+        shell ?? "missing"
+      }) does not match Swift qmlFileName (${
+        appName.join(", ") || "missing"
+      }); see docs/plans/qtbridge-surface/spec.md §4`,
+    );
+    Deno.exit(1);
   }
   reachable.add(shell);
   for (const file of swift) {
@@ -510,6 +517,10 @@ function format(finding: Finding): string {
   return `${finding.check} ${finding.path}:${finding.line} ${finding.detail}`;
 }
 
+function key(finding: Finding): string {
+  return `${finding.check} ${finding.path} ${finding.detail}`;
+}
+
 function sortFindings(findings: Finding[]): Finding[] {
   return findings.sort((a, b) =>
     a.path.localeCompare(b.path) || a.line - b.line ||
@@ -518,8 +529,15 @@ function sortFindings(findings: Finding[]): Finding[] {
 }
 
 async function main(): Promise<void> {
-  if (Deno.args.some((arg) => arg !== "--update-baseline")) {
-    console.error("usage: deno task verify:bridge [--update-baseline]");
+  if (
+    Deno.args.some((arg) =>
+      arg !== "--update-baseline" && arg !== "--allow-growth"
+    ) || (Deno.args.includes("--allow-growth") &&
+      !Deno.args.includes("--update-baseline"))
+  ) {
+    console.error(
+      "usage: deno task verify:bridge | deno task bridge:baseline",
+    );
     Deno.exit(2);
   }
   const swift = await sources(await files("src/swift", ".swift"));
@@ -532,9 +550,10 @@ async function main(): Promise<void> {
   const pin = /GIT_TAG\s+([0-9a-f]{40})/.exec(pinSource)?.[1];
   if (!pin) throw new Error(`QtBridge GIT_TAG missing in ${PIN_FILE}`);
   if (pin !== SUPPORTED_TYPE_PIN) {
-    throw new Error(
-      `QtBridge pin ${pin} needs supported-type review (${SUPPORTED_TYPE_PIN})`,
+    console.error(
+      `QtBridge pin in ${PIN_FILE} (${pin}) differs from supported-type constant SUPPORTED_TYPE_PIN (${SUPPORTED_TYPE_PIN}); revisit the guard on a QtBridge pin bump (docs/plans/qtbridge-surface/spec.md §4)`,
     );
+    Deno.exit(1);
   }
   const findings: Finding[] = [];
   const classes = swiftModel([...swift, ...checkSwift], findings);
@@ -546,7 +565,7 @@ async function main(): Promise<void> {
   );
   signalChecks(qml, [...swift, ...checkSwift], classes, findings);
   const ordered = sortFindings(findings);
-  const lines = [...new Set(ordered.map(format))];
+  const keys = [...new Set(ordered.map(key))].sort();
   const counts = new Map<Check, number>();
   for (const finding of ordered) {
     counts.set(finding.check, (counts.get(finding.check) ?? 0) + 1);
@@ -554,50 +573,61 @@ async function main(): Promise<void> {
   for (const check of CHECKS) {
     console.log(`${check}: ${counts.get(check) ?? 0}`);
   }
-  if (Deno.args.includes("--update-baseline")) {
-    await Deno.writeTextFile(
-      BASELINE,
-      JSON.stringify({ pin, findings: lines }, null, 2) + "\n",
-    );
-    console.log(`Updated ${BASELINE}: ${lines.length} findings`);
-    return;
-  }
   let baseline: { pin: string; findings: string[] };
   try {
     baseline = JSON.parse(await Deno.readTextFile(BASELINE));
   } catch (error) {
     if (!(error instanceof Deno.errors.NotFound)) throw error;
     console.error(
-      `Missing ${BASELINE}; run deno task verify:bridge --update-baseline`,
+      `Missing ${BASELINE}; run deno task bridge:baseline`,
     );
     Deno.exit(1);
   }
   if (baseline.pin !== pin) {
     console.error(
-      `QtBridge pin differs from ${BASELINE}; run deno task verify:bridge --update-baseline`,
+      `QtBridge pin in ${PIN_FILE} (${pin}) differs from recorded pin in ${BASELINE} (${baseline.pin}); check SUPPORTED_TYPE_PIN (${SUPPORTED_TYPE_PIN}) and revisit the guard on a QtBridge pin bump (docs/plans/qtbridge-surface/spec.md §4)`,
     );
     Deno.exit(1);
   }
   if (
     !Array.isArray(baseline.findings) ||
-    !baseline.findings.every((line) => typeof line === "string")
+    !baseline.findings.every((entry) => typeof entry === "string")
   ) {
     throw new Error(
       `Invalid ${BASELINE}: findings must be an array of strings`,
     );
   }
   const existing = new Set(baseline.findings);
-  const current = new Set(lines);
-  const unexpected = lines.filter((line) => !existing.has(line));
-  const stale = baseline.findings.filter((line) => !current.has(line));
-  for (const line of unexpected) console.error(line);
-  for (const line of stale) {
-    const match = /^(\w+) (\S+:\d+) (.+)$/.exec(line);
-    if (!match) throw new Error(`Invalid baseline finding: ${line}`);
+  const current = new Set(keys);
+  const unexpected = keys.filter((entry) => !existing.has(entry));
+  const stale = baseline.findings.filter((entry) => !current.has(entry));
+  if (Deno.args.includes("--update-baseline")) {
+    if (unexpected.length && !Deno.args.includes("--allow-growth")) {
+      console.error(`Refusing baseline growth in ${BASELINE}:`);
+      for (const entry of unexpected) console.error(entry);
+      console.error("Use deno task bridge:baseline to allow growth");
+      Deno.exit(1);
+    }
+    await Deno.writeTextFile(
+      BASELINE,
+      JSON.stringify({ pin, findings: keys }, null, 2) + "\n",
+    );
+    console.log(`Updated ${BASELINE}: ${keys.length} findings`);
+    return;
+  }
+  const unexpectedSet = new Set(unexpected);
+  for (
+    const line of new Set(
+      ordered.filter((finding) => unexpectedSet.has(key(finding))).map(format),
+    )
+  ) console.error(line);
+  for (const entry of stale) {
+    const match = /^(\w+) (\S+) (.+)$/.exec(entry);
+    if (!match) throw new Error(`Invalid baseline finding: ${entry}`);
     console.error(`STALE_BASELINE ${match[2]} ${match[1]} ${match[3]}`);
   }
   if (unexpected.length || stale.length) Deno.exit(1);
-  console.log(`Bridge surface: ${lines.length} baselined findings`);
+  console.log(`Bridge surface: ${keys.length} baselined findings`);
 }
 
 if (import.meta.main) await main();

@@ -101,7 +101,7 @@ integration-contract M0 table).
   (`Extensions.swift:123-125` + `QtBridgeableMacro.swift:188-191`). The Swift
   owner MUST retain returned objects for the QML lifetime (a QML `var` holds
   only the proxy; integration-contract M0 "Patched object return" row).
-  *Enforced: B1 `SUGAR_OPTIONAL_RETURN` (warning).*
+  *Enforced: B1 `SUGAR_OPTIONAL_RETURN`.*
 - **R9 init discipline.** Never mutate tracked/published state from `init`
   of a `QmlInstantiableStatus` class; publish after the holder memoizes.
 - **R10 equality.** `@QtTracked` emits on every write with no old/new
@@ -133,14 +133,17 @@ integration-contract M0 table).
 ## 4. Guard contract
 
 - **Artifact.** `tools/qtbridge_surface.ts` (Deno TypeScript, std only, no
-  build dependency), **extending the existing zero-dependency Swift/QML
-  lexical scanner in `tools/proof_anchor.ts:68-590`** (already parses Swift
-  `var`/`let` stored properties, function bodies, strings, comments) rather
-  than writing a new parser. **Invocation.** `deno task verify:bridge
-  [--update-baseline]` — new `Subcommand` in `tools/cli.ts` (`:29-37` union,
-  help + dispatch cases) + new entry in `deno.json` `tasks`; additionally
-  invoked at the top of `runVerify()` (`tools/cli.ts:310`, before the build
-  at `:365`) so every `verify*` lane gates on it without compiling first.
+  build dependency). It **shares the zero-dependency lexer routine
+  (`skipElement`) with `tools/proof_anchor.ts`** for comment- and
+  string-safe scanning rather than writing a third parser; the Swift
+  declaration model and the QML reachability model are local to the guard.
+  **Invocation.** `deno task verify:bridge` (read-only check) and
+  `deno task bridge:baseline` (controller-owned `--update-baseline
+  --allow-growth` regeneration) — new `Subcommand`s in `tools/cli.ts`
+  (`:29-37` union, help + dispatch cases) + entries in `deno.json` `tasks`;
+  additionally the check runs at the top of `runVerify()`
+  (`tools/cli.ts:310`, before the build at `:365`) so every `verify*` lane
+  gates on it without compiling first.
   Runs read-only analysis; exit 0/1. The script lands in `deno.json`'s
   `fmt`/`lint` include (`tools/**/*.ts`, `deno.json:22-27`), so the CI
   format job (`.github/workflows/build.yml:24`) covers it via
@@ -163,11 +166,15 @@ integration-contract M0 table).
   - `B2` signals (R6): `@QtSignal` declarations vs `on<Capitalized>` handlers
     in the QML universe vs Swift `connect`/`emit` sites (catches audit B,
     incl. `informationRequested`: handled, never emitted).
-- **Failure policy.** Findings not in the baseline fail the run (CI-grade).
-  Baseline entries that no longer reproduce also fail (`STALE_BASELINE`) —
-  the baseline can only shrink. Baseline file:
-  `tools/qtbridge_surface_baseline.json`; `--update-baseline` regenerates it
-  and is controller-owned at checkpoints, never hand-edited by implementers.
+- **Failure policy.** Findings whose key (`<CHECK> <path> <detail>`, line
+  numbers excluded so unrelated line shifts cannot break a lane) is not in
+  the baseline fail the run (CI-grade). Baseline keys that no longer
+  reproduce also fail (`STALE_BASELINE`), and `--update-baseline` refuses to
+  add new keys unless `--allow-growth` is passed, so the baseline shrinks by
+  construction rather than by discipline. Baseline file:
+  `tools/qtbridge_surface_baseline.json`; `deno task bridge:baseline`
+  (controller-owned at checkpoints) regenerates it, and implementers never
+  hand-edit it. Verification-mode `deno task verify:bridge` runs read-only.
 - **False-positive policy.** The guard reports only names it can resolve:
   element ids bound to `PorydawApp`/registered element types, `on<Name>`
   handlers, and source-syntax classifications. Unresolved identifiers
@@ -175,6 +182,15 @@ integration-contract M0 table).
   Delegate-role reads (`model.X`) are **not** checked in this phase (chains
   pass through untyped `property var`, e.g. `AutomationPage.qml:346,349`) —
   R1 removes the silent-invisibility failure mode at the source instead.
+  B2 errs toward silence on the observed side: a same-named `on<Name>`
+  handler anywhere in the QML universe excuses a signal, so the guard cannot
+  by itself prove a signal dead — the dead-signal inventory remains
+  sweep-established, and `HANDLER_NEVER_EMITTED` only inspects
+  `Connections { function onX() }` blocks whose target resolves.
+  `SUGAR_OPTIONAL_RETURN` covers `public` slot functions returning an
+  identifier type; internal helpers and composite returns (`[String]?`) are
+  out of scope by design, and a pin bump is the trigger to revisit the
+  syntactic model.
 - **Ground-truth alternative (rejected for now).** A `porydaw_checks`
   harness dumping each class's runtime `QMetaObject`
   (`SwiftMetaObjectBuilder::metaObject()` is already public) would be exact

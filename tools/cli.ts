@@ -55,14 +55,10 @@ function help(command?: Subcommand): string {
         "deno task verify:shell",
       );
     case "verify:bridge":
-      return `usage: deno task verify:bridge [--update-baseline] [--help]
-  check Swift/QML QtBridge surface against the shrink-only baseline
-  --update-baseline  replace the baseline with current findings
-  --help             show this help without checking
+      return `usage: deno task verify:bridge [--help]
+  check Swift/QML QtBridge surface against the baseline (read-only)
 
-Examples:
-  deno task verify:bridge
-  deno task verify:bridge --update-baseline`;
+  deno task bridge:baseline regenerates the baseline, allowing growth`;
     case "build:app":
     case "build:checks":
     case "build:render":
@@ -323,13 +319,26 @@ const VERIFY_LANES: Record<
 
 async function runBridge(args: string[]): Promise<void> {
   if (args.includes("--help")) showHelp("verify:bridge");
-  const unknown = args.find((arg) => arg !== "--update-baseline");
+  const unknown = args.find((arg) =>
+    arg !== "--update-baseline" && arg !== "--allow-growth"
+  );
   if (unknown) usage("verify:bridge", `unknown argument ${unknown}`);
+  if (args.includes("--allow-growth") && !args.includes("--update-baseline")) {
+    usage("verify:bridge", "--allow-growth requires --update-baseline");
+  }
+  const update = args.includes("--update-baseline");
+  if (
+    update &&
+    (await Deno.permissions.query({ name: "write", path: "tools" })).state !==
+      "granted"
+  ) {
+    usage("verify:bridge", "baseline writes require deno task bridge:baseline");
+  }
   const result = await new Deno.Command("deno", {
     args: [
       "run",
       "--allow-read=src,CMakeLists.txt,cmake/QtBridge.cmake,tools",
-      ...(args.includes("--update-baseline") ? ["--allow-write=tools"] : []),
+      ...(update ? ["--allow-write=tools"] : []),
       "tools/qtbridge_surface.ts",
       ...args,
     ],

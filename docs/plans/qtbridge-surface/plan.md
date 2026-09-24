@@ -16,9 +16,11 @@ house style; dispatch quotes these paths).
 1. `deno task verify:bridge` exists, runs before every `verify*` lane's build
    (`tools/cli.ts` `runVerify()`), and passes with an **empty baseline** at
    plan end.
-2. The 6 non-private unannotated members are resolved; 65 redundant
-   `@QtTracked` and 156 no-op `@QtIgnored` are gone; `deno task build:checks`
-   and the QML lanes stay green.
+2. The silently-invisible members are resolved and the redundant annotations
+   are gone; corrected populations and their derivation live in
+   [amendments.md](amendments.md) (78 `@QtTracked` strips, 155 `@QtIgnored`
+   strips, 24 exposure dispositions, 8 sugar-optional rewrites);
+   `deno task build:checks` and the QML lanes stay green.
 3. ~2,010 dead QML lines are deleted (5 unregistered files ≈1,238L + duplicate
    `quick/TrackHeaderBand.qml` 772L); the editorqml `track-headers` pane
    names the production file; `deno task verify:qml --verbose` green.
