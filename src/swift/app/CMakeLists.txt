@@ -29,6 +29,7 @@ add_library(PorydawApp STATIC
     voicelist/VoicegroupCatalog.swift
     MouseHints.swift
     QListModelSync.swift
+    QmlEngineAccess.swift
     roll/PianoGrid.swift
     roll/GridGesture.swift
     roll/GridScene.swift

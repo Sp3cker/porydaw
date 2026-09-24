@@ -185,6 +185,8 @@ add_subdirectory(src/swift/app)
 qt_add_library(porydaw_app STATIC
     src/app/native_host.h
     src/app/clipboard_host.cpp
+    src/app/qml_engine_host.h
+    src/app/qml_engine_host.cpp
     src/ui/songview/quick/swiftroll/native/font_metrics.cpp
     src/ui/songview/quick/swiftroll/native/font_metrics.h
     src/audio/audioengine.cpp
