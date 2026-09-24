@@ -16,11 +16,11 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-All 49 sites in this file are NATIVE: registerAction and deleteAction drive a real MainWindow, workspace project state, QMessageBox dialogs (Register/Delete/fallback-refusal), a QSettings guard, and async_wait::waitUntil polls on ProjectOpenState::Ready. File-byte and trash-path observations are gated on native dialog clicks and window state, so no presenter-level Swift check can establish them.
-Site tally: 49 sites (49 NATIVE).
+All 49 sites in this file are GAP: registerAction and deleteAction drive a real MainWindow, workspace project state, QMessageBox dialogs (Register/Delete/fallback-refusal), a QSettings guard, and async_wait::waitUntil polls on ProjectOpenState::Ready. No Swift predicate establishes any of them — feature not yet ported: onboarding register/delete dialog flow (the QML Register/Delete confirmation dialogs are absent and ShellPresenter's file.register_song is unwired), and the native harness is uncompiled in all CMake targets and unregistered in checkcatalog, so these sites never execute in any lane.
+Site tally: 49 sites (49 GAP).
 
 Execution and ownership
-The retained native harness owns this file: runOnboardCheck (support.cpp) QTest::qExecs OnboardingTest. No Swift entry point executes these checks; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf), checks/onboardcheck/onboardingtest.h (openSong, waitForDialog, closeWorkspace, readFile/writeFile, defaultCfg, midiDirectory), checks/support/asyncwait.h (waitUntil), and the file-local SettingsGuard/buttonWithRole helpers.
+The native harness runOnboardCheck (support.cpp) is the only owner of these checks (QTest::qExec of OnboardingTest), but the file is uncompiled in all CMake targets and unregistered in checkcatalog, so no lane executes it. No Swift entry point executes these checks either; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf), checks/onboardcheck/onboardingtest.h (openSong, waitForDialog, closeWorkspace, readFile/writeFile, defaultCfg, midiDirectory), checks/support/asyncwait.h (waitUntil), and the file-local SettingsGuard/buttonWithRole helpers.
 
 Fixture, sequence and row constraints
 deleteAction_data expands fallback=false (delete-open-song) and fallback=true (fallback-refusal) into distinct runs. registerAction strips the plan's charmap line, opens the song in a MainWindow, clicks the AcceptRole dialog button, then polls with waitUntil until the snapshot shows the song registered with empty gaps and the register action disabled. deleteAction clicks the DestructiveRole button and polls until songTabFor is null; the fallback row instead runs a QTimer that closes the refusal QMessageBox, then asserts every snapshotted file is byte-identical and the .mid is retained. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
@@ -40,8 +40,8 @@ OnboardingTest::import* methods, none in this file).
 Original assertion inventory and source sequence
 
 A001 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:66
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
   #include "checks/onboardcheck/onboardingtest.h"
 
@@ -113,8 +113,8 @@ Original expression:
   QVERIFY2(fixture, qPrintable(error));
 
 A002 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:71
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       const QString root = fixture->root();
@@ -126,8 +126,8 @@ Original expression:
   QVERIFY2(defaultCfg(root, cfg, error), qPrintable(error));
 
 A003 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:72
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -135,8 +135,8 @@ Original expression:
   QVERIFY2(SongRegistry::blankSong().writeFile(midPath(root, label), &error), qPrintable(error));
 
 A004 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:73
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -145,8 +145,8 @@ Original expression:
                qPrintable(error));
 
 A005 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:76
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       int id = -1;
@@ -157,8 +157,8 @@ Original expression:
                qPrintable(error));
 
 A006 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:81
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       const RegistrationPlan plan =
@@ -168,8 +168,8 @@ Original expression:
   QVERIFY(plan.charmapApplicable);
 
 A007 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:84
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       const QString charmap = root + QStringLiteral("/charmap.txt");
@@ -179,8 +179,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A008 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:86
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       const int at = complete.indexOf(plan.charmapLine.toUtf8());
@@ -189,8 +189,8 @@ Original expression:
   QVERIFY(at >= 0);
 
 A009 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:88
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       const int end = complete.indexOf('\n', at);
@@ -199,8 +199,8 @@ Original expression:
   QVERIFY(end >= at);
 
 A010 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:91
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       QByteArray stripped = complete;
@@ -210,8 +210,8 @@ Original expression:
   QVERIFY2(writeFile(charmap, stripped, error), qPrintable(error));
 
 A011 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:95
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -222,8 +222,8 @@ Original expression:
   QVERIFY2(openSong(window, root, label, error), qPrintable(error));
 
 A012 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:96
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -231,8 +231,8 @@ Original expression:
   QVERIFY(window.m_registerAction->isEnabled());
 
 A013 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:101
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       const SongInfo *partial = nullptr;
@@ -244,8 +244,8 @@ Original expression:
   QVERIFY(partial);
 
 A014 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:102
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -253,8 +253,8 @@ Original expression:
   QVERIFY(partial->registered);
 
 A015 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:103
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -262,8 +262,8 @@ Original expression:
   QCOMPARE(partial->registrationGaps, QStringList{QStringLiteral("charmap.txt")});
 
 A016 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:104
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -271,8 +271,8 @@ Original expression:
   QVERIFY(window.m_workspace->isSongListed(label));
 
 A017 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:107
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       window.m_workspace->registerSelectedSong();
@@ -282,8 +282,8 @@ Original expression:
   QVERIFY2(dialog, qPrintable(error));
 
 A018 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:109
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       QAbstractButton *button = buttonWithRole(*dialog, QMessageBox::AcceptRole);
@@ -292,8 +292,8 @@ Original expression:
   QVERIFY(button);
 
 A019 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:111
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       button->click();
@@ -315,8 +315,8 @@ Original expression:
                checks::async_wait::Result::Ready);
 
 A020 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:125
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -324,8 +324,8 @@ Original expression:
   QCOMPARE(readFile(charmap, error), complete);
 
 A021 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:126
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -333,8 +333,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A022 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:128
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       const std::optional<SongName> name = SongName::create(label);
@@ -343,8 +343,8 @@ Original expression:
   QVERIFY(name.has_value());
 
 A023 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:130
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       window.m_workspace->requestSongOpen(*name);
@@ -356,8 +356,8 @@ Original expression:
           checks::async_wait::Result::Ready);
 
 A024 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:134
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -365,8 +365,8 @@ Original expression:
   QVERIFY(!window.m_registerAction->isEnabled());
 
 A025 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:150
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       closeWorkspace(window);
@@ -389,8 +389,8 @@ Original expression:
   QVERIFY2(fixture, qPrintable(error));
 
 A026 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:153
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       const QString root = fixture->root();
@@ -400,8 +400,8 @@ Original expression:
   QVERIFY2(defaultCfg(root, cfg, error), qPrintable(error));
 
 A027 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:157
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       QString label;
@@ -413,8 +413,8 @@ Original expression:
                    qPrintable(error));
 
 A028 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:159
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -423,8 +423,8 @@ Original expression:
                    qPrintable(error));
 
 A029 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:162
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
           int id = -1;
@@ -435,8 +435,8 @@ Original expression:
                    qPrintable(error));
 
 A030 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:167
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       } else {
@@ -446,8 +446,8 @@ Original expression:
   QVERIFY2(project.open(root, &error), qPrintable(error));
 
 A031 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:171
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
           for (const SongInfo &song : project.songs())
@@ -458,8 +458,8 @@ Original expression:
   QVERIFY(!label.isEmpty());
 
 A032 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:173
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
           if (!QFile::exists(midPath(root, label)))
@@ -469,8 +469,8 @@ Original expression:
                        qPrintable(error));
 
 A033 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:179
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       }
@@ -482,8 +482,8 @@ Original expression:
   QVERIFY2(openSong(window, root, label, error), qPrintable(error));
 
 A034 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:189
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       const QStringList files = {root + QStringLiteral("/sound/song_table.inc"),
@@ -500,8 +500,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A035 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:220
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       }
@@ -540,8 +540,8 @@ Original expression:
                    "fallback refusal did not appear");
 
 A036 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:223
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
           refusalCloser.stop();
@@ -550,8 +550,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A037 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:225
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
           const std::optional<SongName> name = SongName::create(label);
@@ -560,8 +560,8 @@ Original expression:
   QVERIFY(name.has_value());
 
 A038 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:226
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -569,8 +569,8 @@ Original expression:
   QVERIFY(window.m_workspace->songTabFor(*name));
 
 A039 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:228
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
           for (int i = 0; i < files.size(); ++i) {
@@ -579,8 +579,8 @@ Original expression:
   QCOMPARE(readFile(files[i], error), before[i]);
 
 A040 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:229
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -588,8 +588,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A041 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:231
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
           }
@@ -598,8 +598,8 @@ Original expression:
   QVERIFY(QFile::exists(midPath(root, label)));
 
 A042 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:235
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
       } else {
@@ -610,8 +610,8 @@ Original expression:
   QVERIFY2(dialog, qPrintable(error));
 
 A043 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:237
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
           QAbstractButton *button = buttonWithRole(*dialog, QMessageBox::DestructiveRole);
@@ -620,8 +620,8 @@ Original expression:
   QVERIFY(button);
 
 A044 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:240
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
           button->click();
@@ -631,8 +631,8 @@ Original expression:
   QVERIFY(name.has_value());
 
 A045 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:241
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -645,8 +645,8 @@ Original expression:
                    checks::async_wait::Result::Ready);
 
 A046 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:247
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -654,8 +654,8 @@ Original expression:
   QVERIFY(!window.m_workspace->isSongListed(label));
 
 A047 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:248
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -663,8 +663,8 @@ Original expression:
   QCOMPARE(window.m_workspace->listedSongCount(), listed - 1);
 
 A048 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:249
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 
@@ -672,8 +672,8 @@ Original expression:
   QVERIFY(!QFile::exists(midPath(root, label)));
 
 A049 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:250
-Disposition: NATIVE
-Mapping/reason: Original native MainWindow/workspace/dialog harness obligation. A presenter-level Swift check cannot establish this observation without the native window harness; no Swift counterpart exists.
+Disposition: GAP
+Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
 Source context since previous assertion:
 
 

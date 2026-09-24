@@ -16,11 +16,11 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-All 13 sites in this file are GAP: projectEnumerationAndTrackBudgets exercises pure SongRegistry voicegroup/musicPlayer parsing and DecompProject track budgets against a rewritten music_player_table.inc on a copied fixture. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them. The file's helper bodies (copyProject, readFile, writeFile, midiFixture, registeredCount, midiDirectory, defaultCfg, compile, openSong, waitForDialog, closeWorkspace, runOnboardCheck) carry no assertion sites.
+All 13 sites in this file are GAP: projectEnumerationAndTrackBudgets exercises pure SongRegistry voicegroup/musicPlayer parsing and DecompProject track budgets against a rewritten music_player_table.inc on a copied fixture. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them — feature not yet ported: music-player table budget parsing. The native harness is uncompiled in all CMake targets and unregistered in checkcatalog, so these sites never execute in any lane. The file's helper bodies (copyProject, readFile, writeFile, midiFixture, registeredCount, midiDirectory, defaultCfg, compile, openSong, waitForDialog, closeWorkspace, runOnboardCheck) carry no assertion sites.
 Site tally: 13 sites (13 GAP).
 
 Execution and ownership
-The retained native harness owns this file: runOnboardCheck (support.cpp) QTest::qExecs OnboardingTest. No Swift entry point executes these checks; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures: checks/support/songfixture.h (ProjectFixture::copyOf).
+The native harness runOnboardCheck (support.cpp) is the only owner of these checks (QTest::qExec of OnboardingTest), but the file is uncompiled in all CMake targets and unregistered in checkcatalog, so no lane executes it. No Swift entry point executes these checks either; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures: checks/support/songfixture.h (ProjectFixture::copyOf).
 
 Fixture, sequence and row constraints
 No data rows, loops, or branch guards expand these sites beyond a single run: the test rewrites music_player_table.inc with literal, numeric, and unknown-symbol track counts, asserts parsed budgets (BGM 12, SE1 3, SE2 16 via NUM_TRACKS_SE2 - 4, SE3 -1), asserts project.trackBudgetFor fallbacks (12 and 16), then restores the original table. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
@@ -41,7 +41,7 @@ Original assertion inventory and source sequence
 
 A001 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:223
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
   #include "checks/onboardcheck/onboardingtest.h"
 
@@ -271,7 +271,7 @@ Original expression:
 
 A002 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:225
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
 
       const QString root = fixture->root();
@@ -281,7 +281,7 @@ Original expression:
 
 A003 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:226
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
 
 
@@ -290,7 +290,7 @@ Original expression:
 
 A004 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:229
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
 
       const QString tablePath = root + QStringLiteral("/sound/music_player_table.inc");
@@ -301,7 +301,7 @@ Original expression:
 
 A005 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:237
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
 
       const QByteArray table =
@@ -317,7 +317,7 @@ Original expression:
 
 A006 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:245
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
 
       const QVector<MusicPlayer> players = SongRegistry::musicPlayers(root);
@@ -333,7 +333,7 @@ Original expression:
 
 A007 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:246
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
 
 
@@ -342,7 +342,7 @@ Original expression:
 
 A008 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:247
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
 
 
@@ -351,7 +351,7 @@ Original expression:
 
 A009 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:248
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
 
 
@@ -360,7 +360,7 @@ Original expression:
 
 A010 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:250
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
 
       DecompProject project;
@@ -370,7 +370,7 @@ Original expression:
 
 A011 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:253
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
 
       SongInfo song;
@@ -381,7 +381,7 @@ Original expression:
 
 A012 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:255
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
 
       song.player = QStringLiteral("MUSIC_PLAYER_SE3");
@@ -391,7 +391,7 @@ Original expression:
 
 A013 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:256
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: music-player table budget parsing.
 Source context since previous assertion:
 
 

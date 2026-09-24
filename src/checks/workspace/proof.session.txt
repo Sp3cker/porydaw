@@ -35,14 +35,18 @@ Swift predicates in the paired counterpart, listed after the inventory.
 MATCHED identifies an equivalent Swift predicate that would execute for the
 original site; PARTIAL identifies a related Swift predicate with an explicit
 unproved condition; GAP identifies an original predicate with no equivalent
-Swift assertion established; NATIVE identifies a native window, workspace,
-tab, audio engine, settings, widget, dialog, timer, or rendering/harness
-observation that a presenter-level Swift check cannot establish as executed
-here. NATIVE marks sites whose expression names native-harness objects or
-values produced through them; GAP marks portable value/codec/model
-comparisons a presenter-level check could in principle establish.
+Swift assertion established; RETIRED-REPRESENTATION identifies a site whose
+native check-harness mechanism no longer has production ingress. The
+WorkspaceSessionTest harness declared in
+src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target
+(src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and
+is unregistered in src/checks/checkcatalog.cpp, so no site below executes
+natively and no site carries NATIVE. The GAP sites are the user-visible
+session restore, song list, window-geometry, sidecar-preservation and
+editor-view-state behavior the dead MainWindow harness observed; the retired
+sites are the fixture, widget-handle and staging helpers that stand it up.
 WorkspaceSessionTest covers QSettings session restore: restoreProjectOnly over three data rows, closeReopenPreservesSession (editor state, song-filter widgets, window-geometry blob, sidecar preservation, relaunch restore), and deletedRecipeSongIsIgnored.
-session.cpp contributes 44 sites: 0 MATCHED, 0 PARTIAL, 0 GAP, 44 NATIVE. The paired
+session.cpp contributes 44 sites: 0 MATCHED, 0 PARTIAL, 28 GAP, 16 RETIRED-REPRESENTATION. The paired
 counterpart drives the disjoint DocumentSession/ProjectService/bank-history
 suite; it never opens a MainWindow, workspace tab, transport, scale control,
 or editor-codec flow, so no workspace-flow predicate is matched here.
@@ -54,11 +58,14 @@ Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution and ownership
-Native execution owns every site below: the QtTest suites declared in
-src/checks/workspace/tst_workspacesessions.h (WorkspaceSessionTest) run against a real
-MainWindow with the Null audio backend and a staged fixture project copy
-(workspace_test::ProjectCopy; fixture.h/fixture.cpp carries no assertion
-sites). On the Swift side, pdcSuiteRun in
+No native execution remains: the QtTest suites declared in
+src/checks/workspace/tst_workspacesessions.h (WorkspaceSessionTest)
+would run against a real MainWindow with the Null audio backend and a staged
+fixture project copy (workspace_test::ProjectCopy; fixture.h/fixture.cpp
+carries no assertion sites), but the harness is compiled into no CMake target
+and is unregistered in src/checks/checkcatalog.cpp, so each native site was
+reconciled to GAP (user-visible behavior) or RETIRED-REPRESENTATION (fixture,
+widget-handle and staging plumbing). On the Swift side, pdcSuiteRun in
 src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 to
 runProjectSessionSuite and runBankHistorySuite; no Swift entry point opens a
 workspace, tab, transport, scale control, or editor-codec flow. The 185
@@ -78,8 +85,8 @@ restoreProjectOnly_data expands three rows (nothing, gone, project). init/cleanu
 Original assertion inventory
 
 A001 | WorkspaceSessionTest::init | src/checks/workspace/session.cpp:111
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the init fixture guard (QSettings clear plus ProjectCopy reset). Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   #include "checks/workspace/tst_workspacesessions.h"
 
@@ -195,8 +202,8 @@ Original expression:
   QVERIFY2(m_project.reset(error), qPrintable(error))
 
 A002 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:145
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner ApplicationSession.openProject with the shell project restoration exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
   }
@@ -236,24 +243,24 @@ Original expression:
   QTRY_COMPARE(window.windowTitle(), title)
 
 A003 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:146
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner ApplicationSession.openProject with the shell status presentation exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(window.statusBar()->currentMessage().startsWith(QStringLiteral("Opened")))
 
 A004 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:147
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner SongTabsController tabCount (a project without a restored song opens no tab) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_workspace->openTabCount(), 0)
 
 A005 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:149
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner ApplicationSession.openProject with the shell window title exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       } else {
@@ -261,16 +268,16 @@ Original expression:
   QTRY_COMPARE(window.windowTitle(), QStringLiteral("porydaw"))
 
 A006 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:150
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner SongTabsController tabCount exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_workspace->openTabCount(), 0)
 
 A007 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:168
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the window.m_workspace construction guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       }
@@ -294,8 +301,8 @@ Original expression:
   QVERIFY(workspace)
 
 A008 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:171
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift song list model/presenter (src/checks/songlist/songlist_checks.swift), which this pairing does not execute, exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
           auto *panel = window.findChild<SongListPanel *>();
@@ -305,8 +312,8 @@ Original expression:
                       list->currentItem()->text().startsWith(m_songLabel))
 
 A009 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:174
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the selected-tab handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
           SongTab *tab = workspace->selectedSongTab();
@@ -314,16 +321,16 @@ Original expression:
   QVERIFY(tab)
 
 A010 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:175
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the tab-readiness wait. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(tab->isReady())
 
 A011 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:178
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 
@@ -332,24 +339,24 @@ Original expression:
   QVERIFY(loadEditorViewState(settings) == complete)
 
 A012 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:179
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tab->view().editorViewState() == complete)
 
 A013 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:180
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the sidecar snapshot staging helper read. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sidecarSnapshot(m_project.root(), sidecarBefore, snapshotError))
 
 A014 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:185
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the songListSearch widget handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 
@@ -360,32 +367,32 @@ Original expression:
   QVERIFY(search)
 
 A015 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:186
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the songListSort widget handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sort)
 
 A016 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:187
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the songListCategory widget handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(categoryBox)
 
 A017 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:188
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift song list model/presenter (src/checks/songlist/songlist_checks.swift) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(categoryBox->count() > 1)
 
 A018 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:198
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the windowGeometry/windowState close-time persistence (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
           categoryBox->setCurrentIndex(1);
@@ -401,24 +408,24 @@ Original expression:
   QTRY_VERIFY(!settings.value(QStringLiteral("windowGeometry")).toByteArray().isEmpty())
 
 A019 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:199
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the lastProjectDir session-restore key (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(settings.value(QStringLiteral("lastProjectDir")).toString(), m_project.root())
 
 A020 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:200
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the lastSongLabel session-restore key (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(settings.value(QStringLiteral("lastSongLabel")).toString(), m_songLabel)
 
 A021 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:201
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the lastOpenSongs session-restore key (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -426,8 +433,8 @@ Original expression:
                    QStringList{m_songLabel})
 
 A022 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:203
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the songFilterText session-restore key (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -435,8 +442,8 @@ Original expression:
                    QStringLiteral("filterme"))
 
 A023 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:209
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the sidecar snapshot staging helper read. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       }
@@ -448,16 +455,16 @@ Original expression:
                qPrintable(snapshotError))
 
 A024 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:211
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the sidecar directory write path (close must not rewrite sidecar bytes) (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sidecarAfterClose == sidecarBefore)
 
 A025 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:215
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the window.m_workspace construction guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 
@@ -467,8 +474,8 @@ Original expression:
   QVERIFY(workspace)
 
 A026 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:217
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift session restore walk in ApplicationSession/SongTabsController exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const std::vector<SongTab *> startupTabs = workspace->tabsInDisplayOrder();
@@ -476,8 +483,8 @@ Original expression:
   QVERIFY(!startupTabs.empty())
 
 A027 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:219
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the startup tab handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       for (SongTab *tab : startupTabs) {
@@ -485,16 +492,16 @@ Original expression:
   QVERIFY(tab)
 
 A028 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:220
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(tab->view().editorViewState(), complete)
 
 A029 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:222
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the sessionAndEditorSettings close-time invariance (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       }
@@ -502,8 +509,8 @@ Original expression:
   QVERIFY(sessionAndEditorSettings() == beforeRestore)
 
 A030 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:227
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the selected-tab readiness wait. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 
@@ -514,40 +521,40 @@ Original expression:
   QTRY_VERIFY((restoredTab = workspace->selectedSongTab()) && restoredTab->isReady())
 
 A031 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:228
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: ApplicationSession.openProject with the shell window title exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(restored.windowTitle().startsWith(m_songLabel))
 
 A032 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:229
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the sessionAndEditorSettings restore invariance (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sessionAndEditorSettings() == beforeRestore)
 
 A033 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:230
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(restoredTab->view().editorViewState() == complete)
 
 A034 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:231
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(restoredTab->view().editorViewState().hiddenLanes() == complete.hiddenLanes())
 
 A035 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:235
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the songListSearch widget handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       auto *search = restored.findChild<QLineEdit *>(QStringLiteral("songListSearch"));
@@ -557,48 +564,48 @@ Original expression:
   QVERIFY(search)
 
 A036 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:236
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the songListSort widget handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sort)
 
 A037 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:237
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the songListCategory widget handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(categoryBox)
 
 A038 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:238
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the songFilterText restore into the song list search (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(search->text(), QStringLiteral("filterme"))
 
 A039 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:239
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the song list sort restore (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(sort->currentIndex(), 1)
 
 A040 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:240
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the song list category restore (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_COMPARE(categoryBox->currentData().toString(), category)
 
 A041 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:242
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the sidecar snapshot staging helper read. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       std::map<QString, QByteArray> sidecarAfterRestore;
@@ -607,16 +614,16 @@ Original expression:
                qPrintable(snapshotError))
 
 A042 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:244
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the sidecar directory write path (restore must not rewrite sidecar bytes) (the native path is the uncompiled MainWindow/WorkspaceUi harness); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sidecarAfterRestore == sidecarBefore)
 
 A043 | WorkspaceSessionTest::deletedRecipeSongIsIgnored | src/checks/workspace/session.cpp:257
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: ApplicationSession.openProject with the shell window title exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
   }
@@ -635,8 +642,8 @@ Original expression:
   QTRY_COMPARE(window.windowTitle(), title)
 
 A044 | WorkspaceSessionTest::deletedRecipeSongIsIgnored | src/checks/workspace/session.cpp:258
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: SongTabsController tabCount exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:

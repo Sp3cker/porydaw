@@ -35,14 +35,18 @@ Swift predicates in the paired counterpart, listed after the inventory.
 MATCHED identifies an equivalent Swift predicate that would execute for the
 original site; PARTIAL identifies a related Swift predicate with an explicit
 unproved condition; GAP identifies an original predicate with no equivalent
-Swift assertion established; NATIVE identifies a native window, workspace,
-tab, audio engine, settings, widget, dialog, timer, or rendering/harness
-observation that a presenter-level Swift check cannot establish as executed
-here. NATIVE marks sites whose expression names native-harness objects or
-values produced through them; GAP marks portable value/codec/model
-comparisons a presenter-level check could in principle establish.
+Swift assertion established; RETIRED-REPRESENTATION identifies a site whose
+native check-harness mechanism no longer has production ingress. The
+WorkspaceTabsTest harness declared in
+src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target
+(src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and
+is unregistered in src/checks/checkcatalog.cpp, so no site below executes
+natively and no site carries NATIVE. Every GAP site here is the unported
+transport scale selector (root/type/highlight/fold) and its per-tab routing;
+the retired sites are the fixture, widget-handle and old-track-precondition
+plumbing.
 WorkspaceTabsTest::scaleRouting drives the transport scale widgets across two tabs: per-tab root/id/highlight/fold state, widget reflection on selection, track-switch persistence, and delete/undo scale retention.
-tabs_scale.cpp contributes 54 sites: 0 MATCHED, 0 PARTIAL, 2 GAP, 52 NATIVE. The paired
+tabs_scale.cpp contributes 54 sites: 0 MATCHED, 0 PARTIAL, 45 GAP, 9 RETIRED-REPRESENTATION. The paired
 counterpart drives the disjoint DocumentSession/ProjectService/bank-history
 suite; it never opens a MainWindow, workspace tab, transport, scale control,
 or editor-codec flow, so no workspace-flow predicate is matched here.
@@ -54,11 +58,14 @@ Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution and ownership
-Native execution owns every site below: the QtTest suites declared in
-src/checks/workspace/tst_workspacesessions.h (WorkspaceTabsTest) run against a real
-MainWindow with the Null audio backend and a staged fixture project copy
-(workspace_test::ProjectCopy; fixture.h/fixture.cpp carries no assertion
-sites). On the Swift side, pdcSuiteRun in
+No native execution remains: the QtTest suites declared in
+src/checks/workspace/tst_workspacesessions.h (WorkspaceTabsTest::scaleRouting)
+would run against a real MainWindow with the Null audio backend and a staged
+fixture project copy (workspace_test::ProjectCopy; fixture.h/fixture.cpp
+carries no assertion sites), but the harness is compiled into no CMake target
+and is unregistered in src/checks/checkcatalog.cpp, so each native site was
+reconciled to GAP (unported scale selector behavior) or
+RETIRED-REPRESENTATION (fixture plumbing). On the Swift side, pdcSuiteRun in
 src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 to
 runProjectSessionSuite and runBankHistorySuite; no Swift entry point opens a
 workspace, tab, transport, scale control, or editor-codec flow. The 185
@@ -79,7 +86,7 @@ Original assertion inventory
 
 A001 | (anonymous)::selectData | src/checks/workspace/tabs_scale.cpp:21
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   #include "checks/workspace/tst_workspacesessions.h"
 
@@ -105,8 +112,8 @@ Original expression:
   QVERIFY(index >= 0)
 
 A002 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:31
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the window.m_workspace construction guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       combo.setCurrentIndex(index);
@@ -122,8 +129,8 @@ Original expression:
   QVERIFY(workspace)
 
 A003 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:33
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the workspace_test::waitForProject project-open wait helper. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       workspace->requestProjectOpenAt(m_project.root());
@@ -131,8 +138,8 @@ Original expression:
   QVERIFY(workspace_test::waitForProject(*workspace))
 
 A004 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:36
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the open() first-tab handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       SongTab *first = open(window, m_songA);
@@ -141,16 +148,16 @@ Original expression:
   QVERIFY(first)
 
 A005 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:37
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the open() second-tab handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(second)
 
 A006 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:42
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the transportScaleRoot widget handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       auto *root = window.findChild<QComboBox *>(QStringLiteral("transportScaleRoot"));
@@ -161,96 +168,96 @@ Original expression:
   QVERIFY(root)
 
 A007 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:43
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the transportScaleType widget handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(scale)
 
 A008 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:44
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the transportScaleHighlight widget handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(highlight)
 
 A009 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:45
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the transportScaleFold widget handle guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fold)
 
 A010 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:47
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(first->view().scaleRoot(), 0)
 
 A011 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:48
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(first->view().scaleId(), porydaw_scale::ScaleId::major)
 
 A012 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:49
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!first->view().scaleHighlight())
 
 A013 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:50
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!first->view().scaleFold())
 
 A014 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:51
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(second->view().scaleRoot(), 0)
 
 A015 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:52
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(second->view().scaleId(), porydaw_scale::ScaleId::major)
 
 A016 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:53
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!second->view().scaleHighlight())
 
 A017 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:54
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!second->view().scaleFold())
 
 A018 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:64
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 
@@ -266,32 +273,32 @@ Original expression:
   QCOMPARE(first->view().scaleRoot(), firstRoot)
 
 A019 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:65
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(first->view().scaleId(), firstScale)
 
 A020 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:66
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(first->view().scaleHighlight())
 
 A021 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:67
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!first->view().scaleFold())
 
 A022 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:69
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       highlight->click();
@@ -299,16 +306,16 @@ Original expression:
   QVERIFY(!first->view().scaleHighlight())
 
 A023 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:70
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!first->view().scaleFold())
 
 A024 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:92
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the old-track fixture precondition (the engineTrackCount probe / document.addTrack path). Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       highlight->click();
@@ -336,8 +343,8 @@ Original expression:
   QVERIFY(otherTrack >= 0)
 
 A025 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:95
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       view.selectTrack(originalTrack);
@@ -346,48 +353,48 @@ Original expression:
   QCOMPARE(view.scaleRoot(), secondRoot)
 
 A026 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:96
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.scaleId(), secondScale)
 
 A027 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:97
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!view.scaleHighlight())
 
 A028 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:98
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(view.scaleFold())
 
 A029 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:99
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!highlight->isChecked())
 
 A030 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:100
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fold->isChecked())
 
 A031 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:102
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       highlight->click();
@@ -395,8 +402,8 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A032 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:104
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       highlight->click();
@@ -404,8 +411,8 @@ Original expression:
   QVERIFY(!view.scaleHighlight() && view.scaleFold())
 
 A033 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:107
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       highlight->click();
@@ -414,8 +421,8 @@ Original expression:
   QVERIFY(view.scaleHighlight() && !view.scaleFold())
 
 A034 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:109
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       fold->click();
@@ -423,8 +430,8 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A035 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:112
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 
@@ -433,32 +440,32 @@ Original expression:
   QCOMPARE(root->currentData().toInt(), firstRoot)
 
 A036 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:113
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(scale->currentData().toInt(), static_cast<int>(firstScale))
 
 A037 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:114
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(highlight->isChecked())
 
 A038 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:115
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!fold->isChecked())
 
 A039 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:117
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       workspace->selectSongTab(second);
@@ -466,32 +473,32 @@ Original expression:
   QCOMPARE(root->currentData().toInt(), secondRoot)
 
 A040 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:118
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(scale->currentData().toInt(), static_cast<int>(secondScale))
 
 A041 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:119
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(highlight->isChecked())
 
 A042 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:120
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fold->isChecked())
 
 A043 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:123
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 
@@ -500,8 +507,8 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A044 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:125
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       view.selectTrack(originalTrack);
@@ -509,8 +516,8 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A045 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:130
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       view.setScaleHighlight(false);
@@ -521,8 +528,8 @@ Original expression:
   QVERIFY(!view.scaleHighlight() && !view.scaleFold())
 
 A046 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:133
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       view.setScaleHighlight(true);
@@ -531,8 +538,8 @@ Original expression:
   QVERIFY(view.scaleHighlight() && !view.scaleFold())
 
 A047 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:138
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       view.selectTrack(originalTrack);
@@ -543,8 +550,8 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A048 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:146
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       workspace->requestUndo();
@@ -558,8 +565,8 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A049 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:148
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       workspace->requestUndo();
@@ -567,8 +574,8 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A050 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:151
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       if (addedTrack)
@@ -577,8 +584,8 @@ Original expression:
   QVERIFY(!second->document().isDirty())
 
 A051 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:153
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       workspace->selectSongTab(first);
@@ -586,24 +593,24 @@ Original expression:
   QCOMPARE(first->view().scaleRoot(), firstRoot)
 
 A052 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:154
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(first->view().scaleId(), firstScale)
 
 A053 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:155
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(first->view().scaleHighlight())
 
 A054 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:156
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:

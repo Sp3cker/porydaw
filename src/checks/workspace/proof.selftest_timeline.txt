@@ -35,14 +35,18 @@ Swift predicates in the paired counterpart, listed after the inventory.
 MATCHED identifies an equivalent Swift predicate that would execute for the
 original site; PARTIAL identifies a related Swift predicate with an explicit
 unproved condition; GAP identifies an original predicate with no equivalent
-Swift assertion established; NATIVE identifies a native window, workspace,
-tab, audio engine, settings, widget, dialog, timer, or rendering/harness
-observation that a presenter-level Swift check cannot establish as executed
-here. NATIVE marks sites whose expression names native-harness objects or
-values produced through them; GAP marks portable value/codec/model
-comparisons a presenter-level check could in principle establish.
+Swift assertion established; RETIRED-REPRESENTATION identifies a site whose
+native check-harness mechanism no longer has production ingress. The
+WorkspaceTimelineSelfTest harness declared in
+src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target
+(src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and
+is unregistered in src/checks/checkcatalog.cpp, so no site below executes
+natively and no site carries NATIVE. The GAP sites are the user-visible
+transport, live-timeline, document-edit and tab-close behavior the dead
+MainWindow harness observed; the retired sites are the fixture and wait
+helpers that stand it up.
 WorkspaceTimelineSelfTest drives the Null-backend transport while swapping the live MidiTimeline under it: liveTimelineSwapAndUndo exercises addNote/lane-point edits, note moves, triple undo, and voice preview during playback; previewWhileStoppedDoesNotStartTransport guards the stopped-transport preview path.
-selftest_timeline.cpp contributes 21 sites: 0 MATCHED, 0 PARTIAL, 0 GAP, 21 NATIVE. The paired
+selftest_timeline.cpp contributes 21 sites: 0 MATCHED, 0 PARTIAL, 13 GAP, 8 RETIRED-REPRESENTATION. The paired
 counterpart drives the disjoint DocumentSession/ProjectService/bank-history
 suite; it never opens a MainWindow, workspace tab, transport, scale control,
 or editor-codec flow, so no workspace-flow predicate is matched here.
@@ -54,11 +58,14 @@ Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution and ownership
-Native execution owns every site below: the QtTest suites declared in
-src/checks/workspace/tst_workspacesessions.h (WorkspaceTimelineSelfTest) run against a real
-MainWindow with the Null audio backend and a staged fixture project copy
-(workspace_test::ProjectCopy; fixture.h/fixture.cpp carries no assertion
-sites). On the Swift side, pdcSuiteRun in
+No native execution remains: the QtTest suites declared in
+src/checks/workspace/tst_workspacesessions.h (WorkspaceTimelineSelfTest)
+would run against a real MainWindow with the Null audio backend and a staged
+fixture project copy (workspace_test::ProjectCopy; fixture.h/fixture.cpp
+carries no assertion sites), but the harness is compiled into no CMake target
+and is unregistered in src/checks/checkcatalog.cpp, so each native site was
+reconciled to GAP (user-visible behavior) or RETIRED-REPRESENTATION (fixture
+and wait plumbing). On the Swift side, pdcSuiteRun in
 src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 to
 runProjectSessionSuite and runBankHistorySuite; no Swift entry point opens a
 workspace, tab, transport, scale control, or editor-codec flow. The 185
@@ -73,13 +80,13 @@ noteOffSample, bytes, configLineBytes) are shared helpers that carry no
 expects for this pairing.
 
 Fixture, sequence and row constraints
-No _data rows. init/cleanup clear QSettings and reset the staged ProjectCopy. openNull refuses to proceed unless the Null audio backend is active (returns nullptr, hence the NATIVE open guards). startObserved stops playback, waits for Stopped/zero, commits an edit cursor, starts playback, and waits for Playing/advance; every transport precondition below reuses it. A 300 ms qWait spaces the two previewVoice calls.
+No _data rows. init/cleanup clear QSettings and reset the staged ProjectCopy. openNull refuses to proceed unless the Null audio backend is active (returns nullptr, hence the open guards retired below). startObserved stops playback, waits for Stopped/zero, commits an edit cursor, starts playback, and waits for Playing/advance; every transport precondition below reuses it. A 300 ms qWait spaces the two previewVoice calls.
 
 Original assertion inventory
 
 A001 | WorkspaceTimelineSelfTest::init | src/checks/workspace/selftest_timeline.cpp:26
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the init fixture guard (QSettings clear plus ProjectCopy reset). Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   #include "checks/workspace/tst_workspacesessions.h"
 
@@ -110,8 +117,8 @@ Original expression:
   QVERIFY2(m_project.reset(error), qPrintable(error))
 
 A002 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:87
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the openNull tab-readiness guard
 Source context since previous assertion:
   ;
   }
@@ -178,24 +185,24 @@ Original expression:
   QVERIFY(tab)
 
 A003 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:88
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the openNull view handle. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(view)
 
 A004 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:89
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the startObserved wait-for-playback helper. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(startObserved(window, *tab, *view))
 
 A005 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:95
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession.document dirty flag after addNote/addLanePoint exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const int track = view->selectionModel().primaryTrack();
@@ -207,8 +214,8 @@ Original expression:
   QVERIFY(tab->document().isDirty())
 
 A006 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:96
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession playback publication with the NativeAudio publish path exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -218,8 +225,8 @@ Original expression:
                   window.m_audio.playheadSamples() > sampleBeforeEdit)
 
 A007 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:102
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession note storage (addNote visibility) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 
@@ -228,16 +235,16 @@ Original expression:
   QVERIFY(tab->document().findNote(track, 0, 60, &note))
 
 A008 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:103
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the startObserved wait-for-playback helper. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(startObserved(window, *tab, *view))
 
 A009 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:107
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession playback publication with the NativeAudio publish path exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const MidiTimeline *const beforeMove = tab->timeline().get();
@@ -250,8 +257,8 @@ Original expression:
                   window.m_audio.playheadSamples() > sampleBeforeMove)
 
 A010 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:113
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession note move exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       DocNote moved;
@@ -259,8 +266,8 @@ Original expression:
   QVERIFY(tab->document().findNote(track, 24, 61, &moved))
 
 A011 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:118
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner DocumentSession.undo with the workspace undo request path exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const uint64_t sampleBeforeUndo = window.m_audio.playheadSamples();
@@ -273,16 +280,16 @@ Original expression:
                   window.m_audio.playheadSamples() > sampleBeforeUndo)
 
 A012 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:122
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the startObserved wait-for-playback helper. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(startObserved(window, *tab, *view))
 
 A013 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:127
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.previewVoice with NativeAudio.play exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const uint64_t sampleBeforePreview = window.m_audio.playheadSamples();
@@ -293,16 +300,16 @@ Original expression:
   QCOMPARE(window.m_audio.transport(), Transport::Playing)
 
 A014 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:128
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.play with the shared playhead presenter exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(window.m_audio.playheadSamples() > sampleBeforePreview)
 
 A015 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:131
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.stop exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 
@@ -311,8 +318,8 @@ Original expression:
   QTRY_COMPARE(window.m_audio.transport(), Transport::Stopped)
 
 A016 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:134
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner SongTabsController.requestClose exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const SongName name = tab->name();
@@ -321,16 +328,16 @@ Original expression:
   QTRY_VERIFY(!window.m_workspace->songTabFor(name))
 
 A017 | WorkspaceTimelineSelfTest::liveTimelineSwapAndUndo | src/checks/workspace/selftest_timeline.cpp:135
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner SongTabsController tab retirement (tabCount) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_workspace->openTabCount(), qsizetype(0))
 
 A018 | WorkspaceTimelineSelfTest::previewWhileStoppedDoesNotStartTransport | src/checks/workspace/selftest_timeline.cpp:143
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the openNull tab-readiness guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
   }
@@ -344,16 +351,16 @@ Original expression:
   QVERIFY(tab)
 
 A019 | WorkspaceTimelineSelfTest::previewWhileStoppedDoesNotStartTransport | src/checks/workspace/selftest_timeline.cpp:144
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the openNull view handle. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(view)
 
 A020 | WorkspaceTimelineSelfTest::previewWhileStoppedDoesNotStartTransport | src/checks/workspace/selftest_timeline.cpp:146
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.stop with the transport state projection exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       window.stopPlayback();
@@ -361,8 +368,8 @@ Original expression:
   QTRY_COMPARE(window.m_audio.transport(), Transport::Stopped)
 
 A021 | WorkspaceTimelineSelfTest::previewWhileStoppedDoesNotStartTransport | src/checks/workspace/selftest_timeline.cpp:148
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.previewVoice while the transport is stopped exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       window.m_audio.previewVoice(0, 60, 0);

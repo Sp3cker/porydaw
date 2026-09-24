@@ -32,12 +32,17 @@ Command: deno task verify --filter polycheck --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution and ownership
-runPolyCheck executes the PolyphonyGateTest slots under the polycheck lane.
-PanelFixture builds a signature timeline (division 24 at 48 kHz, tempo plus
-time-signature events, one program-0 note on key 60) and a PolyphonyPanel
-sized 380x760 with track name "Brass" on track 2 and voice name
-"voice_piano" on voice 5. No Swift entry point executes these panel checks;
-no Swift counterpart file was identified.
+The native panel harness is not built: the T7A runtime cutover removed
+polyphony/polyphonypanel.cpp from src/checks/CMakeLists.txt and
+src/checks/checkcatalog.cpp registers no polycheck entry, so runPolyCheck never
+runs. polyphony/polyphonyengine.swift is the only compiled polyphony source; it
+executes under swiftcore (PlaybackChecks.swift) and is inventoried separately:
+it covers engine counters and the ring, not this panel. Originally PanelFixture
+builds a signature timeline (division 24 at 48 kHz, tempo plus time-signature
+events, one program-0 note on key 60) and a PolyphonyPanel sized 380x760 with
+track name "Brass" on track 2 and voice name "voice_piano" on voice 5. No
+Swift entry point executes these panel checks; no Swift counterpart file was
+identified.
 
 Fixture, sequence and row constraints
 richSnapshot replays three ring events (stolen key 60 by track 4 at tick 96,
@@ -56,8 +61,7 @@ Original assertion inventory
 
 A001 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:133
 Disposition: GAP
-Mapping/reason: No Swift predicate builds the panel fixture; the signature
-timeline observation below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   #include "checks/polyphony/tst_polyphonycheck.h"
 
@@ -196,8 +200,7 @@ Original expression:
 
 A002 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:136
 Disposition: GAP
-Mapping/reason: No Swift predicate renders the panel log; the three-row
-count below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QVERIFY(fixture.timeline);
       fixture.panel->updateSnapshot(richSnapshot());
@@ -206,8 +209,7 @@ Original expression:
 
 A003 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:140
 Disposition: GAP
-Mapping/reason: No Swift predicate formats the live row; the "live" text
-below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QCOMPARE(fixture.panel->logRowCount(), 3);
       const QString newest = fixture.panel->logRowText(0);
@@ -218,8 +220,7 @@ Original expression:
 
 A004 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:141
 Disposition: GAP
-Mapping/reason: No Swift predicate formats the live row; the "dropped" text
-below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -227,8 +228,7 @@ Original expression:
 
 A005 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:142
 Disposition: GAP
-Mapping/reason: No Swift predicate formats the middle row; the position text
-below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -236,8 +236,7 @@ Original expression:
 
 A006 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:143
 Disposition: GAP
-Mapping/reason: No Swift predicate formats the middle row; the "tail cut"
-text below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -245,8 +244,7 @@ Original expression:
 
 A007 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:144
 Disposition: GAP
-Mapping/reason: No Swift predicate formats the oldest row; the position text
-below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -254,8 +252,7 @@ Original expression:
 
 A008 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:145
 Disposition: GAP
-Mapping/reason: No Swift predicate formats the oldest row; the track text
-below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -263,8 +260,7 @@ Original expression:
 
 A009 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:146
 Disposition: GAP
-Mapping/reason: No Swift predicate formats the oldest row; the pitch text
-below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -272,8 +268,7 @@ Original expression:
 
 A010 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:147
 Disposition: GAP
-Mapping/reason: No Swift predicate resolves voice names in the log; the
-voice text below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -281,8 +276,7 @@ Original expression:
 
 A011 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:148
 Disposition: GAP
-Mapping/reason: No Swift predicate formats the steal attribution; the
-cut-off text below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -290,8 +284,7 @@ Original expression:
 
 A012 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:155
 Disposition: GAP
-Mapping/reason: No Swift predicate wires the log jump signal; the spy
-validity below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QVERIFY(oldest.contains(QStringLiteral("cut off by Trk 5")));
   }
@@ -305,8 +298,7 @@ Original expression:
 
 A013 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:159
 Disposition: GAP
-Mapping/reason: No Swift predicate activates a positioned log row; the jump
-emission below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QVERIFY(jumped.isValid());
       fixture.panel->updateSnapshot(richSnapshot());
@@ -317,8 +309,7 @@ Original expression:
 
 A014 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:161
 Disposition: GAP
-Mapping/reason: No Swift predicate carries the jump tick; the tick argument
-below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QCOMPARE(jumped.count(), 1);
       const QList<QVariant> jump = jumped.takeFirst();
@@ -327,8 +318,7 @@ Original expression:
 
 A015 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:162
 Disposition: GAP
-Mapping/reason: No Swift predicate carries the jump track; the track argument
-below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -336,8 +326,7 @@ Original expression:
 
 A016 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:163
 Disposition: GAP
-Mapping/reason: No Swift predicate carries the jump key; the key argument
-below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -345,8 +334,7 @@ Original expression:
 
 A017 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:165
 Disposition: GAP
-Mapping/reason: No Swift predicate activates the live row; the no-jump
-observation below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QCOMPARE(jump[2].toInt(), 60);
       fixture.panel->activateLogRow(0);
@@ -355,8 +343,7 @@ Original expression:
 
 A018 | PolyphonyGateTest::resetRebasesLog | src/checks/polyphony/polyphonypanel.cpp:175
 Disposition: GAP
-Mapping/reason: No Swift predicate rebases the panel log on reset; the
-single-row count below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QCOMPARE(jumped.count(), 0);
   }
@@ -373,8 +360,7 @@ Original expression:
 
 A019 | PolyphonyGateTest::logCapIs500 | src/checks/polyphony/polyphonypanel.cpp:194
 Disposition: GAP
-Mapping/reason: No Swift predicate caps the panel log; the 500-row count
-below remains an open obligation (the ten-burst loop feeds this one site).
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QCOMPARE(fixture.panel->logRowCount(), 1);
   }
@@ -400,8 +386,7 @@ Original expression:
 
 A020 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:204
 Disposition: GAP
-Mapping/reason: No Swift predicate grabs the panel; the conditional
-screenshot-save observation below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QCOMPARE(fixture.panel->logRowCount(), 500);
   }
@@ -418,8 +403,7 @@ Original expression:
 
 A021 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:208
 Disposition: GAP
-Mapping/reason: No Swift predicate lays out the narrow panel; the visibility
-observation below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QVERIFY(fixture.panel->grab().save(m_screenshotPath));
 
@@ -430,8 +414,7 @@ Original expression:
 
 A022 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:209
 Disposition: GAP
-Mapping/reason: No Swift predicate lays out the narrow panel; the stacked
-(no-wide) observation below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -439,8 +422,7 @@ Original expression:
 
 A023 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:210
 Disposition: GAP
-Mapping/reason: No Swift predicate stacks the panel sections; the section
-order below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -449,8 +431,7 @@ Original expression:
 
 A024 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:212
 Disposition: GAP
-Mapping/reason: No Swift predicate lays out the panel grid; the
-fully-visible observation below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QTRY_VERIFY(fixture.panel->overflowSectionRect().top() >=
                   fixture.panel->usageSectionRect().bottom());
@@ -459,8 +440,7 @@ Original expression:
 
 A025 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:216
 Disposition: GAP
-Mapping/reason: No Swift predicate lays out the wide panel; the wide-layout
-observation below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QTRY_VERIFY(fixture.panel->gridFullyVisible());
 
@@ -471,8 +451,7 @@ Original expression:
 
 A026 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:217
 Disposition: GAP
-Mapping/reason: No Swift predicate places the wide sections side by side;
-the section order below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -481,8 +460,7 @@ Original expression:
 
 A027 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:219
 Disposition: GAP
-Mapping/reason: No Swift predicate lays out the wide panel grid; the
-fully-visible observation below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QTRY_VERIFY(fixture.panel->overflowSectionRect().left() >=
                   fixture.panel->usageSectionRect().right());
@@ -491,8 +469,7 @@ Original expression:
 
 A028 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:221
 Disposition: GAP
-Mapping/reason: No Swift predicate grabs the wide panel; the conditional
-screenshot-save observation below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QTRY_VERIFY(fixture.panel->gridFullyVisible());
       if (!m_screenshotPath.isEmpty())
@@ -502,8 +479,7 @@ Original expression:
 
 A029 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:226
 Disposition: GAP
-Mapping/reason: No Swift predicate lays out the short panel grid; the
-fully-visible observation below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QVERIFY(fixture.panel->grab().save(
               derivedScreenshotPath(m_screenshotPath, QStringLiteral("-wide"))));
@@ -515,8 +491,7 @@ Original expression:
 
 A030 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:227
 Disposition: GAP
-Mapping/reason: No Swift predicate scrolls the short panel; the scrollbar
-range below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   (none: consecutive assertion lines)
 Original expression:
@@ -524,8 +499,7 @@ Original expression:
 
 A031 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:229
 Disposition: GAP
-Mapping/reason: No Swift predicate grabs the short panel; the conditional
-screenshot-save observation below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QTRY_VERIFY(fixture.panel->vScrollRange() > 0);
       if (!m_screenshotPath.isEmpty())
@@ -535,8 +509,7 @@ Original expression:
 
 A032 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:234
 Disposition: GAP
-Mapping/reason: No Swift predicate restores the tall panel; the zero
-scroll-range below remains an open obligation.
+Mapping/reason: feature not yet ported: polyphony panel
 Source context since previous assertion:
   QVERIFY(fixture.panel->grab().save(
               derivedScreenshotPath(m_screenshotPath, QStringLiteral("-short"))));
@@ -550,3 +523,5 @@ Remaining original source (closing sequence and helper bodies):
   }
 
   } // namespace checks
+
+Tally: 32 sites: MATCHED 0, PARTIAL 0, GAP 32, NATIVE 0.

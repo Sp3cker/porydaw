@@ -15,6 +15,11 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
+Every site below is GAP under one canonical reason, "feature not yet ported:
+pitch-bend editor": the Swift app has no pitch-bend editor surface (the
+roll.pitch_bend/G keybinding and the EditCommand row are inert registrations)
+and the original native pitch-bend harness is neither built nor registered, so
+no site executes.
 No Swift counterpart covers this suite: src/checks/pitchbend/ holds no .swift
 file; src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not
 Swift; swiftcore/*.swift and automation Swift touch only unrelated parameter
@@ -27,10 +32,14 @@ Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution ownership
-No Swift entry point executes these checks. The C++ suite entry points are
-runPitchBendEditingCheck (PitchBendEditingTest::init/cleanup drive the fixture);
-PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve and
-the PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with
+No Swift entry point executes these checks, and no native one either: the T7A
+runtime cutover removed every pitchbend source from src/checks/CMakeLists.txt
+and src/checks/checkcatalog.cpp registers no pitch-bend entry, so no site below
+executes. The original C++ suite entry point
+runPitchBendEditingCheck (PitchBendEditingTest::init/cleanup drive the fixture)
+belongs to that unbuilt harness; the
+PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve
+and PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with
 declarations in src/checks/pitchbend/tst_pitchbendediting.h
 (SHA-256 7580a8bae6dab536e3f3a4ceeb170a23d047ee5cf3459bb5e1584e4b2e64b895).
 
@@ -48,7 +57,7 @@ Original assertion inventory and source sequence
 
 A001 | PitchBendFixture::assertNoteSelection | src/checks/pitchbend/fixture.cpp:349
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   #include "checks/pitchbend/tst_pitchbendediting.h"
 
@@ -402,8 +411,8 @@ Original expression:
       QVERIFY(view().selectionModel().noteSelection() == std::vector<NoteId>{m_note.noteId});
 
 A002 | PitchBendEditingTest::init | src/checks/pitchbend/fixture.cpp:388
-Disposition: NATIVE
-Mapping/reason: Original native harness-setup obligation: builds the SongTab, voicegroup lease, quick window, and roll focus the suite runs against. A presenter-level Swift check cannot establish this precondition.
+Disposition: GAP
+Mapping/reason: feature not yet ported: pitch-bend editor
 Source context since previous assertion:
   }
 
@@ -485,4 +494,4 @@ Swift assertion predicates
 None: no Swift counterpart file carries report.expect*/expectEqual predicates
 for this suite.
 
-Tally: 2 sites: MATCHED 0, PARTIAL 0, GAP 1, NATIVE 1.
+Tally: 2 sites: MATCHED 0, PARTIAL 0, GAP 2, NATIVE 0.

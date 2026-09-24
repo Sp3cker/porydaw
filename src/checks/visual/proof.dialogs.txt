@@ -15,13 +15,15 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-This file: 27 assertion sites: 22 NATIVE, 5 GAP. Dispositions tally: 5 GAP, 22 NATIVE. 22/27 NATIVE; the five GAP sites are QWizard currentId page-flow states re-provable in a Swift wizard-flow check with no predicate yet.
+This file: 27 assertion sites: 5 GAP, 22 RETIRED-REPRESENTATION. Dispositions tally: 5 GAP, 22 RETIRED-REPRESENTATION. The 22 former NATIVE sites are frozen PNG baselines of an uncompiled QWidget harness whose runVisualDialogsCheck entry point has no callsite and which is unregistered in checkcatalog, so no lane executes them and no converted-window owner exists; the five GAP sites are QWizard currentId page-flow states of a new-song/MIDI-import wizard that has no Swift/QML owner.
 
 Verification
 Command: deno task verify --filter visual --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 The visual-* harnesses compare against frozen baselines under
-src/checks/fixtures/visual and are not registered in any Swift lane.
+src/checks/fixtures/visual; the harness sources are uncompiled in all CMake
+targets, their runVisual*Check entry points have zero callsites, and they are
+unregistered in src/checks/checkcatalog.cpp and in every Swift lane.
 
 Execution ownership
 runVisualDialogsCheck QTest::qExec's VisualDialogsTest as "visual-dialogs". initTestCase isolates QSettings; cleanup restores the vanilla theme. Every scenario constructs the real dialog (SettingsDialog, ThemeDialog + ThemeController, SampleEditorDialog, Sf2ZonePicker, NewSongWizard) with deterministic fixtures, shows it non-modally via showSettled, and freezes it through compareShown (compareWidget). No Swift entry point executes these captures.
@@ -34,8 +36,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | compareShown (helper) | src/checks/visual/dialogs.cpp:248
-Disposition: NATIVE
-Mapping/reason: Shared screenshot helper: frozen geometry + PNG comparison of the shown dialog. One site executes thirteen captures: settings engine/song x two themes, theme dialog, sample editor x two themes, zone picker, and wizard new-identity/new-sound plus import-analysis/identity/sound; native pixels throughout.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Shared screenshot helper: frozen geometry + PNG comparison of the shown dialog. One site executes thirteen captures: settings engine/song x two themes, theme dialog, sample editor x two themes, zone picker, and wizard new-identity/new-sound plus import-analysis/identity/sound; native pixels throughout.
 Source context since previous assertion:
   // Visual baselines for the modal dialog family: SettingsDialog (engine and
   // song tabs), ThemeDialog, SampleEditorDialog (waveform, handles, seam
@@ -288,8 +290,8 @@ Original expression:
   QVERIFY2(checks::visual::compareWidget(id, widget, regions, &error), qPrintable(error));
 
 A002 | VisualDialogsTest::initTestCase | src/checks/visual/dialogs.cpp:466
-Disposition: NATIVE
-Mapping/reason: Isolated QSettings directory; native harness precondition so theme state never leaks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Isolated QSettings directory; native harness precondition so theme state never leaks.
 Source context since previous assertion:
 
   }
@@ -513,8 +515,8 @@ Original expression:
   QVERIFY2(m_settingsDirectory.isValid(), "could not create isolated QSettings directory");
 
 A003 | VisualDialogsTest::settingsDialogVanilla | src/checks/visual/dialogs.cpp:485
-Disposition: NATIVE
-Mapping/reason: Settings dialog tab widget must exist; native widget-tree observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Settings dialog tab widget must exist; native widget-tree observation.
 Source context since previous assertion:
 
       QSettings::setDefaultFormat(QSettings::IniFormat);
@@ -539,8 +541,8 @@ Original expression:
   QVERIFY(tabs);
 
 A004 | VisualDialogsTest::settingsDialogVanilla | src/checks/visual/dialogs.cpp:494
-Disposition: NATIVE
-Mapping/reason: Engine-tab chrome (polyphony/mixer/rate/filter/defaults) must all render; native widget-tree observation gating the engine-vanilla screenshot.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Engine-tab chrome (polyphony/mixer/rate/filter/defaults) must all render; native widget-tree observation gating the engine-vanilla screenshot.
 Source context since previous assertion:
 
       // Pin the constructor's requested size before show: Qt shrinks
@@ -555,8 +557,8 @@ Original expression:
   QVERIFY2(settingsRegions(dialog, regions), "settings dialog widgets not found");
 
 A005 | VisualDialogsTest::settingsDialogVanilla | src/checks/visual/dialogs.cpp:502
-Disposition: NATIVE
-Mapping/reason: Song-tab chrome (voicegroup/volume/reverb/priority/flags) must all render; native widget-tree observation gating the song-vanilla screenshot.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Song-tab chrome (voicegroup/volume/reverb/priority/flags) must all render; native widget-tree observation gating the song-vanilla screenshot.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("settings/engine-vanilla"), dialog, regions);
@@ -570,8 +572,8 @@ Original expression:
   QVERIFY2(settingsRegions(dialog, regions), "settings dialog widgets not found");
 
 A006 | VisualDialogsTest::settingsDialogDark | src/checks/visual/dialogs.cpp:511
-Disposition: NATIVE
-Mapping/reason: Settings dialog tab widget must exist under the dark theme.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Settings dialog tab widget must exist under the dark theme.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("settings/song-vanilla"), dialog, regions);
@@ -586,8 +588,8 @@ Original expression:
   QVERIFY(tabs);
 
 A007 | VisualDialogsTest::settingsDialogDark | src/checks/visual/dialogs.cpp:520
-Disposition: NATIVE
-Mapping/reason: Engine-tab chrome must render under the dark theme.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Engine-tab chrome must render under the dark theme.
 Source context since previous assertion:
 
       // Pin the constructor's requested size before show: Qt shrinks
@@ -602,8 +604,8 @@ Original expression:
   QVERIFY2(settingsRegions(dialog, regions), "settings dialog widgets not found");
 
 A008 | VisualDialogsTest::settingsDialogDark | src/checks/visual/dialogs.cpp:528
-Disposition: NATIVE
-Mapping/reason: Song-tab chrome must render under the dark theme.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Song-tab chrome must render under the dark theme.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("settings/engine-darkneutralhigh"), dialog, regions);
@@ -617,8 +619,8 @@ Original expression:
   QVERIFY2(settingsRegions(dialog, regions), "settings dialog widgets not found");
 
 A009 | VisualDialogsTest::themeDialog | src/checks/visual/dialogs.cpp:549
-Disposition: NATIVE
-Mapping/reason: Six theme-dialog rows (mode buttons, contrast slider, apply, close) must each resolve to a rendered region; loop expands one site over six named widgets in the native dialog tree.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Six theme-dialog rows (mode buttons, contrast slider, apply, close) must each resolve to a rendered region; loop expands one site over six named widgets in the native dialog tree.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("settings/song-darkneutralhigh"), dialog, regions);
@@ -647,8 +649,8 @@ Original expression:
                    entry.second);
 
 A010 | VisualDialogsTest::sampleEditorVanilla | src/checks/visual/dialogs.cpp:560
-Disposition: NATIVE
-Mapping/reason: Prepared sample WAV imports for the vanilla editor fixture; native dialog fixture precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Prepared sample WAV imports for the vanilla editor fixture; native dialog fixture precondition.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("theme/dialog-vanilla"), dialog, regions);
@@ -665,8 +667,8 @@ Original expression:
                qPrintable(error));
 
 A011 | VisualDialogsTest::sampleEditorVanilla | src/checks/visual/dialogs.cpp:565
-Disposition: NATIVE
-Mapping/reason: Loop toggle must exist; deterministic loop chrome + seam badge precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Loop toggle must exist; deterministic loop chrome + seam badge precondition.
 Source context since previous assertion:
 
       SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
@@ -675,8 +677,8 @@ Original expression:
   QVERIFY(loopOn);
 
 A012 | VisualDialogsTest::sampleEditorVanilla | src/checks/visual/dialogs.cpp:570
-Disposition: NATIVE
-Mapping/reason: Waveform, handles, seam region, and splitter chrome must render; native widget-tree observation gating the vanilla screenshot.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Waveform, handles, seam region, and splitter chrome must render; native widget-tree observation gating the vanilla screenshot.
 Source context since previous assertion:
 
       loopOn->setChecked(true); // deterministic loop chrome + seam badge
@@ -687,8 +689,8 @@ Original expression:
   QVERIFY2(sampleEditorRegions(dialog, regions), "sample editor widgets not found");
 
 A013 | VisualDialogsTest::sampleEditorDark | src/checks/visual/dialogs.cpp:579
-Disposition: NATIVE
-Mapping/reason: Prepared sample WAV imports for the dark editor fixture; native dialog fixture precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Prepared sample WAV imports for the dark editor fixture; native dialog fixture precondition.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("sample-editor/dialog-vanilla"), dialog, regions);
@@ -705,8 +707,8 @@ Original expression:
                qPrintable(error));
 
 A014 | VisualDialogsTest::sampleEditorDark | src/checks/visual/dialogs.cpp:584
-Disposition: NATIVE
-Mapping/reason: Loop toggle must exist under the dark theme.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Loop toggle must exist under the dark theme.
 Source context since previous assertion:
 
       SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
@@ -715,8 +717,8 @@ Original expression:
   QVERIFY(loopOn);
 
 A015 | VisualDialogsTest::sampleEditorDark | src/checks/visual/dialogs.cpp:589
-Disposition: NATIVE
-Mapping/reason: Editor chrome must render under the dark theme.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Editor chrome must render under the dark theme.
 Source context since previous assertion:
 
       loopOn->setChecked(true);
@@ -727,8 +729,8 @@ Original expression:
   QVERIFY2(sampleEditorRegions(dialog, regions), "sample editor widgets not found");
 
 A016 | VisualDialogsTest::sf2ZonePicker | src/checks/visual/dialogs.cpp:601
-Disposition: NATIVE
-Mapping/reason: Grouped zone rows of the parsed-font stand-in must render; native widget-tree observation gating the zone-picker screenshot.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Grouped zone rows of the parsed-font stand-in must render; native widget-tree observation gating the zone-picker screenshot.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("sample-editor/dialog-darkneutralhigh"), dialog, regions);
@@ -746,8 +748,8 @@ Original expression:
   QVERIFY2(zonePickerRegions(picker, regions), "zone picker widgets not found");
 
 A017 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:618
-Disposition: NATIVE
-Mapping/reason: Identity name field (placeholder mus_my_song) must exist so Next advances deterministically; native wizard-tree observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Identity name field (placeholder mus_my_song) must exist so Next advances deterministically; native wizard-tree observation.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("sf2-zone-picker/dialog-vanilla"), picker, regions);
@@ -771,7 +773,7 @@ Original expression:
 
 A018 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:621
 Disposition: GAP
-Mapping/reason: Wizard opens on the identity page (id 0); QWizard page-flow state re-provable in a Swift wizard-flow check, no Swift predicate exists yet.
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift:18-49 carries no new-song/import action, ShellWindow.qml:347-406 holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
 Source context since previous assertion:
 
       name->setText(QStringLiteral("mus_visual_check"));
@@ -780,8 +782,8 @@ Original expression:
   QCOMPARE(wizard.currentId(), 0);
 
 A019 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:623
-Disposition: NATIVE
-Mapping/reason: Wizard identity chrome must render; native widget-tree observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Wizard identity chrome must render; native widget-tree observation.
 Source context since previous assertion:
 
       QList<checks::visual::Region> regions;
@@ -790,7 +792,7 @@ Original expression:
 
 A020 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:630
 Disposition: GAP
-Mapping/reason: Wizard advances to the sound page (id 1) after next(); page-flow state re-provable in Swift, no predicate yet.
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift:18-49 carries no new-song/import action, ShellWindow.qml:347-406 holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("wizard/new-identity-vanilla"), wizard, regions);
@@ -803,8 +805,8 @@ Original expression:
   QCOMPARE(wizard.currentId(), 1);
 
 A021 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:632
-Disposition: NATIVE
-Mapping/reason: Wizard sound-page chrome must render.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Wizard sound-page chrome must render.
 Source context since previous assertion:
 
       regions.clear();
@@ -813,7 +815,7 @@ Original expression:
 
 A022 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:645
 Disposition: GAP
-Mapping/reason: Import wizard opens on the analysis page (id 0); page-flow state re-provable in Swift, no predicate yet.
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift:18-49 carries no new-song/import action, ShellWindow.qml:347-406 holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("wizard/new-sound-vanilla"), wizard, regions);
@@ -832,8 +834,8 @@ Original expression:
   QCOMPARE(wizard.currentId(), 0);
 
 A023 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:647
-Disposition: NATIVE
-Mapping/reason: Import analysis chrome (real SMF table) must render.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Import analysis chrome (real SMF table) must render.
 Source context since previous assertion:
 
       QList<checks::visual::Region> regions;
@@ -842,7 +844,7 @@ Original expression:
 
 A024 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:654
 Disposition: GAP
-Mapping/reason: Import wizard advances to the identity page (id 1); page-flow state, no predicate yet.
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift:18-49 carries no new-song/import action, ShellWindow.qml:347-406 holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("wizard/import-analysis-vanilla"), wizard, regions);
@@ -855,8 +857,8 @@ Original expression:
   QCOMPARE(wizard.currentId(), 1);
 
 A025 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:656
-Disposition: NATIVE
-Mapping/reason: Import identity chrome must render.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Import identity chrome must render.
 Source context since previous assertion:
 
       regions.clear();
@@ -865,7 +867,7 @@ Original expression:
 
 A026 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:663
 Disposition: GAP
-Mapping/reason: Import wizard advances to the sound page (id 2); page-flow state, no predicate yet.
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift:18-49 carries no new-song/import action, ShellWindow.qml:347-406 holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("wizard/import-identity-vanilla"), wizard, regions);
@@ -878,8 +880,8 @@ Original expression:
   QCOMPARE(wizard.currentId(), 2);
 
 A027 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:665
-Disposition: NATIVE
-Mapping/reason: Import sound-page chrome must render.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): dialogs.cpp uncompiled in all CMake targets, runVisualDialogsCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Import sound-page chrome must render.
 Source context since previous assertion:
 
       regions.clear();

@@ -15,13 +15,15 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-This file: 18 assertion sites, all NATIVE. Dispositions tally: 18 NATIVE. 18/18 NATIVE; the browser, editor-variant, and picker captures are pure screenshot comparisons plus native fixture/widget guards.
+This file: 18 assertion sites, all RETIRED-REPRESENTATION. Dispositions tally: 18 RETIRED-REPRESENTATION. The browser, editor-variant, and picker captures are frozen PNG baselines of an uncompiled QWidget harness whose runVisualBrowsersCheck entry point has no callsite and which is unregistered in checkcatalog, so no lane executes them and no converted-window owner exists.
 
 Verification
 Command: deno task verify --filter visual --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 The visual-* harnesses compare against frozen baselines under
-src/checks/fixtures/visual and are not registered in any Swift lane.
+src/checks/fixtures/visual; the harness sources are uncompiled in all CMake
+targets, their runVisual*Check entry points have zero callsites, and they are
+unregistered in src/checks/checkcatalog.cpp and in every Swift lane.
 
 Execution ownership
 runVisualBrowsersCheck stages the decomp fixture (PORYDAW_VISUAL_PROJECT_ROOT or src/checks/fixtures/decompproject) and QTest::qExec's VisualBrowsersTest as "visual-browsers". initTestCase opens the fixture_rich project, loads the bank, and builds a SongViewRig; populateBrowser wires catalog scans, a real LoadedSampleSet, and used-voice tints into the production VoicegroupBrowser. No Swift entry point executes these captures.
@@ -34,8 +36,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | VisualBrowsersTest::initTestCase | src/checks/visual/browsers.cpp:286
-Disposition: NATIVE
-Mapping/reason: Decomp fixture project opens from the staged root; retained native loader path.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Decomp fixture project opens from the staged root; retained native loader path.
 Source context since previous assertion:
   // Visual baseline check: freezes the voicegroup browser's rendered geometry
   // and colors (tree rows, type icons, selection, used-voice tint, editor form
@@ -326,8 +328,8 @@ Original expression:
   QVERIFY2(m_project.open(m_projectRoot, &error), qPrintable(error));
 
 A002 | VisualBrowsersTest::initTestCase | src/checks/visual/browsers.cpp:289
-Disposition: NATIVE
-Mapping/reason: Fixture song identity for mus_route101 must parse; native fixture precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Fixture song identity for mus_route101 must parse; native fixture precondition.
 Source context since previous assertion:
 
 
@@ -338,8 +340,8 @@ Original expression:
                    QStringLiteral("invalid fixture song label '%1'").arg(QLatin1String(kSongLabel))));
 
 A003 | VisualBrowsersTest::initTestCase | src/checks/visual/browsers.cpp:293
-Disposition: NATIVE
-Mapping/reason: Fixture must expose a playable song; native fixture precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Fixture must expose a playable song; native fixture precondition.
 Source context since previous assertion:
 
       const auto song = m_project.playableSong(*songName);
@@ -350,8 +352,8 @@ Original expression:
               QStringLiteral("fixture has no playable song '%1'").arg(QLatin1String(kSongLabel))));
 
 A004 | VisualBrowsersTest::initTestCase | src/checks/visual/browsers.cpp:298
-Disposition: NATIVE
-Mapping/reason: Voicegroup bank loads through DecompProject::loadBank; retained native loader path.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Voicegroup bank loads through DecompProject::loadBank; retained native loader path.
 Source context since previous assertion:
 
       m_bank = m_project.loadBank(*song, &error);
@@ -359,8 +361,8 @@ Original expression:
   QVERIFY2(m_bank, qPrintable(error));
 
 A005 | VisualBrowsersTest::initTestCase | src/checks/visual/browsers.cpp:301
-Disposition: NATIVE
-Mapping/reason: Checked-in song loads through LoadedSong::load; retained native loader path.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Checked-in song loads through LoadedSong::load; retained native loader path.
 Source context since previous assertion:
 
 
@@ -369,8 +371,8 @@ Original expression:
   QVERIFY2(loaded, qPrintable(error));
 
 A006 | VisualBrowsersTest::initTestCase | src/checks/visual/browsers.cpp:303
-Disposition: NATIVE
-Mapping/reason: SongViewRig harness constructs around the loaded song; retained native path.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: SongViewRig harness constructs around the loaded song; retained native path.
 Source context since previous assertion:
 
       m_rig = SongViewRig::create(std::move(loaded), 48000.0, error);
@@ -378,16 +380,16 @@ Original expression:
   QVERIFY2(m_rig, qPrintable(error));
 
 A007 | VisualBrowsersTest::initTestCase | src/checks/visual/browsers.cpp:305
-Disposition: NATIVE
-Mapping/reason: Real VoicegroupBrowser populates from catalog scans, sample set, and used voices; native widget/fixture state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Real VoicegroupBrowser populates from catalog scans, sample set, and used voices; native widget/fixture state.
 Source context since previous assertion:
 
 Original expression:
   QVERIFY2(populateBrowser(error), qPrintable(error));
 
 A008 | VisualBrowsersTest::browserBaseline | src/checks/visual/browsers.cpp:433
-Disposition: NATIVE
-Mapping/reason: Theme applies through the native theme runtime before the browser capture.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Theme applies through the native theme runtime before the browser capture.
 Source context since previous assertion:
 
   }
@@ -521,8 +523,8 @@ Original expression:
   QVERIFY2(applyTheme(theme), qPrintable(QStringLiteral("unknown theme '%1'").arg(theme)));
 
 A009 | VisualBrowsersTest::browserBaseline | src/checks/visual/browsers.cpp:437
-Disposition: NATIVE
-Mapping/reason: Screenshot baseline voicegroupbrowser/<theme>: selector, tree rows, type icons, selection, used-voice tints, DirectSound editor; native pixels.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Screenshot baseline voicegroupbrowser/<theme>: selector, tree rows, type icons, selection, used-voice tints, DirectSound editor; native pixels.
 Source context since previous assertion:
 
       m_browser->selectSlot(kDirectSoundSlot);
@@ -532,8 +534,8 @@ Original expression:
   QVERIFY(grabBrowser(QStringLiteral("voicegroupbrowser/%1").arg(theme)));
 
 A010 | VisualBrowsersTest::editorVariants | src/checks/visual/browsers.cpp:462
-Disposition: NATIVE
-Mapping/reason: Theme applies through the native theme runtime before the editor capture.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Theme applies through the native theme runtime before the editor capture.
 Source context since previous assertion:
 
   }
@@ -564,8 +566,8 @@ Original expression:
   QVERIFY2(applyTheme(theme), qPrintable(QStringLiteral("unknown theme '%1'").arg(theme)));
 
 A011 | VisualBrowsersTest::editorVariants | src/checks/visual/browsers.cpp:465
-Disposition: NATIVE
-Mapping/reason: Screenshot baseline voicegroupbrowser/<editor-variant>/<theme>; native pixels.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Screenshot baseline voicegroupbrowser/<editor-variant>/<theme>; native pixels.
 Source context since previous assertion:
 
       m_browser->selectSlot(slot);
@@ -574,8 +576,8 @@ Original expression:
   QVERIFY(grabBrowser(QStringLiteral("voicegroupbrowser/%1/%2").arg(variant, theme)));
 
 A012 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:480
-Disposition: NATIVE
-Mapping/reason: Theme applies through the native theme runtime before the popup capture.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Theme applies through the native theme runtime before the popup capture.
 Source context since previous assertion:
 
   }
@@ -596,8 +598,8 @@ Original expression:
   QVERIFY2(applyTheme(theme), qPrintable(QStringLiteral("unknown theme '%1'").arg(theme)));
 
 A013 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:485
-Disposition: NATIVE
-Mapping/reason: Real opened SamplePickerButton popup must exist in the native widget tree.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Real opened SamplePickerButton popup must exist in the native widget tree.
 Source context since previous assertion:
 
       m_browser->selectSlot(kDirectSoundSlot);
@@ -608,8 +610,8 @@ Original expression:
   QVERIFY(picker);
 
 A014 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:488
-Disposition: NATIVE
-Mapping/reason: Popup widget must be found; native widget-tree observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Popup widget must be found; native widget-tree observation.
 Source context since previous assertion:
 
       picker->openPopup();
@@ -618,16 +620,16 @@ Original expression:
   QVERIFY(popup);
 
 A015 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:489
-Disposition: NATIVE
-Mapping/reason: Popup becomes visible within 5 s; native async window state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Popup becomes visible within 5 s; native async window state.
 Source context since previous assertion:
 
 Original expression:
   QTRY_VERIFY_WITH_TIMEOUT(popup->isVisible(), 5000);
 
 A016 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:494
-Disposition: NATIVE
-Mapping/reason: Production popup geometry is explicit tested state: width follows the picker button (min 340), height is the fixed 420 cap; native geometry a Swift check cannot establish.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Production popup geometry is explicit tested state: width follows the picker button (min 340), height is the fixed 420 cap; native geometry a Swift check cannot establish.
 Source context since previous assertion:
 
       // Production popup geometry is explicit tested state: width follows the
@@ -643,8 +645,8 @@ Original expression:
                               .arg(expectedPopupSize.height())));
 
 A017 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:515
-Disposition: NATIVE
-Mapping/reason: Popup closes after hide; native popup state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Popup closes after hide; native popup state.
 Source context since previous assertion:
 
       QApplication::processEvents();
@@ -666,8 +668,8 @@ Original expression:
   QVERIFY2(!picker->popupVisible(), "sample picker popup did not close");
 
 A018 | VisualBrowsersTest::samplePickerPopup | src/checks/visual/browsers.cpp:516
-Disposition: NATIVE
-Mapping/reason: Stored result of the samplepicker/<theme> screenshot comparison; native pixels.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): browsers.cpp uncompiled in all CMake targets, runVisualBrowsersCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Stored result of the samplepicker/<theme> screenshot comparison; native pixels.
 Source context since previous assertion:
 
 Original expression:

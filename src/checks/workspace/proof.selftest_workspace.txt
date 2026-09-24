@@ -35,14 +35,19 @@ Swift predicates in the paired counterpart, listed after the inventory.
 MATCHED identifies an equivalent Swift predicate that would execute for the
 original site; PARTIAL identifies a related Swift predicate with an explicit
 unproved condition; GAP identifies an original predicate with no equivalent
-Swift assertion established; NATIVE identifies a native window, workspace,
-tab, audio engine, settings, widget, dialog, timer, or rendering/harness
-observation that a presenter-level Swift check cannot establish as executed
-here. NATIVE marks sites whose expression names native-harness objects or
-values produced through them; GAP marks portable value/codec/model
-comparisons a presenter-level check could in principle establish.
+Swift assertion established; RETIRED-REPRESENTATION identifies a site whose
+native check-harness mechanism no longer has production ingress. The
+WorkspaceEditorCodecSelfTest harness declared in
+src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target
+(src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and
+is unregistered in src/checks/checkcatalog.cpp, so no site below executes
+natively and no site carries NATIVE. The GAP sites are the user-visible
+behavior the dead MainWindow harness observed (editor view-state
+persistence, tab close, transport playhead); the retired sites are harness
+fixture and staging guards that carry no consumer-visible contract of their
+own.
 WorkspaceEditorCodecSelfTest covers the EditorViewState settings codec (codecRows over eight data rows) plus livePersistenceAndFinalClose, which round-trips full/bare editor states through a real MainWindow, poisons the lane blob, and verifies the playhead timer stops on final close.
-selftest_workspace.cpp contributes 41 sites: 0 MATCHED, 0 PARTIAL, 28 GAP, 13 NATIVE. The paired
+selftest_workspace.cpp contributes 41 sites: 0 MATCHED, 0 PARTIAL, 33 GAP, 8 RETIRED-REPRESENTATION. The paired
 counterpart drives the disjoint DocumentSession/ProjectService/bank-history
 suite; it never opens a MainWindow, workspace tab, transport, scale control,
 or editor-codec flow, so no workspace-flow predicate is matched here.
@@ -54,11 +59,14 @@ Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution and ownership
-Native execution owns every site below: the QtTest suites declared in
-src/checks/workspace/tst_workspacesessions.h (WorkspaceEditorCodecSelfTest) run against a real
-MainWindow with the Null audio backend and a staged fixture project copy
-(workspace_test::ProjectCopy; fixture.h/fixture.cpp carries no assertion
-sites). On the Swift side, pdcSuiteRun in
+No native execution remains: the QtTest suites declared in
+src/checks/workspace/tst_workspacesessions.h (WorkspaceEditorCodecSelfTest)
+would run against a real MainWindow with the Null audio backend and a staged
+fixture project copy (workspace_test::ProjectCopy; fixture.h/fixture.cpp
+carries no assertion sites), but the harness is compiled into no CMake target
+and is unregistered in src/checks/checkcatalog.cpp, so each native site was
+reconciled to GAP (user-visible behavior) or RETIRED-REPRESENTATION (fixture
+and staging plumbing). On the Swift side, pdcSuiteRun in
 src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 to
 runProjectSessionSuite and runBankHistorySuite; no Swift entry point opens a
 workspace, tab, transport, scale control, or editor-codec flow. The 185
@@ -78,8 +86,8 @@ codecRows_data expands eight rows (empty, full, bare, invalid-json, empty-blob, 
 Original assertion inventory
 
 A001 | WorkspaceEditorCodecSelfTest::init | src/checks/workspace/selftest_workspace.cpp:117
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the init fixture guard (QSettings clear plus ProjectCopy reset) stages a disposable project copy for that harness. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   #include "checks/workspace/tst_workspacesessions.h"
 
@@ -201,8 +209,8 @@ Original expression:
   QVERIFY2(m_project.reset(error), qPrintable(error))
 
 A002 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:144
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the QTemporaryDir validity guard backs the scratch editorviewstate.ini store. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
   }
@@ -236,7 +244,7 @@ Original expression:
 
 A003 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:155
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       QSettings store(directory.filePath(QStringLiteral("editorviewstate.ini")),
@@ -254,7 +262,7 @@ Original expression:
 
 A004 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:167
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
           return;
@@ -273,7 +281,7 @@ Original expression:
 
 A005 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:168
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -281,7 +289,7 @@ Original expression:
 
 A006 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:176
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
           }
@@ -296,7 +304,7 @@ Original expression:
 
 A007 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:177
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -304,7 +312,7 @@ Original expression:
 
 A008 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:184
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
           return;
@@ -318,7 +326,7 @@ Original expression:
 
 A009 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:186
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       else if (scenario == QStringLiteral("empty-blob"))
@@ -327,7 +335,7 @@ Original expression:
 
 A010 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:188
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       else if (scenario == QStringLiteral("array"))
@@ -336,7 +344,7 @@ Original expression:
 
 A011 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:190
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       else if (scenario == QStringLiteral("wrong-type"))
@@ -345,7 +353,7 @@ Original expression:
 
 A012 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:210
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       else {
@@ -372,7 +380,7 @@ Original expression:
 
 A013 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:212
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
           const EditorViewState decoded = loadEditorViewState(store);
@@ -381,7 +389,7 @@ Original expression:
 
 A014 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:213
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -389,7 +397,7 @@ Original expression:
 
 A015 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:217
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
           const std::map<EditorAutomationRowId, int> expectedLaneHeights{
@@ -400,7 +408,7 @@ Original expression:
 
 A016 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:218
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -408,7 +416,7 @@ Original expression:
 
 A017 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:219
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -416,7 +424,7 @@ Original expression:
 
 A018 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:220
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -424,7 +432,7 @@ Original expression:
 
 A019 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:223
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
           for (int raw : {0, 99999999}) {
@@ -436,7 +444,7 @@ Original expression:
 
 A020 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:227
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
               const EditorViewState clamped = loadEditorViewState(store);
@@ -445,7 +453,7 @@ Original expression:
 
 A021 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:228
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -454,7 +462,7 @@ Original expression:
 
 A022 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:230
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -462,7 +470,7 @@ Original expression:
 
 A023 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:235
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
           }
@@ -474,15 +482,15 @@ Original expression:
 
 A024 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:236
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(lanesDefaulted(corrupted))
 
 A025 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:243
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the Null audio-backend availability guard on the constructed MainWindow. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
   }
@@ -496,8 +504,8 @@ Original expression:
               window.m_audio.backendName() == QStringLiteral("Null"))
 
 A026 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:247
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the stale QSettings lane-blob key absence check laneBlobKey(store).isEmpty(), whose key editorDrawer/automationLanes is written only by the uncompiled src/ui/editorviewstate.cpp codec and has no production Swift/QML writer. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       QSettings store;
@@ -506,8 +514,8 @@ Original expression:
   QVERIFY(laneBlobKey(store).isEmpty())
 
 A027 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:249
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the window.m_workspace construction guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       auto *workspace = window.m_workspace.get();
@@ -515,8 +523,8 @@ Original expression:
   QVERIFY(workspace)
 
 A028 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:251
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the workspace_test::waitForProject project-open wait helper. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       workspace->requestProjectOpenAt(m_project.root());
@@ -524,8 +532,8 @@ Original expression:
   QVERIFY(workspace_test::waitForProject(*workspace))
 
 A029 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:261
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the workspace_test::songName optional label staging. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       const ProjectState &project = workspace->projectState();
@@ -541,8 +549,8 @@ Original expression:
   QVERIFY(name)
 
 A030 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:263
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the workspace_test::openReady tab-readiness guard. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
 Source context since previous assertion:
   ;
       SongTab *tab = workspace_test::openReady(*workspace, *name);
@@ -550,8 +558,8 @@ Original expression:
   QVERIFY(tab)
 
 A031 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:273
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const SongTarget songTarget{tab->document().cfg(), tab->document().label()};
@@ -571,7 +579,7 @@ Original expression:
 
 A032 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:278
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       view.setEditorViewState(bare);
@@ -583,7 +591,7 @@ Original expression:
 
 A033 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:283
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const QString blobKey = laneBlobKey(store);
@@ -592,7 +600,7 @@ Original expression:
 
 A034 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:286
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const QByteArray poisoned = store.value(blobKey).toByteArray();
@@ -602,23 +610,23 @@ Original expression:
 
 A035 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:287
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(lanesDefaulted(corrupted))
 
 A036 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:288
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(store.value(blobKey).toByteArray(), poisoned)
 
 A037 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:290
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       view.setDrawerSectionHeight(EditorDrawerPage::Velocity, layout::fontPx(7.0 / 3.0) + 7);
@@ -631,7 +639,7 @@ Original expression:
 
 A038 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:296
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       view.setEditorViewState(original);
@@ -642,8 +650,8 @@ Original expression:
       }())
 
 A039 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:301
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.play plus the shared playhead presenter exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       window.startPlayback();
@@ -651,8 +659,8 @@ Original expression:
   QTRY_VERIFY(window.m_playheadTimer->isActive())
 
 A040 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:304
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owners SongTabsController.requestClose/releaseAll and NativeAudio.stop exist, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
       const SongName closing = tab->name();
@@ -661,8 +669,8 @@ Original expression:
   QTRY_VERIFY(!window.m_workspace->songTabFor(closing) && !window.m_playheadTimer->isActive())
 
 A041 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:305
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: Behavior gap, not proof: the Swift owner SongTabsController (tabCount and the close walk) exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:

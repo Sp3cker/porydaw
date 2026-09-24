@@ -15,13 +15,15 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-This file: 24 assertion sites: 21 NATIVE, 3 GAP. Dispositions tally: 3 GAP, 21 NATIVE. 21/24 NATIVE; the three GAP sites are pure-model checks (SongName::create identity plus two MidiTimeline::build pointer checks) re-provable in Swift with no predicate yet.
+This file: 24 assertion sites: 1 GAP, 23 RETIRED-REPRESENTATION. Dispositions tally: 1 GAP, 23 RETIRED-REPRESENTATION. The 21 former NATIVE sites are frozen PNG baselines of an uncompiled QWidget/QQuickHost harness whose runVisualChromeCheck entry point has no callsite and which is unregistered in checkcatalog; A019/A022 retire the two nullable C++ MidiTimeline::build pointer checks (Swift PlaybackTimeline.build is non-optional), and A007 stays GAP because SongName::create is active production code with no Swift song-name validation predicate.
 
 Verification
 Command: deno task verify --filter visual --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 The visual-* harnesses compare against frozen baselines under
-src/checks/fixtures/visual and are not registered in any Swift lane.
+src/checks/fixtures/visual; the harness sources are uncompiled in all CMake
+targets, their runVisual*Check entry points have zero callsites, and they are
+unregistered in src/checks/checkcatalog.cpp and in every Swift lane.
 
 Execution ownership
 runVisualChromeCheck QTest::qExec's VisualChromeTest as "visual-chrome". initTestCase isolates QSettings; cleanup restores the vanilla theme. transportBar/songList/shell/polyphony scenarios show the real production widgets and freeze them through compareShown (compareWidget) except shellLoaded, which composites the Quick framebuffer itself and calls checks::visual::compare directly. No Swift entry point executes these captures.
@@ -34,8 +36,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | compareShown (helper) | src/checks/visual/chrome.cpp:108
-Disposition: NATIVE
-Mapping/reason: Shared screenshot helper: frozen geometry + PNG comparison of the shown widget. One site executes nine captures: transportbar vanilla/darkneutralhigh, songlist vanilla/darkneutralhigh, shell/empty-vanilla, and polyphony narrow+wide x two themes; native pixels throughout.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Shared screenshot helper: frozen geometry + PNG comparison of the shown widget. One site executes nine captures: transportbar vanilla/darkneutralhigh, songlist vanilla/darkneutralhigh, shell/empty-vanilla, and polyphony narrow+wide x two themes; native pixels throughout.
 Source context since previous assertion:
   // Visual baselines for the persistent shell chrome: the TransportBar, the
   // Songs dock panel, the MainWindow shell (tab bar, dock title bars, status
@@ -148,8 +150,8 @@ Original expression:
   QVERIFY2(checks::visual::compareWidget(id, widget, regions, &error), qPrintable(error));
 
 A002 | VisualChromeTest::initTestCase | src/checks/visual/chrome.cpp:487
-Disposition: NATIVE
-Mapping/reason: Isolated QSettings directory; native harness precondition so theme state never leaks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Isolated QSettings directory; native harness precondition so theme state never leaks.
 Source context since previous assertion:
 
   }
@@ -534,8 +536,8 @@ Original expression:
   QVERIFY2(m_settingsDirectory.isValid(), "could not create isolated QSettings directory");
 
 A003 | VisualChromeTest::comparatorSelfTest | src/checks/visual/chrome.cpp:504
-Disposition: NATIVE
-Mapping/reason: Comparator self-test on synthetic images; native harness precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Comparator self-test on synthetic images; native harness precondition.
 Source context since previous assertion:
 
       QSettings::setDefaultFormat(QSettings::IniFormat);
@@ -558,8 +560,8 @@ Original expression:
   QVERIFY2(checks::visual::selfTest(&error), qPrintable(error));
 
 A004 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:580
-Disposition: NATIVE
-Mapping/reason: Staged decomp project root env input; the loaded-shell baseline cannot be captured without a real project, so the native path refuses instead of faking one.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Staged decomp project root env input; the loaded-shell baseline cannot be captured without a real project, so the native path refuses instead of faking one.
 Source context since previous assertion:
 
   }
@@ -646,8 +648,8 @@ Original expression:
                "without a real project");
 
 A005 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:589
-Disposition: NATIVE
-Mapping/reason: Real MainWindow must expose its WorkspaceUi; native widget-tree observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Real MainWindow must expose its WorkspaceUi; native widget-tree observation.
 Source context since previous assertion:
 
       themes::apply(*app(), themes::vanilla());
@@ -657,8 +659,8 @@ Original expression:
   QVERIFY(workspace);
 
 A006 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:591
-Disposition: NATIVE
-Mapping/reason: Async project open must reach Ready within 30 s; native async readiness.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Async project open must reach Ready within 30 s; native async readiness.
 Source context since previous assertion:
 
       workspace->requestProjectOpenAt(projectRoot);
@@ -670,7 +672,7 @@ Original expression:
 
 A007 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:596
 Disposition: GAP
-Mapping/reason: SongName::create for mus_route101 is pure-model identity validation re-provable in a Swift check; no Swift predicate exists yet.
+Mapping/reason: feature not yet ported: song-name validation in Swift; SongName::create (src/project/projectidentity.cpp:8-13) is active production code bridged at src/project/swift_project_service.cpp:427, so the mechanism is not retired, and Swift song labels are plain String values with no validation predicate.
 Source context since previous assertion:
 
       const auto name = SongName::create(QStringLiteral("mus_route101"));
@@ -678,8 +680,8 @@ Original expression:
   QVERIFY(name);
 
 A008 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:599
-Disposition: NATIVE
-Mapping/reason: Workspace must expose the opened SongTab; native workspace state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Workspace must expose the opened SongTab; native workspace state.
 Source context since previous assertion:
 
       workspace->requestSongOpen(*name);
@@ -688,8 +690,8 @@ Original expression:
   QVERIFY(tab);
 
 A009 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:600
-Disposition: NATIVE
-Mapping/reason: Tab must reach ready within 30 s; native async readiness.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Tab must reach ready within 30 s; native async readiness.
 Source context since previous assertion:
 
 Original expression:
@@ -697,8 +699,8 @@ Original expression:
                                             30000, 1) == checks::async_wait::Result::Ready);
 
 A010 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:609
-Disposition: NATIVE
-Mapping/reason: Real Songs dock panel must exist; native widget-tree observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Real Songs dock panel must exist; native widget-tree observation.
 Source context since previous assertion:
 
       window->resize(1104, 684);
@@ -712,8 +714,8 @@ Original expression:
   QVERIFY(songList);
 
 A011 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:617
-Disposition: NATIVE
-Mapping/reason: Loaded song must be present in the project snapshot; observed through the retained native open path.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Loaded song must be present in the project snapshot; observed through the retained native open path.
 Source context since previous assertion:
 
       const SongInfo *loaded = nullptr;
@@ -727,8 +729,8 @@ Original expression:
   QVERIFY2(loaded, "loaded song is absent from the project snapshot");
 
 A012 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:622
-Disposition: NATIVE
-Mapping/reason: Private uiTick slot invoked so the polyphony meter reflects the loaded song; native shell state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Private uiTick slot invoked so the polyphony meter reflects the loaded song; native shell state.
 Source context since previous assertion:
 
       songList->setCurrentSong(loaded->id);
@@ -739,8 +741,8 @@ Original expression:
   QVERIFY(QMetaObject::invokeMethod(window.get(), "uiTick"));
 
 A013 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:631
-Disposition: NATIVE
-Mapping/reason: Shell grab must be non-null; native framebuffer observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Shell grab must be non-null; native framebuffer observation.
 Source context since previous assertion:
 
       QApplication::processEvents();
@@ -755,8 +757,8 @@ Original expression:
   QVERIFY2(!composite.isNull(), "shell grab returned a null image");
 
 A014 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:633
-Disposition: NATIVE
-Mapping/reason: Embedded Quick host must exist; native widget-tree observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Embedded Quick host must exist; native widget-tree observation.
 Source context since previous assertion:
 
       auto *host = tab->findChild<SongTabQuickHost *>();
@@ -764,8 +766,8 @@ Original expression:
   QVERIFY2(host && host->container(), "loaded tab has no embedded Quick host");
 
 A015 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:637
-Disposition: NATIVE
-Mapping/reason: Loaded tab must expose its Quick window; native window observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Loaded tab must expose its Quick window; native window observation.
 Source context since previous assertion:
 
       QWidget *container = host->container();
@@ -775,8 +777,8 @@ Original expression:
   QVERIFY2(quickWindow, "loaded tab exposes no Quick window");
 
 A016 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:638
-Disposition: NATIVE
-Mapping/reason: Embedded Quick window must produce a frame; native async rendering state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Embedded Quick window must produce a frame; native async rendering state.
 Source context since previous assertion:
 
 Original expression:
@@ -784,8 +786,8 @@ Original expression:
                "embedded Quick window produced no frame");
 
 A017 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:641
-Disposition: NATIVE
-Mapping/reason: Quick framebuffer grab must be non-null; native pixel observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Quick framebuffer grab must be non-null; native pixel observation.
 Source context since previous assertion:
 
       const QImage quickImage = quickWindow->grabWindow();
@@ -793,8 +795,8 @@ Original expression:
   QVERIFY2(!quickImage.isNull(), "Quick window grab returned a null image");
 
 A018 | VisualChromeTest::shellLoaded | src/checks/visual/chrome.cpp:652
-Disposition: NATIVE
-Mapping/reason: Screenshot baseline shell/loaded-vanilla: QWidget grab composited with the real QQuickWindow framebuffer at its mapped container bounds; native mixed-surface pixels.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Converted QML surface covered by the shell QML lane (src/ui/shell/ShellWindow.qml), not these frozen QWidget PNGs. Original observation: Screenshot baseline shell/loaded-vanilla: QWidget grab composited with the real QQuickWindow framebuffer at its mapped container bounds; native mixed-surface pixels.
 Source context since previous assertion:
 
       const QRect containerRect(container->mapTo(window.get(), QPoint(0, 0)), container->size());
@@ -813,8 +815,8 @@ Original expression:
           qPrintable(error));
 
 A019 | VisualChromeTest::polyphonyPanelVanilla | src/checks/visual/chrome.cpp:663
-Disposition: GAP
-Mapping/reason: MidiTimeline::build for the vanilla polyphony fixture is pure-model input construction re-provable in a Swift check; no Swift predicate exists yet.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3 and section 4): nullable C++ MidiTimeline::build pointer check; Swift PlaybackTimeline.build(state:sampleRate:) at src/swift/core/PlaybackTimeline.swift:173 returns a non-optional struct with no failure branch (spec 2.1/4/5.3 precedent); chrome.cpp uncompiled in all targets and unregistered in checkcatalog.
 Source context since previous assertion:
 
       window->close();
@@ -829,8 +831,8 @@ Original expression:
   QVERIFY(timeline);
 
 A020 | VisualChromeTest::polyphonyPanelVanilla | src/checks/visual/chrome.cpp:676
-Disposition: NATIVE
-Mapping/reason: Narrow layout (380x760) must stay narrow; native responsive-layout state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Narrow layout (380x760) must stay narrow; native responsive-layout state.
 Source context since previous assertion:
 
       PolyphonyPanel panel;
@@ -849,8 +851,8 @@ Original expression:
   QTRY_VERIFY(!panel.wideLayoutActive());
 
 A021 | VisualChromeTest::polyphonyPanelVanilla | src/checks/visual/chrome.cpp:681
-Disposition: NATIVE
-Mapping/reason: Wide layout (900x600) must engage; native responsive-layout state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Wide layout (900x600) must engage; native responsive-layout state.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("polyphony/narrow-vanilla"), panel, polyphonyRegions(panel));
@@ -861,8 +863,8 @@ Original expression:
   QTRY_VERIFY(panel.wideLayoutActive());
 
 A022 | VisualChromeTest::polyphonyPanelDark | src/checks/visual/chrome.cpp:691
-Disposition: GAP
-Mapping/reason: MidiTimeline::build for the dark polyphony fixture; same pure-model re-proof obligation as the vanilla twin.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3 and section 4): nullable C++ MidiTimeline::build pointer check; Swift PlaybackTimeline.build(state:sampleRate:) at src/swift/core/PlaybackTimeline.swift:173 returns a non-optional struct with no failure branch (spec 2.1/4/5.3 precedent); chrome.cpp uncompiled in all targets and unregistered in checkcatalog.
 Source context since previous assertion:
 
       panel.clearFocus();
@@ -878,8 +880,8 @@ Original expression:
   QVERIFY(timeline);
 
 A023 | VisualChromeTest::polyphonyPanelDark | src/checks/visual/chrome.cpp:704
-Disposition: NATIVE
-Mapping/reason: Narrow layout (380x760) must stay narrow under the dark theme; native layout state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Narrow layout (380x760) must stay narrow under the dark theme; native layout state.
 Source context since previous assertion:
 
       PolyphonyPanel panel;
@@ -898,8 +900,8 @@ Original expression:
   QTRY_VERIFY(!panel.wideLayoutActive());
 
 A024 | VisualChromeTest::polyphonyPanelDark | src/checks/visual/chrome.cpp:710
-Disposition: NATIVE
-Mapping/reason: Wide layout (900x600) must engage under the dark theme; native layout state.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): chrome.cpp uncompiled in all CMake targets, runVisualChromeCheck entry point uncalled, unregistered in checkcatalog, production QWidget class uncompiled; frozen PNG baseline under src/checks/fixtures/visual/ is a legacy QWidget/QQuickHost render with no converted-window owner. Original observation: Wide layout (900x600) must engage under the dark theme; native layout state.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("polyphony/narrow-darkneutralhigh"), panel,

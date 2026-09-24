@@ -10,10 +10,12 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Status and evidence
 The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. No Swift counterpart was identified for this deleted host suite. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Nothing here is marked MATCHED or PARTIAL; unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove any Swift replacement.
 
+Dispositions and no-ingress evidence
+NATIVE is no longer used: every site that observed a native-window, embedding, delivery, framebuffer, settings, popup, or harness obligation is RETIRED-REPRESENTATION, because the mechanism that carried it is gone (this C++ file was deleted at 31ea635f, appears in no CMake target, and checkcatalog.cpp registers no host entry; re-verified 2026-09-24). GAP sites are behavior assertions whose Swift owners exist but whose original predicates have no executed Swift equivalent; each mapping names the owner verified under src/swift/app. The Reference revision and Original SHA-256 below were re-verified against each other (git show <revision>:<path> | shasum -a 256) before any retirement claim.
+
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
+Command: deno task proof check
+Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity. No integrated verification result was provided for this snapshot, and no lane executes this deleted harness, so execution evidence is unknown.
 
 Execution ownership
 No Swift entry point executes the deleted host checks; no Swift fixture is paired.
@@ -22,11 +24,13 @@ Fixture, sequence and row constraints
 Every case opens with the host.prepare guard; band-geometry cases expand one QCOMPARE site per published band row (rect, plot, visibility entries). The four physicalInputsMatchCanonical calls expand input-parity obligations across pointer surfaces. Velocity/roll plot assertions expand over the track-headers, keyboard, and drawer-body geometry rows.
 Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
+Tally: MATCHED 0, PARTIAL 0, GAP 43, NATIVE 0, RETIRED-REPRESENTATION 152.
+
 Original assertion inventory and source sequence
 
 A001 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:63
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   #include "checks/fwd.hpp"
   #include "checks/host/hosttestsupport.h"
@@ -95,8 +99,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A002 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:64
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old host.view().timeline() identity accessor (host-to-timeline seam); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift DocumentSession/PlaybackTimeline owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -104,8 +108,8 @@ Original expression:
   QVERIFY(host.view().timeline())
 
 A003 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:65
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SongView editorDrawer() QWidget accessor; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -113,8 +117,8 @@ Original expression:
   QVERIFY(host.view().editorDrawer())
 
 A004 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:66
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old editorDrawer()->velocityArea() QWidget handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -122,8 +126,8 @@ Original expression:
   QVERIFY(host.view().editorDrawer()->velocityArea())
 
 A005 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:67
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quickView() TimelineQuickView handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -132,7 +136,7 @@ Original expression:
 
 A006 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:68
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/SongDocument owns the document note projection for track 0; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -140,8 +144,8 @@ Original expression:
   QCOMPARE(host.document().notesForTrack(0).size(), size_t{2})
 
 A007 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:75
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old LoadedSong staging fixture; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/DocumentWorkspace owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -155,8 +159,8 @@ Original expression:
   QVERIFY2(loaded, qPrintable(error))
 
 A008 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:77
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SongViewRig host quick-canvas rig construction; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           auto rig = checks::SongViewRig::create(std::move(loaded), 44100.0, error);
@@ -166,7 +170,7 @@ Original expression:
 
 A009 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:86
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/SongDocument owns fixture note discovery from the loaded document; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           SongDocument &document = rig->document();
@@ -183,7 +187,7 @@ Original expression:
 
 A010 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:87
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift PlaybackTimeline/DocumentSession owns the timeline note-on event published for the fixture note; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -194,8 +198,8 @@ Original expression:
                               }))
 
 A011 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:92
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old showQuickViewport() native viewport staging; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = rig->view();
@@ -204,8 +208,8 @@ Original expression:
   QVERIFY(checks::support::showQuickViewport(view, QSize(720, 520)))
 
 A012 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:100
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old editorDrawer()->velocityArea() QWidget handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           view.selectTrack(fixtureNote->engineTrack);
@@ -221,7 +225,7 @@ Original expression:
 
 A013 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:101
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/SongDocument owns the loaded song label identity; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -229,8 +233,8 @@ Original expression:
   QCOMPARE(document.label(), m_songLabel)
 
 A014 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:102
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old view.timeline() address identity (host-to-timeline seam); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift DocumentSession/PlaybackTimeline owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -239,7 +243,7 @@ Original expression:
 
 A015 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:103
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession selected track owns the primary track selection after selectTrack; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -248,7 +252,7 @@ Original expression:
 
 A016 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:104
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession note selection owns the note selection set after setNoteSelection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -257,7 +261,7 @@ Original expression:
 
 A017 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:105
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage/VelocityAxisModel owns the velocity axis marker count for the selected note; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -266,7 +270,7 @@ Original expression:
 
 A018 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:106
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage/VelocityAxisModel owns the velocity axis marker value for the selected note; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -274,8 +278,8 @@ Original expression:
   QCOMPARE(area->axis().markers().front().velocity, fixtureNote->velocity)
 
 A019 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:113
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -289,8 +293,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A020 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:116
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view handle discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -300,8 +304,8 @@ Original expression:
   QVERIFY(quick)
 
 A021 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:118
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick root object discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           QQuickItem *root = quick->rootObject();
@@ -310,8 +314,8 @@ Original expression:
   QVERIFY(root)
 
 A022 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:121
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old track-headers quick item discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter owns the behavior).
 Source context since previous assertion:
   ;
           auto *headers = view.findChild<songview::TrackHeaderModel *>(
@@ -321,8 +325,8 @@ Original expression:
   QVERIFY(headers)
 
 A023 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:124
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old embedded QQuickWindow discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           QString captureError;
@@ -332,8 +336,8 @@ Original expression:
   QVERIFY(window)
 
 A024 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:127
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old published-frame QImage capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           const QImage publishedFrame =
@@ -343,8 +347,8 @@ Original expression:
   QVERIFY2(!publishedFrame.isNull(), qPrintable(captureError))
 
 A025 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:130
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old track-headers band geometry handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter/TrackHeadersGeometry owns the behavior).
 Source context since previous assertion:
   ;
           const songview::TimelineBandLayout &layout = view.timelineBandLayout();
@@ -354,8 +358,8 @@ Original expression:
   QVERIFY(trackHeaders.has_value())
 
 A026 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:131
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old track-headers plot-rect emptiness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter/TrackHeadersGeometry owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -363,8 +367,8 @@ Original expression:
   QVERIFY(trackHeaders->plotRect.isEmpty())
 
 A027 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:136
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old band layout geometry handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift GridGeometry/EditorDrawerPresenter owns the behavior).
 Source context since previous assertion:
   ;
           for (songview::TimelineBand band :
@@ -376,8 +380,8 @@ Original expression:
   QVERIFY(geometry.has_value())
 
 A028 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:137
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old band layout rect non-emptiness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift GridGeometry/EditorDrawerPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -385,8 +389,8 @@ Original expression:
   QVERIFY(!geometry->rect.isEmpty())
 
 A029 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:138
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old band layout plot-rect non-emptiness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift GridGeometry/EditorDrawerPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -394,8 +398,8 @@ Original expression:
   QVERIFY(!geometry->plotRect.isEmpty())
 
 A030 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:139
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old band plot origin aligned to the host timeline split; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift GridGeometry/EditorDrawerPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -403,8 +407,8 @@ Original expression:
   QCOMPARE(geometry->plotRect.x(), view.timelineSplitX())
 
 A031 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:140
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old band plot right edge aligned to the band rect; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift GridGeometry/EditorDrawerPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -412,8 +416,8 @@ Original expression:
   QCOMPARE(geometry->plotRect.right(), geometry->rect.right())
 
 A032 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:141
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old track-headers/band plot non-intersection; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter/GridGeometry owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -421,8 +425,8 @@ Original expression:
   QVERIFY(!trackHeaders->rect.intersects(geometry->plotRect))
 
 A033 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:169
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old band rect published to a QML root property; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           }
@@ -457,8 +461,8 @@ Original expression:
   QCOMPARE(root->property(entry.rect).toRectF(), expectedRect)
 
 A034 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:170
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old band plot published to a QML root property; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -466,8 +470,8 @@ Original expression:
   QCOMPARE(root->property(entry.plot).toRectF(), expectedPlot)
 
 A035 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:171
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old band visibility published to a QML root property; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -475,8 +479,8 @@ Original expression:
   QCOMPARE(root->property(entry.visible).toBool(), geometry.has_value())
 
 A036 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:173
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old physical quick-input parity for the ruler band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           }
@@ -487,8 +491,8 @@ Original expression:
               QStringLiteral("timelineRulerGutterInput")))
 
 A037 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:176
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old physical quick-input parity for the roll band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -498,8 +502,8 @@ Original expression:
               QStringLiteral("timelineRollGutterInput")))
 
 A038 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:179
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old physical quick-input parity for the other-events band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -510,8 +514,8 @@ Original expression:
               QStringLiteral("timelineOtherEventsGutterInput")))
 
 A039 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:183
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old physical quick-input parity for the velocity band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -523,7 +527,7 @@ Original expression:
 
 A040 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:189
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const auto velocity = layout.geometry(songview::TimelineBand::Velocity);
@@ -534,7 +538,7 @@ Original expression:
 
 A041 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:190
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the roll band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -542,8 +546,8 @@ Original expression:
   QVERIFY(roll.has_value())
 
 A042 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:191
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity band left edge aligned to the track-headers width; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -551,8 +555,8 @@ Original expression:
   QCOMPARE(velocity->rect.x(), trackHeaders->rect.width())
 
 A043 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:192
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity plot origin aligned to the host timeline split; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -560,8 +564,8 @@ Original expression:
   QCOMPARE(velocity->plotRect.x(), view.timelineSplitX())
 
 A044 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:193
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old roll plot origin aligned to the host timeline split; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -569,8 +573,8 @@ Original expression:
   QCOMPARE(roll->plotRect.x(), view.timelineSplitX())
 
 A045 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:194
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity plot offset equal to the host piano-keyboard width; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -578,8 +582,8 @@ Original expression:
   QCOMPARE(velocity->plotRect.x() - velocity->rect.x(), view.pianoKeyboardWidth())
 
 A046 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:195
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old roll plot offset equal to the host piano-keyboard width; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -587,8 +591,8 @@ Original expression:
   QCOMPARE(roll->plotRect.x() - roll->rect.x(), view.pianoKeyboardWidth())
 
 A047 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:196
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer body rect matched to the velocity band rect; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -597,8 +601,8 @@ Original expression:
                    std::optional<QRect>{velocity->rect})
 
 A048 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:204
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -612,8 +616,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A049 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:207
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view handle discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -623,8 +627,8 @@ Original expression:
   QVERIFY(quick)
 
 A050 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:209
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick root object discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           QQuickItem *root = quick->rootObject();
@@ -633,8 +637,8 @@ Original expression:
   QVERIFY(root)
 
 A051 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:225
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick band input-item identity across six bands; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           auto input = [root](const char *name) {
@@ -658,8 +662,8 @@ Original expression:
                   automationGutter && velocity && velocityGutter && voice && voiceGutter)
 
 A052 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:227
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old ruler plot/gutter interaction identity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift PianoGrid/GridGesture owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -667,8 +671,8 @@ Original expression:
   QCOMPARE(ruler->interaction(), rulerGutter->interaction())
 
 A053 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:228
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old dynamic_cast<TimeRuler*> host interaction seam; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift PianoGrid/GridGesture owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -676,8 +680,8 @@ Original expression:
   QVERIFY(dynamic_cast<songview::TimeRuler *>(ruler->interaction()))
 
 A054 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:229
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old roll plot/gutter interaction identity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift PianoGrid owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -685,8 +689,8 @@ Original expression:
   QCOMPARE(roll->interaction(), rollGutter->interaction())
 
 A055 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:230
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old dynamic_cast<PianoRoll*> host interaction seam; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift PianoGrid owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -694,8 +698,8 @@ Original expression:
   QVERIFY(dynamic_cast<songview::PianoRoll *>(roll->interaction()))
 
 A056 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:231
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old other-events plot/gutter interaction identity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -703,8 +707,8 @@ Original expression:
   QCOMPARE(other->interaction(), otherGutter->interaction())
 
 A057 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:232
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old dynamic_cast<OtherStrip*> host interaction seam; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -712,8 +716,8 @@ Original expression:
   QVERIFY(dynamic_cast<songview::OtherStrip *>(other->interaction()))
 
 A058 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:233
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation plot/gutter interaction identity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -721,8 +725,8 @@ Original expression:
   QCOMPARE(automation->interaction(), automationGutter->interaction())
 
 A059 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:234
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation interaction bound to the host automation canvas; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -730,8 +734,8 @@ Original expression:
   QCOMPARE(automation->interaction(), view.editorDrawer()->automationPage()->canvas())
 
 A060 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:235
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity plot/gutter interaction identity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -739,8 +743,8 @@ Original expression:
   QCOMPARE(velocity->interaction(), velocityGutter->interaction())
 
 A061 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:236
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity interaction bound to the host velocityArea widget; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -748,8 +752,8 @@ Original expression:
   QCOMPARE(velocity->interaction(), view.editorDrawer()->velocityArea())
 
 A062 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:237
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old voice plot/gutter interaction identity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VoiceChangesPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -757,8 +761,8 @@ Original expression:
   QCOMPARE(voice->interaction(), voiceGutter->interaction())
 
 A063 | quickInputsOwnTheirInteractions | src/checks/host/tst_hostadapter.cpp:238
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old voice interaction bound to the host voiceChangeArea widget; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VoiceChangesPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -766,8 +770,8 @@ Original expression:
   QCOMPARE(voice->interaction(), view.editorDrawer()->voiceChangeArea())
 
 A064 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:245
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -781,8 +785,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A065 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:248
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view handle discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -792,8 +796,8 @@ Original expression:
   QVERIFY(quick)
 
 A066 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:250
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick root object discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           QQuickItem *root = quick->rootObject();
@@ -802,8 +806,8 @@ Original expression:
   QVERIFY(root)
 
 A067 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:252
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer QWidget handle discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter owns the behavior).
 Source context since previous assertion:
   ;
           EditorDrawer *drawer = view.editorDrawer();
@@ -813,7 +817,7 @@ Original expression:
 
 A068 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:255
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the other-events band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const auto other = view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
@@ -824,7 +828,7 @@ Original expression:
 
 A069 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:256
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -833,7 +837,7 @@ Original expression:
 
 A070 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:259
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the velocity drawer body rect presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const DrawerChrome &chrome = drawer->chrome();
@@ -843,8 +847,8 @@ Original expression:
   QVERIFY(body.has_value())
 
 A071 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:260
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer chrome velocity handle visibility; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -852,8 +856,8 @@ Original expression:
   QVERIFY(chrome.velocityHandleVisible())
 
 A072 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:261
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer chrome automation handle hidden state; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -861,8 +865,8 @@ Original expression:
   QVERIFY(!chrome.automationHandleVisible())
 
 A073 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:262
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer chrome voice-changes handle hidden state; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -870,8 +874,8 @@ Original expression:
   QVERIFY(!chrome.voiceChangesHandleVisible())
 
 A074 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:263
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer overlay rect above the other-events band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -879,8 +883,8 @@ Original expression:
   QVERIFY(drawer->overlayRect().bottom() < other->rect.top())
 
 A075 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:264
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer chrome handle rect aligned to the drawer body; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -888,8 +892,8 @@ Original expression:
   QCOMPARE(chrome.velocityHandleRect().bottom(), body->top())
 
 A076 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:265
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer body bottom aligned to the chrome bar top; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -897,8 +901,8 @@ Original expression:
   QCOMPARE(body->bottom() + 1, qRound(chrome.barRect().top()))
 
 A077 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:266
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer chrome automation/voice-changes toggle spacing; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -908,8 +912,8 @@ Original expression:
                                                           layout::space(layout::Space::One))
 
 A078 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:269
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer chrome velocity/automation toggle spacing; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -919,8 +923,8 @@ Original expression:
                                                         layout::space(layout::Space::One))
 
 A079 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:276
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer chrome toggles centred on the piano keyboard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
 Source context since previous assertion:
   ;
           const QRectF toggles = chrome.voiceChangesToggleRect()
@@ -932,8 +936,8 @@ Original expression:
   QVERIFY(std::abs(toggles.center().x() - pianoCenter) <= layout::singlePixel())
 
 A080 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:288
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old track-headers quick rows/band/scrollbar item discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter owns the behavior).
 Source context since previous assertion:
   ;
           const auto *headers = view.findChild<songview::TrackHeaderModel *>(
@@ -952,8 +956,8 @@ Original expression:
   QVERIFY(headers && headerBand && headerInput && headerRows && headerScroll && headerThumb)
 
 A081 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:291
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old track-headers band geometry handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter/TrackHeadersGeometry owns the behavior).
 Source context since previous assertion:
   ;
           const auto headersGeometry =
@@ -963,8 +967,8 @@ Original expression:
   QVERIFY(headersGeometry.has_value())
 
 A082 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:292
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old track-headers input bound to the headers presenter; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -972,8 +976,8 @@ Original expression:
   QCOMPARE(headerInput->interaction(), headers)
 
 A083 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:293
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old track-headers row-count projection into the quick row model; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -981,8 +985,8 @@ Original expression:
   QCOMPARE(headerRows->property("count").toInt(), headers->rowCount())
 
 A084 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:294
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old track-headers scrollbar width projection; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -990,8 +994,8 @@ Original expression:
   QCOMPARE(headerScroll->width(), headers->scrollbarWidth())
 
 A085 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:295
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old track-headers scrollbar visibility projection; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -999,8 +1003,8 @@ Original expression:
   QCOMPARE(headerScroll->isVisible(), headers->maximumScrollY() > 0.0)
 
 A086 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:296
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old track-headers scrollbar thumb visibility projection; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1008,8 +1012,8 @@ Original expression:
   QCOMPARE(headerThumb->isVisible(), headers->maximumScrollY() > 0.0)
 
 A087 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:297
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick ruler plot origin aligned to the host timeline split; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1018,8 +1022,8 @@ Original expression:
                   layout::singlePixel())
 
 A088 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:299
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick window device pixel ratio; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1027,8 +1031,8 @@ Original expression:
   QVERIFY(quick->quickWindow()->devicePixelRatio() > 0.0)
 
 A089 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:306
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1042,8 +1046,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A090 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:309
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view handle discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -1053,8 +1057,8 @@ Original expression:
   QVERIFY(quick)
 
 A091 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:311
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick root object discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           QQuickItem *root = quick->rootObject();
@@ -1063,8 +1067,8 @@ Original expression:
   QVERIFY(root)
 
 A092 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:313
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer QWidget handle discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter owns the behavior).
 Source context since previous assertion:
   ;
           EditorDrawer *drawer = view.editorDrawer();
@@ -1074,7 +1078,7 @@ Original expression:
 
 A093 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:316
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the band layout geometry before the choreography change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const DrawerChrome &chrome = drawer->chrome();
@@ -1085,7 +1089,7 @@ Original expression:
 
 A094 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:320
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the band layout geometry after the choreography change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1096,8 +1100,8 @@ Original expression:
   QVERIFY(after.has_value())
 
 A095 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:321
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old band geometry re-publication to QML root properties; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1105,8 +1109,8 @@ Original expression:
   QVERIFY(after->rect != before->rect)
 
 A096 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:327
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity band rect re-published to the QML root property; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           // No event-loop pump: the drawer chrome snapshot publishes through
@@ -1119,8 +1123,8 @@ Original expression:
   QCOMPARE(root->property("velocityBandRect").toRectF(), QRectF(after->rect))
 
 A097 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:328
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old drawer chrome handle rect following the published band rect; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1128,8 +1132,8 @@ Original expression:
   QCOMPARE(chrome.velocityHandleRect().bottom(), QRectF(after->rect).top())
 
 A098 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:357
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1165,8 +1169,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A099 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:360
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view handle discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -1176,8 +1180,8 @@ Original expression:
   QVERIFY(quick)
 
 A100 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:362
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick root object discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           QQuickItem *root = quick->rootObject();
@@ -1186,8 +1190,8 @@ Original expression:
   QVERIFY(root)
 
 A101 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:365
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old hidden band cleared from the host band layout; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           view.setDrawerSectionVisible(page, false);
@@ -1197,8 +1201,8 @@ Original expression:
   QVERIFY(!view.timelineBandLayout().geometry(band).has_value())
 
 A102 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:366
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old hidden band visible property cleared on the QML root; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1206,8 +1210,8 @@ Original expression:
   QVERIFY(!root->property(qPrintable(visibleProperty)).toBool())
 
 A103 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:367
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old hidden band rect property cleared on the QML root; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1215,8 +1219,8 @@ Original expression:
   QVERIFY(root->property(qPrintable(rectProperty)).toRectF().isEmpty())
 
 A104 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:382
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old hidden band plot/gutter quick item discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           QString inputName;
@@ -1238,8 +1242,8 @@ Original expression:
   QVERIFY(plot && gutter)
 
 A105 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:383
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old hidden band plot item visibility; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1247,8 +1251,8 @@ Original expression:
   QVERIFY(!plot->isVisible())
 
 A106 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:384
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old hidden band gutter item visibility; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1256,8 +1260,8 @@ Original expression:
   QVERIFY(!gutter->isVisible())
 
 A107 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:387
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old restored band present in the host band layout; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           view.setDrawerSectionVisible(page, true);
@@ -1267,8 +1271,8 @@ Original expression:
   QVERIFY(view.timelineBandLayout().geometry(band).has_value())
 
 A108 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:388
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old restored band visible property on the QML root; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1276,8 +1280,8 @@ Original expression:
   QVERIFY(root->property(qPrintable(visibleProperty)).toBool())
 
 A109 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:389
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old restored band physical quick-input parity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1286,8 +1290,8 @@ Original expression:
                                                                 band, inputName, gutterName))
 
 A110 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:397
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1301,8 +1305,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A111 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:400
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view handle discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -1312,8 +1316,8 @@ Original expression:
   QVERIFY(quick)
 
 A112 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:402
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick root object discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           QQuickItem *root = quick->rootObject();
@@ -1322,8 +1326,8 @@ Original expression:
   QVERIFY(root)
 
 A113 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:405
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old roll band cleared from the host band layout; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           view.setEventListVisible(true);
@@ -1333,8 +1337,8 @@ Original expression:
   QVERIFY(!view.timelineBandLayout().geometry(songview::TimelineBand::Roll).has_value())
 
 A114 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:410
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old roll plot/gutter quick band-input item presence; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           auto *roll =
@@ -1346,8 +1350,8 @@ Original expression:
   QVERIFY(roll && gutter)
 
 A115 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:411
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old roll plot item visibility under the event-list toggle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1355,8 +1359,8 @@ Original expression:
   QVERIFY(!roll->isVisible())
 
 A116 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:412
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old roll gutter item visibility under the event-list toggle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1364,8 +1368,8 @@ Original expression:
   QVERIFY(!gutter->isVisible())
 
 A117 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:413
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity band presence in the host band layout; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1373,8 +1377,8 @@ Original expression:
   QVERIFY(view.timelineBandLayout().geometry(songview::TimelineBand::Velocity).has_value())
 
 A118 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:416
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old roll band restored in the host band layout; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           view.setEventListVisible(false);
@@ -1384,8 +1388,8 @@ Original expression:
   QVERIFY(view.timelineBandLayout().geometry(songview::TimelineBand::Roll).has_value())
 
 A119 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:423
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1399,8 +1403,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A120 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:426
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view handle discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -1410,8 +1414,8 @@ Original expression:
   QVERIFY(quick)
 
 A121 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:428
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick root object discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           QQuickItem *root = quick->rootObject();
@@ -1420,8 +1424,8 @@ Original expression:
   QVERIFY(root)
 
 A122 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:433
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old other-events input item and band geometry discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           auto *input = root->findChild<songview::TimelineInputItem *>(
@@ -1433,8 +1437,8 @@ Original expression:
   QVERIFY(input && geometry.has_value())
 
 A123 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:437
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old shared tooltip QQuickItem and OtherStrip widget discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
 Source context since previous assertion:
   ;
           QQuickItem *toolTip =
@@ -1446,7 +1450,7 @@ Original expression:
 
 A124 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:438
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift has no counterpart for the retired OtherStrip tooltip surface: feature not yet ported: other-strip tooltip/loop markers; the retired strip model had to expose the hovered marker before any tooltip text could be observed; no equivalent predicate established.
 Source context since previous assertion:
   ;
 
@@ -1454,8 +1458,8 @@ Original expression:
   QVERIFY(!view.model().strip.empty())
 
 A125 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:444
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old input containment of the tooltip hover point; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
 Source context since previous assertion:
   ;
           const StripItem &marker = view.model().strip.front();
@@ -1468,8 +1472,8 @@ Original expression:
   QVERIFY(input->contains(inputPoint))
 
 A126 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:454
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old OtherStrip tooltip visibility after a hover enter; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
 Source context since previous assertion:
   ;
           const QPointF windowPoint = input->mapToScene(inputPoint);
@@ -1487,7 +1491,7 @@ Original expression:
 
 A127 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:455
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift has no counterpart for the retired OtherStrip tooltip surface: feature not yet ported: other-strip tooltip/loop markers; the retired tooltip text had to contain the hovered marker label; no equivalent predicate established.
 Source context since previous assertion:
   ;
 
@@ -1495,8 +1499,8 @@ Original expression:
   QVERIFY(otherStrip->toolTipText().contains(marker.label))
 
 A128 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:456
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old tooltip position matched to the hover point; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1504,8 +1508,8 @@ Original expression:
   QCOMPARE(otherStrip->toolTipPosition(), inputPoint)
 
 A129 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:457
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old tooltip QQuickItem visibility after the hover; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1513,8 +1517,8 @@ Original expression:
   QVERIFY(toolTip->isVisible())
 
 A130 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:464
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old rendered tooltip text containing the marker label; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
 Source context since previous assertion:
   ;
           const auto renderedText = [](QQuickItem &item) {
@@ -1529,7 +1533,7 @@ Original expression:
 
 A131 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:478
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift has no counterpart for the retired OtherStrip tooltip surface: feature not yet ported: other-strip tooltip/loop markers; the retired tooltip had to clear on leave (async wait result); no equivalent predicate established.
 Source context since previous assertion:
   ;
           const QPointF outside = root->property("rulerBandRect").toRectF().center();
@@ -1550,8 +1554,8 @@ Original expression:
   QCOMPARE(hidden, checks::async_wait::Result::Ready)
 
 A132 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:480
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old OtherStrip tooltip cleared after leave; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
 Source context since previous assertion:
   ;
           settle();
@@ -1560,8 +1564,8 @@ Original expression:
   QVERIFY(!otherStrip->toolTipVisible() && otherStrip->toolTipText().isEmpty())
 
 A133 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:481
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old tooltip QQuickItem hidden after leave; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1569,8 +1573,8 @@ Original expression:
   QVERIFY(!toolTip->isVisible())
 
 A134 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:488
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1584,8 +1588,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A135 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:492
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old other-events band geometry discovery for the raster probe; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -1596,8 +1600,8 @@ Original expression:
   QVERIFY(geometry.has_value())
 
 A136 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:496
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old baseline other-events band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           QString captureError;
@@ -1609,7 +1613,7 @@ Original expression:
 
 A137 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:500
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift has no counterpart for the retired loop-marker raster surface: feature not yet ported: other-strip tooltip/loop markers; the loop timeline had to exist for the loop-marker scenario; no equivalent predicate established.
 Source context since previous assertion:
   ;
           host.document().setLoopTick(false, 6);
@@ -1621,7 +1625,7 @@ Original expression:
 
 A138 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:501
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift has no counterpart for the retired loop-marker raster surface: feature not yet ported: other-strip tooltip/loop markers; the loop start tick reaching the timeline; no equivalent predicate established.
 Source context since previous assertion:
   ;
 
@@ -1630,7 +1634,7 @@ Original expression:
 
 A139 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:502
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift has no counterpart for the retired loop-marker raster surface: feature not yet ported: other-strip tooltip/loop markers; the loop end tick reaching the timeline; no equivalent predicate established.
 Source context since previous assertion:
   ;
 
@@ -1639,7 +1643,7 @@ Original expression:
 
 A140 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:507
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift has no counterpart for the retired loop-marker raster surface: feature not yet ported: other-strip tooltip/loop markers; the other-events band geometry after the loop update; no equivalent predicate established.
 Source context since previous assertion:
   ;
           view.updateSong(loopTimeline.get());
@@ -1651,8 +1655,8 @@ Original expression:
   QVERIFY(updated.has_value())
 
 A141 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:509
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: Swift has no counterpart for the retired loop-marker raster surface: feature not yet ported: other-strip tooltip/loop markers; the post-update band raster capture validity guard; no equivalent predicate established.
 Source context since previous assertion:
   ;
           const QImage after = checks::support::captureQuickBand(view, updated->rect, &captureError);
@@ -1662,7 +1666,7 @@ Original expression:
 
 A142 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:512
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift has no counterpart for the retired loop-marker raster surface: feature not yet ported: other-strip tooltip/loop markers; the other-events raster equality after the loop markers changed; no equivalent predicate established.
 Source context since previous assertion:
   ;
           // The timeline fields above are primary; this raster comparison guards
@@ -1672,8 +1676,8 @@ Original expression:
   QCOMPARE(after, baseline)
 
 A143 | automationTempoRangeDelegatesTheSelectionScope | src/checks/host/tst_hostadapter.cpp:519
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
           view.updateSong(&host.timeline());
@@ -1687,8 +1691,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A144 | automationTempoRangeDelegatesTheSelectionScope | src/checks/host/tst_hostadapter.cpp:527
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view and automation page widget handles; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -1703,8 +1707,8 @@ Original expression:
   QVERIFY(quick && page)
 
 A145 | automationTempoRangeDelegatesTheSelectionScope | src/checks/host/tst_hostadapter.cpp:531
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation canvas and automation input item handles; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage owns the behavior).
 Source context since previous assertion:
   ;
           auto *canvas = page->canvas();
@@ -1716,7 +1720,7 @@ Original expression:
 
 A146 | automationTempoRangeDelegatesTheSelectionScope | src/checks/host/tst_hostadapter.cpp:534
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift AutomationPage/AutomationParameter owns the automation tempo parameter index discovery; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const int tempoIndex = checks::support::automationParameterIndex(
@@ -1727,7 +1731,7 @@ Original expression:
 
 A147 | automationTempoRangeDelegatesTheSelectionScope | src/checks/host/tst_hostadapter.cpp:538
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift AutomationPage/AutomationLaneProjection owns the activated automation lane body rect; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           canvas->activateParameter(tempoIndex);
@@ -1739,7 +1743,7 @@ Original expression:
 
 A148 | events::sendMouse | src/checks/host/tst_hostadapter.cpp:549
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift AutomationPage/AutomationSelectionCommands owns the time selection active state after the tempo-range drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const qreal y = tempo.center().y();
@@ -1758,7 +1762,7 @@ Original expression:
 
 A149 | events::sendMouse | src/checks/host/tst_hostadapter.cpp:550
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift AutomationPage/AutomationSelectionCommands owns the time selection scope after the tempo-range drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1767,7 +1771,7 @@ Original expression:
 
 A150 | events::sendMouse | src/checks/host/tst_hostadapter.cpp:551
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift AutomationPage/AutomationSelectionCommands owns the tempo flag on the time selection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1776,7 +1780,7 @@ Original expression:
 
 A151 | events::sendMouse | src/checks/host/tst_hostadapter.cpp:552
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift AutomationPage/AutomationSelectionCommands owns the empty lane list on a tempo-scoped time selection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1784,8 +1788,8 @@ Original expression:
   QVERIFY(selection.lanes.empty())
 
 A152 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.cpp:559
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1799,8 +1803,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A153 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.cpp:566
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view and automation input item handles; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -1814,8 +1818,8 @@ Original expression:
   QVERIFY(quick && automation)
 
 A154 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.cpp:569
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation input item handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage owns the behavior).
 Source context since previous assertion:
   ;
           auto *input = quick->rootObject()->findChild<songview::TimelineInputItem *>(
@@ -1825,8 +1829,8 @@ Original expression:
   QVERIFY(input)
 
 A155 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.cpp:578
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old focused timeline band after the pan press (focus plumbing); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
           const uint64_t revision = host.document().revision();
@@ -1843,8 +1847,8 @@ Original expression:
                    std::optional<songview::TimelineBand>{songview::TimelineBand::Automation})
 
 A156 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.cpp:580
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick-window mouse-grabber identity during the pan; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1852,8 +1856,8 @@ Original expression:
   QCOMPARE(quick->quickWindow()->mouseGrabberItem(), static_cast<QQuickItem *>(input))
 
 A157 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.cpp:581
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation canvas isPanning while the pointer is held; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1861,8 +1865,8 @@ Original expression:
   QVERIFY(automation->isPanning())
 
 A158 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.cpp:584
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation canvas isPanning after a further move; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
           QFocusEvent focusOut(QEvent::FocusOut, Qt::OtherFocusReason);
@@ -1872,8 +1876,8 @@ Original expression:
   QVERIFY(automation->isPanning())
 
 A159 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.cpp:587
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation canvas isPanning cleared after release; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
           QEvent deactivate(QEvent::WindowDeactivate);
@@ -1884,7 +1888,7 @@ Original expression:
 
 A160 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.cpp:588
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the document revision unchanged by the pan gesture; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1893,7 +1897,7 @@ Original expression:
 
 A161 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.cpp:589
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history (coreEditHistoryCountAtTip) owns the history depth unchanged by the pan gesture; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1901,8 +1905,8 @@ Original expression:
   QCOMPARE(host.document().undoStack()->count(), undo)
 
 A162 | velocityVoiceRoutingUsesPresentationOnlyForSteadyContext | src/checks/host/tst_hostadapter.cpp:596
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1916,8 +1920,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A163 | velocityVoiceRoutingUsesPresentationOnlyForSteadyContext | src/checks/host/tst_hostadapter.cpp:599
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old editorDrawer()->velocityArea() QWidget handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -1928,7 +1932,7 @@ Original expression:
 
 A164 | velocityVoiceRoutingUsesPresentationOnlyForSteadyContext | src/checks/host/tst_hostadapter.cpp:602
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage/VelocityAxisModel owns the velocity axis voice name at the steady cursor; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           view.selectionModel().clearNoteSelection();
@@ -1939,7 +1943,7 @@ Original expression:
 
 A165 | velocityVoiceRoutingUsesPresentationOnlyForSteadyContext | src/checks/host/tst_hostadapter.cpp:605
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage/VelocityAxisModel owns the velocity axis voice name after the voice change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           view.setPlayheadSample(host.timeline().sampleForTick(24), true);
@@ -1949,8 +1953,8 @@ Original expression:
   QCOMPARE(QString::fromLatin1(area->axis().map().voiceName()), QStringLiteral("Noise"))
 
 A166 | velocityVoiceRoutingUsesPresentationOnlyForSteadyContext | src/checks/host/tst_hostadapter.cpp:610
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity-area diagnostics content-build counter; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage presentation counters owns the behavior).
 Source context since previous assertion:
   ;
           const auto before = area->diagnostics();
@@ -1962,8 +1966,8 @@ Original expression:
   QCOMPARE(area->diagnostics().contentBuildCount, before.contentBuildCount)
 
 A167 | velocityVoiceRoutingUsesPresentationOnlyForSteadyContext | src/checks/host/tst_hostadapter.cpp:611
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity-area diagnostics playhead-presentation counter; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage/SharedPlayheadPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1973,7 +1977,7 @@ Original expression:
 
 A168 | velocityVoiceRoutingUsesPresentationOnlyForSteadyContext | src/checks/host/tst_hostadapter.cpp:615
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage/VelocityAxisModel owns the velocity axis voice name after the second voice change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           view.setPlayheadSample(host.timeline().sampleForTick(26), false);
@@ -1983,8 +1987,8 @@ Original expression:
   QCOMPARE(QString::fromLatin1(area->axis().map().voiceName()), QStringLiteral("Square 1"))
 
 A169 | drawerSoloAndTrackRemapReachTheHost | src/checks/host/tst_hostadapter.cpp:622
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1998,8 +2002,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A170 | drawerSoloAndTrackRemapReachTheHost | src/checks/host/tst_hostadapter.cpp:625
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view handle discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -2009,8 +2013,8 @@ Original expression:
   QVERIFY(quick)
 
 A171 | drawerSoloAndTrackRemapReachTheHost | src/checks/host/tst_hostadapter.cpp:628
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity band TimelineInputItem handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           auto *velocity = quick->rootObject()->findChild<songview::TimelineInputItem *>(
@@ -2021,7 +2025,7 @@ Original expression:
 
 A172 | drawerSoloAndTrackRemapReachTheHost | src/checks/host/tst_hostadapter.cpp:635
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession soloed tracks/TrackHeadersPresenter owns the track solo state after the drawer solo toggle; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const int selectedTrack = view.selectionModel().primaryTrack();
@@ -2036,7 +2040,7 @@ Original expression:
 
 A173 | drawerSoloAndTrackRemapReachTheHost | src/checks/host/tst_hostadapter.cpp:642
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument moveTrack/DocumentWorkspace owns the track move acceptance (moveTrack(0, 1)); no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           view.setTrackSolo(selectedTrack, false);
@@ -2051,7 +2055,7 @@ Original expression:
 
 A174 | drawerSoloAndTrackRemapReachTheHost | src/checks/host/tst_hostadapter.cpp:643
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/DocumentWorkspace empty-lane state owns the moved lane flagged empty in the editor view state; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -2060,7 +2064,7 @@ Original expression:
 
 A175 | drawerSoloAndTrackRemapReachTheHost | src/checks/host/tst_hostadapter.cpp:644
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/DocumentWorkspace empty-lane state owns the old lane no longer flagged empty in the editor view state; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -2068,8 +2072,8 @@ Original expression:
   QVERIFY(!view.editorViewState().emptyLanes.contains(oldLane))
 
 A176 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:651
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -2084,7 +2088,7 @@ Original expression:
 
 A177 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:660
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the automation band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -2101,7 +2105,7 @@ Original expression:
 
 A178 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:661
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the voice-changes band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -2109,8 +2113,8 @@ Original expression:
   QVERIFY(voice.has_value())
 
 A179 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:663
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation canvas QWidget handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage owns the behavior).
 Source context since previous assertion:
   ;
           auto *automationArea = view.editorDrawer()->automationPage()->canvas();
@@ -2119,8 +2123,8 @@ Original expression:
   QVERIFY(automationArea)
 
 A180 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:668
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old voice band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           const auto automationRows = automationArea->rows();
@@ -2132,8 +2136,8 @@ Original expression:
   QVERIFY2(!voiceBefore.isNull(), qPrintable(captureError))
 
 A181 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:671
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           const QImage automationBefore =
@@ -2144,7 +2148,7 @@ Original expression:
 
 A182 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:674
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift AutomationPage/AutomationProjection owns the automation canvas rows unchanged across a voice change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           view.setPlayheadSample(host.timeline().sampleForTick(24), true);
@@ -2154,8 +2158,8 @@ Original expression:
   QVERIFY(automationRowsEqual(automationArea->rows(), automationRows))
 
 A183 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:679
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old post-change voice/automation raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           const QImage voiceAfter =
@@ -2168,7 +2172,7 @@ Original expression:
 
 A184 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:680
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VoiceChangesPage/VoiceChangesPublication owns the voice band raster changed by the voice change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -2176,8 +2180,8 @@ Original expression:
   QVERIFY(voiceAfter != voiceBefore)
 
 A185 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:683
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation band raster equality across a voice change; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage owns the behavior).
 Source context since previous assertion:
   ;
           // The image check is a retained negative control. The primary
@@ -2187,8 +2191,8 @@ Original expression:
   QCOMPARE(automationAfter, automationBefore)
 
 A186 | sharedPopupDiesOnHideAndReadinessReset | src/checks/host/tst_hostadapter.cpp:690
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -2202,8 +2206,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A187 | sharedPopupDiesOnHideAndReadinessReset | src/checks/host/tst_hostadapter.cpp:693
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view handle discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -2213,8 +2217,8 @@ Original expression:
   QVERIFY(quick)
 
 A188 | sharedPopupDiesOnHideAndReadinessReset | src/checks/host/tst_hostadapter.cpp:694
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick window handle discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -2222,8 +2226,8 @@ Original expression:
   QVERIFY(quick->quickWindow())
 
 A189 | sharedPopupDiesOnHideAndReadinessReset | src/checks/host/tst_hostadapter.cpp:696
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old shared popup session handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           auto *session = quick->popupSession();
@@ -2232,8 +2236,8 @@ Original expression:
   QVERIFY(session)
 
 A190 | sharedPopupDiesOnHideAndReadinessReset | src/checks/host/tst_hostadapter.cpp:698
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old beginMenu acceptance on the shared popup session; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           QObject menuOwner;
@@ -2242,8 +2246,8 @@ Original expression:
   QVERIFY(session->beginMenu(&menuOwner))
 
 A191 | sharedPopupDiesOnHideAndReadinessReset | src/checks/host/tst_hostadapter.cpp:699
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old shared popup session reported open; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -2251,8 +2255,8 @@ Original expression:
   QVERIFY(session->isOpen())
 
 A192 | sharedPopupDiesOnHideAndReadinessReset | src/checks/host/tst_hostadapter.cpp:704
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old shared popup session closed when the host hides; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           // Tab switches hide the embedded child while the top level stays
@@ -2264,8 +2268,8 @@ Original expression:
   QVERIFY(!session->isOpen())
 
 A193 | sharedPopupDiesOnHideAndReadinessReset | src/checks/host/tst_hostadapter.cpp:707
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old beginMenu acceptance after the readiness reset; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           // Readiness/document resets route through cancelTransientInput: any
@@ -2275,8 +2279,8 @@ Original expression:
   QVERIFY(session->beginMenu(&menuOwner))
 
 A194 | sharedPopupDiesOnHideAndReadinessReset | src/checks/host/tst_hostadapter.cpp:708
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old shared popup session reported open after the readiness reset; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -2284,8 +2288,8 @@ Original expression:
   QVERIFY(session->isOpen())
 
 A195 | sharedPopupDiesOnHideAndReadinessReset | src/checks/host/tst_hostadapter.cpp:710
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old shared popup session closed after the readiness reset; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           view.cancelTransientInput();
