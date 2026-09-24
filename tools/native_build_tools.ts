@@ -1,5 +1,9 @@
 import { join } from "node:path";
 import { cmakeBuildUsesNinja } from "./local_build_environment.ts";
+import {
+  checkSwiftCompiler,
+  selectedSwiftCompiler,
+} from "./swift_toolchain.ts";
 import { installMissingNativeBuildTools } from "./native_build_tool_installers.ts";
 
 const decoder = new TextDecoder();
@@ -127,7 +131,10 @@ async function commandResult(
     }).output();
     const stdout = decoder.decode(result.stdout).trim();
     const stderr = decoder.decode(result.stderr).trim();
-    return { success: result.success, output: stdout || stderr };
+    return {
+      success: result.success,
+      output: [stdout, stderr].filter(Boolean).join("\n"),
+    };
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
       return { success: false, output: "" };
@@ -398,6 +405,12 @@ export async function inspectNativeBuildTools(
       );
     }
   }
+
+  const swiftIssue = await checkSwiftCompiler(
+    await selectedSwiftCompiler(buildDirectory),
+    { link: missing.size === 0 && incompatibilities.length === 0 },
+  );
+  if (swiftIssue) incompatibilities.push(swiftIssue);
 
   return {
     cmake: cmake.executable,

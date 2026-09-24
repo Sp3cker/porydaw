@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { dirname, join, normalize } from "node:path";
 
 export const qtVersion = "6.11";
 // Qt 6.11's Windows repository layout needs this post-3.3 aqtinstall revision.
@@ -86,8 +86,8 @@ export function qtInstallationDirectory(
   );
 }
 
-function isRequestedQtVersion(version: string): boolean {
-  return version === qtVersion || version.startsWith(`${qtVersion}.`);
+function isRequestedQtVersion(version: string, requested: string): boolean {
+  return version === requested || version.startsWith(`${requested}.`);
 }
 
 function qtConfig(prefix: string): string {
@@ -97,24 +97,46 @@ function qtConfig(prefix: string): string {
 export async function localQtPrefix(
   root = Deno.cwd(),
   installation = currentQtInstallation(),
+  requestedVersion?: string,
 ): Promise<string | undefined> {
   const directory = qtInstallationDirectory(root, installation);
-  // aqt's Windows architecture name includes a win64_ prefix, but the
-  // extracted kit directory does not.
   const kitDirectory = installation.host === "windows"
     ? "msvc2022_64"
+    : installation.architecture === "linux_gcc_arm64"
+    ? "gcc_arm64"
     : installation.architecture;
   try {
+    const prefixes: string[] = [];
     for await (const version of Deno.readDir(directory)) {
-      if (!version.isDirectory || !isRequestedQtVersion(version.name)) continue;
+      if (
+        !version.isDirectory ||
+        !isRequestedQtVersion(version.name, requestedVersion ?? qtVersion)
+      ) continue;
       const prefix = join(directory, version.name, kitDirectory);
-      if (await exists(qtConfig(prefix))) return prefix;
+      if (await exists(qtConfig(prefix))) prefixes.push(prefix);
     }
+    if (requestedVersion === undefined) {
+      try {
+        const cache = await Deno.readTextFile(
+          join(root, "build", "CMakeCache.txt"),
+        );
+        const configured = /^Qt6_DIR:[^=]+=(.+)$/m.exec(cache)?.[1];
+        const selected = prefixes.find((prefix) =>
+          configured !== undefined &&
+          dirname(qtConfig(prefix)) === normalize(configured)
+        );
+        if (selected) return selected;
+      } catch (error) {
+        if (!(error instanceof Deno.errors.NotFound)) throw error;
+      }
+    }
+    return prefixes.sort((a, b) =>
+      b.localeCompare(a, undefined, { numeric: true })
+    )[0];
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) return undefined;
     throw error;
   }
-  return undefined;
 }
 
 // Bind the Swift compiler to the swiftly-managed toolchain named by
@@ -195,7 +217,13 @@ export async function cmakeConfigureArgs({
     ...(buildChecks === undefined
       ? []
       : [`-DPORYDAW_BUILD_CHECKS=${buildChecks ? "ON" : "OFF"}`]),
-    ...(qtPrefix ? [`-DCMAKE_PREFIX_PATH=${qtPrefix}`] : []),
+    ...(qtPrefix
+      ? [
+        "-UQt6*_DIR",
+        `-DCMAKE_PREFIX_PATH=${qtPrefix}`,
+        `-DQt6_DIR:PATH=${dirname(qtConfig(qtPrefix))}`,
+      ]
+      : []),
     ...(swiftToolchain ? [swiftToolchain] : []),
     poryaaaaArgument,
   ];

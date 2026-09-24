@@ -46,7 +46,7 @@ xattr -d com.apple.quarantine /Applications/porydaw.app
 
 ## Building from source
 
-Porydaw is a Swift 6 + QML application built through Deno tasks against a checkout-local Qt 6.11. On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly. macOS is currently the only platform that builds the Swift app; Windows and Linux Swift build support is pending.
+Porydaw is a Swift 6 + QML application built through Deno tasks against a checkout-local Qt 6.11. On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly. The Swift app builds on macOS and Linux. Linux ARM64 has been validated with Swift 6.4.0 and Qt 6.11.2; Windows Swift build support is pending.
 
 If you'd rather build Porydaw yourself, see [INSTALL.md](https://github.com/huderlem/porydaw/blob/main/INSTALL.md) for instructions on building Porydaw from source.
 

@@ -33,6 +33,7 @@ const toolsetMarker = setupToolsetMarker(root);
 
 type Options = {
   dryRun: boolean;
+  qtVersion: string;
 };
 
 type Toolset = {
@@ -53,25 +54,37 @@ type Platform = {
 
 function usage(message?: string): never {
   if (message) console.error(`setup: ${message}`);
-  console.error(`usage: deno task setup [--dry-run]
+  console.error(
+    `usage: deno task setup [--dry-run] [--qt-version ${qtVersion}.<patch>]
   --dry-run  check installed native tools and print setup without provisioning
-  --help     show this help`);
-  Deno.exit(2);
+  --qt-version  select an exact Qt ${qtVersion} patch release
+  --help     show this help`,
+  );
+  Deno.exit(message ? 2 : 0);
 }
 
 function options(raw: string[]): Options {
   let dryRun = false;
-  for (const argument of raw) {
+  let selectedQtVersion = qtVersion;
+  for (let index = 0; index < raw.length; index++) {
+    const argument = raw[index];
     if (argument === "--") continue;
     if (argument === "--dry-run") {
       dryRun = true;
+    } else if (argument === "--qt-version") {
+      selectedQtVersion = raw[++index];
+      if (
+        !selectedQtVersion ||
+        !selectedQtVersion.startsWith(`${qtVersion}.`) ||
+        !/^\d+\.\d+\.\d+$/.test(selectedQtVersion)
+      ) usage(`--qt-version requires a ${qtVersion}.<patch> version`);
     } else if (argument === "--help") {
       usage();
     } else {
       usage(`unknown option ${argument}`);
     }
   }
-  return { dryRun };
+  return { dryRun, qtVersion: selectedQtVersion };
 }
 
 async function exists(path: string): Promise<boolean> {
@@ -195,11 +208,16 @@ async function ensureToolset(python: NativeBuildPython): Promise<Toolset> {
 async function ensureQt(
   environmentPython: string,
   target: Platform,
+  requestedVersion: string,
 ): Promise<LocalQt> {
   const installation = qtInstallationDirectory(root, target.qt);
-  const existingPrefix = await localQtPrefix(root, target.qt);
+  const existingPrefix = await localQtPrefix(
+    root,
+    target.qt,
+    requestedVersion === qtVersion ? undefined : requestedVersion,
+  );
   if (existingPrefix) return { prefix: existingPrefix, reused: true };
-  await run(`downloading Qt ${qtVersion}.x`, environmentPython, [
+  await run(`downloading Qt ${requestedVersion}`, environmentPython, [
     "-m",
     "aqt",
     "install-qt",
@@ -207,10 +225,10 @@ async function ensureQt(
     installation,
     target.qt.host,
     "desktop",
-    qtVersion,
+    requestedVersion,
     target.qt.architecture,
   ]);
-  const prefix = await localQtPrefix(root, target.qt);
+  const prefix = await localQtPrefix(root, target.qt, requestedVersion);
   if (!prefix) {
     throw new Error("Qt installation did not provide Qt6Config.cmake");
   }
@@ -281,7 +299,7 @@ try {
     );
     const qt = await progress.run(
       "qt",
-      () => ensureQt(toolset.environmentPython, target),
+      () => ensureQt(toolset.environmentPython, target, parsed.qtVersion),
       ({ reused }) => reused ? "reused .cache/setup/qt" : "downloaded",
     );
     await progress.run(

@@ -1,7 +1,16 @@
+#if canImport(Darwin)
 import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(ucrt)
+import ucrt
+#endif
 import Foundation
 import PorydawApp
 import QtBridge
+#if !canImport(Darwin)
+@_spi(ExperimentalCustomExecutors) import _Concurrency
+#endif
 
 @main
 struct PorydawShellApp: QApp {
@@ -9,6 +18,9 @@ struct PorydawShellApp: QApp {
     let instantiableTypes: [QmlInstantiable.Type] = [ShellPresenter.self, ApplicationSession.self]
 
     init() {
+        #if !canImport(Darwin)
+        _createExecutors(factory: PorydawExecutorFactory.self)
+        #endif
         let arguments = CommandLine.arguments.dropFirst()
         if arguments.contains("--help") || arguments.contains("-h") {
             print("""
@@ -24,11 +36,7 @@ struct PorydawShellApp: QApp {
             exit(EXIT_SUCCESS)
         }
         if arguments.contains("--version") || arguments.contains("-v") {
-            guard let version = Bundle.main.object(
-                forInfoDictionaryKey: "CFBundleShortVersionString") as? String else {
-                fatalError("Missing application bundle version")
-            }
-            print("porydaw \(version)")
+            print("porydaw \(porydawBuildVersion)")
             exit(EXIT_SUCCESS)
         }
     }

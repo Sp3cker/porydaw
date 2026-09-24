@@ -109,7 +109,7 @@ async function installLinuxTools(
       cmake: ["cmake"],
       ninja: ["ninja"],
       python: ["python"],
-      "python-pip": ["python"],
+      "python-pip": ["python-pip"],
       "python-venv": ["python"],
     });
     await run("installing missing Arch build tools", "sudo", [

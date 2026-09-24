@@ -171,6 +171,9 @@ if(POLICY CMP0157)
         "$<IF:$<CONFIG:Debug>,incremental,wholemodule>")
 endif()
 enable_language(Swift)
+if(NOT APPLE AND CMAKE_Swift_COMPILER_VERSION VERSION_LESS 6.4)
+    message(FATAL_ERROR "The Qt main executor requires Swift 6.4 or newer on Linux and Windows")
+endif()
 add_subdirectory(src/swift/core)
 add_subdirectory(src/swift/playback)
 add_subdirectory(src/swift/project)
@@ -341,8 +344,15 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(porydaw_app PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
 endif()
 
-# The Swift shell owns the only application entry point.
-add_library(porydaw_shell_entry STATIC src/swift/app/shell/PorydawShellApp.swift)
+file(CONFIGURE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/PorydawBuildVersion.swift"
+    CONTENT "let porydawBuildVersion = \"@PROJECT_VERSION@\"\n" @ONLY)
+add_library(porydaw_shell_entry STATIC
+    src/swift/app/shell/PorydawShellApp.swift
+    "${CMAKE_CURRENT_BINARY_DIR}/PorydawBuildVersion.swift")
+if(NOT APPLE)
+    target_sources(porydaw_shell_entry PRIVATE
+        src/swift/app/shell/QtMainExecutor.swift)
+endif()
 set_target_properties(porydaw_shell_entry PROPERTIES
     Swift_MODULE_NAME PorydawShellEntry
     Swift_LANGUAGE_VERSION 6
@@ -363,6 +373,16 @@ set(shell_qml
 )
 set_source_files_properties(${shell_qml} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 qt_add_executable(porydaw ${shell_qml} resources/fonts.qrc)
+if(NOT APPLE)
+    target_sources(porydaw PRIVATE src/app/qt_main_executor.cpp)
+endif()
+if(NOT APPLE)
+    foreach(qml IN LISTS shell_qml)
+        get_filename_component(qml_name "${qml}" NAME)
+        file(GENERATE OUTPUT "$<TARGET_FILE_DIR:porydaw>/${qml_name}"
+            INPUT "${CMAKE_CURRENT_SOURCE_DIR}/${qml}")
+    endforeach()
+endif()
 # Retain Swift @main and the original editor qrc from their archives
 # while linking native LTO objects with the C++ driver.
 set_target_properties(porydaw PROPERTIES LINKER_LANGUAGE CXX)
@@ -370,6 +390,8 @@ target_link_libraries(porydaw PRIVATE
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_shell_entry>"
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
 )
+porydaw_link_linux_swift_runtime(porydaw
+    porydaw_shell_entry PorydawApp QtBridge PorydawProject PorydawPlayback PorydawCore)
 
 if(PORYDAW_BUILD_CHECKS)
     add_subdirectory(src/checks)
