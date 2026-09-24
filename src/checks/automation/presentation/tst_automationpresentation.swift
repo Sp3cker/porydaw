@@ -1,7 +1,6 @@
 import Foundation
 import PorydawApp
 import PorydawCore
-import PorydawProjectService
 
 // Existing scenarios paired with tst_automationpresentation.cpp.
 // Entry order remains in AutomationPageChecks.swift.

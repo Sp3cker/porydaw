@@ -173,6 +173,7 @@ endif()
 enable_language(Swift)
 add_subdirectory(src/swift/core)
 add_subdirectory(src/swift/playback)
+add_subdirectory(src/swift/project)
 include(cmake/QtBridge.cmake)
 add_subdirectory(src/swift/app)
 
@@ -196,24 +197,10 @@ qt_add_library(porydaw_app STATIC
     src/audio/wavexport.h
     src/audio/miniaudio_impl.c
     src/audio/stb_vorbis_impl.c
-    src/project/decompproject.cpp
-    src/project/decompproject.h
+    src/project/banklease.cpp
+    src/project/banklease.h
     src/project/projectidentity.cpp
     src/project/projectidentity.h
-    src/project/songregistry.cpp
-    src/project/songregistry.h
-    src/project/songsmk.cpp
-    src/project/songsmk.h
-    src/project/swift_project_service.cpp
-    src/project/swift_project_service.h
-    src/project/samplereg.cpp
-    src/project/samplereg.h
-    src/project/sidecar.cpp
-    src/project/sidecar.h
-    src/project/voicegroupprojectcontext.cpp
-    src/project/voicegroupprojectcontext.h
-    src/project/voicegroupsource.cpp
-    src/project/voicegroupsource.h
 )
 
 qt_add_resources(porydaw_app "swift_roll_qml"

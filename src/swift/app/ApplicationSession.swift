@@ -1,6 +1,5 @@
 import Foundation
 import PorydawCore
-import PorydawProjectService
 import QtBridge
 
 /// The application behind the mounted surface: the project service, the one

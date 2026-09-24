@@ -1,6 +1,8 @@
 Assertion correspondence: midi/tst_midiroundtrip.cpp
 
 Reference revision: f7a01dba0d8595d9fc4070f1767d69d8d9ed76a8
+Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/midi/tst_midiroundtrip.cpp
 Original SHA-256: 5569d902b961eac8d872144d27ded4a9fc75c4609d2bcb4a5052f3f8274fa66f
 Swift counterpart: src/checks/midi/MidiChecks.swift

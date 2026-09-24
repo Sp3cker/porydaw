@@ -3,50 +3,79 @@ Assertion correspondence: voicegroupsave/savecore.cpp
 Reference revision: c1f165eb1aa49af49c72a3e4f15cf6d9f23b6735
 Original: src/checks/voicegroupsave/savecore.cpp
 Original SHA-256: 4500ba70725cc3bc1572c54206dbac778fd0d9020dad00a1e4fcbe23f5dccd87
-Swift counterpart: none identified
+Swift counterpart: src/checks/projectstore/SaveCoreChecks.swift
+Shared helper: none; saveCoreBankRoundTrip and saveCoreSourceSaveAndPreview are file-private in the Swift counterpart.
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below (81 sites). Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
+original macro/failure site appears below (81 sites). Source context preserves
+setup, rows, loops, and guards between assertions verbatim. S identifiers
+identify exact Swift predicates in the counterpart file, listed under Swift
+assertion predicates after the inventory.
 MATCHED means a corresponding Swift predicate was identified and executed;
-PARTIAL means a related check exists but differs in a stated way;
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of a converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-No Swift counterpart was identified for this file, so every site below is GAP:
-no equivalent Swift assertion is established, and each original predicate and
-its setup remain an open obligation. None of these labels authorizes deletion
+PARTIAL means a related check exists but differs in a stated way; NATIVE
+identifies retained native-window/rendering or native setup obligations; GAP
+identifies an original predicate without a replacement assertion. Unsure cases
+are recorded as GAP, never PARTIAL, and none of these labels authorizes deletion
 or claims whole-case equivalence.
+Task 18 ports this ledger's store-API half only. A079 is MATCHED: the Swift
+predicate asserts a freshly loaded store bank is clean, the same observable the
+original selectedBankView()->dirty guard established under
+cleanSaveEmitsNoReceipt. A051/A076 are PARTIAL: their Swift predicates keep the
+bank-byte oracles (saved voicegroup bytes differ from, then return to, the
+original bytes) while the original stimulus also saves and undoes
+SongDocument/MIDI through MainWindow. The remaining 78 sites are
+widget/SongDocument/Qt app-level behavior owned by the Swift session lane
+src/checks/workspace/session_*.swift, not the store API.
 
 Verification
-Command: deno task verify --filter voicegroup-save --verbose
-Result: pending integrated run.
-The "voicegroup-save" filter selects the retained native harness; it provides
-no Swift parity evidence.
+Command: deno task verify --filter projectstore-checks --verbose
+Result: PASS - observed for this tree (both ported suites ran with no failures),
+with deno task verify --filter projectstore-checks-catalog-absent --verbose also
+PASS. This bookkeeping pass re-ran only deno task proof (structure and tallies);
+execution evidence is that observed run, not a re-run here.
 
 Execution ownership
-The retained native harness owns this file. runVoicegroupSaveCheck in
-src/checks/voicegroupsave/fixture.cpp constructs VoicegroupSaveTest and qExecs
-it under the "voicegroup-save" application id; init()/cleanup() bracket every
-test method. failedRebindRetainsBinding, catalogOutageRetainsLastValid, releaseEditDirtiesOnlyBank (plus its _data row factory), undoShortcutRestoresWithoutWrite, unifiedSavePersistsSongAndBank, queuedSaveSnapshotPreservesNewerEdit, undoSaveRoundTripsBankBytes, and cleanSaveEmitsNoReceipt execute the checks inventoried below.
-Shared per-test state (m_window, m_document, m_tab, m_browser, m_dsSlot,
-m_originalVoice, m_homeId/m_homeArg, voicegroup/MIDI baselines, save receipts)
-is built by VoicegroupSaveTest::openSong with VoicegroupBrowserDriver and the
-song/project fixtures declared in src/checks/voicegroupsave/tst_voicegroupsave.h.
-No Swift entry point executes these checks; there are no S entries and no
-shared-helper expects for this file.
+The historical C++ owner is runVoicegroupSaveCheck in
+src/checks/voicegroupsave/fixture.cpp, which constructs VoicegroupSaveTest and
+qExecs it under the "voicegroup-save" application id; init()/cleanup() bracket
+every test method and failedRebindRetainsBinding, catalogOutageRetainsLastValid,
+releaseEditDirtiesOnlyBank (plus its _data row factory),
+undoShortcutRestoresWithoutWrite, unifiedSavePersistsSongAndBank,
+queuedSaveSnapshotPreservesNewerEdit, undoSaveRoundTripsBankBytes and
+cleanSaveEmitsNoReceipt are the cases inventoried below. Shared per-test state
+(m_window, m_document, m_tab, m_browser, m_dsSlot, m_originalVoice,
+m_homeId/m_homeArg, voicegroup/MIDI baselines, save receipts) is built by
+VoicegroupSaveTest::openSong with VoicegroupBrowserDriver and the song/project
+fixtures declared in src/checks/voicegroupsave/tst_voicegroupsave.h. That
+harness is a MainWindow/SongDocument surface and is not the ported seam.
+The Swift entry point for the ported rows is
+src/checks/support/corecheck/CoreCheckSupport.swift :: pdc_suite_run case 19
+(PDC_SUITE_SAVECORE) and case 22 (PDC_SUITE_PROJECTSTORE_CHECKS), both calling
+runSaveCoreSuite; src/checks/support/corecheck/tst_swiftcore.cpp ::
+SwiftCoreTest::saveCore/projectStoreChecks dispatch them, and checkcatalog.cpp ::
+projectstore-save and projectstore-checks register the harnesses with
+fixtureRootKind DecompProject. runSaveCoreSuite calls saveCoreBankRoundTrip (a
+temporary root with sound/voicegroups/savecheck.inc loaded by
+VoicegroupStore(projectRoot:) under _savecheck, then a release edit, a save, a
+reversal and a second save) and saveCoreSourceSaveAndPreview (VoicegroupSource
+preview/shadow rows that do not pair with this ledger); A079/A051/A076 evaluate
+inside saveCoreBankRoundTrip.
 
 Fixture, sequence and row constraints
 releaseEditDirtiesOnlyBank_data publishes three rows (adjacent, lower-bound, upper-bound) that reuse every site of releaseEditDirtiesOnlyBank with the release resolved from the row. No other data rows or loops expand these sites. The queued-save sequence stages a stale snapshot, posts a queued heartbeat turn, adds a newer note, and retries; the catalog-outage sequence hides and restores the fixture sound directory around a catalog refresh; undo chains re-dirty past save points exactly as sequenced below.
 Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
+The ported rows execute through VoicegroupStore/VoicegroupSource only: the
+MainWindow save/undo path (QAction shortcut dispatch, m_document->isDirty,
+save receipts, catalog-outage handling) has no ingress in this lane and is
+exercised, if at all, by the workspace session suite.
 
 Original assertion inventory and source sequence
 
 A001 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:50
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 #include "checks/voicegroupsave/tst_voicegroupsave.h"
 
@@ -103,7 +132,7 @@ QVERIFY(selector)
 
 A002 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:54
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -115,7 +144,7 @@ QVERIFY(QMetaObject::invokeMethod(selector, "activated", Qt::DirectConnection, Q
 
 A003 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:55
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -127,7 +156,7 @@ QVERIFY2(settle([this, &missingArg] {
 
 A004 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:59
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -136,7 +165,7 @@ QVERIFY(m_window->statusBar()->currentMessage().contains(missingArg))
 
 A005 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:60
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -145,7 +174,7 @@ QVERIFY(m_tab->voicegroupId() && *m_tab->voicegroupId() == *m_homeId)
 
 A006 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:61
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -154,7 +183,7 @@ QCOMPARE(m_tab->voicegroupLease().get(), retainedLease)
 
 A007 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:62
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -163,7 +192,7 @@ QVERIFY(!m_browser->isLoading())
 
 A008 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:63
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -172,7 +201,7 @@ QVERIFY(selector->isEnabled())
 
 A009 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:64
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -181,7 +210,7 @@ QVERIFY(m_browser->releaseSpinBox())
 
 A010 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:65
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -190,7 +219,7 @@ QVERIFY(m_browser->releaseSpinBox()->isEnabled())
 
 A011 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:66
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -199,7 +228,7 @@ QCOMPARE(m_browser->slotRowText(m_dsSlot), retainedRow)
 
 A012 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:67
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -208,7 +237,7 @@ QCOMPARE(m_browser->browserMinimumSizeHint(), retainedMinimum)
 
 A013 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:68
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -217,7 +246,7 @@ QCOMPARE(m_browser->dockGeometry(), retainedGeometry)
 
 A014 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:71
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -229,7 +258,7 @@ QVERIFY2(waitForVoicegroup(m_homeArg, *m_homeId),
 
 A015 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:73
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -238,7 +267,7 @@ QVERIFY(!m_document->isDirty())
 
 A016 | VoicegroupSaveTest::catalogOutageRetainsLastValid | src/checks/voicegroupsave/savecore.cpp:81
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 }
@@ -255,7 +284,7 @@ QVERIFY2(project.rename(QStringLiteral("sound"), backup),
 
 A017 | VoicegroupSaveTest::catalogOutageRetainsLastValid | src/checks/voicegroupsave/savecore.cpp:94
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     struct Restore final {
@@ -279,7 +308,7 @@ QVERIFY2(settle([this] {
 
 A018 | VoicegroupSaveTest::catalogOutageRetainsLastValid | src/checks/voicegroupsave/savecore.cpp:99
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -288,7 +317,7 @@ QCOMPARE(m_window->m_workspace->projectState().catalog.groupArgs, catalogBefore)
 
 A019 | VoicegroupSaveTest::catalogOutageRetainsLastValid | src/checks/voicegroupsave/savecore.cpp:100
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -297,7 +326,7 @@ QVERIFY(m_tab->voicegroupId() && *m_tab->voicegroupId() == *m_homeId)
 
 A020 | VoicegroupSaveTest::catalogOutageRetainsLastValid | src/checks/voicegroupsave/savecore.cpp:101
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -306,7 +335,7 @@ QVERIFY(!m_browser->isLoading())
 
 A021 | VoicegroupSaveTest::catalogOutageRetainsLastValid | src/checks/voicegroupsave/savecore.cpp:102
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -315,7 +344,7 @@ QVERIFY(m_browser->voicegroupSelector() && m_browser->voicegroupSelector()->isEn
 
 A022 | VoicegroupSaveTest::catalogOutageRetainsLastValid | src/checks/voicegroupsave/savecore.cpp:103
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -324,7 +353,7 @@ QVERIFY(m_browser->releaseSpinBox() && m_browser->releaseSpinBox()->isEnabled())
 
 A023 | VoicegroupSaveTest::catalogOutageRetainsLastValid | src/checks/voicegroupsave/savecore.cpp:105
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -335,7 +364,7 @@ QVERIFY2(project.rename(backup, QStringLiteral("sound")),
 
 A024 | VoicegroupSaveTest::catalogOutageRetainsLastValid | src/checks/voicegroupsave/savecore.cpp:107
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -344,7 +373,7 @@ QVERIFY2(refreshCatalog(), "catalog refresh did not settle after sound recovery"
 
 A025 | VoicegroupSaveTest::catalogOutageRetainsLastValid | src/checks/voicegroupsave/savecore.cpp:108
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -353,7 +382,7 @@ QCOMPARE(m_window->m_workspace->projectState().catalog.groupArgs, catalogBefore)
 
 A026 | VoicegroupSaveTest::catalogOutageRetainsLastValid | src/checks/voicegroupsave/savecore.cpp:109
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -362,7 +391,7 @@ QVERIFY(!m_browser->isLoading())
 
 A027 | VoicegroupSaveTest::releaseEditDirtiesOnlyBank | src/checks/voicegroupsave/savecore.cpp:124
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 }
@@ -386,7 +415,7 @@ QVERIFY2(release != m_originalVoice.release,
 
 A028 | VoicegroupSaveTest::releaseEditDirtiesOnlyBank | src/checks/voicegroupsave/savecore.cpp:129
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -398,7 +427,7 @@ QVERIFY(spin)
 
 A029 | VoicegroupSaveTest::releaseEditDirtiesOnlyBank | src/checks/voicegroupsave/savecore.cpp:131
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     spin->setValue(release);
@@ -409,7 +438,7 @@ QVERIFY2(waitForBankRelease(m_dsSlot, release, true),
 
 A030 | VoicegroupSaveTest::releaseEditDirtiesOnlyBank | src/checks/voicegroupsave/savecore.cpp:133
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -418,7 +447,7 @@ QVERIFY(!m_document->isDirty())
 
 A031 | VoicegroupSaveTest::releaseEditDirtiesOnlyBank | src/checks/voicegroupsave/savecore.cpp:134
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -427,7 +456,7 @@ QVERIFY(!m_window->isWindowModified())
 
 A032 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:143
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 }
@@ -444,7 +473,7 @@ QVERIFY(spin)
 
 A033 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:144
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -453,7 +482,7 @@ QVERIFY(field)
 
 A034 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:146
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     spin->setValue(edited);
@@ -463,7 +492,7 @@ QVERIFY2(waitForBankRelease(m_dsSlot, edited, true), "setup release edit did not
 
 A035 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:149
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -474,7 +503,7 @@ QVERIFY(undoAction)
 
 A036 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:150
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -483,7 +512,7 @@ QCOMPARE(undoAction->shortcutContext(), Qt::WindowShortcut)
 
 A037 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:151
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -492,7 +521,7 @@ QVERIFY(!undoAction->shortcuts().isEmpty())
 
 A038 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:153
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     QSignalSpy triggered(undoAction, &QAction::triggered);
@@ -502,7 +531,7 @@ QVERIFY(triggered.isValid())
 
 A039 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:162
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -519,7 +548,7 @@ QVERIFY(target && (target == spin || spin->isAncestorOf(target)))
 
 A040 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:168
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -533,7 +562,7 @@ QVERIFY(!overrideEvent.isAccepted())
 
 A041 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:173
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     events::sendKey(*target, QEvent::KeyPress, undoKey.key(), undoKey.keyboardModifiers(),
@@ -546,7 +575,7 @@ QCOMPARE(triggered.count(), 1)
 
 A042 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:174
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -556,7 +585,7 @@ QVERIFY2(waitForBankRelease(m_dsSlot, m_originalVoice.release, false),
 
 A043 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:176
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -565,7 +594,7 @@ QVERIFY(!m_document->isDirty())
 
 A044 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:177
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -574,7 +603,7 @@ QVERIFY(!m_window->isWindowModified())
 
 A045 | VoicegroupSaveTest::undoShortcutRestoresWithoutWrite | src/checks/voicegroupsave/savecore.cpp:178
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -583,7 +612,7 @@ QCOMPARE(readFileBytes(m_voicegroupPath), m_voicegroupBytes)
 
 A046 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:185
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 }
@@ -598,7 +627,7 @@ QVERIFY(m_browser->releaseSpinBox())
 
 A047 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:187
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     m_browser->releaseSpinBox()->setValue(edited);
@@ -608,7 +637,7 @@ QVERIFY2(waitForBankRelease(m_dsSlot, edited, true), "voice edit did not settle 
 
 A048 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:191
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -620,7 +649,7 @@ QVERIFY(m_window->isWindowModified())
 
 A049 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:193
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     const int receiptsBefore = m_savedReceipts;
@@ -630,7 +659,7 @@ QVERIFY2(saveSelectedSong(), "unified save had no dirty state to submit")
 
 A050 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:194
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -638,8 +667,8 @@ Original expression:
 QVERIFY2(waitForCleanSave(receiptsBefore), "unified save did not publish a clean receipt")
 
 A051 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:195
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S002 (src/checks/projectstore/SaveCoreChecks.swift saveCoreBankRoundTrip) asserts the bank-only half of unifiedSavePersistsSongAndBank: after the release edit and save the voicegroup file bytes differ from the original m_voicegroupBytes capture. unproved: the original stimulus also saves the SongDocument and writes MIDI through MainWindow (the paired readFileBytes(m_document->midPath()) obligation is A052, which keeps GAP), and no Swift predicate in this lane loads or saves the SongDocument/MIDI.
 Source context since previous assertion:
 ;
 
@@ -648,7 +677,7 @@ QCOMPARE(readFileBytes(m_voicegroupPath) == m_voicegroupBytes, false)
 
 A052 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:196
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -657,7 +686,7 @@ QCOMPARE(readFileBytes(m_document->midPath()) == m_midiBytes, false)
 
 A053 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:203
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 }
@@ -672,7 +701,7 @@ QVERIFY(m_browser->releaseSpinBox())
 
 A054 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:205
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     m_browser->releaseSpinBox()->setValue(edited);
@@ -682,7 +711,7 @@ QVERIFY2(waitForBankRelease(m_dsSlot, edited, true), "setup voice edit did not s
 
 A055 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:224
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -709,7 +738,7 @@ QVERIFY2(saveSelectedSong(), "stale snapshot save was not submitted")
 
 A056 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:227
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     m_document->addNote(m_track, newerTick, 76, 24, 89);
@@ -720,7 +749,7 @@ QTRY_VERIFY_WITH_TIMEOUT(turn.heartbeat && m_savedReceipts > receiptsBefore, 500
 
 A057 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:228
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -729,7 +758,7 @@ QVERIFY(!turn.completedInline)
 
 A058 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:229
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -738,7 +767,7 @@ QCOMPARE(readFileBytes(m_document->midPath()), staleMidi)
 
 A059 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:230
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -747,7 +776,7 @@ QVERIFY(m_document->isDirty())
 
 A060 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:233
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -758,7 +787,7 @@ QVERIFY2(saveSelectedSong(), "newer-state retry had no dirty state")
 
 A061 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:234
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -767,7 +796,7 @@ QVERIFY2(waitForCleanSave(retryReceipts), "newer-state retry did not clean the s
 
 A062 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:235
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -776,7 +805,7 @@ QCOMPARE(readFileBytes(m_document->midPath()), newerMidi)
 
 A063 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:238
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -787,7 +816,7 @@ QVERIFY2(settle([this] { return m_document->isDirty(); }), "newer probe undo did
 
 A064 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:240
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     requestUndo();
@@ -801,7 +830,7 @@ QVERIFY2(settle([this] {
 
 A065 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:247
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     VoicegroupSource fresh;
@@ -813,7 +842,7 @@ QVERIFY2(fresh.open(m_project->root(), m_document->cfg().voicegroupArg, &error),
 
 A066 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:249
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -822,7 +851,7 @@ QVERIFY(fresh.voiceAt(m_dsSlot))
 
 A067 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:250
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -831,7 +860,7 @@ QCOMPARE(fresh.voiceAt(m_dsSlot)->release, edited)
 
 A068 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:257
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 }
@@ -846,7 +875,7 @@ QVERIFY(m_browser->releaseSpinBox())
 
 A069 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:259
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     m_browser->releaseSpinBox()->setValue(edited);
@@ -856,7 +885,7 @@ QVERIFY2(waitForBankRelease(m_dsSlot, edited, true), "voice edit did not settle"
 
 A070 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:262
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     m_document->addNote(m_track, appendTick(*m_document), 72, 24, 93);
@@ -867,7 +896,7 @@ QVERIFY(saveSelectedSong())
 
 A071 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:263
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -876,7 +905,7 @@ QVERIFY2(waitForCleanSave(firstSave), "initial save did not clean both resources
 
 A072 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:266
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -887,7 +916,7 @@ QVERIFY2(settle([this] { return m_document->isDirty(); }), "note undo did not ap
 
 A073 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:268
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     requestUndo();
@@ -901,7 +930,7 @@ QVERIFY2(settle([this] {
 
 A074 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:274
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     const int secondSave = m_savedReceipts;
@@ -911,7 +940,7 @@ QVERIFY(saveSelectedSong())
 
 A075 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:275
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -919,8 +948,8 @@ Original expression:
 QVERIFY2(waitForCleanSave(secondSave), "round-trip save did not clean both resources")
 
 A076 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:276
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S003 (src/checks/projectstore/SaveCoreChecks.swift saveCoreBankRoundTrip) asserts the bank-only half of undoSaveRoundTripsBankBytes: reversing the edit through the public store operation and saving again restores the original voicegroup bytes. unproved: the original stimulus also undoes the voice edit through the MainWindow undo shortcut and re-saves the SongDocument/MIDI with it.
 Source context since previous assertion:
 ;
 
@@ -929,7 +958,7 @@ QCOMPARE(readFileBytes(m_voicegroupPath), m_voicegroupBytes)
 
 A077 | VoicegroupSaveTest::cleanSaveEmitsNoReceipt | src/checks/voicegroupsave/savecore.cpp:282
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 }
@@ -943,7 +972,7 @@ QVERIFY(!m_document->isDirty())
 
 A078 | VoicegroupSaveTest::cleanSaveEmitsNoReceipt | src/checks/voicegroupsave/savecore.cpp:283
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -951,8 +980,8 @@ Original expression:
 QVERIFY(m_browser->selectedBankView())
 
 A079 | VoicegroupSaveTest::cleanSaveEmitsNoReceipt | src/checks/voicegroupsave/savecore.cpp:284
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S001 (src/checks/projectstore/SaveCoreChecks.swift saveCoreBankRoundTrip) asserts !initial.dirty for the bank loaded from the clean savecheck fixture, the same observable the original selectedBankView()->dirty guard established under cleanSaveEmitsNoReceipt.
 Source context since previous assertion:
 ;
 
@@ -961,7 +990,7 @@ QVERIFY(!m_browser->selectedBankView()->dirty)
 
 A080 | VoicegroupSaveTest::cleanSaveEmitsNoReceipt | src/checks/voicegroupsave/savecore.cpp:285
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
 
@@ -970,7 +999,7 @@ QVERIFY(!saveSelectedSong())
 
 A081 | VoicegroupSaveTest::cleanSaveEmitsNoReceipt | src/checks/voicegroupsave/savecore.cpp:287
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -985,15 +1014,31 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-No Swift counterpart identified for this file: no same-dir savecore.swift
-exists and no Swift check covers the voicegroup browser/save suite, so no
-report.expect*/expectEqual predicates pair with these sites. There are no S
-entries and no shared-helper expects for this file.
+Three sites pair with Swift predicates; each entry gives the ledger check name,
+the Swift function, the counterpart path and the line of the call, followed by
+the predicate expression verbatim. The other 78 sites have no paired predicate.
+
+S001 | saveCoreBankRoundTrip | src/checks/projectstore/SaveCoreChecks.swift
+Anchor: message "A079: initially selected bank is clean"
+    report.expect(!initial.dirty, cppID: "savecore/A079",
+                  message: "A079: initially selected bank is clean")
+
+S002 | saveCoreBankRoundTrip | src/checks/projectstore/SaveCoreChecks.swift
+Anchor: message "A051: partial — bank-only save changes its on-disk voicegroup bytes"
+    report.expectEqual(true, try Data(contentsOf: path) != original,
+                       cppID: "savecore/A051",
+                       what: "A051: partial — bank-only save changes its on-disk voicegroup bytes")
+
+S003 | saveCoreBankRoundTrip | src/checks/projectstore/SaveCoreChecks.swift
+Anchor: message "A076: partial — bank-only reversal and save restore the original voicegroup bytes"
+    report.expectEqual(original, try Data(contentsOf: path),
+                       cppID: "savecore/A076",
+                       what: "A076: partial — bank-only reversal and save restore the original voicegroup bytes")
 
 Related Swift source scope
-No file src/checks/voicegroupsave/savecore.swift exists. A repo-wide search
-for Swift voicegroup-browser coverage finds only project-io voicegroup
-references in the workspace session suite (dispatched by
-src/checks/workspace/SessionChecks.swift and implemented in sibling scenario
-files), which exercise project open/save plumbing,
-not the browser/editor/picker/save flows inventoried here.
+The counterpart file is src/checks/projectstore/SaveCoreChecks.swift (Task 18,
+suite 19/22). The remaining 78 sites stay unpaired: no check under
+src/checks/projectstore/ opens a MainWindow, song document, voicegroup browser
+or save receipt. The workspace session suite (src/checks/workspace/
+SessionChecks.swift with session_io/session_save/bank_*.swift) covers project
+open and save plumbing, not the widget-level save/undo flows inventoried here.

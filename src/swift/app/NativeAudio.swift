@@ -3,7 +3,6 @@ import PorydawCore
 import PorydawPlayback
 import PorydawPlaybackNative
 import PorydawAudioDeviceNative
-import PorydawProjectService
 
 public enum NativeAudioError: Error, Equatable {
     case initializationFailed(String)
@@ -155,13 +154,9 @@ public final class NativeAudio {
     /// Derive the stored-field address from the compiler, not a copied Swift tuple
     /// or an assumed C layout. The engine only reads this mutable library borrow.
     private static func borrowVoices(_ bank: NativeBankLease) throws -> UnsafeMutablePointer<ToneData>? {
-        let nativeLease = pd_bank_lease_native(bank.handle)
-        defer { withExtendedLifetime(nativeLease) {} }
-        guard let storage = nativeLease.pointee.__getUnsafe() else { return nil }
-        guard let offset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices) else {
+        guard MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices) != nil else {
             throw NativeAudioError.bindFailed
         }
-        return UnsafeMutableRawPointer(mutating: storage).advanced(by: offset)
-            .assumingMemoryBound(to: ToneData.self)
+        return bank.withVoices { $0 }
     }
 }

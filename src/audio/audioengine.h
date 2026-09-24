@@ -5,7 +5,7 @@
 #include "audio/swift_playback.h"
 #include "audio/timeline_handoff.h"
 #include "audio/trackactivitylevel.h"
-#include "project/voicegroupsource.h"
+#include "project/banklease.h"
 #include <QString>
 #include <algorithm>
 #include <array>

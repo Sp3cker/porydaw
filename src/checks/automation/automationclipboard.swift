@@ -1,7 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
-import PorydawProjectService
+import PorydawBankLease
 
 // Existing scenarios paired with automationclipboard.cpp.
 // Entry order remains in AutomationPageChecks.swift.

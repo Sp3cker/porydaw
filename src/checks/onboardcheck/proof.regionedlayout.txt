@@ -1,6 +1,8 @@
 Assertion correspondence: onboardcheck/regionedlayout.cpp
 
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/onboardcheck/regionedlayout.cpp
 Original SHA-256: a59d94a22f58702307844009f0f4f90f7179be69a1b51acafec4ff6e31344219
 Swift counterpart: none identified

@@ -148,6 +148,52 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
             runBankHistorySuite(boxedBank.report)
         }
     case 12:
+        runProjectIdentitySuite(report)
+    case 13:
+        runSongModelSuite(report)
+    case 14:
+        runMidiCfgSuite(report)
+    case 15:
+        runSongsMkSuite(report)
+    case 16:
+        runSongCatalogSuite(report)
+    case 17:
+        runSynthCatalogSuite(report)
+    case 18:
+        runVoicegroupValueSuite(report)
+    case 19:
+        runSaveCoreSuite(report)
+    case 20:
+        runVoicegroupEditingSuite(report)
+    case 21:
+        runVoicegroupCatalogAbsentSuite(report)
+    case 22:
+        runVoicegroupEditingSuite(report)
+        runSaveCoreSuite(report)
+    case 23:
+        runVoicegroupContextSuite(report)
+    case 24:
+        runVoicegroupBankLogicSuite(report)
+    case 25:
+        runProjectStoreActorSuite(report)
+    case 26:
+        runProjectStoreOpenSuite(report)
+    case 27:
+        runProjectStoreReadSuite(report)
+    case 28:
+        runProjectStoreLoadBankSuite(report)
+    case 29:
+        runProjectStoreEditSuite(report)
+    case 30:
+        runProjectStoreSaveSuite(report)
+    case 31:
+        runBankLeasesSuite(report)
+    case 32:
+        let boxedExport = ReportBox(report)
+        MainActor.assumeIsolated {
+            runExportChecks(boxedExport.report)
+        }
+    case 33:
         let boxedTheme = ReportBox(report)
         MainActor.assumeIsolated {
             runThemeColorChecks(boxedTheme.report)

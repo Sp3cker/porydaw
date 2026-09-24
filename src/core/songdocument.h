@@ -17,7 +17,6 @@
 #include "core/timedefaults.h"
 #include "core/tracklimits.h"
 #include "core/xcmd.h"
-#include "project/decompproject.h"
 
 class MidiTimeline;
 
@@ -158,9 +157,9 @@ class SongDocument : public QObject
     int smfTrackFor(int engineTrack) const;
     uint8_t channelFor(int engineTrack) const;
 
-    // Tracks this song's music player allocates in-game (DecompProject::
-    // trackBudgetFor, set by the owner after load). MPlayStart never starts
-    // tracks at or beyond this index, so the UI warns that they can be
+    // Tracks this song's music player allocates in-game (set by the owner
+    // after load). MPlayStart never starts tracks at or beyond this index,
+    // so the UI warns that they can be
     // incompatible in-game. Editing and Porydaw playback are never gated on
     // it. Defaults to track_limits::kHardwareCapacity.
     int trackBudget() const { return m_trackBudget; }

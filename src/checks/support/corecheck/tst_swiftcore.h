@@ -24,6 +24,27 @@ class SwiftCoreTest final : public QObject
     void timeEdits();
     void projectSession();
     void bankHistory();
+    void projectIdentity();
+    void songModel();
+    void midiCfg();
+    void songsMk();
+    void songCatalog();
+    void synthCatalog();
+    void voicegroupValues();
+    void saveCore();
+    void voicegroupEditing();
+    void catalogAbsent();
+    void projectStoreChecks();
+    void voicegroupContext();
+    void voicegroupBankLogic();
+    void projectStoreActor();
+    void projectStoreOpen();
+    void projectStoreReads();
+    void projectStoreLoadBank();
+    void projectStoreEdit();
+    void projectStoreSave();
+    void bankLeases();
+    void exportChecks();
     void themeColor();
 };
 

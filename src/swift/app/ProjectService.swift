@@ -1,14 +1,15 @@
 import Foundation
 import PorydawCore
-import PorydawProjectService
+import PorydawProject
+import PorydawBankLease
 
 // MARK: - Public errors
 
-/// Typed failures for the native project service boundary.
+/// Typed failures for the project store boundary.
 public enum ProjectServiceError: Error, Equatable, Sendable {
     /// The service is closed; no further operations are accepted.
     case serviceClosed
-    /// A hard native failure with the worker's message.
+    /// A hard project-store failure with the underlying message.
     case operationFailed(String)
     /// The bank changed underneath the edit (stale expected value, occupied
     /// blank slot, out-of-range slot, spent materialization token). The
@@ -18,8 +19,7 @@ public enum ProjectServiceError: Error, Equatable, Sendable {
 
 // MARK: - Public bank vocabulary
 
-/// VgMacro ordinals, mirroring the declaration order in
-/// src/project/voicegroupsource.h. The adapter carries ordinals, not names.
+/// VgMacro ordinals, mirroring VgMacro's declaration in VoiceValues.swift.
 public enum BankVoiceMacro {
     public static let directSound: Int32 = 0
     public static let directSoundNoResample: Int32 = 1
@@ -36,8 +36,7 @@ public enum BankVoiceMacro {
     public static let keysplitAll: Int32 = 12
 }
 
-/// VgLineKind ordinals, mirroring the declaration order in
-/// src/project/voicegroupsource.h.
+/// VgLineKind ordinals, mirroring VoiceValues.swift.
 public enum BankSlotKind {
     public static let none: Int32 = 0
     public static let other: Int32 = 1
@@ -147,29 +146,39 @@ public struct BankSlotView: Equatable, Sendable {
 
 // MARK: - Owned bank lease
 
-/// Swift ownership wrapper over one opaque native bank handle. ARC shares the
-/// wrapper; deinit releases the handle on whatever thread drops the last
-/// reference (the release is thread-safe). Applied edits mint a fresh lease;
+/// Retains one actor-owned bank lease. Applied edits mint a fresh lease;
 /// the superseded wrapper keeps its own bank alive, so old views stay valid.
-public final class NativeBankLease: @unchecked Sendable {
-    let handle: OpaquePointer
+public final class NativeBankLease: Sendable {
+    let handle: ProjectBankLease
     /// Voicegroup identity, copied from the published view for save requests.
     public let sourcePath: String
     public let sectionLabel: String
 
-    init(handle: OpaquePointer, sourcePath: String, sectionLabel: String) {
+    fileprivate init(handle: ProjectBankLease) {
         self.handle = handle
-        self.sourcePath = sourcePath
-        self.sectionLabel = sectionLabel
-    }
-
-    deinit {
-        pd_bank_lease_release(handle)
+        sourcePath = handle.id.sourceRelativePath
+        sectionLabel = handle.sectionLabel
     }
 
     /// Identity of the underlying native bank, for reuse/validity checks.
-    public var bankToken: UInt {
-        UInt(pd_bank_lease_bank_token(handle))
+    public var bankToken: UInt { handle.bankToken }
+
+    /// Borrows the native voice array while this lease keeps its bank alive.
+    /// The pointer must not be retained beyond the lease's lifetime.
+    /// - Parameter body: A synchronous operation on the borrowed voices.
+    /// - Returns: The operation's result.
+    /// - Throws: Any error thrown by `body`.
+    public func withVoices<T>(_ body: (UnsafeMutablePointer<ToneData>?) throws -> T) rethrows -> T {
+        let voices = handle.withNativeBank { box -> UnsafeMutablePointer<ToneData>? in
+            let nativeLease = pd_bank_lease_native(box)
+            guard let storage = nativeLease.pointee.__getUnsafe(),
+                  let offset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices) else {
+                return nil
+            }
+            return UnsafeMutableRawPointer(mutating: storage).advanced(by: offset)
+                .assumingMemoryBound(to: ToneData.self)
+        }
+        return try withExtendedLifetime(handle) { try body(voices) }
     }
 }
 
@@ -278,9 +287,6 @@ public struct SongRegistrationPlan: Equatable, Sendable {
     }
 }
 
-/// The removal plan behind the native Delete Song confirmation
-/// (DeletionPlanResult): what unregisterSong would edit plus the voicegroup
-/// that may be deleted with the song.
 public struct SongDeletionPlan: Equatable, Sendable {
     /// The song's table index; -1 = no table entry, 0 = the engine's
     /// fallback song, which cannot be deleted.
@@ -294,9 +300,6 @@ public struct SongDeletionPlan: Equatable, Sendable {
     public var inLdScript: Bool
     public var inCharmap: Bool
     public var inDebugMenu: Bool
-    /// The voicegroup file deletable with the song (used only by it), as a
-    /// raw name; nil when none applies. Pass it back to deleteSong to
-    /// delete it too — the worker re-verifies it is still unused.
     public var deletableVoicegroupName: String?
     /// The display form of deletableVoicegroupName.
     public var deletableVoicegroupDisplay: String?
@@ -318,141 +321,155 @@ public struct SongDeletionPlan: Equatable, Sendable {
 
 // MARK: - Project service
 
-/// Async Swift front over the serial native worker. The actor serializes bank
+/// Async Swift front over the project-store actor. The actor owns bank
 /// transitions; document history never blocks on it.
 public actor ProjectService {
-    nonisolated(unsafe) private var handle: OpaquePointer?
+    private var store: ProjectStore?
+    private var snapshot: ProjectSnapshot?
     private var closed = false
 
-    public init() {
-        handle = pd_service_create()
-    }
+    public init() {}
 
-    deinit {
-        if let handle {
-            pd_service_destroy(handle)
+    private func requireStore() throws -> ProjectStore {
+        guard !closed else { throw ProjectServiceError.serviceClosed }
+        guard let store else {
+            throw ProjectServiceError.operationFailed("Project is not open.")
         }
+        return store
     }
 
-    private func requireHandle() throws -> OpaquePointer {
-        guard let handle, !closed else { throw ProjectServiceError.serviceClosed }
-        return handle
-    }
-
-    /// Opens the project root on the worker.
+    /// Opens the project root in the project-store actor.
     public func open(root: String) async throws {
-        let handle = try requireHandle()
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            root.withCString { rootPtr in
-                let context = Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
-                pd_service_open(handle, rootPtr, context, openCompletion)
-            }
+        guard !closed else { throw ProjectServiceError.serviceClosed }
+        let candidate = ProjectStore(projectRoot: URL(filePath: root, directoryHint: .isDirectory))
+        do {
+            let opened = try await candidate.open()
+            guard !closed else { throw ProjectServiceError.serviceClosed }
+            store = candidate
+            snapshot = opened
+        } catch {
+            throw projectFailure(error)
         }
     }
-    /// Returns every playable song's listing — registered, partially
-    /// registered and unregistered strays alike — in project snapshot order.
-    /// This is the feed SongListPresenter consumes.
+
     public func songs() async throws -> [SongListing] {
-        let handle = try requireHandle()
-        return try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<[SongListing], Error>) in
-            let context = Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
-            pd_service_list_songs(handle, context, songListCompletion)
-        }
+        let store = try requireStore()
+        do {
+            let values = try await store.songs()
+            let statuses = try await store.registrationStatuses()
+            var result: [SongListing] = []
+            result.reserveCapacity(values.count)
+            for song in values where song.hasMid {
+                let gaps = statuses[song.label]?.missingFiles ?? []
+                result.append(SongListing(id: song.id, label: song.label, constant: song.constant,
+                                          player: song.player, midiPath: song.midPath ?? "",
+                                          trackBudget: snapshot?.trackBudgetFor(song: song) ?? 16,
+                                          hasMid: song.hasMid, hasCfg: song.hasCfg,
+                                          registered: song.registered, registrationGaps: gaps))
+            }
+            return result
+        } catch { throw projectFailure(error) }
     }
-    /// Returns the playable labels copied from the native project snapshot.
-    /// Playable means the .mid exists, so unregistered strays are included.
+
     public func songLabels() async throws -> [String] {
         try await songs().map(\.label)
     }
 
-    /// The read-only half of the native Register Song flow: resolves the
-    /// song's identity and computes the registration plan for the shell's
-    /// confirmation. Unknown labels throw.
     public func songRegistrationPlan(label: String) async throws -> SongRegistrationPlan {
-        let handle = try requireHandle()
-        return try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<SongRegistrationPlan, Error>) in
-            label.withCString { labelPtr in
-                let context = Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
-                pd_service_song_registration_plan(handle, labelPtr, context,
-                                                  registrationPlanCompletion)
+        let store = try requireStore()
+        do {
+            let song: ProjectSong
+            do { song = try await store.songMeta(label: label) }
+            catch ProjectStoreReadError.songNotFound {
+                throw ProjectServiceError.operationFailed("No song named \(label) in this project.")
             }
-        }
+            let constant = song.constant.isEmpty ? song.label.uppercased() : song.constant
+            let player = song.player.isEmpty ? "MUSIC_PLAYER_BGM" : song.player
+            let plan = try await store.registrationPlan(label: label, constant: constant,
+                                                        player: player)
+            let status = try await store.registrationStatus(label: label, constant: constant)
+            return SongRegistrationPlan(label: label, constant: constant, player: player,
+                                        songId: plan.songId, missingFiles: status.missingFiles)
+        } catch { throw projectFailure(error) }
     }
 
-    /// The confirmed half of the Register Song flow: writes the song into
-    /// every registration file with the plan's constant/player, then
-    /// refreshes the project snapshot. Returns the assigned song ID.
     public func registerSong(_ plan: SongRegistrationPlan) async throws -> Int {
-        let handle = try requireHandle()
-        return try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<Int, Error>) in
-            plan.label.withCString { labelPtr in
-                plan.constant.withCString { constantPtr in
-                    plan.player.withCString { playerPtr in
-                        let context =
-                            Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
-                        pd_service_song_register(handle, labelPtr, constantPtr, playerPtr,
-                                                 context, mutationCompletion)
-                    }
-                }
-            }
-        }
+        let store = try requireStore()
+        do {
+            let id = try await store.registerSong(label: plan.label, constant: plan.constant,
+                                                  player: plan.player)
+            snapshot = try await store.snapshot()
+            return id
+        } catch { throw projectFailure(error) }
     }
 
-    /// The read-only half of the native Delete Song flow: what unregistering
-    /// the song would edit and the voicegroup deletable with it, for the
-    /// shell's confirmation. Unknown labels throw.
     public func songDeletionPlan(label: String) async throws -> SongDeletionPlan {
-        let handle = try requireHandle()
-        return try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<SongDeletionPlan, Error>) in
-            label.withCString { labelPtr in
-                let context = Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
-                pd_service_song_deletion_plan(handle, labelPtr, context, deletionPlanCompletion)
+        let store = try requireStore()
+        do {
+            guard !label.isEmpty else {
+                throw ProjectServiceError.operationFailed("Invalid song label.")
             }
-        }
+            let song: ProjectSong
+            do { song = try await store.songMeta(label: label) }
+            catch ProjectStoreReadError.songNotFound {
+                throw ProjectServiceError.operationFailed("No song named \(label) in this project.")
+            }
+            let constant = song.constant.isEmpty ? song.label.uppercased() : song.constant
+            let plan = try await store.removalPlan(label: label, constant: constant)
+            let voicegroup = try await store.deletableVoicegroup(label: label)
+            return SongDeletionPlan(tableIndex: plan.tableIndex, tableCount: plan.tableCount,
+                                    lastEntry: plan.lastEntry, inSongsH: plan.inSongsH,
+                                    inLdScript: plan.inLdScript, inCharmap: plan.inCharmap,
+                                    inDebugMenu: plan.inDebugMenu,
+                                    deletableVoicegroupName: voicegroup,
+                                    deletableVoicegroupDisplay: voicegroup.map {
+                                        $0.hasPrefix("_") ? String($0.dropFirst()) : $0
+                                    })
+        } catch { throw projectFailure(error) }
     }
 
-    /// The confirmed half of the Delete Song flow: moves the .mid to
-    /// .porydaw/trash, removes the .s and midi.cfg flags, unregisters the
-    /// song, optionally deletes the plan's voicegroup, then refreshes the
-    /// project snapshot. Song ID 0 (the engine fallback) throws.
     public func deleteSong(label: String, voicegroupName: String? = nil) async throws {
-        let handle = try requireHandle()
-        _ = try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<Int, Error>) in
-            label.withCString { labelPtr in
-                (voicegroupName ?? "").withCString { voicegroupPtr in
-                    let context = Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
-                    pd_service_song_delete(handle, labelPtr, voicegroupPtr, context,
-                                           mutationCompletion)
-                }
-            }
-        }
+        let store = try requireStore()
+        do {
+            try await store.deleteSong(label: label, voicegroupName: voicegroupName)
+            snapshot = try await store.snapshot()
+        } catch { throw projectFailure(error) }
     }
 
-    /// The project's -G voicegroup arguments (the catalog's groupArgs),
-    /// sorted — the voice-list selector's choice feed.
     public func voicegroupArgs() async throws -> [String] {
-        let handle = try requireHandle()
-        return try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<[String], Error>) in
-            let context = Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
-            pd_service_voicegroup_args(handle, context, stringListCompletion)
-        }
+        let store = try requireStore()
+        do { return try await store.voicegroupArgs() }
+        catch { throw projectFailure(error) }
     }
-    /// Opens a playable song: raw MIDI bytes plus copied metadata and the
-    /// owned bank lease. Unknown labels and unreadable stages throw.
+
+    /// Opens a playable song: raw MIDI bytes, metadata and the owned bank lease.
+    /// Unknown labels and unreadable stages throw.
     public func openSong(label: String) async throws -> LoadedSong {
-        let handle = try requireHandle()
-        return try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<LoadedSong, Error>) in
-            label.withCString { labelPtr in
-                let context = Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
-                pd_service_open_song(handle, labelPtr, context, songCompletion)
+        let store = try requireStore()
+        do {
+            let song: ProjectSong
+            do {
+                song = try await store.songMeta(label: label)
+            } catch ProjectStoreReadError.songNotFound {
+                throw ProjectServiceError.operationFailed(
+                    label.isEmpty ? "Invalid song label." : "No playable song named \(label).")
             }
+            guard song.hasMid, let midiPath = song.midPath else {
+                throw ProjectServiceError.operationFailed("No playable song named \(label).")
+            }
+            let bytes = try await store.run { try ProjectFileStore.read(midiPath) }
+            let bank = try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument)
+            let lease = NativeBankLease(handle: bank)
+            return LoadedSong(
+                label: song.label, midiPath: midiPath, constant: song.constant,
+                player: song.player, trackBudget: snapshot?.trackBudgetFor(song: song) ?? 16,
+                hasMid: song.hasMid, hasCfg: song.hasCfg, registered: song.registered,
+                config: song.cfg, source: SongSource(label: song.label, midiPath: midiPath,
+                                                    hasConfig: song.hasCfg),
+                midiBytes: Array(bytes), bank: lease, bankSlots: copySlots(bank),
+                bankDirty: bank.dirty, bankLoadName: bank.loadName)
+        } catch {
+            throw projectFailure(error)
         }
     }
 
@@ -460,54 +477,31 @@ public actor ProjectService {
     /// failed stage throws and later stages never run; nothing here marks the
     /// document clean — the caller confirms via SongDocument.didSave.
     public func save(_ snapshot: SaveSnapshot, bank: NativeBankLease?) async throws -> SaveReceipt {
-        let handle = try requireHandle()
-        let config = snapshot.config
-        let flagCopies = config.rawFlags.map { strdup($0) }
-        defer { flagCopies.forEach { free($0) } }
-        let labelCopy = strdup(snapshot.destination.label)
-        defer { free(labelCopy) }
-        let midCopy = strdup(snapshot.destination.midiPath)
-        defer { free(midCopy) }
-        let voicegroupCopy = strdup(config.voicegroupArgument)
-        defer { free(voicegroupCopy) }
-        let bankSourceCopy = bank.flatMap { strdup($0.sourcePath) }
-        defer { if let bankSourceCopy { free(bankSourceCopy) } }
-        let bankSectionCopy = bank.flatMap { strdup($0.sectionLabel) }
-        defer { if let bankSectionCopy { free(bankSectionCopy) } }
-        return try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<SaveReceipt, Error>) in
-            snapshot.bytes.withUnsafeBufferPointer { midiBuffer in
-                flagCopies.withUnsafeBufferPointer { flagBuffer in
-                    var flagPointers = flagBuffer.map { UnsafePointer($0) }
-                    flagPointers.withUnsafeBufferPointer { flagPointerBuffer in
-                        var request = PdSaveRequest(
-                            label: labelCopy,
-                            midPath: midCopy,
-                            midiBytes: midiBuffer.baseAddress.map {
-                                UnsafeRawPointer($0).assumingMemoryBound(to: UInt8.self)
-                            },
-                            midiByteCount: snapshot.bytes.count,
-                            cfg: PdSongCfg(
-                                rawFlags: flagPointerBuffer.baseAddress,
-                                rawFlagCount: config.rawFlags.count,
-                                voicegroupArg: voicegroupCopy,
-                                masterVolume: Int32(config.masterVolume),
-                                reverb: Int32(config.reverb ?? -1),
-                                hasReverb: config.reverb != nil,
-                                priority: Int32(config.priority),
-                                exactGate: config.exactGate,
-                                extendedClocks: config.extendedClocks,
-                                noCompression: config.noCompression),
-                            flagsNeeded: snapshot.flagsNeeded,
-                            saveBank: bank != nil,
-                            bankSourcePath: bankSourceCopy.map { UnsafePointer($0) },
-                            bankSectionLabel: bankSectionCopy.map { UnsafePointer($0) })
-                        let context =
-                            Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
-                        pd_service_save(handle, &request, context, saveCompletion)
-                    }
+        let store = try requireStore()
+        do {
+            var refreshed: AppliedBankEdit?
+            if let bank {
+                guard let saved = try await store.saveVoicegroup(lease: bank.handle) else {
+                    throw ProjectServiceError.operationFailed(
+                        "Could not save voicegroup \(bank.sourcePath) [\(bank.sectionLabel)].")
                 }
+                refreshed = appliedBank(saved, token: nil)
             }
+            try await store.run {
+                try ProjectFileStore.writeAtomic(snapshot.destination.midiPath,
+                                                 data: Data(snapshot.bytes))
+            }
+            var flagsWritten = false
+            if snapshot.flagsNeeded {
+                let midiDir = URL(filePath: snapshot.destination.midiPath)
+                    .deletingLastPathComponent()
+                try await store.saveSongFlags(midiDir: midiDir, label: snapshot.destination.label,
+                                              config: snapshot.config)
+                flagsWritten = true
+            }
+            return SaveReceipt(flagsWritten: flagsWritten, bank: refreshed)
+        } catch {
+            throw projectFailure(error)
         }
     }
 
@@ -516,54 +510,155 @@ public actor ProjectService {
     /// value requires an exact match. Mismatches throw bankConflict.
     public func bankApply(lease: NativeBankLease, slot: Int,
                           value: BankVoice, expected: BankVoice?) async throws -> AppliedBankEdit {
-        let handle = try requireHandle()
-        return try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<AppliedBankEdit, Error>) in
-            withPdVoice(value) { valueCopy in
-                if let expected {
-                    withPdVoice(expected) { expectedCopy in
-                        var edit = PdVoiceEdit(slot: Int32(slot), value: valueCopy,
-                                               hasExpected: true, expected: expectedCopy)
-                        let context =
-                            Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
-                        pd_service_bank_apply(handle, lease.handle, &edit, context,
-                                              bankEditCompletion)
-                    }
-                } else {
-                    var edit = PdVoiceEdit(
-                        slot: Int32(slot), value: valueCopy, hasExpected: false,
-                        expected: PdVoiceValue(macro: 0, key: 0, pan: 0, symbol: nil,
-                                               keysplitTable: nil, sweep: 0, duty: 0, period: 0,
-                                               attack: 0, decay: 0, sustain: 0, release: 0))
-                    let context =
-                        Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
-                    pd_service_bank_apply(handle, lease.handle, &edit, context,
-                                          bankEditCompletion)
-                }
-            }
+        let store = try requireStore()
+        do {
+            let converted = try projectVoice(value)
+            let old = try expected.map(projectVoice)
+            let result = try await store.applyVoicegroupEdit(
+                lease: lease.handle,
+                operation: .set(SetVoicegroupSlot(slot: slot, value: converted, expected: old)))
+            return try bankEditResult(result)
+        } catch {
+            throw projectFailure(error)
         }
     }
 
     /// Reverts a blank-slot materialization via its single-shot token. Spent
     /// or unknown tokens throw bankConflict; the source bytes stay untouched.
     public func bankRevert(lease: NativeBankLease, token: UInt64) async throws -> AppliedBankEdit {
-        let handle = try requireHandle()
-        return try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<AppliedBankEdit, Error>) in
-            let context = Unmanaged.passRetained(ContinuationBox(continuation)).toOpaque()
-            pd_service_bank_revert(handle, lease.handle, token, context, bankEditCompletion)
+        let store = try requireStore()
+        do {
+            return try bankEditResult(
+                await store.revertBlankSlot(lease: lease.handle, materializationToken: token))
+        } catch {
+            throw projectFailure(error)
         }
     }
 
-    /// Idempotent. Drains outstanding work on the worker before releasing it;
-    /// owned leases outlive the service.
+    /// Idempotent. Owned leases outlive the service.
     public func close() async {
-        guard let handle else { return }
-        self.handle = nil
+        store = nil
+        snapshot = nil
         closed = true
-        // The raw C handle is a value; sever the actor-region link so the
-        // detached teardown closure is not inferred to race with self.
-        nonisolated(unsafe) let serviceHandle = handle
-        await Task.detached { pd_service_destroy(serviceHandle) }.value
+    }
+}
+
+// MARK: - Store value conversion
+
+private func projectFailure(_ error: any Error) -> ProjectServiceError {
+    if let error = error as? ProjectServiceError { return error }
+    if let error = error as? any LocalizedError, let message = error.errorDescription {
+        return .operationFailed(message)
+    }
+    return .operationFailed(error.localizedDescription)
+}
+
+private func projectVoice(_ voice: BankVoice) throws -> PorydawProject.VgVoice {
+    guard let macro = PorydawProject.VgMacro(rawValue: voice.macro) else {
+        throw ProjectServiceError.operationFailed("Voice macro ordinal is out of range.")
+    }
+    return PorydawProject.VgVoice(macro: macro, key: Int(voice.key), pan: Int(voice.pan),
+                   symbol: voice.symbol, keysplitTable: voice.keysplitTable,
+                   sweep: Int(voice.sweep), duty: Int(voice.duty), period: Int(voice.period),
+                   attack: Int(voice.attack), decay: Int(voice.decay),
+                   sustain: Int(voice.sustain), release: Int(voice.release))
+}
+
+private func copyVoice(_ voice: PorydawProject.VgVoice) -> BankVoice {
+    BankVoice(macro: voice.macro.rawValue, key: Int32(voice.key), pan: Int32(voice.pan),
+              symbol: voice.symbol, keysplitTable: voice.keysplitTable,
+              sweep: Int32(voice.sweep), duty: Int32(voice.duty), period: Int32(voice.period),
+              attack: Int32(voice.attack), decay: Int32(voice.decay),
+              sustain: Int32(voice.sustain), release: Int32(voice.release))
+}
+
+private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
+    lease.withNativeBank { box in
+        let nativeLease = pd_bank_lease_native(box)
+        let bank = nativeLease.pointee.__getUnsafe()
+        return lease.slotViews.enumerated().map { index, slot in
+            let voice = slot.voice.map(copyVoice)
+            let tone: BankTone? = bank.flatMap { storage in
+                guard voice == nil, slot.kind != .none, index < 128 else { return nil }
+                let loaded = withUnsafePointer(to: storage.pointee.voices) {
+                    $0.withMemoryRebound(to: ToneData.self, capacity: 128) { $0[index] }
+                }
+                let name = withUnsafePointer(to: storage.pointee.voiceNames) {
+                    $0.withMemoryRebound(to: CChar.self,
+                                         capacity: 128 * Int(VG_VOICE_NAME_LEN)) { names in
+                        let start = names.advanced(by: index * Int(VG_VOICE_NAME_LEN))
+                        let length = (0..<Int(VG_VOICE_NAME_LEN)).first(where: {
+                            start[$0] == 0
+                        }) ?? Int(VG_VOICE_NAME_LEN)
+                        let bytes = UnsafeRawPointer(start).assumingMemoryBound(to: UInt8.self)
+                        return String(decoding: UnsafeBufferPointer(start: bytes, count: length),
+                                      as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                }
+                let adsr = loaded.type == UInt8(VOICE_KEYSPLIT)
+                    || loaded.type == UInt8(VOICE_KEYSPLIT_ALL) ? nil
+                    : BankToneAdsr(attack: Int32(loaded.attack), decay: Int32(loaded.decay),
+                                   sustain: Int32(loaded.sustain), release: Int32(loaded.release))
+                let synth = loaded.type & 0xE7 == 0
+                    && loaded.wav?.pointee.size == 0 && loaded.wav?.pointee.data != nil
+                return BankTone(name: name, type: Int32(loaded.type), isSynth: synth, adsr: adsr)
+            }
+            let subvoices = bank.flatMap { storage -> [Int32]? in
+                guard index < 128 else { return nil }
+                return withUnsafePointer(to: storage.pointee.voices) {
+                    $0.withMemoryRebound(to: ToneData.self, capacity: 128) {
+                        copySubvoiceMacros($0[index])
+                    }
+                }
+            }
+            return BankSlotView(kind: slot.kind.rawValue, voice: voice, tone: tone,
+                                subvoiceMacros: subvoices)
+        }
+    }
+}
+
+/// Resolve split facts while the borrowed native bank is pinned.
+/// Published slots retain only the copied ordinals, never native pointers.
+private func copySubvoiceMacros(_ tone: ToneData) -> [Int32]? {
+    let split = tone.type & UInt8(VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL)
+    guard split != 0 else { return nil }
+    guard let group = tone.subGroup?.assumingMemoryBound(to: ToneData.self),
+          tone.type & UInt8(VOICE_KEYSPLIT) == 0 || tone.keySplitTable != nil else {
+        return Array(repeating: -1, count: 128)
+    }
+    return (0..<128).map { key in
+        let index: Int
+        if tone.type & UInt8(VOICE_KEYSPLIT_ALL) != 0 {
+            index = key
+        } else if let table = tone.keySplitTable {
+            index = Int(table[key])
+        } else {
+            return -1
+        }
+        guard index < Int(VOICEGROUP_SIZE) else { return -1 }
+        let type = group[index].type
+        guard type & UInt8(VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL) == 0 else { return -1 }
+        switch type & UInt8(VOICE_TYPE_CGB_MASK) {
+        case UInt8(VOICE_SQUARE_1): return BankVoiceMacro.square1
+        case UInt8(VOICE_SQUARE_2): return BankVoiceMacro.square2
+        case UInt8(VOICE_PROGRAMMABLE_WAVE): return BankVoiceMacro.programmableWave
+        case UInt8(VOICE_NOISE): return BankVoiceMacro.noise
+        default:
+            return type == UInt8(VOICE_DIRECTSOUND) || type == UInt8(VOICE_DIRECTSOUND_NO_RESAMPLE)
+                || type == UInt8(VOICE_DIRECTSOUND_ALT) ? BankVoiceMacro.directSound : -1
+        }
+    }
+}
+
+private func appliedBank(_ lease: ProjectBankLease, token: UInt64?) -> AppliedBankEdit {
+    AppliedBankEdit(lease: NativeBankLease(handle: lease), slots: copySlots(lease),
+                    dirty: lease.dirty, loadName: lease.loadName,
+                    materializationToken: token == 0 ? nil : token)
+}
+
+private func bankEditResult(_ result: ProjectBankEditOutcome) throws -> AppliedBankEdit {
+    switch result {
+    case let .applied(lease, token): appliedBank(lease, token: token)
+    case .conflict: throw ProjectServiceError.bankConflict
     }
 }

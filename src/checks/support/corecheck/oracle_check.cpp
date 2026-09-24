@@ -17,7 +17,6 @@
 #include "core/timedefaults.h"
 #include "core/tracklimits.h"
 #include "core/velocitymodel.h"
-#include "project/decompproject.h"
 
 namespace {
 

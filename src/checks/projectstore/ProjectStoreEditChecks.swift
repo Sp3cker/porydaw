@@ -1,0 +1,222 @@
+import Foundation
+import PorydawProject
+
+private enum EditFixtureError: Error {
+    case missingFixture
+}
+
+private func editFixture(_ body: (URL) throws -> Void) throws {
+    guard let root = CheckEnvironment.fixtureRoot,
+          let staged = CheckEnvironment.fixturePath("sound/voicegroups/fixture_rich.inc"),
+          FileManager.default.fileExists(atPath: staged) else {
+        throw EditFixtureError.missingFixture
+    }
+    let copy = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "projectstore-edit-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: copy) }
+    try FileManager.default.copyItem(at: URL(filePath: root), to: copy)
+    try body(copy)
+}
+
+private func editExpect(_ row: String, _ condition: Bool, _ report: CheckReport, _ detail: String) {
+    report.expect(condition, cppID: "projectstore-edit/\(row)", message: "\(row): \(detail)")
+}
+
+private func editFail(_ rows: [String], _ report: CheckReport, _ detail: String) {
+    for row in rows { report.fail("projectstore-edit/\(row)", detail) }
+}
+
+internal func runProjectStoreEditSuite(_ report: CheckReport) {
+    do {
+        try editFixture { root in
+            let store = ProjectStore(projectRoot: root)
+            let opened = awaitValue { try await store.open() }
+            guard case .success = opened else {
+                editFail(["E01", "E02", "E03", "E04", "E05", "E06", "E07", "E08", "E09"],
+                         report, "fixture project failed to open: \(String(describing: opened))")
+                return
+            }
+            let loaded = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
+            guard case .success(let first) = loaded,
+                  let original = first.slotViews.first?.voice else {
+                editFail(["E01", "E02", "E03", "E04", "E05", "E06", "E07", "E08", "E09"],
+                         report, "fixture slot 0 failed to load: \(String(describing: loaded))")
+                return
+            }
+
+            var changed = original
+            changed.key = original.key == 60 ? 61 : 60
+            let scalarEdit: VoicegroupEditOperation = .set(.init(slot: 0, value: changed, expected: original))
+            let setResult = awaitValue { try await store.applyVoicegroupEdit(lease: first, operation: scalarEdit) }
+            guard case .success(.applied(let edited, let scalarToken)) = setResult else {
+                editFail(["E01", "E02", "E03", "E04", "E05", "E06", "E07", "E08", "E09"],
+                         report, "fixture scalar edit failed: \(String(describing: setResult))")
+                return
+            }
+            editExpect("E01", edited.bankToken != first.bankToken && edited.dirty &&
+                       edited.slotViews[0].voice?.key == changed.key &&
+                       first.slotViews[0].voice == original && !first.dirty && scalarToken == nil,
+                       report, "scalar edit replaces the bank and leaves the original lease unchanged")
+
+            let stale = awaitValue { try await store.applyVoicegroupEdit(lease: edited, operation: scalarEdit) }
+            let afterStale = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
+            if case .success(.conflict(let id)) = stale,
+               case .success(let current) = afterStale {
+                editExpect("E02", id == edited.id && current.bankToken == edited.bankToken &&
+                           current.slotViews[0].voice == changed, report,
+                           "stale expected voice conflicts without changing the published bank")
+            } else {
+                editExpect("E02", false, report,
+                           "stale edit or subsequent reload failed: \(String(describing: stale))")
+            }
+
+            guard let blank = edited.slotViews.firstIndex(where: { $0.kind == .none }) else {
+                editFail(["E03", "E04", "E05", "E06", "E07", "E08", "E09"], report,
+                         "fixture contains no blank slot to materialize")
+                return
+            }
+            let blankVoice = VgVoice(macro: .square1, sustain: 15)
+            let insert = awaitValue {
+                try await store.applyVoicegroupEdit(
+                    lease: edited, operation: .set(.init(slot: blank, value: blankVoice, expected: nil)))
+            }
+            guard case .success(.applied(let materialized, let maybeToken)) = insert,
+                  let token = maybeToken else {
+                editFail(["E03", "E04", "E05", "E06", "E07", "E08", "E09"], report,
+                         "blank-slot insertion failed or omitted its token: \(String(describing: insert))")
+                return
+            }
+            editExpect("E03", materialized.bankToken != edited.bankToken && materialized.dirty &&
+                       materialized.slotViews[blank].kind == .editable &&
+                       materialized.slotViews[blank].voice == blankVoice &&
+                       edited.slotViews[blank].kind == .none, report,
+                       "blank slot \(blank) materializes with Square 1 sustain 15 and a token")
+
+            let reverted = awaitValue {
+                try await store.revertBlankSlot(lease: materialized, materializationToken: token)
+            }
+            guard case .success(.applied(let restored, let revertedToken)) = reverted else {
+                editFail(["E04", "E05", "E06", "E07", "E08", "E09"], report,
+                         "blank-slot revert failed: \(String(describing: reverted))")
+                return
+            }
+            editExpect("E04", restored.bankToken != materialized.bankToken &&
+                       restored.slotViews[blank].kind == .none &&
+                       restored.slotViews[blank].voice == nil &&
+                       materialized.slotViews[blank].voice == blankVoice && revertedToken == nil,
+                       report, "revert republishes the empty slot without minting a token")
+
+            let spent = awaitValue { try await store.revertBlankSlot(lease: restored, materializationToken: token) }
+            if case .success(.conflict(let id)) = spent {
+                editExpect("E05", id == restored.id, report, "spent token conflicts")
+            } else {
+                editExpect("E05", false, report, "spent token must conflict: \(String(describing: spent))")
+            }
+            let unknown = awaitValue {
+                try await store.revertBlankSlot(lease: restored, materializationToken: UInt64.max)
+            }
+            if case .success(.conflict(let id)) = unknown {
+                editExpect("E06", id == restored.id, report, "unknown token conflicts")
+            } else {
+                editExpect("E06", false, report, "unknown token must conflict: \(String(describing: unknown))")
+            }
+            let outside = awaitValue {
+                try await store.applyVoicegroupEdit(
+                    lease: restored, operation: .set(.init(slot: 128, value: blankVoice, expected: nil)))
+            }
+            if case .success(.conflict(let id)) = outside {
+                editExpect("E07", id == restored.id, report, "out-of-range slot conflicts")
+            } else {
+                editExpect("E07", false, report,
+                           "out-of-range slot must conflict: \(String(describing: outside))")
+            }
+
+            let previewed = awaitValue { try await store.preview(lease: restored) }
+            if case .success(let preview?) = previewed {
+                editExpect("E08", preview.id == restored.id && preview.bankToken != 0 &&
+                           preview.slotViews[blank].kind == .none, report,
+                           "preview returns an adopted bank with the requested source identity")
+            } else {
+                editExpect("E08", false, report, "preview failed: \(String(describing: previewed))")
+            }
+
+            do {
+                try editFixture { otherRoot in
+                    let otherStore = ProjectStore(projectRoot: otherRoot)
+                    let foreignStore = ProjectStore(projectRoot: root)
+                    let otherOpen = awaitValue { try await otherStore.open() }
+                    let foreignOpen = awaitValue { try await foreignStore.open() }
+                    let otherLoad = awaitValue { try await otherStore.loadBank(voicegroupArg: "_fixture_rich") }
+                    guard case .success = otherOpen, case .success = foreignOpen,
+                          case .success(let otherLease) = otherLoad else {
+                        editExpect("E09", false, report, "fresh or second project failed to open its bank")
+                        return
+                    }
+                    let attempted = awaitValue {
+                        try await foreignStore.applyVoicegroupEdit(lease: otherLease, operation: scalarEdit)
+                    }
+                    let afterAttempt = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
+                    if case .failure(let error as VoicegroupStoreError) = attempted,
+                       case .operationFailed(let message) = error,
+                       case .success(let current) = afterAttempt {
+                        editExpect("E09",
+                                   message == "Voicegroup is not loaded: \(otherLease.id.sourceRelativePath)" &&
+                                   current.bankToken == restored.bankToken &&
+                                   current.slotViews[0].voice == changed, report,
+                                   "foreign lease into an unloaded store throws without changing the original bank")
+                    } else {
+                        editExpect("E09", false, report,
+                                   "foreign edit or reload failed: \(String(describing: attempted))")
+                    }
+                }
+            } catch {
+                editExpect("E09", false, report, "cannot prepare second fixture copy: \(error)")
+            }
+
+            do {
+                try editFixture { expiryRoot in
+                    let expiryStore = ProjectStore(projectRoot: expiryRoot)
+                    guard case .success = awaitValue({ try await expiryStore.open() }),
+                          case .success(let base) = awaitValue({
+                              try await expiryStore.loadBank(voicegroupArg: "_fixture_rich")
+                          }),
+                          let blankSlot = base.slotViews.firstIndex(where: { $0.kind == .none }) else {
+                        editExpect("E10", false, report, "expiry fixture failed to open its bank")
+                        return
+                    }
+                    let blankValue = VgVoice(macro: .square1, sustain: 15)
+                    guard case .success(.applied(_, let maybeToken)) = awaitValue({
+                        try await expiryStore.applyVoicegroupEdit(
+                            lease: base,
+                            operation: .set(.init(slot: blankSlot, value: blankValue, expected: nil)))
+                    }), let liveToken = maybeToken else {
+                        editExpect("E10", false, report, "blank-slot insertion minted no token")
+                        return
+                    }
+                    try FileManager.default.setAttributes(
+                        [.modificationDate: Date(timeIntervalSinceNow: 3600)],
+                        ofItemAtPath: base.sourcePath)
+                    let reloaded = awaitValue {
+                        try await expiryStore.loadBank(voicegroupArg: "_fixture_rich")
+                    }
+                    let expired = awaitValue {
+                        try await expiryStore.revertBlankSlot(lease: base, materializationToken: liveToken)
+                    }
+                    if case .success(let fresh) = reloaded,
+                       case .success(.conflict(let id)) = expired {
+                        editExpect("E10", id == base.id && fresh.bankToken != base.bankToken, report,
+                                   "on-disk change reloads the bank and burns its minted tokens")
+                    } else {
+                        editExpect("E10", false, report,
+                                   "reload or expired-token revert misbehaved: \(String(describing: expired))")
+                    }
+                }
+            } catch {
+                editExpect("E10", false, report, "cannot prepare expiry fixture: \(error)")
+            }
+        }
+    } catch {
+        editFail(["E01", "E02", "E03", "E04", "E05", "E06", "E07", "E08", "E09"],
+                 report, "cannot prepare edit fixture: \(error)")
+    }
+}

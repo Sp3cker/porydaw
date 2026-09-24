@@ -1,10 +1,11 @@
 Assertion correspondence: voicegroup/voicegroupsourcecatalog.cpp
 
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/voicegroup/voicegroupsourcecatalog.cpp
 Original SHA-256: 19df14b6511fae332d2f8b74222a67f996abf3d2f7d7f3e5dd96c739d6950b53
 Swift counterpart: none identified
-Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -17,9 +18,23 @@ NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted Swift window. GAP identifies an
 original predicate without a replacement assertion. These VoicegroupSourceTest catalog cases prove ADSR default scans, synth catalog write/gate rules, single-colon symbol scans, and synth-descriptor loads through real and synthetic project trees. No Swift catalog coverage exists, so every site is GAP.
 
+Retirement
+Task 18 retires this ledger with the dead catalog surface (spec.md:78): zero of
+the sites below are ported into Swift, no Swift counterpart file exists, and no
+S entries pair with these sites. The retirement is recorded in
+src/checks/projectstore/VoicegroupCatalogAbsentChecks.swift, and the harness
+projectstore-checks-catalog-absent asserts it (voicegroupEditingRowIDs 90 rows,
+saveCoreRowIDs 1 row, and no ported check name deriving from
+voicegroupsourcecatalog/). Row dispositions below are unchanged by the
+retirement; the C++ suite has no registered harness (runVgCheck is defined in
+this file but is not listed in checkcatalog.cpp).
+
 Verification
-Command: deno task verify --filter vgbankcheck --verbose
-Result: pending integrated run.
+Command: deno task verify --filter projectstore-checks-catalog-absent --verbose
+Result: PASS - observed for this tree (the retirement assertion ran: 90 ported
+editing rows, 1 ported save-core row, and no ported check name deriving from
+voicegroupsourcecatalog/). This bookkeeping pass re-ran only deno task proof
+(structure); execution evidence is that observed run, not a re-run here.
 
 Execution and ownership
 C++ entry point runVgCheck (qExec name "voicegroup-source") drives VoicegroupSourceTest; the cases in this file use QTemporaryDir synthetic trees, voicegroup_test::copyProject fixtures, or the staged session (m_session) opened in init(). Shared C++ fixtures: checks/voicegroup/voicegrouptestfixture.h/.cpp (openSession, writeFile/readFile, copyProject) and checks/voicegroup/tst_voicegroupsource.h (class declaration). This file's cases are not on the vgbankcheck lane. No Swift entry point executes any paired check.

@@ -1,6 +1,8 @@
 Assertion correspondence: visual/chrome.cpp
 
 Reference revision: 4346c26abdcab317ccf97e178c959a82301081c9
+Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/visual/chrome.cpp
 Original SHA-256: 4d56d2d67f8f8c009ea37b7f36e0fb997930c3a110a7e1e3d06bf546a514d1f5
 Swift counterpart: none identified

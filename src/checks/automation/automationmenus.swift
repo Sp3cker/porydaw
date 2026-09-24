@@ -1,6 +1,5 @@
 import PorydawApp
 import PorydawCore
-import PorydawProjectService
 
 @MainActor
 func drawerAutomationOriginalClearMenus(_ report: CheckReport, suite: DocumentSession,

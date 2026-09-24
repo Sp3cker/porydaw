@@ -3,7 +3,6 @@ set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
 
 add_library(PorydawApp STATIC
     ProjectService.swift
-    ProjectServiceCallbacks.swift
     ServiceBankHistory.swift
     DocumentSession.swift
     DocumentWorkspace.swift
@@ -88,7 +87,7 @@ add_library(PorydawApp STATIC
     shell/ShellAppearance.swift
 )
 
-# Generated like the playback module map: the service header lives at the
+# Generated like the playback module map: the bank-lease header lives at the
 # repo's src/project, not beside this module map.
 configure_file(
     module.modulemap.in
@@ -151,4 +150,4 @@ target_compile_options(PorydawApp PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
 )
 
-target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawPlayback QtBridge Qt6::Gui)
+target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawPlayback PorydawProject QtBridge Qt6::Gui)

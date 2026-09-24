@@ -1,6 +1,8 @@
 Assertion correspondence: project/iomutations.cpp
 
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/project/iomutations.cpp
 Original SHA-256: 7e9bc82238223d083d9896a86accebbe1892abdf03e38dba935c4507537c35b8
 Swift counterpart: src/checks/workspace/SessionChecks.swift

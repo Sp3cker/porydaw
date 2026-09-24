@@ -2,8 +2,6 @@
 
 #include <QWidget>
 
-#include "project/decompproject.h"
-
 class QComboBox;
 class QLabel;
 class QLineEdit;

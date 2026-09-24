@@ -1,6 +1,5 @@
 import PorydawApp
 import PorydawCore
-import PorydawProjectService
 
 @MainActor
 func runClipboardSelectionChecks(_ report: CheckReport, suite: DocumentSession,

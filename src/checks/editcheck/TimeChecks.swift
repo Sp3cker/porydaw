@@ -2,7 +2,6 @@ import Foundation
 import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
-import PorydawProjectService
 
 @MainActor
 func runTimeEditsSuite(_ report: CheckReport) {

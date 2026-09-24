@@ -1,6 +1,6 @@
 import Foundation
 import PorydawApp
-import PorydawProjectService
+import PorydawBankLease
 import QtBridge
 
 /// Clipboard probe for the grid-input and clipboard shell lanes. It moves the

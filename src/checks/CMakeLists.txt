@@ -44,11 +44,6 @@ qt_add_executable(porydaw_checks
     support/checkstartup.h
     support/songfixture.cpp
     support/songfixture.h
-    voicegroup/tst_voicegroupbank.cpp
-    voicegroup/voicegrouptestfixture.cpp
-    voicegroup/voicegrouptestfixture.h
-    midi/tst_midiexport.cpp
-    midi/tst_midiexport.h
     ${PROJECT_SOURCE_DIR}/resources/fonts.qrc
 )
 set_target_properties(porydaw_checks PROPERTIES
@@ -187,6 +182,27 @@ if(APPLE)
         trackheaders/TrackHeadersChecks.swift
         trackheaders/TrackHeadersInputChecks.swift
         workspace/SessionChecks.swift
+        projectstore/ProjectIdentityChecks.swift
+        projectstore/SongModelChecks.swift
+        projectstore/MidiCfgChecks.swift
+        projectstore/SongsMkChecks.swift
+        projectstore/SongCatalogChecks.swift
+        projectstore/SynthCatalogChecks.swift
+        projectstore/VoicegroupValueChecks.swift
+        projectstore/SaveCoreChecks.swift
+        projectstore/VoicegroupEditingChecks.swift
+        projectstore/VoicegroupCatalogAbsentChecks.swift
+        projectstore/VoicegroupContextChecks.swift
+        projectstore/VoicegroupBankLogicChecks.swift
+        projectstore/ProjectStoreActorChecks.swift
+        projectstore/ProjectStoreCheckSupport.swift
+        projectstore/ProjectStoreOpenChecks.swift
+        projectstore/ProjectStoreReadChecks.swift
+        projectstore/ProjectStoreLoadBankChecks.swift
+        projectstore/ProjectStoreEditChecks.swift
+        projectstore/ProjectStoreSaveChecks.swift
+        projectstore/BankLeasesChecks.swift
+        projectstore/ExportChecks.swift
         workspace/session_support.swift
         workspace/session_fixtures.swift
         workspace/session_editor_semantics.swift
@@ -210,10 +226,11 @@ if(APPLE)
     target_compile_options(swift_core_check PRIVATE
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
     )
-    target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback PorydawApp)
+    target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback PorydawProject PorydawApp)
     target_link_libraries(porydaw_checks PRIVATE swift_core_check)
     target_sources(porydaw_checks PRIVATE
         support/corecheck/tst_swiftcore.cpp

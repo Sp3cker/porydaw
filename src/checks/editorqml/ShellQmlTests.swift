@@ -1,6 +1,6 @@
 import Foundation
 import PorydawApp
-import PorydawProjectService
+import PorydawBankLease
 import QtBridge
 import QtBridgeCpp
 

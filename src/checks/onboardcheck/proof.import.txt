@@ -1,6 +1,8 @@
 Assertion correspondence: onboardcheck/import.cpp
 
 Reference revision: f7a01dba0d8595d9fc4070f1767d69d8d9ed76a8
+Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/onboardcheck/import.cpp
 Original SHA-256: b0831014eeca2f2069d1bbf87af241322c7c51b605133d45381b76c72800ac48
 Swift counterpart: src/checks/editcheck/EventChecks.swift (importAnalysis/importTransforms, the onboardcheck import predicates executed by runMidiImportSuite)

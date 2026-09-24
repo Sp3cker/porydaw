@@ -1,36 +1,106 @@
 Assertion correspondence: voicegroup/tst_voicegroupbank.cpp
 
 Reference revision: 92f1a51fea5c7be17f2478271fd12633a6514225
+Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
 Original: src/checks/voicegroup/tst_voicegroupbank.cpp
 Original SHA-256: 478ab4b4f1233477838cc8a2367023c388d10032cd324d960677fa91593a75e4
-Swift counterpart: none identified
+Swift counterpart: src/checks/projectstore/BankLeasesChecks.swift
+Additional Swift counterpart: src/checks/projectstore/ProjectStoreSaveChecks.swift (write-failure row S04 only, for A089-A093)
+Shared helper: src/checks/projectstore/ProjectStoreCheckSupport.swift
+Shared SHA-256: 2bb40884c45fa62a7a88a6acfaf210e5766d3be4e58197b1759f8701e4e72612
+Shared helper: src/checks/support/corecheck/CoreCheckSupport.swift
+Shared SHA-256: e974d8ddfba8e2e21fc1aab0657cbe1e542b828d7dfe2c24908a25bb344f551d
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below. Source context preserves setup, rows,
-loops, and guards between assertions verbatim. S identifiers would identify exact
-Swift predicates; none exist for this file, so every site below is GAP.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted Swift window. GAP identifies an
-original predicate without a replacement assertion. VoicegroupBankTest exercises DecompProject bank leases, voicegroup edits, materialization tokens, and saves against a staged project copy; no presenter-level Swift check can establish these native project-model observations, and none has been written, so no site rises above GAP.
+loops, and guards between assertions verbatim. The original file was deleted in
+the S6 flip cutover; its ported successor is
+src/checks/projectstore/BankLeasesChecks.swift, which drives the S5 ProjectStore
+actor and the flipped ProjectService front end and reports every original case
+under cppID "vgbankcheck/VoicegroupBankTest::<case>". S identifiers identify
+exact Swift predicates in that counterpart, listed after the inventory.
+MATCHED identifies a Swift predicate that asserts the same observable under the
+same row and fixture. C++ API-shape conditions (optional has_value(),
+error-string emptiness, lease-pointer identity, the BlankSlotMaterialization
+record type) count as representation when the Swift value predicate establishes
+the same behavior.
+PARTIAL identifies a related Swift predicate with an explicit unproved part:
+harness guards whose Swift counterpart is a throwing fixture construction or a
+copied scratch root, SongName/VoicegroupId creation (no Swift ingress), the
+materialization record fields the store-level result does not publish, and the
+verified-dead failed-synth-definition half of the save case are recorded PARTIAL
+rather than MATCHED.
+GAP identifies an original predicate without a replacement assertion; the two
+re-dirty sites of the unported failed-synth-save stimulus stay GAP.
+Unsure between MATCHED and PARTIAL resolves to PARTIAL; bookkeeping must not
+overclaim. Totals: 72 MATCHED, 19 PARTIAL, 2 GAP, and no label claims
+whole-case equivalence.
 
 Verification
 Command: deno task verify --filter vgbankcheck --verbose
-Result: pending integrated run.
+Result: controller-observed 2026-09-24 for this tree — verify: 1/49 ok, no failures.
+Command: deno task verify --verbose
+Result: controller-observed 2026-09-24 for this tree — verify: 49/49 ok (full unfiltered gate).
+The vgbankcheck lane now dispatches swiftBank (checkcatalog.cpp:381) to the
+projectstore bankleases suite; the legacy C++ suite no longer exists, so this
+inventory is a historical record. This bookkeeping pass reused the
+controller-observed runs above and re-ran only deno task proof check (structure
+and tallies); it did not re-run a lane.
 
 Execution and ownership
-C++ entry point runVgBankCheck (qExec name "voicegroup-bank") drives VoicegroupBankTest against a ProjectFixture copy of the staged root; init() reloads the bank for song m_songLabel every case. Only this file's suite is reachable through the registered native lane vgbankcheck (song mus_gym per src/checks/checkcatalog.cpp). Shared C++ fixtures: checks/voicegroup/voicegrouptestfixture.h/.cpp (session, baseline snapshots, file helpers; no assertion sites of its own) and project/voicegroupsource.h. No Swift entry point executes any paired check.
+The historical C++ entry point runVgBankCheck (qExec name "voicegroup-bank")
+drove VoicegroupBankTest against a checks::ProjectFixture copy of the staged
+root through DecompProject; init() re-copied the fixture and reloaded the bank
+for song m_songLabel before every case, so the first thirteen sites belong to a
+per-case fixture, not to a suite-level setup. That source is recoverable from
+the Reference revision and SHA-256 above, never from HEAD. Shared C++ fixtures:
+checks/voicegroup/voicegrouptestfixture.h/.cpp and project/voicegroupsource.h,
+both deleted in the same cutover and carrying no assertion sites of their own.
+The Swift entry point is runBankLeasesSuite
+(src/checks/projectstore/BankLeasesChecks.swift), dispatched from
+src/checks/support/corecheck/CoreCheckSupport.swift case 31
+(PDC_SUITE_BANK_LEASES) by
+src/checks/support/corecheck/tst_swiftcore.cpp:178; checkcatalog.cpp:381
+registers vgbankcheck (mus_gym) with native(..., swiftBank). bankCase
+(BankLeasesChecks.swift) runs bankFixture per row and reports
+report.pass/report.fail under the original cppID; serviceBankCase
+(BankLeasesChecks.swift) drives the same cppID through the flipped
+ProjectService front end for the added serviceLeaseReuse, serviceEditAndRevert
+and serviceSaveRefresh rows. The write-failure predicate cited for A089-A093 is
+row S04 of runProjectStoreSaveSuite
+(src/checks/projectstore/ProjectStoreSaveChecks.swift), cppID
+"projectstore-savebank/S04".
 
 Fixture, sequence and row constraints
-init() runs before every case and owns the first thirteen sites. The conflict case expands one site quintet over three VoicegroupEditInput rows (stale lease, blank-expected, out-of-range slot) in a for loop. editedDirectSound is a helper, not a case: its rejections surface through the caller's QVERIFY2. Slot constants kDirectSoundSlot=0 and kBlankSlot=13, shared song mus_oldale, and VOICEGROUP_SIZE bounds are fixed inputs the paired Swift loops must carry if ever written.
+bankFixture (BankLeasesChecks.swift) requires CheckEnvironment.fixtureRoot and
+the staged sound/voicegroups/fixture_rich.inc, copies the root into an isolated
+temporary scratch, opens a ProjectStore over it and requires snapshot.isOpen,
+resolves mus_gym as playable, probes mus_absent through songNotFound, loads the
+bank through song.cfg.voicegroupArgument, and requires fixture_rich with 128
+slots, an editable slot 0 with a voice, an editable Square 1 slot and a clean
+bank before handing the fixture to the case body. Every bankCase row re-runs
+that precondition, and the original init() ran the same sequence before every
+case. Fixed inputs carried over exactly: kDirectSoundSlot = 0
+(directSoundSlot), kBlankSlot = 13 (blankSlot), shared song mus_oldale, the
+VOICEGROUP_SIZE bound (voicegroupSize = 128), and the catalog song mus_gym.
+staleBlankAndOutOfRangeEditsConflictWithoutMutation expands the same three rows
+(stale lease, blank-expected, out-of-range slot) in a loop that captures source
+bytes before and after each row. editedDirectSound is a helper, not a case: its
+rejections surface through the caller's requires; it fixes key 60 -> 61.
+The failed-synth-definition half of
+saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty is not ported:
+synth-definition writes are verified dead across the seam (the divergence is
+recorded at BankLeasesChecks.swift) and the sibling projectstore-savebank
+S04 row covers the observed failed-save-leaves-dirty rule with a write-failure
+stimulus instead. Original setup, helper bodies, and row constants at the
+reference revision remain authoritative for the C++ inventory.
 
 Original assertion inventory and source sequence
 
 A001 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:78
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001 and S002 (src/checks/projectstore/BankLeasesChecks.swift and :53 bankFixture). The Swift fixture requires CheckEnvironment.fixtureRoot and the staged sound/voicegroups/fixture_rich.inc and copies the staged root into an isolated temporary scratch before opening it; unproved: no value predicate for the copy result itself (a failed copy fails the row) and the copy target is a scratch directory rather than the staged root.
 Source context since previous assertion:
 #include <memory>
 #include <optional>
@@ -114,8 +184,8 @@ Original expression:
     QVERIFY2(m_copy, qPrintable(error));
 
 A002 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:79
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S003 (src/checks/projectstore/BankLeasesChecks.swift bankFixture). The Swift fixture requires snapshot.isOpen after opening the copied root, the same project-open observation the original made against the ProjectFixture copy.
 Source context since previous assertion:
 
 
@@ -123,8 +193,8 @@ Original expression:
     QVERIFY2(m_project.open(m_copy->root(), &error), qPrintable(error));
 
 A003 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:81
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S004 (src/checks/projectstore/BankLeasesChecks.swift bankFixture). The Swift rows pass the literal song label mus_gym to store.songMeta and require isPlayable; unproved: SongName creation and normalization have no Swift ingress, so the label-validity guard itself is not asserted.
 Source context since previous assertion:
 
     const std::optional<SongName> name = SongName::create(m_songLabel);
@@ -133,8 +203,8 @@ Original expression:
     QVERIFY(name.has_value());
 
 A004 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:83
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S004 (src/checks/projectstore/BankLeasesChecks.swift bankFixture). The Swift fixture requires the resolved mus_gym song meta to be playable, the same playableSong(label) resolution the original asserted; the C++ optional shape is representation.
 Source context since previous assertion:
 
     const std::optional<SongInfo> song = m_project.playableSong(*name);
@@ -143,8 +213,8 @@ Original expression:
     QVERIFY(song.has_value());
 
 A005 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:86
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S006, S007, S008 and S009 (src/checks/projectstore/BankLeasesChecks.swift, :68, :71, :74 bankFixture). A failed loadBank throws before any of these requires, so a non-null bank with no error is established by the bank-content predicates; the C++ optional and error-string conjunction is representation.
 Source context since previous assertion:
 
     m_song = *song;
@@ -154,8 +224,8 @@ Original expression:
     QVERIFY2(m_initial && m_initial->bank && error.isEmpty(), qPrintable(error));
 
 A006 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:87
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S006 (src/checks/projectstore/BankLeasesChecks.swift bankFixture). The Swift fixture requires bank.slotViews.count == voicegroupSize (128), the same VOICEGROUP_SIZE bound the original compared.
 Source context since previous assertion:
 
 
@@ -163,8 +233,8 @@ Original expression:
     QCOMPARE(m_initial->slotViews.size(), qsizetype(VOICEGROUP_SIZE));
 
 A007 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:88
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S006 (src/checks/projectstore/BankLeasesChecks.swift bankFixture). The Swift fixture requires bank.loadName == fixture_rich, the same load-name comparison the original made.
 Source context since previous assertion:
 
 
@@ -172,8 +242,8 @@ Original expression:
     QCOMPARE(m_initial->loadName, QStringLiteral("fixture_rich"));
 
 A008 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:89
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S007 (src/checks/projectstore/BankLeasesChecks.swift bankFixture). The Swift fixture requires bank.slotViews[directSoundSlot].kind == .editable, the same Editable kind comparison the original made.
 Source context since previous assertion:
 
 
@@ -181,8 +251,8 @@ Original expression:
     QCOMPARE(m_initial->slotViews[kDirectSoundSlot].kind, VgLineKind::Editable);
 
 A009 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:90
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S007 (src/checks/projectstore/BankLeasesChecks.swift bankFixture). The Swift fixture requires bank.slotViews[directSoundSlot].voice to be non-nil, the same voice-presence guard the original made.
 Source context since previous assertion:
 
 
@@ -190,8 +260,8 @@ Original expression:
     QVERIFY(m_initial->slotViews[kDirectSoundSlot].voice.has_value());
 
 A010 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:92
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S008 (src/checks/projectstore/BankLeasesChecks.swift bankFixture). The Swift fixture requires firstSquareSlot(bank) to resolve to an editable slot holding a voice, the same squareSlot >= 0 guard the original made.
 Source context since previous assertion:
 
     const int squareSlot = firstSquareSlot(*m_initial);
@@ -200,8 +270,8 @@ Original expression:
     QVERIFY2(squareSlot >= 0, "fixture_rich must retain a Square 1 voice");
 
 A011 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:93
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S008 (src/checks/projectstore/BankLeasesChecks.swift bankFixture). The Swift predicate requires the located Square 1 slot kind to be .editable, the same kind comparison the original made on squareSlot.
 Source context since previous assertion:
 
 
@@ -209,8 +279,8 @@ Original expression:
     QCOMPARE(m_initial->slotViews[squareSlot].kind, VgLineKind::Editable);
 
 A012 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:94
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S008 (src/checks/projectstore/BankLeasesChecks.swift bankFixture). The Swift predicate requires the located Square 1 slot to hold a voice, the same voice-presence guard the original made on squareSlot.
 Source context since previous assertion:
 
 
@@ -218,8 +288,8 @@ Original expression:
     QVERIFY(m_initial->slotViews[squareSlot].voice.has_value());
 
 A013 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:95
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S009 (src/checks/projectstore/BankLeasesChecks.swift bankFixture). The Swift fixture requires not bank.dirty for the freshly loaded bank, the same clean-bank observation the original made.
 Source context since previous assertion:
 
 
@@ -227,8 +297,8 @@ Original expression:
     QVERIFY(!m_initial->dirty);
 
 A014 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:100
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001 and S002 (src/checks/projectstore/BankLeasesChecks.swift and :53 bankFixture). The Swift case re-runs the same copied-scratch fixture through bankCase before its body; unproved: no value predicate for the copy result itself and the copy target is a scratch directory, exactly as recorded for A001.
 Source context since previous assertion:
 
 }
@@ -240,8 +310,8 @@ Original expression:
     QVERIFY(m_copy);
 
 A015 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:102
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S013 (src/checks/projectstore/BankLeasesChecks.swift). The Swift case resolves the literal label mus_gym through store.songMeta and requires isPlayable; unproved: SongName creation has no Swift ingress, so the label-validity guard itself is not asserted.
 Source context since previous assertion:
 
     const std::optional<SongName> found = SongName::create(m_songLabel);
@@ -250,8 +320,8 @@ Original expression:
     QVERIFY(found.has_value());
 
 A016 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:103
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S013 and S004 (src/checks/projectstore/BankLeasesChecks.swift and :58). The Swift case requires the resolved mus_gym meta to be playable, the same playableSong(found) resolution the original asserted.
 Source context since previous assertion:
 
 
@@ -259,8 +329,8 @@ Original expression:
     QVERIFY(m_project.playableSong(*found).has_value());
 
 A017 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:105
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S014 (src/checks/projectstore/BankLeasesChecks.swift). The Swift case probes the literal label mus_absent and requires songNotFound; unproved: SongName creation has no Swift ingress, so the absent-label construction guard itself is not asserted.
 Source context since previous assertion:
 
     const std::optional<SongName> absent = SongName::create(QStringLiteral("mus_absent"));
@@ -269,8 +339,8 @@ Original expression:
     QVERIFY(absent.has_value());
 
 A018 | VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels | src/checks/voicegroup/tst_voicegroupbank.cpp:106
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S014 and S005 (src/checks/projectstore/BankLeasesChecks.swift and :60). The Swift case and the per-row fixture require the mus_absent probe to fail with songNotFound carrying that label, the same not-playable resolution the original asserted.
 Source context since previous assertion:
 
 
@@ -278,8 +348,8 @@ Original expression:
     QVERIFY(!m_project.playableSong(*absent).has_value());
 
 A019 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:111
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S006, S007, S008 and S009 (src/checks/projectstore/BankLeasesChecks.swift, :68, :71, :74 bankFixture). The per-row fixture asserts the loaded bank identity, slot kinds and clean state for this case, the same guard the original made on m_initial.
 Source context since previous assertion:
 
 }
@@ -291,8 +361,8 @@ Original expression:
     QVERIFY(m_initial);
 
 A020 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:114
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S016 and S037 (src/checks/projectstore/BankLeasesChecks.swift and :315). The store row requires repeated.bankToken == initial.bankToken and the service row requires the repeated lease to reuse the first token, so the reload succeeded; the C++ optional and error-string shape is representation.
 Source context since previous assertion:
 
     QString error;
@@ -302,8 +372,8 @@ Original expression:
     QVERIFY2(repeated && error.isEmpty(), qPrintable(error));
 
 A021 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:115
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S016 and S037 (src/checks/projectstore/BankLeasesChecks.swift and :315). The Swift predicates compare the reloaded bank token with the original lease token, the same lease-identity comparison the original made through bank.get().
 Source context since previous assertion:
 
 
@@ -311,8 +381,8 @@ Original expression:
     QCOMPARE(repeated->bank.get(), m_initial->bank.get());
 
 A022 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:117
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S015 (src/checks/projectstore/BankLeasesChecks.swift). The Swift case resolves the literal label mus_oldale; unproved: SongName creation has no Swift ingress, so the shared-label validity guard itself is not asserted.
 Source context since previous assertion:
 
     const std::optional<SongName> sharedName = SongName::create(QString::fromLatin1(kSharedSong));
@@ -321,8 +391,8 @@ Original expression:
     QVERIFY(sharedName.has_value());
 
 A023 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:119
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S015 (src/checks/projectstore/BankLeasesChecks.swift). The Swift case requires the resolved mus_oldale meta to be playable, the same playableSong(sharedName) resolution the original asserted.
 Source context since previous assertion:
 
     const std::optional<SongInfo> sharedSong = m_project.playableSong(*sharedName);
@@ -331,8 +401,8 @@ Original expression:
     QVERIFY(sharedSong.has_value());
 
 A024 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:121
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S016 and S037 (src/checks/projectstore/BankLeasesChecks.swift and :315). The Swift predicates require the shared-voicegroup lease token to equal the original token, which requires the shared load to have succeeded, as in the original.
 Source context since previous assertion:
 
     const std::optional<LoadedBankView> shared = m_project.loadBank(*sharedSong, &error);
@@ -341,8 +411,8 @@ Original expression:
     QVERIFY2(shared && error.isEmpty(), qPrintable(error));
 
 A025 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:122
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S016 and S037 (src/checks/projectstore/BankLeasesChecks.swift and :315). The Swift predicates compare the shared-voicegroup lease token with the original, the same shared bank equality the original asserted.
 Source context since previous assertion:
 
 
@@ -350,8 +420,8 @@ Original expression:
     QCOMPARE(shared->bank.get(), m_initial->bank.get());
 
 A026 | VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup | src/checks/voicegroup/tst_voicegroupbank.cpp:123
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S016 (src/checks/projectstore/BankLeasesChecks.swift). The Swift store row requires shared.id == initial.id, the same voicegroup-identity equality the original asserted.
 Source context since previous assertion:
 
 
@@ -359,8 +429,8 @@ Original expression:
     QCOMPARE(shared->id, m_initial->id);
 
 A027 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:152
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S006, S007, S008 and S009 (src/checks/projectstore/BankLeasesChecks.swift, :68, :71, :74 bankFixture). The per-row fixture asserts the loaded bank identity, slot kinds and clean state for this case, the same guard the original made on m_initial.
 Source context since previous assertion:
 
 }
@@ -396,8 +466,8 @@ Original expression:
     QVERIFY(m_initial);
 
 A028 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:156
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S010 and S011 (src/checks/projectstore/BankLeasesChecks.swift and :92 editedDirectSound). The Swift helper requires the original key to be 60 and the edit result to be the applied case, the same editedDirectSound success guard the original made.
 Source context since previous assertion:
 
     const VoicegroupLease oldLease = m_initial->bank;
@@ -408,8 +478,8 @@ Original expression:
     QVERIFY2(applied, qPrintable(error));
 
 A029 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:157
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S017 and S038 (src/checks/projectstore/BankLeasesChecks.swift and :337). The Swift predicates require the edited store lease and the service edit result to be dirty, the same applied-view dirty observation.
 Source context since previous assertion:
 
 
@@ -417,8 +487,8 @@ Original expression:
     QVERIFY(applied->view.dirty);
 
 A030 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:158
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S017 and S038 (src/checks/projectstore/BankLeasesChecks.swift and :337). The Swift predicates require the replacement bank token to differ from the pre-edit lease token, the same new-bank identity the original asserted through bank.get().
 Source context since previous assertion:
 
 
@@ -426,8 +496,8 @@ Original expression:
     QVERIFY(applied->view.bank.get() != m_initial->bank.get());
 
 A031 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:159
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S017 (src/checks/projectstore/BankLeasesChecks.swift). The Swift predicate requires sameKindsExcept(initial, edited) over all 128 slots, the same kind-preservation invariant the original asserted.
 Source context since previous assertion:
 
 
@@ -435,8 +505,8 @@ Original expression:
     QVERIFY(sameKindsExcept(*m_initial, applied->view));
 
 A032 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:160
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S017 and S038 (src/checks/projectstore/BankLeasesChecks.swift and :337). The Swift predicates require the edited slot to hold a voice and the service result slot to equal the changed voice, so slot 0 holds a voice as in the original.
 Source context since previous assertion:
 
 
@@ -444,8 +514,8 @@ Original expression:
     QVERIFY(applied->view.slotViews[kDirectSoundSlot].voice.has_value());
 
 A033 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:161
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S017 and S038 (src/checks/projectstore/BankLeasesChecks.swift and :337). The Swift predicates require the edited slot voice key to be 61, the same key-61 comparison the original made.
 Source context since previous assertion:
 
 
@@ -453,8 +523,8 @@ Original expression:
     QCOMPARE(applied->view.slotViews[kDirectSoundSlot].voice->key, 61);
 
 A034 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:162
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S012 and S038 (src/checks/projectstore/BankLeasesChecks.swift and :337). The Swift predicates require the scalar edit to publish no materialization token, the same no-materialization guard the original made; the C++ optional shape is representation.
 Source context since previous assertion:
 
 
@@ -462,8 +532,8 @@ Original expression:
     QVERIFY(!applied->materialization.has_value());
 
 A035 | VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease | src/checks/voicegroup/tst_voicegroupbank.cpp:163
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S017 and S038 (src/checks/projectstore/BankLeasesChecks.swift and :337). The Swift predicates require the pre-edit lease to keep voice key 60 and to stay clean, the same old-lease key-60 observation the original made.
 Source context since previous assertion:
 
 
@@ -471,8 +541,8 @@ Original expression:
     QCOMPARE(oldLease->voices[kDirectSoundSlot].key, uint8_t(60));
 
 A036 | VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation | src/checks/voicegroup/tst_voicegroupbank.cpp:171
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S010 and S011 (src/checks/projectstore/BankLeasesChecks.swift and :92 editedDirectSound). The Swift conflict row first requires the same DirectSound scalar edit to apply at key 61 with no materialization token; the C++ optional result guard is representation.
 Source context since previous assertion:
 
 }
@@ -487,8 +557,8 @@ Original expression:
     QVERIFY2(appliedEdit, qPrintable(initialEditError));
 
 A037 | VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation | src/checks/voicegroup/tst_voicegroupbank.cpp:185
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S018 and S044 (src/checks/projectstore/BankLeasesChecks.swift and :428). The Swift store loop requires each conflict row to return the conflict case, and the service row requires the stale edit and the spent revert to throw bankConflict; a transport error would throw out of bankAwait and fail the row, so the original empty-error guard is established by the returned conflict value, with the error string itself counted as C++ representation.
 Source context since previous assertion:
 
     const VgVoice original = *m_initial->slotViews[kDirectSoundSlot].voice;
@@ -509,8 +579,8 @@ Original expression:
         QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A038 | VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation | src/checks/voicegroup/tst_voicegroupbank.cpp:186
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S018 (src/checks/projectstore/BankLeasesChecks.swift). The Swift loop requires a result for every conflict row, the same result-presence guard the original made.
 Source context since previous assertion:
 
 
@@ -518,8 +588,8 @@ Original expression:
         QVERIFY(result.has_value());
 
 A039 | VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation | src/checks/voicegroup/tst_voicegroupbank.cpp:187
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S018 (src/checks/projectstore/BankLeasesChecks.swift). The Swift loop requires the conflict result case, the same conflict-alternative assertion the original made.
 Source context since previous assertion:
 
 
@@ -527,8 +597,8 @@ Original expression:
         QVERIFY(std::holds_alternative<VoicegroupEditConflictResult>(*result));
 
 A040 | VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation | src/checks/voicegroup/tst_voicegroupbank.cpp:189
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S019 and S045 (src/checks/projectstore/BankLeasesChecks.swift and :435). The Swift predicates reload the bank after each conflicted row and require its token, dirty flag and slot state; the reload is a throwing call, so the original non-null plus empty-error guard is established.
 Source context since previous assertion:
 
         const std::optional<LoadedBankView> current = m_project.loadBank(m_song, &error);
@@ -537,8 +607,8 @@ Original expression:
         QVERIFY2(current && error.isEmpty(), qPrintable(error));
 
 A041 | VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation | src/checks/voicegroup/tst_voicegroupbank.cpp:190
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S019 and S045 (src/checks/projectstore/BankLeasesChecks.swift and :435). The Swift predicates require the reloaded bank token to equal the pre-conflict applied or saved token, the same current bank equality the original asserted.
 Source context since previous assertion:
 
 
@@ -546,8 +616,8 @@ Original expression:
         QCOMPARE(current->bank.get(), applied.view.bank.get());
 
 A042 | VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation | src/checks/voicegroup/tst_voicegroupbank.cpp:191
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S019 and S045 (src/checks/projectstore/BankLeasesChecks.swift and :435). The Swift predicates require the reloaded bank to stay dirty after the conflict, the same still-dirty observation the original made.
 Source context since previous assertion:
 
 
@@ -555,8 +625,8 @@ Original expression:
         QVERIFY(current->dirty);
 
 A043 | VoicegroupBankTest::unknownIdentityIsHardError | src/checks/voicegroup/tst_voicegroupbank.cpp:197
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S006, S007, S008 and S009 (src/checks/projectstore/BankLeasesChecks.swift, :68, :71, :74 bankFixture). The per-row fixture asserts the loaded bank identity, slot kinds and clean state for this case, the same guard the original made on m_initial.
 Source context since previous assertion:
 
     }
@@ -569,8 +639,8 @@ Original expression:
     QVERIFY(m_initial);
 
 A044 | VoicegroupBankTest::unknownIdentityIsHardError | src/checks/voicegroup/tst_voicegroupbank.cpp:200
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S020 (src/checks/projectstore/BankLeasesChecks.swift unknownIdentityIsHardError). The Swift row substitutes a second ProjectStore opened over the same fixture root, whose lease the owning store does not recognise, for the original absent VoicegroupId; unproved: VoicegroupId creation has no Swift ingress, so the unknown-identity construction itself is unproved.
 Source context since previous assertion:
 
     const std::optional<VoicegroupId> unknown =
@@ -580,8 +650,8 @@ Original expression:
     QVERIFY(unknown.has_value());
 
 A045 | VoicegroupBankTest::unknownIdentityIsHardError | src/checks/voicegroup/tst_voicegroupbank.cpp:205
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S020 and S022 (src/checks/projectstore/BankLeasesChecks.swift and :222), with S022 additionally pinning the owning store unchanged. The Swift row requires the foreign-lease edit to fail with operationFailed, the same hard-error, no-result outcome the original asserted.
 Source context since previous assertion:
 
     const VgVoice value = *m_initial->slotViews[kDirectSoundSlot].voice;
@@ -593,8 +663,8 @@ Original expression:
     QVERIFY(!result.has_value());
 
 A046 | VoicegroupBankTest::unknownIdentityIsHardError | src/checks/voicegroup/tst_voicegroupbank.cpp:206
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S021 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the failure message to be non-empty, the same non-empty-error observation the original made.
 Source context since previous assertion:
 
 
@@ -602,8 +672,8 @@ Original expression:
     QVERIFY(!error.isEmpty());
 
 A047 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:213
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S010 and S011 (src/checks/projectstore/BankLeasesChecks.swift and :92 editedDirectSound). The Swift preview row first requires the same DirectSound scalar edit to apply at key 61 with no materialization token; the C++ optional result guard is representation.
 Source context since previous assertion:
 
 }
@@ -617,8 +687,8 @@ Original expression:
     QVERIFY2(applied, qPrintable(initialEditError));
 
 A048 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:218
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S023 (src/checks/projectstore/BankLeasesChecks.swift previewFailureRollsBackCandidate). The Swift row creates the .porydaw directory under the copied root with a throwing createDirectory before writing the blocker file; unproved: no value predicate for the directory creation (a failure fails the row).
 Source context since previous assertion:
 
     const VgVoice before = *applied->view.slotViews[kDirectSoundSlot].voice;
@@ -630,8 +700,8 @@ Original expression:
     QVERIFY(QDir().mkpath(QFileInfo(previewPath).path()));
 
 A049 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:220
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S023 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row writes an empty blocker file with a throwing Data.write, the same blocker the original created through QFile; unproved: no explicit open predicate and no error-string propagation.
 Source context since previous assertion:
 
     QFile blocker(previewPath);
@@ -640,8 +710,8 @@ Original expression:
     QVERIFY(blocker.open(QIODevice::WriteOnly));
 
 A050 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:225
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S026 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row removes the blocker with a throwing removeItem after the rejected edit, plus a defer cleanup; unproved: no value predicate for the removal result.
 Source context since previous assertion:
 
     blocker.close();
@@ -653,8 +723,8 @@ Original expression:
     QVERIFY(QFile::remove(previewPath));
 
 A051 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:226
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S024 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the blocked preview edit to fail with operationFailed, the same rejected-edit, no-result outcome the original asserted.
 Source context since previous assertion:
 
 
@@ -662,8 +732,8 @@ Original expression:
     QVERIFY(!rejectedResult.has_value());
 
 A052 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:227
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S025 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the failure message to be non-empty, the same non-empty-error observation the original made.
 Source context since previous assertion:
 
 
@@ -671,8 +741,8 @@ Original expression:
     QVERIFY(!error.isEmpty());
 
 A053 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:230
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S027 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row reloads the bank after the rejected edit and requires its token to equal the applied token; the reload is a throwing call, so the original non-null plus empty-error guard is established.
 Source context since previous assertion:
 
     error.clear();
@@ -682,8 +752,8 @@ Original expression:
     QVERIFY2(survived && error.isEmpty(), qPrintable(error));
 
 A054 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:231
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S027 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires survived.bankToken == applied.bankToken, the same survived bank equality against the applied bank the original asserted.
 Source context since previous assertion:
 
 
@@ -691,8 +761,8 @@ Original expression:
     QCOMPARE(survived->bank.get(), applied->view.bank.get());
 
 A055 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:232
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S027 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the survived slot voice key to be 61, which requires the slot to hold a voice, the same voice-presence guard the original made.
 Source context since previous assertion:
 
 
@@ -700,8 +770,8 @@ Original expression:
     QVERIFY(survived->slotViews[kDirectSoundSlot].voice.has_value());
 
 A056 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:233
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S027 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the survived slot voice key to be 61, the same key comparison the original made.
 Source context since previous assertion:
 
 
@@ -709,8 +779,8 @@ Original expression:
     QCOMPARE(survived->slotViews[kDirectSoundSlot].voice->key, 61);
 
 A057 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:234
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S027 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the survived slot symbol to equal the initial lease symbol, the same symbol-preservation comparison the original made against m_initial.
 Source context since previous assertion:
 
 
@@ -719,8 +789,8 @@ Original expression:
              m_initial->slotViews[kDirectSoundSlot].voice->symbol);
 
 A058 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:240
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S006, S007, S008 and S009 (src/checks/projectstore/BankLeasesChecks.swift, :68, :71, :74 bankFixture). The per-row fixture asserts the loaded bank identity, slot kinds and clean state for this case, the same guard the original made on m_initial.
 Source context since previous assertion:
 
 }
@@ -732,8 +802,8 @@ Original expression:
     QVERIFY(m_initial);
 
 A059 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:241
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S028 (src/checks/projectstore/BankLeasesChecks.swift blankMaterializationRevertAndSpentToken). The Swift row requires initial.slotViews[blankSlot].kind == .none, the same blank-slot kind comparison the original made.
 Source context since previous assertion:
 
 
@@ -741,8 +811,8 @@ Original expression:
     QCOMPARE(m_initial->slotViews[kBlankSlot].kind, VgLineKind::None);
 
 A060 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:248
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S029 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the blank-slot edit to return the applied case with a materialization token; the operation is awaited through bankAwait, so the original empty-error guard is representation.
 Source context since previous assertion:
 
     VgVoice blank;
@@ -756,8 +826,8 @@ Original expression:
     QVERIFY2(materialized && error.isEmpty(), qPrintable(error));
 
 A061 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:250
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S029 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the applied result case, the same applied-result alternative the original asserted.
 Source context since previous assertion:
 
     const auto *const applied = std::get_if<VoicegroupEditAppliedResult>(&*materialized);
@@ -766,8 +836,8 @@ Original expression:
     QVERIFY(applied);
 
 A062 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:251
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S029 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the applied result to carry a non-nil materialization token, the same materialization-presence guard the original made.
 Source context since previous assertion:
 
 
@@ -775,8 +845,8 @@ Original expression:
     QVERIFY(applied->materialization.has_value());
 
 A063 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:252
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S029 (src/checks/projectstore/BankLeasesChecks.swift). The Swift store result publishes the materialization token but not the record fields; unproved: firstAddedSlot == 13, which the ProjectStore edit result does not carry (BlankSlotMaterialization exists in PorydawProject but the store publishes only materializationToken).
 Source context since previous assertion:
 
 
@@ -784,8 +854,8 @@ Original expression:
     QCOMPARE(applied->materialization->firstAddedSlot, kBlankSlot);
 
 A064 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:253
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S029 (src/checks/projectstore/BankLeasesChecks.swift). Unproved: the materialization record non-empty addedLines, which the ProjectStore edit result does not publish; only the token presence is asserted.
 Source context since previous assertion:
 
 
@@ -793,8 +863,8 @@ Original expression:
     QVERIFY(!applied->materialization->addedLines.isEmpty());
 
 A065 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:254
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S030 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires sameKindsExcept(initial, materialized, except: blankSlot), the same kind-preservation invariant across every slot but the materialized one.
 Source context since previous assertion:
 
 
@@ -802,8 +872,8 @@ Original expression:
     QVERIFY(sameKindsExcept(*m_initial, applied->view, kBlankSlot));
 
 A066 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:255
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S030 and S039 (src/checks/projectstore/BankLeasesChecks.swift and :350). The Swift store row requires the materialized slot kind to be .editable and the service row requires the same editable kind on the materialized slot, the same editable-kind comparison the original made.
 Source context since previous assertion:
 
 
@@ -811,8 +881,8 @@ Original expression:
     QCOMPARE(applied->view.slotViews[kBlankSlot].kind, VgLineKind::Editable);
 
 A067 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:256
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S030 and S039 (src/checks/projectstore/BankLeasesChecks.swift and :350). The Swift store row requires the materialized slot voice to equal the Square 1, sustain-15 blank voice the original compared, and the service row requires the same voice; BankVoice equality carries the comparison.
 Source context since previous assertion:
 
 
@@ -820,8 +890,8 @@ Original expression:
     QCOMPARE(*applied->view.slotViews[kBlankSlot].voice, blank);
 
 A068 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:262
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S031 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the revert to return the applied case; the revert is awaited through bankAwait, so the original empty-error guard is representation.
 Source context since previous assertion:
 
 
@@ -834,8 +904,8 @@ Original expression:
     QVERIFY2(reverted && error.isEmpty(), qPrintable(error));
 
 A069 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:264
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S031 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the applied revert result case, the same reverted-view alternative the original asserted.
 Source context since previous assertion:
 
     const auto *const revertedView = std::get_if<VoicegroupEditAppliedResult>(&*reverted);
@@ -844,8 +914,8 @@ Original expression:
     QVERIFY(revertedView);
 
 A070 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:265
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S032 and S040 (src/checks/projectstore/BankLeasesChecks.swift and :357). The Swift store row requires the revert result to carry no token and the service row requires the reverted edit to expose no materialization token, the same no-materialization guard the original made.
 Source context since previous assertion:
 
 
@@ -853,8 +923,8 @@ Original expression:
     QVERIFY(!revertedView->materialization.has_value());
 
 A071 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:266
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S032 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires sameKindsExcept(initial, restored), the same kind-preservation invariant the original asserted against m_initial.
 Source context since previous assertion:
 
 
@@ -862,8 +932,8 @@ Original expression:
     QVERIFY(sameKindsExcept(*m_initial, revertedView->view));
 
 A072 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:267
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S032 and S040 (src/checks/projectstore/BankLeasesChecks.swift and :357). The Swift store row requires the restored slot kind to be .none and the service row requires the restored slot kind to be BankSlotKind.none, the same blank-kind restoration the original asserted.
 Source context since previous assertion:
 
 
@@ -871,8 +941,8 @@ Original expression:
     QCOMPARE(revertedView->view.slotViews[kBlankSlot].kind, VgLineKind::None);
 
 A073 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:268
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S032 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the restored slot voice to be nil, the same voice-absence guard the original made.
 Source context since previous assertion:
 
 
@@ -880,8 +950,8 @@ Original expression:
     QVERIFY(!revertedView->view.slotViews[kBlankSlot].voice.has_value());
 
 A074 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:272
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S033 and S041 (src/checks/projectstore/BankLeasesChecks.swift and :364). The Swift store row requires the second use of the same token to return the conflict case and the service row requires the spent revert to throw bankConflict, the same spent-result presence the original asserted.
 Source context since previous assertion:
 
 
@@ -892,8 +962,8 @@ Original expression:
     QVERIFY(spent.has_value());
 
 A075 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:273
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S033 (src/checks/projectstore/BankLeasesChecks.swift), with S034 (src/checks/projectstore/BankLeasesChecks.swift), S041 (src/checks/projectstore/BankLeasesChecks.swift) and S042 (src/checks/projectstore/BankLeasesChecks.swift) additionally pinning the spent-token conflict and the unchanged reverted bank. The Swift row requires the spent-token result to be the conflict case, the same conflict-alternative assertion the original made.
 Source context since previous assertion:
 
 
@@ -901,8 +971,8 @@ Original expression:
     QVERIFY(std::holds_alternative<VoicegroupEditConflictResult>(*spent));
 
 A076 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:280
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S010 and S011 (src/checks/projectstore/BankLeasesChecks.swift and :92 editedDirectSound). The Swift save row first requires the same DirectSound scalar edit to apply at key 61 with no materialization token; the C++ optional result guard is representation.
 Source context since previous assertion:
 
 }
@@ -916,8 +986,8 @@ Original expression:
     QVERIFY2(edited, qPrintable(initialEditError));
 
 A077 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:283
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S036 (src/checks/projectstore/BankLeasesChecks.swift saveRefreshesBank). The Swift row reads the voicegroup source bytes directly from initial.sourcePath with a throwing Data read before and after the save; unproved: the VoicegroupSource open with song.cfg.voicegroupArg, which the Swift row replaces with a direct byte read.
 Source context since previous assertion:
 
     VoicegroupSource source;
@@ -927,8 +997,8 @@ Original expression:
     QVERIFY2(source.open(m_copy->root(), m_song.cfg.voicegroupArg, &error), qPrintable(error));
 
 A078 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:287
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S035 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the save to return a refreshed bank (a nil receipt bank throws into report.fail), so the original non-null plus empty-error guard is established by the success case.
 Source context since previous assertion:
 
     const QByteArray before = voicegroup_test::readFile(source.filePath());
@@ -939,8 +1009,8 @@ Original expression:
     QVERIFY2(saved && error.isEmpty(), qPrintable(error));
 
 A079 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:288
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S036 and S043 (src/checks/projectstore/BankLeasesChecks.swift and :414). The store row requires not saved.dirty and the service row requires not saved.dirty for the refreshed service bank, the same clean-after-save observation the original made.
 Source context since previous assertion:
 
 
@@ -948,8 +1018,8 @@ Original expression:
     QVERIFY(!saved->dirty);
 
 A080 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:289
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S036 and S043 (src/checks/projectstore/BankLeasesChecks.swift and :414). The Swift predicates require the saved bank token to differ from the pre-save lease token, the same fresh-bank identity the original asserted through bank.get().
 Source context since previous assertion:
 
 
@@ -957,8 +1027,8 @@ Original expression:
     QVERIFY(saved->bank.get() != edited->view.bank.get());
 
 A081 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:290
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S036 and S043 (src/checks/projectstore/BankLeasesChecks.swift and :414). The Swift predicates require the saved slot 0 voice key to be 61 on both the store and service paths, the same persisted-key comparison the original made.
 Source context since previous assertion:
 
 
@@ -966,8 +1036,8 @@ Original expression:
     QCOMPARE(saved->slotViews[kDirectSoundSlot].voice->key, 61);
 
 A082 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:291
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S036 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires sameKindsExcept(initial, saved), the same kind-preservation invariant the original asserted.
 Source context since previous assertion:
 
 
@@ -975,8 +1045,8 @@ Original expression:
     QVERIFY(sameKindsExcept(*m_initial, *saved));
 
 A083 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:292
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicates S036 and S043 (src/checks/projectstore/BankLeasesChecks.swift and :414). The Swift predicates compare the source bytes before and after the save and require a change, the same modified-file observation the original made.
 Source context since previous assertion:
 
 
@@ -984,8 +1054,8 @@ Original expression:
     QVERIFY(voicegroup_test::readFile(source.filePath()) != before);
 
 A084 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:294
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S036 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row reloads the bank after the save and requires its token to equal the saved token; the reload is a throwing call, so the original non-null plus empty-error guard is established.
 Source context since previous assertion:
 
     const std::optional<LoadedBankView> reused = m_project.loadBank(m_song, &error);
@@ -994,8 +1064,8 @@ Original expression:
     QVERIFY2(reused && error.isEmpty(), qPrintable(error));
 
 A085 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:295
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Predicate S036 (src/checks/projectstore/BankLeasesChecks.swift). The Swift row requires the reloaded bank token to equal the saved bank token, the same reused bank equality the original asserted.
 Source context since previous assertion:
 
 
@@ -1003,8 +1073,8 @@ Original expression:
     QCOMPARE(reused->bank.get(), saved->bank.get());
 
 A086 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:298
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S008 and S036 (src/checks/projectstore/BankLeasesChecks.swift and :305). The fixture requires an editable Square 1 slot on the loaded bank and S036 requires sameKindsExcept across the save, so the saved bank keeps that slot; unproved: no predicate runs firstSquareSlot over the saved lease itself, and the following re-dirty stimulus is not ported.
 Source context since previous assertion:
 
 
@@ -1015,7 +1085,7 @@ Original expression:
 
 A087 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:304
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: No equivalent Swift assertion exists. The re-dirty edit on the saved Square 1 slot belongs to the failed-synth-definition save stimulus, which is verified dead across the seam and is not ported (the divergence is recorded at src/checks/projectstore/BankLeasesChecks.swift); this site remains an open obligation.
 Source context since previous assertion:
 
     VgVoice square = *saved->slotViews[squareSlot].voice;
@@ -1029,7 +1099,7 @@ Original expression:
 
 A088 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:306
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: No equivalent Swift assertion exists. The re-dirty view guard belongs to the unported failed-synth-definition save stimulus (src/checks/projectstore/BankLeasesChecks.swift); this site remains an open obligation.
 Source context since previous assertion:
 
     const auto *const dirtyView = std::get_if<VoicegroupEditAppliedResult>(&*redirtied);
@@ -1038,8 +1108,8 @@ Original expression:
     QVERIFY(dirtyView);
 
 A089 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:310
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S046 (src/checks/projectstore/ProjectStoreSaveChecks.swift, row projectstore-savebank/S04). The Swift write-failure row requires the save to fail with operationFailed, so a failed save yields no refreshed bank; unproved: the original fails the save through an unknown synth definition, verified dead across the seam, while the Swift row blocks the write with the immutable flag.
 Source context since previous assertion:
 
     const std::optional<LoadedBankView> failed = m_project.saveVoicegroup(
@@ -1050,8 +1120,8 @@ Original expression:
     QVERIFY(!failed.has_value());
 
 A090 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:311
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S046 (src/checks/projectstore/ProjectStoreSaveChecks.swift). The Swift row requires the failure message to start with Cannot write, the same non-empty-error observation under a different failure stimulus.
 Source context since previous assertion:
 
 
@@ -1059,8 +1129,8 @@ Original expression:
     QVERIFY(!error.isEmpty());
 
 A091 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:314
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S046 (src/checks/projectstore/ProjectStoreSaveChecks.swift). The Swift row reloads the bank after the failed save and requires a success carrying the dirty record, the same non-null plus empty-error reload guard under a different failure stimulus.
 Source context since previous assertion:
 
     error.clear();
@@ -1070,8 +1140,8 @@ Original expression:
     QVERIFY2(current && error.isEmpty(), qPrintable(error));
 
 A092 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:315
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S046 (src/checks/projectstore/ProjectStoreSaveChecks.swift). The Swift row requires the dirty record bank token to equal the edited bank token after the failed save, the same unchanged-bank identity the original asserted under a different failure stimulus.
 Source context since previous assertion:
 
 
@@ -1079,8 +1149,8 @@ Original expression:
     QCOMPARE(current->bank.get(), dirtyView->view.bank.get());
 
 A093 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:316
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S046 (src/checks/projectstore/ProjectStoreSaveChecks.swift). The Swift row requires the dirty record to stay dirty after the failed save, the same still-dirty observation under a different failure stimulus.
 Source context since previous assertion:
 
 
@@ -1106,7 +1176,289 @@ int runVgBankCheck(const QString &projectRoot, const QString &songLabel,
 
 
 Swift assertion predicates
-none: no Swift counterpart file exists, so there are no S entries.
+
+S001 | bankFixture fixture gate | bankFixture | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  guard let fixtureRoot = CheckEnvironment.fixtureRoot,
+        let staged = CheckEnvironment.fixturePath("sound/voicegroups/fixture_rich.inc"),
+        FileManager.default.fileExists(atPath: staged) else {
+      throw BankLeasesCheckError.failed("fixture_rich.inc is absent")
+  }
+
+S002 | bankFixture staged root copied to an isolated scratch | bankFixture | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: copy)
+  (a throwing construction: a failed copy fails the row through bankCase:108 report.fail or
+  serviceBankCase:140 report.fail; no value predicate exists for the copy itself)
+
+S003 | bankFixture | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(snapshot.isOpen, "fixture project did not open")
+
+S004 | bankFixture | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(song.isPlayable, "mus_gym is not playable")
+
+S005 | bankFixture | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  do {
+      _ = try bankAwait { try await store.songMeta(label: "mus_absent") }
+      throw BankLeasesCheckError.failed("mus_absent unexpectedly resolved")
+  } catch ProjectStoreReadError.songNotFound(let label) {
+      try bankRequire(label == "mus_absent", "wrong absent-song label")
+  }
+
+S006 | bankFixture | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(bank.loadName == "fixture_rich" && bank.slotViews.count == voicegroupSize,
+                  "mus_gym did not load fixture_rich with 128 slots")
+
+S007 | bankFixture | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(bank.slotViews[directSoundSlot].kind == .editable &&
+                  bank.slotViews[directSoundSlot].voice != nil,
+                  "slot 0 is not an editable voice")
+
+S008 | bankFixture | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(firstSquareSlot(bank).map {
+      bank.slotViews[$0].kind == .editable && bank.slotViews[$0].voice != nil
+  } == true, "fixture_rich lacks an editable Square 1 voice")
+
+S009 | bankFixture | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(!bank.dirty, "newly loaded bank is dirty")
+
+S010 | editedDirectSound | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(original.key == 60, "slot 0 must begin with key 60")
+
+S011 | editedDirectSound | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  guard case .applied(let lease, let token) = result else {
+      throw BankLeasesCheckError.failed("DirectSound scalar edit conflicted")
+  }
+
+S012 | editedDirectSound | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(token == nil, "scalar edit unexpectedly minted a blank-slot token")
+
+S013 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(found.isPlayable, "mus_gym must resolve to a playable song")
+
+S014 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(label == "mus_absent", "wrong absent-song label")
+
+S015 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(sharedSong.isPlayable, "mus_oldale is not playable")
+
+S016 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(repeated.bankToken == initial.bankToken && shared.bankToken == initial.bankToken &&
+                  shared.id == initial.id, "shared voicegroup did not reuse the original bank and identity")
+
+S017 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(edited.dirty && edited.bankToken != initial.bankToken &&
+                  sameKindsExcept(initial, edited) &&
+                  edited.slotViews[directSoundSlot].voice?.key == 61 &&
+                  initial.slotViews[directSoundSlot].voice?.key == 60 && !initial.dirty,
+                  "scalar edit failed to publish a dirty replacement while retaining the old lease")
+
+S018 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  guard case .conflict(let identity) = result else {
+      throw BankLeasesCheckError.failed("slot \(slot) expected \(String(describing: expected)) did not conflict")
+  }
+
+S019 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(identity == initial.id && current.bankToken == applied.bankToken && current.dirty &&
+                  current.slotViews[directSoundSlot].voice?.key == 61 &&
+                  sameKindsExcept(applied, current) && sourceBefore == sourceAfter,
+                  "conflict mutated the dirty bank or its source bytes")
+
+S020 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  guard case .failure(let error as VoicegroupStoreError)? = attempted,
+        case .operationFailed(let message) = error else {
+      throw BankLeasesCheckError.failed("foreign lease did not produce a hard operationFailed error")
+  }
+
+S021 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(!message.isEmpty, "foreign-lease error message is empty")
+
+S022 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(stillLoaded.bankToken == initial.bankToken && !stillLoaded.dirty,
+                  "foreign edit changed the owning store")
+
+S023 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try FileManager.default.createDirectory(at: blocker.deletingLastPathComponent(),
+                                          withIntermediateDirectories: true)
+  try Data().write(to: blocker)
+
+S024 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  guard case .failure(let error as VoicegroupStoreError)? = attempted,
+        case .operationFailed(let message) = error else {
+      throw BankLeasesCheckError.failed("preview blocker did not reject the candidate: \(String(describing: attempted))")
+  }
+
+S025 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(!message.isEmpty, "preview error message is empty")
+
+S026 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try FileManager.default.removeItem(at: blocker)
+
+S027 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(survived.bankToken == applied.bankToken && survived.dirty &&
+                  survived.slotViews[directSoundSlot].voice?.key == 61 &&
+                  survived.slotViews[directSoundSlot].voice?.symbol ==
+                      initial.slotViews[directSoundSlot].voice?.symbol &&
+                  sameKindsExcept(applied, survived) && sourceAfter == sourceBefore,
+                  "failed preview changed the published bank or source bytes")
+
+S028 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(initial.slotViews[blankSlot].kind == .none, "fixture slot 13 is not blank")
+
+S029 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  guard case .applied(let materialized, let maybeToken) = result, let token = maybeToken else {
+      throw BankLeasesCheckError.failed("blank edit failed to mint a materialization token")
+  }
+
+S030 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(materialized.dirty && sameKindsExcept(initial, materialized, except: blankSlot) &&
+                  materialized.slotViews[blankSlot].kind == .editable &&
+                  materialized.slotViews[blankSlot].voice == blank,
+                  "blank slot did not materialize as an editable Square 1 voice")
+
+S031 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  guard case .applied(let restored, let revertedToken) = revert else {
+      throw BankLeasesCheckError.failed("materialization revert was not applied")
+  }
+
+S032 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(revertedToken == nil && sameKindsExcept(initial, restored) &&
+                  restored.slotViews[blankSlot].kind == .none &&
+                  restored.slotViews[blankSlot].voice == nil,
+                  "revert did not restore the blank slot without minting another token")
+
+S033 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  guard case .conflict(let id) = spent else {
+      throw BankLeasesCheckError.failed("spent materialization token did not conflict")
+  }
+
+S034 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(id == initial.id && current.bankToken == restored.bankToken &&
+                  current.slotViews[blankSlot].kind == .none,
+                  "spent token mutated the reverted bank")
+
+S035 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  guard let saved = try bankAwait({ try await store.saveVoicegroup(lease: edited) }) else {
+      throw BankLeasesCheckError.failed("save returned no refreshed bank")
+  }
+
+S036 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(!saved.dirty && saved.bankToken != edited.bankToken &&
+                  saved.slotViews[directSoundSlot].voice?.key == 61 &&
+                  sameKindsExcept(initial, saved) && before != after &&
+                  repeated.bankToken == saved.bankToken,
+                  "save did not publish a clean fresh bank with persisted slot bytes")
+
+S037 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(shared.label == "mus_oldale" &&
+                  first.bank.bankToken != 0 &&
+                  repeated.bank.bankToken == first.bank.bankToken &&
+                  shared.bank.bankToken == first.bank.bankToken,
+                  "shared voicegroup songs did not reuse the service bank lease")
+
+S038 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(edited.dirty && edited.lease.bankToken != first.bank.bankToken &&
+                  edited.materializationToken == nil &&
+                  edited.slots[directSoundSlot].voice == changed &&
+                  first.bankSlots[directSoundSlot].voice == original && !first.bankDirty,
+                  "service scalar edit did not preserve the old lease and publish key 61")
+
+S039 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(materialized.dirty &&
+                  materialized.slots[blankSlot].kind == BankSlotKind.editable &&
+                  materialized.slots[blankSlot].voice == blankVoice,
+                  "service blank materialization did not publish the expected voice")
+
+S040 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(restored.materializationToken == nil && restored.dirty &&
+                  restored.slots == edited.slots &&
+                  restored.slots[blankSlot].kind == BankSlotKind.none,
+                  "service revert did not restore the bank before materialization")
+
+S041 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  guard case .failure(let error as ProjectServiceError)? = spent,
+        error == .bankConflict else {
+      throw BankLeasesCheckError.failed("spent service token did not throw bankConflict")
+  }
+
+S042 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(current.bank.bankToken == restored.lease.bankToken &&
+                  current.bankDirty == restored.dirty &&
+                  current.bankSlots == restored.slots && sourceAfter == sourceBefore,
+                  "spent service token mutated the bank, dirty flag or source bytes")
+
+S043 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(!saved.dirty && saved.lease.bankToken != restored.lease.bankToken &&
+                  saved.slots[directSoundSlot].voice == changed &&
+                  saved.slots[blankSlot].kind == BankSlotKind.none &&
+                  sourceAfter != sourceBefore,
+                  "service save did not publish a clean refreshed bank with persisted key 61")
+
+S044 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  guard case .failure(let error as ProjectServiceError)? = attempted,
+        error == .bankConflict else {
+      throw BankLeasesCheckError.failed(
+          "service \(conflict == 0 ? "stale edit" : "spent revert") did not throw bankConflict")
+  }
+
+S045 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: function
+  try bankRequire(current.bank.bankToken == saved.lease.bankToken &&
+                  current.bankDirty == saved.dirty &&
+                  current.bankSlots == saved.slots && bytes == sourceAfter,
+                  "service conflict changed the refreshed bank, dirty flag or source bytes")
+
+S046 | runProjectStoreSaveSuite | src/checks/projectstore/ProjectStoreSaveChecks.swift
+Anchor: function
+  saveExpect("S04", message.hasPrefix("Cannot write ") && dirty.dirty &&
+             dirty.bankToken == edited.bankToken &&
+             saved.slotViews[0].voice == changed && !saved.dirty, report,
+             "write failure preserves dirty bank; restored file permits save")
 
 Shared helpers
-none: no Swift fixture files carry expects for this suite.
+src/checks/projectstore/ProjectStoreCheckSupport.swift (awaitValue) and
+src/checks/support/corecheck/CoreCheckSupport.swift (CheckEnvironment, CheckReport) carry no
+expects for this pairing. The index lists the predicates this inventory cites; every
+MATCHED or PARTIAL mapping above cites at least one of them.
