@@ -337,6 +337,8 @@ set(shell_qml
     src/ui/shell/TransportBar.qml
     src/ui/shell/TransportButton.qml
     src/ui/shell/TransportOutputDial.qml
+    src/ui/shell/PolyphonyPanel.qml
+    src/ui/shell/PolyphonyChannelGroup.qml
 )
 set_source_files_properties(${shell_qml} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 qt_add_executable(porydaw ${shell_qml} resources/fonts.qrc)

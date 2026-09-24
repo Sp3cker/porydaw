@@ -71,6 +71,8 @@ enum ShellQmlLane {
               fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym")),
         Entry(name: "shell-drawer-parity", inputFileName: "tst_ShellDrawerParity.qml",
               fixtureFiles: songs("mus_route101")),
+        Entry(name: "shell-polyphony", inputFileName: "tst_ShellPolyphony.qml",
+              fixtureFiles: songs("mus_route101")),
     ]
 
     private static var manifestLine: String {
@@ -121,12 +123,50 @@ enum ShellQmlLane {
         GridInputClipProbe.registerQmlElement()
         GatedVisualsProbe.registerQmlElement()
         TabsDrawerProbe.registerQmlElement()
+        PolyphonyShellProbe.registerQmlElement()
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .appendingPathComponent(entry.inputFileName).path
         let arguments = [CommandLine.arguments.first ?? "shell_qml_tests", "-input", inputFile] + payload
         var argv: [UnsafeMutablePointer<Int8>?] = arguments.map { strdup($0) }
         defer { argv.forEach { free($0) } }
-        return app.runQtQuickTests(Int32(arguments.count), &argv)
+        let status = app.runQtQuickTests(Int32(arguments.count), &argv)
+        guard status == 0, entry.name == "shell-polyphony",
+              ProcessInfo.processInfo.environment["PORYDAW_POLYPHONY_PROFILE"] == nil
+        else { return status }
+        for profile in ["dpr1-font12", "dpr1-font16", "dpr2-font12", "dpr2-font16"] {
+            let child = Process()
+            child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+            child.arguments = [entry.name, scratch, "--qt", "ShellPolyphony::test_visualProfiles"]
+            var environment = ProcessInfo.processInfo.environment
+            environment["PORYDAW_POLYPHONY_PROFILE"] = profile
+            environment["QT_SCALE_FACTOR"] = profile.hasPrefix("dpr2") ? "2" : "1"
+            environment["QT_QPA_PLATFORM"] = "offscreen"
+            child.environment = environment
+            let output = Pipe()
+            child.standardOutput = output
+            child.standardError = output
+            do {
+                try child.run()
+            } catch {
+                return fail("polyphony \(profile): child failed to start: \(error)")
+            }
+            let log = String(decoding: output.fileHandleForReading.readDataToEndOfFile(),
+                             as: UTF8.self)
+            child.waitUntilExit()
+            print("polyphony \(profile): \(log)")
+            guard child.terminationStatus == 0 else {
+                return fail("polyphony \(profile): capture failed (\(child.terminationStatus))")
+            }
+            for state in ["narrow-vanilla", "wide-vanilla",
+                          "narrow-darkneutralhigh", "wide-darkneutralhigh"] {
+                let image = URL(fileURLWithPath: scratch)
+                    .appendingPathComponent("polyphony-\(profile)-\(state).png").path
+                guard FileManager.default.fileExists(atPath: image) else {
+                    return fail("polyphony \(profile)/\(state): capture is missing")
+                }
+            }
+        }
+        return 0
     }
 
     private static func fail(_ message: String) -> Int32 {

@@ -39,6 +39,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// The open songs. Constructed with the session and never nil: the surface
     /// binds the strip before the first open and after the last close.
     @QtTracked public var songTabs: SongTabsController
+    @QtTracked public var polyphony: PolyphonyPanelPresenter
 
     private var projectRoot = ""
     private var labels: [String] = []
@@ -80,10 +81,25 @@ public final class ApplicationSession: QmlInstantiableStatus {
         playheadGuides = PlayheadGuidesPresenter()
         eventList = EventListPresenter()
         transportBar = TransportBarPresenter()
+        polyphony = PolyphonyPanelPresenter()
         do {
             audio = try NativeAudio()
         } catch {
             lastSaveError = String(describing: error)
+        }
+        polyphony.attach(audio: audio)
+        polyphony.onJump = { [weak self] tick, track, key, dpr in
+            guard let session = self?.workspace?.session else { return }
+            session.selectPrimaryTrack(track)
+            if let note = session.document.notes(in: track).last(where: {
+                $0.tick <= tick && Int($0.pitch) == key
+                    && UInt64(tick) < UInt64($0.tick) + UInt64($0.duration)
+            }) {
+                session.setSelectedNotes([note.id])
+                _ = session.mutateCamera { $0.ensureKeyVisible(key) }
+            }
+            session.editCursor = tick
+            _ = session.mutateCamera { $0.ensureTickVisible(UInt64(tick), dpr: dpr) }
         }
         songTabs.attach(app: self)
         transportBar.attach(session: self)
@@ -401,6 +417,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// Never earlier: the QML surface binds to every tab's grid, pages and
     /// workspace until the scene is really gone.
     private func releaseDocumentPresentation() {
+        polyphony.setVisible(showing: false)
+        polyphony.setContext(session: nil)
         songTabs.releaseAllDetached()
         audio?.unload()
         songOpen = false
@@ -466,6 +484,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// and the surface read.
     @QtIgnored
     func tabsDidChange() {
+        polyphony.setContext(session: workspace?.session)
         refreshDocumentState()
         // The selected workspace's grid owns command availability; switching
         // tabs swaps it, so the window's Edit-menu enabled states must refresh.

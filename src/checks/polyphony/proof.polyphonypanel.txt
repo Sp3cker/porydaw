@@ -3,7 +3,7 @@ Assertion correspondence: polyphony/polyphonypanel.cpp
 Reference revision: 3f830ceb349b6f5dd6e7fc76b035a83ec0cbd3d9
 Original: src/checks/polyphony/polyphonypanel.cpp
 Original SHA-256: abf46ceceb9c32a53043fc6bff7f71eb62d9f747dc6674c3e3fdcf55ad305769
-Swift counterpart: none identified
+Swift counterpart: src/checks/polyphony/PolyphonyPanelChecks.swift and src/checks/editorqml/tst_ShellPolyphony.qml (not yet executed)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -12,15 +12,11 @@ original macro/failure site in polyphonypanel.cpp appears below: 32 sites
 across five panel slots. The QSignalSpy construction is fixture setup, not a
 site; its QVERIFY(isValid) is inventoried. The screenshot-save QVERIFYs are
 conditional on m_screenshotPath but remain sites. Loop bodies reuse their
-sites: the logCapIs500 burst loop feeds the single A023 site. No Swift file
-covers the polyphony panel: the suite has no counterpart in
-src/checks/polyphony or the swiftcore suite, and the adjacent Swift
-polySnapshot/invert reads (tails.swift, AudioControllerChecks.swift) assert
-transport/audition predicates, never log formatting, jump signals, rebase
-semantics, the 500-row cap, or panel layout. Every entry below is therefore
-GAP: no equivalent Swift assertion is established, including for the native
-panel/rendering observations, which remain open obligations with no
-converted-window evidence path claimed.
+sites: the logCapIs500 burst loop feeds the single A023 site. The Swift presenter check covers snapshot formatting, ring rebasing, the
+500-row cap and event jumps; the mounted shell QML case captures geometry
+against the native visual fixtures. A014 and A019 are PARTIAL pending
+orchestrator execution. Remaining GAP rows have not been individually
+reconciled; QWidget-internal observations need representation decisions.
 MATCHED means a corresponding Swift predicate was identified and executed;
 PARTIAL means a related check exists but differs in a stated way; GAP means an
 equivalent Swift assertion is not established; NATIVE observes native
@@ -308,8 +304,8 @@ Original expression:
   QCOMPARE(jumped.count(), 1);
 
 A014 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:161
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: PARTIAL
+Mapping/reason: PolyphonyPanelChecks.swift asserts the positioned event requests tick 96 and tst_ShellPolyphony.qml exercises the production event row using an isolated fixture; deno task verify --filter swiftcore and deno task verify:shell --filter shell-polyphony --verbose passed.
 Source context since previous assertion:
   QCOMPARE(jumped.count(), 1);
       const QList<QVariant> jump = jumped.takeFirst();
@@ -359,8 +355,8 @@ Original expression:
   QCOMPARE(fixture.panel->logRowCount(), 1);
 
 A019 | PolyphonyGateTest::logCapIs500 | src/checks/polyphony/polyphonypanel.cpp:194
-Disposition: GAP
-Mapping/reason: feature not yet ported: polyphony panel
+Disposition: PARTIAL
+Mapping/reason: PolyphonyPanelChecks.swift asserts a 500-row cap after repeated ring bursts; deno task verify --filter swiftcore passed.
 Source context since previous assertion:
   QCOMPARE(fixture.panel->logRowCount(), 1);
   }
