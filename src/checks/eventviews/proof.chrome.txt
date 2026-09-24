@@ -94,7 +94,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A002 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:63
 Disposition: MATCHED
-Mapping/reason: tst_ShellEventList.qml compares presenter.visible false before the strip toggle (shell-event-list, executed).
+Mapping/reason: tst_ShellEventList.qml compares presenter.visible false before the View-menu MIDI Event List action (shell-event-list, executed).
 Source context since previous assertion:
 ;
 

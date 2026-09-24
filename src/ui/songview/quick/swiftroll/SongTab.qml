@@ -12,7 +12,7 @@ FocusScope {
     required property QtObject controller
     property font applicationFont: Application.font
     property var shellRouter: null
-    property bool showEvents: false
+    readonly property bool showEvents: session.showsEvents
     signal contextMenuAt(real x, real y)
 
     // The presenter mirrors page visibility: the event Loader destroys its
@@ -22,8 +22,12 @@ FocusScope {
         const presenter = root.session.eventListPresenter()
         if (presenter)
             presenter.setVisible(root.showEvents)
+        if (root.showEvents && root.visible && eventPage.item)
+            Qt.callLater(function() {
+                if (eventPage.item)
+                    eventPage.item.forceActiveFocus(Qt.OtherFocusReason)
+            })
     }
-    readonly property var eventPageItem: eventPage.item
 
     Component.onDestruction: controller.pageReleased(session.tabId)
 

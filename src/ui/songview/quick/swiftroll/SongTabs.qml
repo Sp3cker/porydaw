@@ -35,24 +35,6 @@ Item {
         }
         return false
     }
-    // The selected tab's page: the strip toggle reads and flips its event
-    // list state, so the piano roll surface keeps no overlay controls over
-    // its interactive tracks.
-    readonly property var selectedTabPage: root.controller.selectedIndex >= 0
-                                           && root.controller.selectedIndex < pages.count ? pages.itemAt(root.controller.selectedIndex) : null
-    readonly property bool selectedShowsEvents: !!(root.selectedTabPage
-                                                   && root.selectedTabPage.showEvents)
-    function toggleSelectedTabEvents() {
-        const page = root.selectedTabPage
-        if (!page)
-            return
-        page.showEvents = !page.showEvents
-        if (page.showEvents)
-            Qt.callLater(function() {
-                if (page.eventPageItem)
-                    page.eventPageItem.forceActiveFocus(Qt.OtherFocusReason)
-            })
-    }
     Keys.onPressed: event => {
         if (root.shellRouter && !root.focusOwnsLocalKeys()) {
             const route = root.eventListIsActive() ? "routeEventListKey" : "routeEditorKey"
@@ -183,7 +165,7 @@ Item {
         Flickable {
             id: stripViewport
             anchors.left: parent.left
-            anchors.right: eventToggle.left
+            anchors.right: scrollControls.visible ? scrollControls.left : parent.right
             height: parent.height
             contentWidth: tabRow.width
             contentHeight: height
@@ -316,21 +298,6 @@ Item {
                 Accessible.name: qsTr("Scroll tabs right")
                 onClicked: stripViewport.contentX = Math.min(Math.max(0, stripViewport.contentWidth - stripViewport.width), stripViewport.contentX + stripViewport.width)
             }
-        }
-        // Per-tab page switch: the roll surface keeps no overlay controls,
-        // so scrollbar and ruler clicks can never flip the page by accident.
-        StripButton {
-            id: eventToggle
-            objectName: "songTabEventListToggle"
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.right: scrollControls.visible ? scrollControls.left : parent.right
-            text: root.selectedShowsEvents ? qsTr("Piano Roll") : qsTr("Event List")
-            Accessible.name: root.selectedShowsEvents ? qsTr("Show piano roll") : qsTr("Show event list")
-            ToolTip.visible: hovered
-            ToolTip.text: Accessible.name
-            enabled: root.selectedTabPage !== null
-            onClicked: root.toggleSelectedTabEvents()
         }
     }
 

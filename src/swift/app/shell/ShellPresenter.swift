@@ -54,6 +54,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("roll.grid_triplet", "Triplet Grid", .gridTriplet),
         Action("transport.play_pause", "Play/Pause"),
         Action("transport.stop", "Stop"),
+        Action("view.event_list", "MIDI Event List"),
         Action("view.polyphony_debugger", "Polyphony Debugger"),
     ]
     private static let byId = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0) })
@@ -169,6 +170,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "edit.undo": return session.songOpen && session.canUndo
         case "edit.redo": return session.songOpen && session.canRedo
         case "transport.play_pause", "transport.stop": return session.songOpen
+        case "view.event_list": return session.songTabs.selectedPage != nil
         default: return true // open project and quit were always enabled
         }
     }
@@ -199,6 +201,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "edit.redo": session.requestRedo()
         case "transport.play_pause": session.playPause()
         case "transport.stop": session.stop()
+        case "view.event_list":
+            session.songTabs.setSelectedTabEventsVisible(visible:
+                !session.songTabs.selectedTabShowsEvents)
         case "view.polyphony_debugger":
             polyphonyVisible.toggle()
             session.polyphony.setVisible(showing: polyphonyVisible)

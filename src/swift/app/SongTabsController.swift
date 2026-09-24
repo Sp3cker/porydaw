@@ -30,6 +30,9 @@ public final class SongTabSession {
     /// standalone session's pages, this facade's never fail — they resolve
     /// against a workspace that lives exactly as long as the tab.
     @QtTracked public var songOpen = true
+    /// Whether this tab shows the event list instead of the piano roll. The
+    /// View menu's MIDI Event List check mirrors the selected tab's value.
+    @QtTracked public var showsEvents = false
     /// The application that owns window-scoped prompt state. The page binds
     /// this tab as `applicationSession`, so the time-signature prompt cannot
     /// read those properties unless they are a stored object reference.
@@ -144,6 +147,10 @@ public final class SongTabsController {
     /// resolving a delegate by index, so a reorder cannot hand it another tab's
     /// roll.
     @QtTracked public var selectedPage: SongTabSession?
+    /// Whether the selected tab shows the event list instead of the piano
+    /// roll. The View menu's MIDI Event List check mirrors this; per-tab
+    /// state lives on each SongTabSession and survives tab switches.
+    @QtTracked public var selectedTabShowsEvents = false
 
     /// The application that owns the workspaces. The application owns this
     /// controller, so the reference is weak and is bound once the application's
@@ -242,6 +249,15 @@ public final class SongTabsController {
     public func selectTab(tabId: Int) {
         guard tabId != selectedId, tabIndex(of: tabId) != nil else { return }
         select(tabId: tabId)
+    }
+
+    /// Shows or hides the selected tab's event list, mirroring the legacy
+    /// View-menu check. Ignored without a selected tab; the mounted page
+    /// follows through its session binding.
+    public func setSelectedTabEventsVisible(visible: Bool) {
+        guard let page = selectedPage else { return }
+        if page.showsEvents != visible { page.showsEvents = visible }
+        if selectedTabShowsEvents != visible { selectedTabShowsEvents = visible }
     }
 
     /// Moves a tab to a final index. The reorder is a genuine row move, so no
@@ -486,6 +502,8 @@ public final class SongTabsController {
         if selectedId != tabId { selectedId = tabId }
         if selectedIndex != index { selectedIndex = index }
         if selectedPage !== page { selectedPage = page }
+        let showsEvents = page?.showsEvents ?? false
+        if selectedTabShowsEvents != showsEvents { selectedTabShowsEvents = showsEvents }
     }
 
     /// Drops every row, retaining each tab with the application until the page

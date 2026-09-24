@@ -71,22 +71,34 @@ TestCase {
         verify(shell !== null)
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
-        const session = shell.shellPresenter.session
+        const shellPresenter = shell.shellPresenter
+        const session = shellPresenter.session
+        verify(!shellPresenter.actionEnabled("view.event_list"),
+               "MIDI Event List is disabled until the selected tab is ready")
+        compare(shellPresenter.actionLabel("view.event_list"), "MIDI Event List")
+        compare(shellPresenter.viewActionIds[0], "view.event_list",
+                "MIDI Event List leads the View menu")
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() {
             return session.songOpen || session.lastSaveError.length > 0
         }, 30000), "song load settles")
         verify(session.songOpen, session.lastSaveError)
+        verify(shellPresenter.actionEnabled("view.event_list"),
+               "the ready tab enables MIDI Event List")
         const tab = findChild(shell.sceneLoader.item, "songTab_" + session.songTabs.selectedId)
         verify(tab !== null, "selected song page is present")
-        const toggle = findChild(shell.sceneLoader.item, "songTabEventListToggle")
-        verify(toggle !== null, "the strip page toggle is present")
         const presenter = session.eventListPresenter()
         compare(presenter.visible, false, "event list is hidden until requested")
-        mouseClick(toggle)
+        compare(session.songTabs.selectedTabShowsEvents, false)
+        shellPresenter.activate("view.event_list")
+        tryCompare(session.songTabs, "selectedTabShowsEvents", true, 3000)
         tryCompare(presenter, "visible", true, 3000)
         const page = findChild(tab, "eventListPage")
         verify(page !== null, "existing event-list page is rendered")
+        tryVerify(function() {
+            const item = findChild(shell, "shellAction_view.event_list")
+            return item !== null && item.checked && item.enabled
+        }, 3000, "the View menu check mirrors the visible event list")
         const table = findChild(page, "eventListTable")
         verify(table !== null, "existing seven-column table is rendered")
         compare(table.columns, 7)
@@ -144,7 +156,7 @@ TestCase {
         tryCompare(presenter, "editing", false)
         compare(presenter.cellDisplay(restored, 3), String(changedPitch),
                 "cell edit changed the document-backed table value")
-        mouseClick(toggle)
+        shellPresenter.activate("view.event_list")
         tryCompare(presenter, "visible", false)
     }
 }
