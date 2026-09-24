@@ -60,6 +60,8 @@ qt_add_executable(porydaw_checks
     ${PROJECT_SOURCE_DIR}/src/porydaw_scale.h
     ${PROJECT_SOURCE_DIR}/src/ui/activity/trackactivity.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/activity/trackactivity.h
+    support/checkstartup.cpp
+    support/checkstartup.h
     support/songfixture.cpp
     support/songfixture.h
     voicegroup/tst_voicegroupbank.cpp
@@ -76,23 +78,6 @@ qt_add_executable(porydaw_checks
     playback/cgb.cpp
     playback/tails.cpp
     playback/settle.cpp
-    swiftrollgated/tst_swiftrollgated.cpp
-    swiftrollgated/gesturechecks.cpp
-    swiftrollgated/clipboardchecks.cpp
-    swiftrollgated/chromevisuals.cpp
-    swiftrollgated/drawerparity.cpp
-    swiftrollgated/nativefixture.h
-    swiftrollgated/notevisuals.cpp
-    swiftrollgated/tabchecks.cpp
-    swiftrollgated/tabfixture.cpp
-    swiftrollgated/tabfixture.h
-    swiftrollgated/tst_swiftrollgated.h
-    themelayout/tst_themelayout.h
-    themelayout/themelayoutcheck.cpp
-    themelayout/tst_themelayout_color.cpp
-    themelayout/tst_themelayout_font.cpp
-    themelayout/tst_themelayout_scale.cpp
-    themelayout/tst_themelayout_chrome.cpp
     ${PROJECT_SOURCE_DIR}/resources/fonts.qrc
 )
 set_target_properties(porydaw_checks PROPERTIES

@@ -89,7 +89,7 @@ enum ShellQmlLane {
         app.setInputDir(EditorQmlPaths.testDirectory)
         app.setImportPath(EditorQmlPaths.qmlImportPath)
         app.setPluginsPath(EditorQmlPaths.pluginPath)
-        pdAppRegisterTypes()
+        ApplicationSession.registerQmlElement()
         ShellPresenter.registerQmlElement()
         ShellQmlBootstrap.registerQmlElement()
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)

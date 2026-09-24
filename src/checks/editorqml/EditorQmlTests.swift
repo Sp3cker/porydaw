@@ -247,7 +247,7 @@ enum EditorQmlLane {
         qTestApp.setInputDir(EditorQmlPaths.testDirectory)
         qTestApp.setImportPath(EditorQmlPaths.qmlImportPath)
         qTestApp.setPluginsPath(EditorQmlPaths.pluginPath)
-        pdAppRegisterTypes()
+        ApplicationSession.registerQmlElement()
         EditorQmlBootstrap.registerQmlElement()
 
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)

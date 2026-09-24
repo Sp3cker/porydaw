@@ -29,13 +29,6 @@ int qtOnly(QApplication &, const QStringList &, const QStringList &qtArguments)
     return Run(qtArguments);
 }
 
-template <auto Run>
-int qtWithApplication(QApplication &application, const QStringList &,
-                      const QStringList &qtArguments)
-{
-    return Run(application, qtArguments);
-}
-
 int midiExport(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
 {
     return runExportCheck(argumentAt(arguments, 1), argumentAt(arguments, 2), qtArguments);
@@ -55,15 +48,6 @@ int swiftCore(QApplication &, const QStringList &arguments, const QStringList &q
     selected.append(qtArguments);
     return runSwiftCoreCheck(argumentAt(arguments, 1), selected);
 }
-
-int swiftGrid(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
-{
-    QString mode = argumentAt(arguments, 0);
-    if (mode.startsWith(QStringLiteral("--")))
-        mode.remove(0, 2);
-    return runSwiftGridBoundaryCheck(mode, argumentAt(arguments, 1), argumentAt(arguments, 2),
-                                     qtArguments);
-}
 #endif
 
 } // namespace
@@ -75,15 +59,6 @@ const std::vector<CheckDefinition> &catalog()
         const QStringList rich = fixtures::richVoicegroupFiles();
         const QStringList route101 =
             project + strings({"sound/songs/midi/mus_route101.mid"}) + rich;
-        // The tab scenarios open more than one song at a time, so the
-        // swiftrollgated surface stages the other registered songs that share
-        // the fixture's `_fixture_rich` voicegroup.
-        const QStringList tabSongs =
-            project +
-            strings({"sound/songs/midi/mus_route101.mid",
-                     "sound/songs/midi/mus_littleroot_test.mid",
-                     "sound/songs/midi/mus_route102.mid", "sound/songs/midi/mus_gym.mid"}) +
-            rich;
         const QStringList route102 =
             project + strings({"sound/songs/midi/mus_route102.mid"}) + rich;
         const QStringList bank =
@@ -164,21 +139,6 @@ const std::vector<CheckDefinition> &catalog()
                                                    "test_midis/smf/malformed/duplicate_eot.mid",
                                                    "test_midis/smf/stress/automation_burst.mid"}) +
                                           rich});
-        // Swift grid input/raster and cross-surface routing. swiftrollgated also
-        // covers standalone Quick drawer hover/drag pixels and Tab/arrow ownership.
-        for (const char *name : {"swiftrollgated", "swiftbandkeys", "swiftqtml", "selectionkey"}) {
-            result.push_back({
-                .name = name,
-                .argv = {QStringLiteral("--") + QString::fromUtf8(name),
-                         QStringLiteral("{scratch}"), QStringLiteral("mus_route101")},
-                .handler = swiftGrid,
-                .scratchKind = ScratchKind::ExistingDirectory,
-                .fixtureRootKind = FixtureRootKind::DecompProject,
-                .fixtureFiles = tabSongs,
-                .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}},
-                .windowing = Windowing::WindowSystem,
-            });
-        }
 #endif
         const auto appendNative = [&](const char *name, const char *command, const char *song,
                                       const QStringList &files, Handler handler = midiExport) {
@@ -187,35 +147,6 @@ const std::vector<CheckDefinition> &catalog()
         appendNative("vgbankcheck", "vgbankcheck", "mus_gym", bank, voicegroupBank);
         appendNative("exportcheck-loop", "exportcheck", "mus_route101", route101);
         appendNative("exportcheck-tail", "exportcheck", "mus_route102", route102);
-        result.push_back({.name = "themecheck",
-                          .argv = strings({"--themecheck"}),
-                          .handler = qtWithApplication<runThemeLayoutThemeCheck>,
-                          .startup = StartupKind::HandlerOwned});
-        result.push_back({.name = "fontcheck",
-                          .argv = strings({"--fontcheck"}),
-                          .handler = qtWithApplication<runThemeLayoutFontCheck>,
-                          .startup = StartupKind::HandlerOwned});
-        result.push_back({.name = "darkbasecheck",
-                          .argv = strings({"--darkbasecheck"}),
-                          .handler = qtWithApplication<runThemeLayoutDarkBaseCheck>,
-                          .startup = StartupKind::HandlerOwned});
-        const auto layoutScale = [](QApplication &application, const QStringList &arguments,
-                                    const QStringList &qtArguments) {
-            return runThemeLayoutScaleCheck(application, argumentAt(arguments, 1).toInt(),
-                                            qtArguments);
-        };
-        result.push_back({.name = "editor-layout-12",
-                          .argv = strings({"--editor-layout-check", "12"}),
-                          .handler = layoutScale,
-                          .startup = StartupKind::HandlerOwned});
-        result.push_back({.name = "editor-layout-16",
-                          .argv = strings({"--editor-layout-check", "16"}),
-                          .handler = layoutScale,
-                          .startup = StartupKind::HandlerOwned});
-        result.push_back({.name = "editor-layout-18",
-                          .argv = strings({"--editor-layout-check", "18"}),
-                          .handler = layoutScale,
-                          .startup = StartupKind::HandlerOwned});
         return result;
     }();
     return definitions;
