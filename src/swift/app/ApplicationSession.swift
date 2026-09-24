@@ -67,9 +67,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private var isDisposed = false
     private var hasReleased = false
     private var activeReplacementTask: Task<Void, Never>?
-    /// The project and song a close-all walk is switching to, when the walk was
-    /// started by a project open rather than by the host's close.
-    private var pendingProjectSwitch: (path: String, label: String?)?
+    private var pendingProjectSwitch: (path: String, label: String?,
+                                       service: ProjectService, labels: [String])?
 
     public required init() {
         let palette = GridPalette()
@@ -350,6 +349,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// through `acknowledgeGridDetached()`, which is where the release happens.
     public func hostClosing() {
         isDisposed = true
+        if let pending = pendingProjectSwitch {
+            pendingProjectSwitch = nil
+            Task { await pending.service.close() }
+        }
         mouseHints.setWindowActive(active: false)
         activeReplacementTask?.cancel()
         // Cancel while the scene exists: every tab's resize session and every
@@ -406,9 +409,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     // MARK: - Project and song opens
 
-    /// Starts a project replacement without exposing async/throws through Qt.
-    /// Every open tab is asked to close first — the same Save/Discard/Cancel
-    /// question the strip asks — and the switch runs once the strip is empty.
     public func openProject(path: String) {
         requestProjectSwitch(path: path, label: nil)
     }
@@ -517,18 +517,18 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
     }
 
-    /// The close-all walk's verdict. A walk this session started for a project
-    /// open continues that switch; any other walk answers the host: a completed
-    /// walk closes its window, a refusal cancels it.
     @QtIgnored
     func closeAllResolved(closed: Bool) {
         if let pending = pendingProjectSwitch {
             pendingProjectSwitch = nil
             guard closed else {
+                Task { await pending.service.close() }
                 closeCancelled()
                 return
             }
-            startProjectSwitch(path: pending.path, label: pending.label)
+            activeReplacementTask = Task { [weak self] in
+                await self?.finishProjectSwitch(pending)
+            }
             return
         }
         if closed { allTabsClosed() } else { closeCancelled() }
@@ -587,30 +587,35 @@ public final class ApplicationSession: QmlInstantiableStatus {
         await awaitTabCloses()
     }
 
-    /// Starts a project switch: every tab is asked to close first, and the switch
-    /// runs once the strip is empty. A refusal cancels the switch.
     private func requestProjectSwitch(path: String, label: String?) {
-        // A close-all walk already running for an earlier open is generic: the
-        // latest request wins, and the in-flight walk resolves into it.
-        guard songTabs.tabCount > 0 else {
-            pendingProjectSwitch = nil
-            startProjectSwitch(path: path, label: label)
-            return
-        }
-        pendingProjectSwitch = (path: path, label: label)
-        songTabs.startCloseAll()
+        startProjectSwitch(path: path, label: label)
     }
 
-    /// Runs a queued project switch. The session is held weakly until the switch
-    /// actually starts, so a queued open that is superseded by the host's teardown
-    /// abandons the switch instead of keeping the session alive past it.
     private func startProjectSwitch(path: String, label: String?) {
         let priorTask = activeReplacementTask
         activeReplacementTask = Task { [weak self] in
             _ = await priorTask?.value
             guard let self else { return }
-            guard await self.replaceProject(path: path) else { return }
-            if let label { await self.openTab(label: label, at: nil) }
+            self.lastSaveError = ""
+            let service = ProjectService()
+            do {
+                try await service.open(root: path)
+                let labels = try await service.songLabels()
+                guard !self.isDisposed, !Task.isCancelled else {
+                    await service.close()
+                    return
+                }
+                let candidate = (path: path, label: label, service: service, labels: labels)
+                if self.songTabs.tabCount == 0 {
+                    await self.finishProjectSwitch(candidate)
+                } else {
+                    self.pendingProjectSwitch = candidate
+                    self.songTabs.startProjectSwitchCloseAll()
+                }
+            } catch {
+                await service.close()
+                self.failOpen(String(describing: error))
+            }
         }
     }
 
@@ -763,28 +768,20 @@ public final class ApplicationSession: QmlInstantiableStatus {
         playhead.refreshImmediate()
     }
 
-    private func replaceProject(path: String) async -> Bool {
-        lastSaveError = ""
-        let service = ProjectService()
-        do {
-            try await service.open(root: path)
-            let newLabels = try await service.songLabels()
-            await releaseTabs()
-            await catalogService?.close()
-            guard !isDisposed, !Task.isCancelled else {
-                await service.close()
-                return false
-            }
-            catalogService = service
-            projectRoot = path
-            labels = newLabels
-            projectOpen = true
-            return true
-        } catch {
-            await service.close()
-            failOpen(String(describing: error))
-            return false
+    private func finishProjectSwitch(
+        _ candidate: (path: String, label: String?, service: ProjectService, labels: [String])
+    ) async {
+        await releaseTabs()
+        await catalogService?.close()
+        guard !isDisposed, !Task.isCancelled else {
+            await candidate.service.close()
+            return
         }
+        catalogService = candidate.service
+        projectRoot = candidate.path
+        labels = candidate.labels
+        projectOpen = true
+        if let label = candidate.label { await openTab(label: label, at: nil) }
     }
 
     /// Republishes the flags the window and the strip read: the song is open

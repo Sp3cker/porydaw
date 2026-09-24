@@ -145,6 +145,8 @@ TestCase {
             return session.songTabs.tabCount === 1 || session.lastSaveError.length > 0
         }, 30000), "the first song loads")
         tryCompare(session.songTabs, "tabCount", 1)
+        var firstId = session.songTabs.selectedId
+        var firstPage = session.songTabs.selectedPage
         session.openSong("mus_littleroot_test")
         verify(waitForNative(function() {
             return session.songTabs.tabCount === 2 || session.lastSaveError.length > 0
@@ -153,6 +155,15 @@ TestCase {
         verify(session.songTabs.selectedPage !== null, "the live second tab has a page")
         compare(session.songTabs.selectedPage.dirty, false,
                 "the live selected tab is clean before the project-open failure")
+        var tabs = session.songTabs
+        var selectedId = tabs.selectedId
+        var selectedPage = tabs.selectedPage
+        var tabCount = tabs.tabCount
+        var label = selectedPage.title
+        var selectedDocument = selectedPage.grid
+        verify(waitForNative(function() { return selectedDocument.noteSummary.length > 2 }, 5000),
+               "the selected document publishes loaded notes before project replacement")
+        var originalNotes = selectedDocument.noteSummary
 
         openFailedSpy.target = session
         criticalSpy.target = shell.shellPresenter
@@ -169,5 +180,20 @@ TestCase {
         verify(waitForNative(function() { return dialog.visible }, 3000),
                "the project-open failure dialog is shown")
         dialog.close()
+        compare(tabs.selectedId, selectedId,
+                "failed project replacement preserves the selected tab")
+        compare(tabs.tabCount, tabCount,
+                "failed project replacement preserves the open tab count")
+        compare(tabs.selectedPage, selectedPage,
+                "failed project replacement preserves the selected page identity")
+        compare(selectedPage.songOpen, true,
+                "failed project replacement keeps the selected document ready")
+        compare(selectedPage.title, label,
+                "failed project replacement preserves the document label")
+        compare(selectedPage.grid.noteSummary, originalNotes,
+                "failed project replacement preserves the selected document notes")
+        verify(findChild(shell.sceneLoader.item, "songTab_" + firstId) !== null
+               && firstPage.songOpen,
+               "failed project replacement keeps the background document ready")
     }
 }

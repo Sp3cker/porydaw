@@ -156,6 +156,7 @@ public final class SongTabsController {
     @QtIgnored private var isClosingAll = false
     /// Whether the walk's next step is already scheduled for the next turn.
     @QtIgnored private var advancePending = false
+    @QtIgnored private var projectSwitchApprovalIndex: Int?
 
     private var nextTabId = 1
 
@@ -274,11 +275,13 @@ public final class SongTabsController {
         if pendingCloseId != tabId { pendingCloseId = tabId }
     }
 
-    /// The gate's Discard answer: the unsaved changes are given up and the tab
-    /// closes. A close-all walk continues with the next tab.
     public func confirmDiscard() {
         guard let tabId = takePendingClose() else { return }
-        if let index = tabIndex(of: tabId) { closeTab(index: index) }
+        if let index = projectSwitchApprovalIndex {
+            projectSwitchApprovalIndex = index + 1
+        } else if let index = tabIndex(of: tabId) {
+            closeTab(index: index)
+        }
         advanceCloseAll()
     }
 
@@ -300,6 +303,7 @@ public final class SongTabsController {
         if reloadId != -1 { reloadId = -1 }
         if isClosingAll {
             isClosingAll = false
+            projectSwitchApprovalIndex = nil
             app?.closeAllResolved(closed: false)
         }
     }
@@ -327,7 +331,11 @@ public final class SongTabsController {
         savingCloseId = -1
         guard saved, pendingCloseId == tabId, let index = tabIndex(of: tabId) else { return }
         pendingCloseId = -1
-        closeTab(index: index)
+        if projectSwitchApprovalIndex != nil {
+            projectSwitchApprovalIndex = index + 1
+        } else {
+            closeTab(index: index)
+        }
         advanceCloseAll()
     }
 
@@ -350,6 +358,15 @@ public final class SongTabsController {
         // answer drives advanceCloseAll — and drop any reload so the walk owns
         // the outcome.
         reloadId = -1
+        isClosingAll = true
+        if pendingCloseId == -1 { advanceCloseAll() }
+    }
+
+    @QtIgnored
+    func startProjectSwitchCloseAll() {
+        guard !isClosingAll else { return }
+        reloadId = -1
+        projectSwitchApprovalIndex = 0
         isClosingAll = true
         if pendingCloseId == -1 { advanceCloseAll() }
     }
@@ -411,13 +428,6 @@ public final class SongTabsController {
         if reopening { app?.reloadApproved(label: tab.title, index: index) }
     }
 
-    /// Advances the close-all walk: clean tabs close at once, a dirty one raises
-    /// the gate and the walk resumes from its answer.
-    ///
-    /// The next question is always raised a turn after the previous answer. QML
-    /// reports a dialog rejection more than once for one closed dialog — the
-    /// Cancel button's own click and the dialog's rejection — and a stale answer
-    /// must never cancel the question that followed it.
     private func advanceCloseAll() {
         guard isClosingAll, !advancePending else { return }
         advancePending = true
@@ -430,8 +440,20 @@ public final class SongTabsController {
 
     private func settleCloseAll() {
         guard isClosingAll else { return }
+        let projectSwitch = projectSwitchApprovalIndex != nil
+        if let approvalIndex = projectSwitchApprovalIndex {
+            for index in approvalIndex..<tabs.count {
+                let tab = tabs[index]
+                guard tab.dirty else { continue }
+                projectSwitchApprovalIndex = index
+                if tab.tabId != selectedId { select(tabId: tab.tabId) }
+                if pendingCloseId != tab.tabId { pendingCloseId = tab.tabId }
+                return
+            }
+            projectSwitchApprovalIndex = nil
+        }
         while let tab = tabs.first {
-            guard tab.dirty else {
+            guard tab.dirty && !projectSwitch else {
                 closeTab(index: 0)
                 continue
             }
