@@ -525,6 +525,183 @@ TestCase {
         verify(clipProbe.readClipJson().length > 0, "the tiling clip remains staged")
     }
 
+    function test_noteDeleteAndCutKeys() {
+        var session = openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = findChild(surface, "swiftRollInput")
+        verify(roll && roll.visible, "the real roll input is mounted")
+        var visible = []
+        var all = gridNotes(grid)
+        for (var vi = 0; vi < all.length; ++vi) {
+            var probe = findChild(surface, "gridNote_" + all[vi].id)
+            if (!probe)
+                continue
+            var center = probe.mapToItem(roll, probe.width / 2, probe.height / 2)
+            if (center.x > 1 && center.y > 1 && center.x < roll.width - 1 && center.y < roll.height - 1)
+                visible.push(all[vi])
+        }
+        verify(visible.length >= 2, "the staged song shows two notes to delete")
+        visible.sort(function(a, b) {
+            return a.tick !== b.tick ? a.tick - b.tick : a.id - b.id
+        })
+        var first = null
+        var second = null
+        for (var pi = 0; pi + 1 < visible.length; ++pi) {
+            if (visible[pi].track === visible[pi + 1].track) {
+                first = visible[pi]
+                second = visible[pi + 1]
+                break
+            }
+        }
+        verify(first !== null && second !== null, "two visible notes share one track")
+        grid.setTrack(first.track)
+        verify(waitForNative(function() {
+            return grid.trackIndex === first.track
+        }, 5000), "the source track is presented")
+        var firstCenter = noteCenter(roll, surface, first.id)
+        verify(firstCenter !== null, "the first note renders")
+        mouseClick(roll, firstCenter.x, firstCenter.y, Qt.LeftButton)
+        var secondCenter = noteCenter(roll, surface, second.id)
+        verify(secondCenter !== null, "the second note renders")
+        mouseClick(roll, secondCenter.x, secondCenter.y, Qt.LeftButton, Qt.ShiftModifier)
+        verify(waitForNative(function() {
+            return selectedCount(grid) === 2
+        }, 5000), "real pointer input selects both notes")
+        var beforeDelete = gridNotes(grid)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        verify(shell.shellPresenter.actionEnabled("roll.delete"), "Delete is enabled")
+        keyClick(Qt.Key_Delete)
+        verify(waitForNative(function() {
+            var current = gridNotes(grid)
+            return current.length === beforeDelete.length - 2
+                && noteById(grid, first.id) === null
+                && noteById(grid, second.id) === null
+        }, 5000), "real Delete removes both selected notes")
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return gridNotes(grid).length === beforeDelete.length
+                && noteById(grid, first.id) !== null
+                && noteById(grid, second.id) !== null
+        }, 5000), "Undo restores both deleted notes")
+        firstCenter = noteCenter(roll, surface, first.id)
+        verify(firstCenter !== null, "the restored first note renders")
+        mouseClick(roll, firstCenter.x, firstCenter.y, Qt.LeftButton)
+        secondCenter = noteCenter(roll, surface, second.id)
+        verify(secondCenter !== null, "the restored second note renders")
+        mouseClick(roll, secondCenter.x, secondCenter.y, Qt.LeftButton, Qt.ShiftModifier)
+        verify(waitForNative(function() {
+            return selectedCount(grid) === 2
+        }, 5000), "real pointer input re-selects both notes")
+        verify(shell.shellPresenter.actionEnabled("roll.cut"), "Cut is enabled")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keySequence(StandardKey.Cut)
+        var cutText = ""
+        verify(waitForNative(function() {
+            var current = gridNotes(grid)
+            if (current.length !== beforeDelete.length - 2)
+                return false
+            cutText = clipProbe.readClipJson()
+            return cutText.length > 0
+        }, 5000), "real Cut removes both notes and publishes clip bytes")
+        var cut = JSON.parse(cutText)
+        compare(cut.format, 1, "cut format")
+        compare(cut.span, 0, "cut span is a note selection")
+        compare(cut.tracks.length, 1, "cut tracks")
+        compare(cut.tracks[0].track, first.track, "cut track")
+        compare(cut.tracks[0].notes.length, 2, "cut notes")
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return gridNotes(grid).length === beforeDelete.length
+        }, 5000), "Undo restores both cut notes")
+        var pasteBase = gridNotes(grid)
+        var pasteEnd = 0
+        for (var pe = 0; pe < pasteBase.length; ++pe)
+            pasteEnd = Math.max(pasteEnd, pasteBase[pe].tick + pasteBase[pe].duration)
+        var pasteCursor = (Math.floor((pasteEnd + grid.snapTicks - 1) / grid.snapTicks) + 2) * grid.snapTicks
+        grid.setEditCursorTick(pasteCursor)
+        compare(grid.editCursorTick, pasteCursor, "the paste cursor is staged clear")
+        verify(waitForNative(function() {
+            return shell.shellPresenter.actionEnabled("roll.paste")
+        }, 5000), "Paste is enabled with the cut clip")
+        keySequence(StandardKey.Paste)
+        verify(waitForNative(function() {
+            return gridNotes(grid).length === beforeDelete.length + 2
+        }, 5000), "Paste reinserts the cut payload")
+    }
+
+    function test_trackExpandingRangePaste() {
+        var session = openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = findChild(surface, "swiftRollInput")
+        verify(roll && roll.visible, "the real roll input is mounted")
+        var probedTracks = 0
+        for (var ti = 0; ti < 16; ++ti) {
+            grid.setTrack(ti)
+            if (grid.trackIndex === ti)
+                probedTracks = ti + 1
+        }
+        verify(probedTracks > 0 && probedTracks < 16, "the staged song leaves expansion headroom")
+        grid.setTrack(0)
+        verify(waitForNative(function() {
+            return grid.trackIndex === 0
+        }, 5000), "track 0 is presented")
+        grid.setTrack(probedTracks)
+        verify(grid.trackIndex !== probedTracks, "the outer track is beyond the staged song")
+        grid.setTrack(0)
+        var before = gridNotes(grid)
+        var snap = grid.snapTicks
+        verify(snap > 0, "snap is positive")
+        var latestEnd = 0
+        for (var li = 0; li < before.length; ++li)
+            latestEnd = Math.max(latestEnd, before[li].tick + before[li].duration)
+        var cursor = (Math.floor((latestEnd + snap - 1) / snap) + 2) * snap
+        grid.setEditCursorTick(cursor)
+        compare(grid.editCursorTick, cursor, "the edit cursor is staged")
+        var expandingPayload = JSON.stringify({
+            format: 1, ticksPerBeat: grid.ticksPerBeat, span: 96, wholeLane: false,
+            tracks: [{ track: 0, notes: [{ relTick: 0, key: 60, duration: 24, velocity: 100 }] },
+                     { track: probedTracks,
+                       notes: [{ relTick: 0, key: 64, duration: 24, velocity: 90 }] }],
+            lanes: [], tempo: []
+        })
+        verify(clipProbe.writeClipJson(expandingPayload), "the expanding clip is staged")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        verify(waitForNative(function() {
+            return shell.shellPresenter.actionEnabled("roll.paste")
+        }, 5000), "Paste is enabled with a range clip")
+        keySequence(StandardKey.Paste)
+        verify(waitForNative(function() {
+            if (gridNotes(grid).length !== before.length + 1)
+                return false
+            var home = tileOn(grid, cursor, 60, 24, 0, 100)
+            return home !== null && grid.editCursorTick === cursor + 96
+        }, 5000), "real Paste merges the home track and advances by span")
+        verify(waitForNative(function() {
+            return shell.shellPresenter.actionEnabled("edit.undo")
+        }, 5000), "Undo is enabled after the expanding paste")
+        grid.setTrack(probedTracks)
+        verify(waitForNative(function() {
+            return grid.trackIndex === probedTracks
+        }, 5000), "the paste expands the song by one track")
+        var outer = tileOn(grid, cursor, 64, 24, probedTracks, 90)
+        verify(outer !== null, "the outer track carries its pasted note")
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return tileOn(grid, cursor, 64, 24, probedTracks, 90) === null
+        }, 5000), "Undo removes the outer pasted note")
+        grid.setTrack(0)
+        verify(waitForNative(function() {
+            return grid.trackIndex === 0 && gridNotes(grid).length === before.length
+        }, 5000), "Undo restores the home baseline")
+        grid.setTrack(probedTracks)
+        verify(grid.trackIndex !== probedTracks, "Undo retracts the expansion")
+    }
+
     function pastedOn(grid, sourceId, tick, source) {
         var list = JSON.parse(grid.noteSummary)
         for (var i = 0; i < list.length; ++i) {

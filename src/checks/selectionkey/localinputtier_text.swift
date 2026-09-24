@@ -234,5 +234,165 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     report.expect(second.session.selectedNotes == Set(pairT1) && second.session.selectedTrack == primaryBeforeOutOfRange && publications.isEmpty, cppID: lifetimeID,
                   message: "out-of-range primary-track selects keep the track, notes, and publications")
     second.session.onChange = priorChange
+    let tempoID = "drawerpresentation/DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp"
+    let ccID = "drawerpresentation/DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit"
+    let escapeID = "drawerpresentation/DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus"
+    let focusID = "drawerpresentation/DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel"
+    let lateID = "drawerpresentation/DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing"
+    let tempoFixture = drawerAutomationAutomationFixture(suite: suite, service: service)
+    tempoFixture.activate(.tempo)
+    let tempoBaseRevision = tempoFixture.document.revision
+    report.expect(tempoFixture.page.openPrompt(tick: 24, value: 140), cppID: tempoID,
+                  message: "tempo insertion prompt opens at tick 24")
+    report.expect(tempoFixture.page.acceptPrompt(displayedValue: 90), cppID: tempoID,
+                  message: "tempo prompt commits 90 BPM")
+    report.expectEqual(tempoBaseRevision + 1, tempoFixture.document.revision, cppID: tempoID,
+                       what: "A017 one tempo acceptance advances the revision once")
+    report.expect(tempoFixture.tempoValues.contains("24:90"), cppID: tempoID,
+                  message: "A019 committed tempo reads 90 BPM at tick 24")
+    report.expect(tempoFixture.page.openPrompt(tick: 32, value: 120), cppID: tempoID,
+                  message: "tempo ceiling prompt opens at tick 32")
+    report.expect(tempoFixture.page.acceptPrompt(displayedValue: TimeDefaults.maximumTempoBPM + 1000),
+                  cppID: tempoID, message: "over-maximum tempo acceptance commits")
+    report.expect(tempoFixture.tempoValues.contains("32:\(TimeDefaults.maximumTempoBPM)"), cppID: tempoID,
+                  message: "A024 ceiling acceptance clamps to the maximum BPM")
+    report.expect(tempoFixture.page.openPrompt(tick: 40, value: 120), cppID: tempoID,
+                  message: "tempo floor prompt opens at tick 40")
+    report.expect(tempoFixture.page.acceptPrompt(displayedValue: TimeDefaults.minimumTempoBPM - 1000),
+                  cppID: tempoID, message: "under-minimum tempo acceptance commits")
+    report.expect(tempoFixture.tempoValues.contains("40:\(TimeDefaults.minimumTempoBPM)"), cppID: tempoID,
+                  message: "A028 floor acceptance clamps to the minimum BPM")
+    report.expectEqual(tempoBaseRevision + 3, tempoFixture.document.revision, cppID: tempoID,
+                       what: "A029 three tempo acceptances advance the revision three times")
+    let tempoDepthFixture = drawerAutomationAutomationFixture(suite: suite, service: service)
+    tempoDepthFixture.activate(.tempo)
+    let tempoDepthBase = try? coreEditHistoryCountAtTip(tempoDepthFixture.document, report: report, cppID: tempoID)
+    report.expect(tempoDepthFixture.page.openPrompt(tick: 24, value: 140), cppID: tempoID,
+                  message: "depth tempo prompt opens at tick 24")
+    report.expect(tempoDepthFixture.page.acceptPrompt(displayedValue: 90), cppID: tempoID,
+                  message: "depth tempo prompt commits 90 BPM")
+    if let base = tempoDepthBase,
+       let afterFirst = try? coreEditHistoryCountAtTip(tempoDepthFixture.document, report: report, cppID: tempoID) {
+        report.expectEqual(base + 1, afterFirst, cppID: tempoID,
+                           what: "A018 one tempo acceptance records one history entry")
+    } else {
+        report.fail(tempoID, "tempo history depth unreadable after one acceptance")
+    }
+    report.expect(tempoDepthFixture.page.openPrompt(tick: 32, value: 120), cppID: tempoID,
+                  message: "depth tempo ceiling prompt opens at tick 32")
+    report.expect(tempoDepthFixture.page.acceptPrompt(displayedValue: TimeDefaults.maximumTempoBPM + 1000),
+                  cppID: tempoID, message: "depth over-maximum tempo acceptance commits")
+    report.expect(tempoDepthFixture.page.openPrompt(tick: 40, value: 120), cppID: tempoID,
+                  message: "depth tempo floor prompt opens at tick 40")
+    report.expect(tempoDepthFixture.page.acceptPrompt(displayedValue: TimeDefaults.minimumTempoBPM - 1000),
+                  cppID: tempoID, message: "depth under-minimum tempo acceptance commits")
+    if let base = tempoDepthBase,
+       let afterAll = try? coreEditHistoryCountAtTip(tempoDepthFixture.document, report: report, cppID: tempoID) {
+        report.expectEqual(base + 3, afterAll, cppID: tempoID,
+                           what: "A030 three tempo acceptances record three history entries")
+    } else {
+        report.fail(tempoID, "tempo history depth unreadable after three acceptances")
+    }
+    let ccFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    ccFixture.activate(ccFixture.panLane)
+    report.expect(ccFixture.page.rows.contains { $0.parameter == ccFixture.panLane }, cppID: ccID,
+                  message: "A035 CC10 lane present in the insertion fixture row stack")
+    let ccBaseRevision = ccFixture.document.revision
+    report.expect(ccFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
+                  message: "CC insertion prompt opens at empty tick 96")
+    report.expect(ccFixture.page.acceptPrompt(displayedValue: 0), cppID: ccID,
+                  message: "displayed 0 commits through the center offset")
+    report.expectEqual(ccBaseRevision + 1, ccFixture.document.revision, cppID: ccID,
+                       what: "A042 one CC insertion advances the revision once")
+    report.expectEqual(2, ccFixture.lanePoints(ccFixture.panLane).count, cppID: ccID,
+                       what: "A044 insertion leaves two lane points")
+    report.expectEqual(64, ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+                       cppID: ccID, what: "A045 inserted point stores 64")
+    report.expect(ccFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
+                  message: "node prompt opens on the inserted point")
+    report.expect(ccFixture.page.acceptPrompt(displayedValue: -64), cppID: ccID,
+                  message: "displayed -64 commits through the stored offset")
+    report.expect(ccFixture.lanePoints(ccFixture.panLane).contains { $0.tick == 96 }, cppID: ccID,
+                  message: "A049 lowered node found at tick 96")
+    report.expectEqual(0, ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+                       cppID: ccID, what: "A050 displayed -64 stores 0")
+    report.expect(ccFixture.page.openPrompt(tick: 96, value: 0), cppID: ccID,
+                  message: "node prompt reopens on the lowered point")
+    report.expect(ccFixture.page.acceptPrompt(displayedValue: 63), cppID: ccID,
+                  message: "displayed 63 commits through the stored offset")
+    report.expect(ccFixture.lanePoints(ccFixture.panLane).contains { $0.tick == 96 }, cppID: ccID,
+                  message: "A054 raised node found at tick 96")
+    report.expectEqual(127, ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+                       cppID: ccID, what: "A055 displayed 63 stores 127")
+    report.expectEqual(ccBaseRevision + 3, ccFixture.document.revision, cppID: ccID,
+                       what: "A056 three CC acceptances advance the revision three times")
+    let ccDepthFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    ccDepthFixture.activate(ccDepthFixture.panLane)
+    let ccDepthBase = try? coreEditHistoryCountAtTip(ccDepthFixture.document, report: report, cppID: ccID)
+    report.expect(ccDepthFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
+                  message: "depth CC insertion prompt opens at tick 96")
+    report.expect(ccDepthFixture.page.acceptPrompt(displayedValue: 0), cppID: ccID,
+                  message: "depth displayed 0 commits through the center offset")
+    if let base = ccDepthBase,
+       let afterFirst = try? coreEditHistoryCountAtTip(ccDepthFixture.document, report: report, cppID: ccID) {
+        report.expectEqual(base + 1, afterFirst, cppID: ccID,
+                           what: "A043 one CC insertion records one history entry")
+    } else {
+        report.fail(ccID, "CC history depth unreadable after one insertion")
+    }
+    report.expect(ccDepthFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
+                  message: "depth node prompt opens on the inserted point")
+    report.expect(ccDepthFixture.page.acceptPrompt(displayedValue: -64), cppID: ccID,
+                  message: "depth displayed -64 commits")
+    report.expect(ccDepthFixture.page.openPrompt(tick: 96, value: 0), cppID: ccID,
+                  message: "depth node prompt reopens on the lowered point")
+    report.expect(ccDepthFixture.page.acceptPrompt(displayedValue: 63), cppID: ccID,
+                  message: "depth displayed 63 commits")
+    if let base = ccDepthBase,
+       let afterAll = try? coreEditHistoryCountAtTip(ccDepthFixture.document, report: report, cppID: ccID) {
+        report.expectEqual(base + 3, afterAll, cppID: ccID,
+                           what: "A057 three CC acceptances record three history entries")
+    } else {
+        report.fail(ccID, "CC history depth unreadable after three acceptances")
+    }
+    let escapeFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    escapeFixture.activate(escapeFixture.panLane)
+    report.expect(escapeFixture.page.rows.contains { $0.parameter == escapeFixture.panLane }, cppID: escapeID,
+                  message: "A063 CC10 lane present in the escape fixture row stack")
+    let focusFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    focusFixture.activate(focusFixture.panLane)
+    report.expect(focusFixture.page.rows.contains { $0.parameter == focusFixture.panLane }, cppID: focusID,
+                  message: "A073 CC10 lane present in the focus fixture row stack")
+    let focusDepthBase = try? coreEditHistoryCountAtTip(focusFixture.document, report: report, cppID: focusID)
+    let focusBaseRevision = focusFixture.document.revision
+    report.expect(focusFixture.page.openPrompt(tick: 24, value: 64), cppID: focusID,
+                  message: "node prompt opens before the document change")
+    focusFixture.document.writeLane(track: 0, lane: .controller(TimeDefaults.ccPan), from: 48, through: 48,
+                                    points: [LaneWrite(tick: 48, value: 32)])
+    report.expect(!focusFixture.page.promptOpen, cppID: focusID,
+                  message: "document change cancels the pending prompt")
+    report.expect(focusFixture.lanePoints(focusFixture.panLane).contains { $0.tick == 24 }, cppID: focusID,
+                  message: "A080 original node found after the cancel")
+    report.expectEqual(64, focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 24 }?.value ?? -1,
+                       cppID: focusID, what: "A081 cancelled prompt keeps the original value 64")
+    report.expect(focusFixture.lanePoints(focusFixture.panLane).contains { $0.tick == 48 }, cppID: focusID,
+                  message: "A082 added point found at tick 48")
+    report.expectEqual(32, focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 48 }?.value ?? -1,
+                       cppID: focusID, what: "A083 added point stores 32")
+    report.expectEqual(["24:64", "48:32"], focusFixture.values(focusFixture.panLane), cppID: focusID,
+                       what: "A084 lane holds the original plus the added point")
+    report.expectEqual(focusBaseRevision + 1, focusFixture.document.revision, cppID: focusID,
+                       what: "A085 document change alone advances the revision once")
+    if let base = focusDepthBase,
+       let afterChange = try? coreEditHistoryCountAtTip(focusFixture.document, report: report, cppID: focusID) {
+        report.expectEqual(base + 1, afterChange, cppID: focusID,
+                           what: "A086 document change records one history entry")
+    } else {
+        report.fail(focusID, "focus history depth unreadable after the document change")
+    }
+    let lateFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    lateFixture.activate(lateFixture.panLane)
+    report.expect(lateFixture.page.rows.contains { $0.parameter == lateFixture.panLane }, cppID: lateID,
+                  message: "A096 CC10 lane present in the cancel fixture row stack")
 
 }

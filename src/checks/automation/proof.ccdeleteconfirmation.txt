@@ -7,7 +7,7 @@ Original SHA-256: d75733bc8844b4f8ca187a03fd69501172f4ee8b727804c945aeaaccae26ab
 Swift counterpart: src/checks/automation/domain/tst_automationdomain.swift
 Swift SHA-256: c7314347f30a129f9ba667ef57a9b569b475c2dd4d6f520f51552f51329c32b7
 Additional Swift counterpart: src/checks/automation/automationpointmenus.swift
-Additional Swift SHA-256: 02e53ba32c703c92a5a6f596f62857f5a97173514cb51732da1b563f10ebfd25
+Additional Swift SHA-256: 74b18a0c7b24abb1cd5b8c8e2881f42d87ffe07db114d6878d5acce44dd536bc
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift SHA-256: e6b78590c3c586824ae89880f2d843d5832bb03c7c550e34062fa9487e785e3f
 
@@ -58,7 +58,7 @@ Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:154
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. The original asserts the native focused band (focusAutomationBand) as the precondition of the confirmation route; the converted Swift page publishes no focused-band state, so no predicate can execute this observation.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: focusAutomationBand has no Swift ingress: focusedBand/TimelineBand do not exist anywhere in src/swift/app/drawer/automation, and the successor plotFocused flag is driven by the QML plot binding (src/ui/songview/quick/drawer/AutomationPage.qml:283-289), unobservable in the Swift-only lane, which has no window.
 Source context since previous assertion:
   // Regression coverage for the automation canvas' CC-lane delete confirmation:
   // the Quick form that replaced the nonempty-lane QMessageBox on the shared
@@ -305,7 +305,7 @@ Original expression:
 
 A010 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:179
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. The original asserts the rendered confirmation gives Cancel the initial focus (inputHasActiveFocus); the Swift presenter owns the confirmation prompt kind but publishes no active-focus state.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: Cancel initial window focus is QML-owned: confirming prompts force Cancel focus in takeFocus (src/ui/songview/quick/drawer/AutomationPrompt.qml:36-40) while Swift publishes only the branch fact promptKind==confirmLaneDelete ([S126]). Proven half: the open confirmation owns its kind ([S155]), its open state ([S156]) and the page interaction ([S157]).
 Source context since previous assertion:
 
 
@@ -338,7 +338,7 @@ Original expression:
 
 A013 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:186
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. The original asserts the automation band regains focus after the accept; the Swift page publishes no focused-band state.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: band-focus return after accept is QML-owned (onClosed->focusOrigin, src/ui/songview/quick/drawer/AutomationPage.qml:233-235,646); no focused-band fact exists in Swift. The accept removal and single revision stay matched ([S130], [S132]).
 Source context since previous assertion:
 
 
@@ -627,7 +627,7 @@ Original expression:
 
 A042 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:243
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. The original asserts the automation band regains focus after the Cancel route; the Swift page publishes no focused-band state.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: band-focus return after Cancel is QML-owned (same onClosed->focusOrigin route); the cancel drop and untouched document stay matched ([S136], [S137]).
 Source context since previous assertion:
 
 
@@ -717,7 +717,7 @@ Original expression:
 
 A050 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:269
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. The original asserts the automation band regains focus after the Escape dismissal; the Swift page publishes no focused-band state.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain for the focus return: it is QML-owned (onClosed->focusOrigin, src/ui/songview/quick/drawer/AutomationPage.qml:233-235,646) and unobservable in the Swift-only lane. Proven half: the production Escape route now executes on the confirmation: handleEscape claims it ([S158]) and drops the prompt and the interaction ([S159]) with nothing written ([S160]); the confirmation own cancel route stays matched ([S136], [S137]).
 Source context since previous assertion:
 
 
@@ -878,7 +878,7 @@ Original expression:
 
 A064 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:318
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. The original asserts the automation band regains focus after the outside dismissal; the Swift page publishes no focused-band state.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: the outside right-press dismissal is native pointer delivery plus band focus: Swift has no outside-press route for confirmations (outsideMenuPress covers menus only; the prompt-underlay cancel is QML-only cancelDraft->model.cancelPrompt, src/ui/songview/quick/drawer/AutomationPrompt.qml:56-61) and no focused-band fact. The cancel outcome stays matched ([S136], [S137]).
 Source context since previous assertion:
 
 
@@ -919,7 +919,7 @@ Original expression:
 
 A067 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:335
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. The original asserts the confirmation gives Cancel the initial focus before the Return cancellation; the Swift presenter publishes no active-focus state.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: same QML-owned initial focus as A010 (src/ui/songview/quick/drawer/AutomationPrompt.qml:36-40); the confirmation kind and interaction stay proven ([S155], [S157]).
 Source context since previous assertion:
 
 
@@ -979,7 +979,7 @@ Original expression:
 
 A073 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:347
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. The original asserts the automation band regains focus after the Return cancellation; the Swift page publishes no focused-band state.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: band-focus return after the Return cancellation is QML-owned; the Return-cancel drop stays covered ([S152], [S153], [S136], [S137]).
 Source context since previous assertion:
 
 
@@ -1009,7 +1009,7 @@ Original expression:
 
 A075 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:361
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. The original asserts the confirmation gives Cancel the initial focus in the stale scenario; the Swift presenter publishes no active-focus state.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: same QML-owned initial focus as A010 in the stale scenario; the confirmation kind and interaction stay proven ([S155], [S157]).
 Source context since previous assertion:
 
 
@@ -1192,7 +1192,7 @@ Original expression:
 
 A091 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:416
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. The original asserts the confirmation gives Cancel the initial focus in the foreign-popup scenario; the Swift presenter publishes no active-focus state.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: same QML-owned initial focus as A010 in the foreign-popup scenario; the confirmation kind and interaction stay proven ([S155], [S157]).
 Source context since previous assertion:
 
 
@@ -1366,7 +1366,7 @@ Original expression:
 
 A106 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:473
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. The original asserts the ruler control regains active focus after the foreign pick (hasActiveFocus); the Swift page has no ruler-division ingress and publishes no active-focus state.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain, feature-not-ported: the ruler control, its division menu and ruler focus have no Swift ingress: no openDivisionMenu/GridSelection anywhere in src/swift, zero Ruler/Division references in the automation drawer QML; openDivisionMenu lives only in src/ui/songview/quick/RulerControls.qml outside the automation scope. The foreign-pick grid change and no-write observations stay recorded per site.
 Source context since previous assertion:
 
 
@@ -1379,7 +1379,7 @@ Original expression:
 
 A107 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:476
 Disposition: GAP
-Mapping/reason: GAP - native key delivery. The original asserts a physical Qt Return press on the focused ruler control reopening the foreign division menu; the Swift page has no ruler-menu ingress and no key-delivery predicate, so this observation cannot execute.
+Mapping/reason: GAP - native key delivery. GAP-retain, feature-not-ported: a physical Return on the focused ruler control reopening the foreign division menu has no Swift ingress (same ruler no-ingress evidence as A106) and no key-delivery predicate exists in Swift.
 Source context since previous assertion:
 
       keyClick(Qt::Key_Return);
@@ -1739,7 +1739,7 @@ Original expression:
 
 A139 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:579
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. The original asserts the confirmation gives Cancel the initial focus in the written-count scenario; the Swift presenter publishes no active-focus state.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: same QML-owned initial focus as A010 in the written-count scenario; the confirmation kind and interaction stay proven ([S155], [S157]).
 Source context since previous assertion:
 
 
@@ -1933,9 +1933,10 @@ Remaining original source (closing sequence and helper bodies):
 Swift assertion predicates
 The S entries are exact predicates called by the paired Swift suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
-S001-S123 index src/checks/automation/domain/tst_automationdomain.swift; S124-S151 index
+S001-S123 index src/checks/automation/domain/tst_automationdomain.swift; S124-S151 and S155-S160 index
 drawerAutomationLaneDeleteConfirmation in src/checks/automation/automationpointmenus.swift,
-which owns the confirmation, stale, synthetic-only and written-count predicates;
+which owns the confirmation, stale, synthetic-only and written-count predicates, the open
+confirmation interaction predicates (S155-S157) and the confirmation Escape route (S158-S160);
 S152-S154 index drawerAutomationCancellationAndNoOps in
 src/checks/automation/automationcanvasediting.swift, which owns the page Escape and
 cancellation route cited for the two dismissal sites.
@@ -2462,116 +2463,116 @@ S123 | expect | src/checks/automation/domain/tst_automationdomain.swift:717
   report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::replaceSpans",
                             message: "tst_automationdomain.cpp:\(line) row=\(row)")
 
-S124 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:188
+S124 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:208
     report.expect(page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0),
                   cppID: id, message: "the lane menu opens")
 
-S125 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:190
+S125 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:210
     report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue),
                   cppID: id, message: "the Delete events row is consumed")
 
-S126 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:192
+S126 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:212
     report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id,
                        what: "the row opens the delete confirmation")
 
-S127 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:194
+S127 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:214
     report.expect(page.promptMessage.contains("2 written events"), cppID: id,
                   message: "the confirmation names the written count")
 
-S128 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:196
+S128 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:216
     report.expectEqual(before, fixture.snapshot, cppID: id,
                        what: "opening the confirmation writes nothing")
 
-S129 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:198
+S129 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:218
     report.expect(page.acceptPromptDraft(), cppID: id, message: "the confirmation accepts")
 
-S130 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:199
+S130 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:219
     report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
                        what: "accept removes only the target lane")
 
-S131 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:201
+S131 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:221
     report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
                        what: "the volume lane is preserved")
 
-S132 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:203
+S132 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:223
     report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
                        what: "one acceptance is one revision")
 
-S133 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:205
+S133 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:225
     report.expect(fixture.undo(), cppID: id, message: "the acceptance undoes")
 
-S134 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:206
+S134 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:226
     report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores the target lane")
 
-S135 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:208
+S135 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:228
     report.expect(!fixture.document.history.canUndo, cppID: id,
                   message: "the acceptance recorded exactly one history entry")
 
-S136 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:216
+S136 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:236
     report.expect(!page.hasPrompt, cppID: cancelID, message: "cancelling drops the confirmation")
 
-S137 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:217
+S137 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:237
     report.expectEqual(cancelBefore, fixture.snapshot, cppID: cancelID,
                        what: "cancelling leaves document and history untouched")
 
-S138 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:226
+S138 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:246
     report.expect(!page.acceptPromptDraft(), cppID: staleID,
                   message: "a stale confirmation cannot delete its target")
 
-S139 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:228
+S139 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:248
     report.expectEqual(rewritten, fixture.snapshot, cppID: staleID,
                        what: "the rejected confirmation leaves the rewritten lane intact")
 
-S140 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:240
+S140 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:260
     report.expect(synthetic.page.publishedMenuRows.first {
         $0.actionId == AutomationMenuAction.deleteLaneEvents.rawValue
     }?.enabled == false, cppID: syntheticID,
                   message: "the eventless lane disables Delete events")
 
-S141 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:244
+S141 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:264
     report.expect(!synthetic.page.consumeMenuAction(
         actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: syntheticID,
                   message: "the disabled row is refused")
 
-S142 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:247
+S142 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:267
     report.expect(!synthetic.page.hasPrompt, cppID: syntheticID,
                   message: "no confirmation opens for the eventless lane")
 
-S143 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:258
+S143 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:278
     report.expect(single.page.consumeMenuAction(
         actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: countID,
                   message: "the Delete events row is consumed")
 
-S144 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:261
+S144 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:281
     report.expect(single.page.promptMessage.contains("1 written events"), cppID: countID,
                   message: "the confirmation counts written events only")
 
-S145 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:263
+S145 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:283
     report.expect(single.page.acceptPromptDraft(), cppID: countID,
                   message: "the confirmation accepts")
 
-S146 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:265
+S146 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:285
     report.expectEqual([String](), single.values(single.volumeLane), cppID: countID,
                        what: "accept removes the written event")
 
-S147 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:267
+S147 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:287
     report.expect(single.page.catalogIndex(of: single.volumeLane) >= 0, cppID: countID,
                   message: "the volume parameter remains in the catalog")
 
-S148 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:269
+S148 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:289
     report.expect(single.undo(), cppID: countID, message: "the acceptance undoes")
 
-S149 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:270
+S149 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:290
     report.expectEqual(["48:70"], single.values(single.volumeLane), cppID: countID,
                        what: "undo restores the written event")
 
-S150 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:230
+S150 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:250
     report.expectEqual(["24:60", "120:40", "168:5"], fixture.values(fixture.panLane),
                        cppID: staleID,
                        what: "the rejected confirmation preserves the rewritten points")
 
-S151 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:249
+S151 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:269
     report.expectEqual(syntheticBefore, synthetic.snapshot, cppID: syntheticID,
                        what: "the refused row writes nothing")
 
@@ -2586,6 +2587,24 @@ S153 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationca
 S154 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:27
     report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
                        what: "a cancelled gesture mutates nothing")
+
+S155 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:294
+    report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id, what: "the reopened row owns the delete confirmation")
+
+S156 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:295
+    report.expect(page.promptOpen, cppID: id, message: "the delete confirmation is open")
+
+S157 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:296
+    report.expect(page.interactionActive, cppID: id, message: "the open confirmation marks the page interacting")
+
+S158 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:299
+    report.expect(page.handleEscape(), cppID: escapeID, message: "Escape claims the open confirmation")
+
+S159 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:300
+    report.expect(!page.promptOpen && !page.interactionActive, cppID: escapeID, message: "Escape drops the confirmation and the interaction")
+
+S160 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:301
+    report.expectEqual(confirmationEscapeBefore, fixture.snapshot, cppID: escapeID, what: "Escape cancellation writes nothing")
 
 Shared helper: src/checks/automation/AutomationPageChecks.swift
 SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9

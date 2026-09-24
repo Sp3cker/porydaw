@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationpointmenus.cpp
 Original SHA-256: b15a2e6646fb4e2878367a6ef67473926f9ac2522c626266ce2c090755355325
 Swift counterpart: src/checks/automation/automationpointmenus.swift
-Swift SHA-256: 02e53ba32c703c92a5a6f596f62857f5a97173514cb51732da1b563f10ebfd25
+Swift SHA-256: 74b18a0c7b24abb1cd5b8c8e2881f42d87ffe07db114d6878d5acce44dd536bc
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -196,7 +196,7 @@ Original expression:
 
 A021 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:170
 Disposition: GAP
-Mapping/reason: Native focus delivery: the original requires the text input of the inline prompt to hold the active focus of the quick window after the Set Value pick; the counterpart observes the prompt opening and marking the page interacting ([S001], [S002]) but publishes no active-focus fact.
+Mapping/reason: GAP-retain: the prompt window active focus stays QML-owned: AutomationPrompt.takeFocus drives field.focusInput for the value form (src/ui/songview/quick/drawer/AutomationPrompt.qml:36-44) while the Swift page publishes no active-focus fact (promptOpen/promptKind/promptDraft only, src/swift/app/drawer/automation/AutomationPage.swift:180-188). Proven half: the Set Value pick now runs the production menu route: the written point owns its target ([S095]), the menu opens ([S096]) with Set Value enabled ([S097]) and consumed ([S098]), opening the value form ([S099], [S100]) with its draft ([S102]) and the interaction ([S101]); cancelling drops both ([S103]). The rendered selectedText itself has no Swift ingress.
 Original expression:
   QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value pick")
 
@@ -256,7 +256,7 @@ Original expression:
 
 A031 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:184
 Disposition: GAP
-Mapping/reason: Native focus delivery: the original requires the plot automation input to own the active focus of the quick window again after the commit and its undo; the counterpart asserts the committed value, the one revision and the undo ([S008], [S009], [S013], [S014]) but publishes no focus owner.
+Mapping/reason: GAP-retain: focus return after commit and undo is QML-owned: both modal surfaces call page.focusOrigin, forcing the plot focus (src/ui/songview/quick/drawer/AutomationPage.qml:233-235,638,646), while the Swift plotFocused flag is bound from QML activeFocus (AutomationPage.qml:283-289) and unobservable in the Swift-only lane, which has no window. The commit, the one revision and the undo stay matched ([S008], [S009], [S013], [S014]).
 Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
@@ -311,7 +311,7 @@ Original expression:
 
 A040 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:214
 Disposition: GAP
-Mapping/reason: Native focus delivery: the original requires the automation input to own the active focus of the quick window again after the Escape-cancelled prompt; the counterpart asserts the prompt drop and the untouched document and history ([S021], [S022]) but publishes no focus owner.
+Mapping/reason: GAP-retain for the focus return: it is QML-owned (onClosed->focusOrigin, src/ui/songview/quick/drawer/AutomationPage.qml:233-235,638,646) and unobservable in the Swift-only lane. Proven half: the production Escape route now executes: the reopened prompt owns the interaction ([S091]), handleEscape claims it ([S092]) and drops the prompt and the interaction ([S093]) with nothing written ([S094]); the prompt drop and the untouched document and history stay matched ([S021], [S022]).
 Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
@@ -347,7 +347,7 @@ Original expression:
 
 A046 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:233
 Disposition: GAP
-Mapping/reason: Native focus delivery: the original requires the focused text input of the quick window to belong to the inline prompt before the track switch; the counterpart asserts the prompt and its parameter-switch drop ([S046], [S047]) but publishes no focused-input fact.
+Mapping/reason: GAP-retain: the pre-switch focused text input has no Swift ingress: the page publishes prompt state, never which item holds window focus. The prompt and its parameter-switch drop stay matched ([S046], [S047]); the routed Set Value predicates prove the prompt carries its draft and the interaction before any switch ([S101], [S102]).
 Original expression:
   QVERIFY(automation_valueprompt::focusedTextInput(quickWindow()))
 
@@ -395,7 +395,7 @@ Original expression:
 
 A054 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:264
 Disposition: GAP
-Mapping/reason: Native focus delivery: the guard establishes the native automation band focus and the active focus item of the quick window through the deleted C++ harness, and the ported page publishes no focused-band fact, so no executing predicate observes this precondition.
+Mapping/reason: GAP-retain: focusAutomationBand has no Swift ingress: focusedBand/TimelineBand do not exist anywhere in src/swift/app/drawer/automation, and the successor plotFocused flag is driven by the QML plot binding (src/ui/songview/quick/drawer/AutomationPage.qml:283-289), which the Swift-only lane cannot observe without a window.
 Original expression:
   QVERIFY(focusAutomationBand())
 
@@ -450,7 +450,7 @@ Original expression:
 
 A063 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:295
 Disposition: GAP
-Mapping/reason: Native focus delivery: the original re-reads the focused band of the native quick view after the retargeted Delete pick; the ported page publishes no focused-band fact and this counterpart has no predicate for the return of native band focus.
+Mapping/reason: GAP-retain: the band-focus return after the retargeted Delete pick is QML-owned (onClosed->focusOrigin, src/ui/songview/quick/drawer/AutomationPage.qml:233-235,638) and no focused-band fact exists in Swift. The retargeted Delete values stay matched ([S084], [S085], [S086]).
 Original expression:
   QTRY_VERIFY2(songTab.view().quickView()->focusedBand() == songview::TimelineBand::Automation,
                    "the retargeted Delete pick did not return the band focus")
@@ -482,7 +482,7 @@ Original expression:
 
 A068 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:322
 Disposition: GAP
-Mapping/reason: Native focus delivery: the original re-reads the focused band of the native quick view after the miss dismissal; the ported page publishes no focused-band fact and this counterpart has no predicate for the return of native band focus.
+Mapping/reason: GAP-retain: the band-focus return after the miss dismissal is QML-owned (same onClosed->focusOrigin route); the miss dismissal itself stays matched ([S088], [S089], [S090]).
 Original expression:
   QTRY_VERIFY2(songTab.view().quickView()->focusedBand() == songview::TimelineBand::Automation,
                    "the miss dismissal did not restore the automation band focus")
@@ -502,7 +502,7 @@ Original expression:
 
 A071 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:336
 Disposition: GAP
-Mapping/reason: Native key delivery: the original dismisses the native plot-miss fallback menu with a physical Escape; the fallback time-selection menu has no Swift predicate in this counterpart and no executing predicate routes Escape into an open menu and re-reads its state.
+Mapping/reason: GAP-retain: the fallback time-selection menu has no Swift ingress: a Swift miss press closes the menu and opens nothing ([S088], [S089], [S090]), and the time-selection surface is owned by another lane. The shared Escape-into-open-menu route is proven on the point menu: handleEscape claims it ([S112]) and closes it ([S113]) with nothing written ([S114]).
 Original expression:
   QVERIFY2(!fallback.session->isOpen(), "Escape did not dismiss the fallback menu")
 
@@ -789,7 +789,7 @@ Original expression:
 
 A115 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:488
 Disposition: GAP
-Mapping/reason: Native focus delivery: the original requires the text input of the inline prompt to hold the active focus of the quick window after the Set Value pick on the synthetic row; the counterpart asserts the prompt and its empty-tick insertion ([S015], [S016], [S017]) but publishes no active-focus fact.
+Mapping/reason: GAP-retain: same QML-owned prompt focus as A021 (src/ui/songview/quick/drawer/AutomationPrompt.qml:36-44; no active-focus fact in Swift). Proven half: the production Set Value route opens the value form with draft and interaction ([S095]-[S102]). The synthetic enable/disable and promotion stay matched ([S015], [S016], [S017]).
 Original expression:
   QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value pick")
 
@@ -868,7 +868,7 @@ Original expression:
 
 A128 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:508
 Disposition: GAP
-Mapping/reason: Native focus delivery: the original re-checks that the automation input owns the active focus of the quick window after the promoted event is undone; the counterpart asserts the empty-tick insertion commit ([S017]) but stages neither that undo nor any focus owner.
+Mapping/reason: GAP-retain: same QML-owned focus return as A031. The empty-tick insertion commit stays matched ([S017]); the undo and any focus owner stay unstaged in Swift.
 Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
@@ -1037,7 +1037,7 @@ Original expression:
 
 A155 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:615
 Disposition: GAP
-Mapping/reason: Native focus delivery: the original requires the native ruler control to hold active focus after the foreign division pick; that foreign ruler route is native rendering and ownership with no Swift predicate in this counterpart, and the page publishes no focus owner.
+Mapping/reason: GAP-retain, feature-not-ported: the ruler-division menu and ruler focus have no Swift ingress: no openDivisionMenu/GridSelection anywhere in src/swift, zero Ruler/Division references in the automation drawer QML (AutomationPage.qml, AutomationMenu.qml, AutomationPrompt.qml); openDivisionMenu lives only in src/ui/songview/quick/RulerControls.qml outside the automation scope. The displaced-target no-write observations stay recorded per site.
 Original expression:
   QTRY_VERIFY2(division->hasActiveFocus(),
                    "the foreign pick did not return focus to the ruler control")
@@ -1103,8 +1103,8 @@ Original expression:
   QVERIFY(nodeModel)
 
 A166 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:653
-Disposition: GAP
-Mapping/reason: Native key delivery: the original dismisses the open point menu with a physical Escape on the popup session window; no executing predicate in this counterpart routes Escape into a menu and re-reads the page menu-open state (the consumption predicates observe the action route only, [S030], [S084]).
+Disposition: MATCHED
+Mapping/reason: The Swift scenario reopens the point menu through the production pointer route ([S110], [S111]) and dismisses it through the production Escape route: handleEscape claims the open menu ([S112]) and closes it ([S113]) with nothing written ([S114]), the same dispatchEscape the QML Escape handling calls (src/ui/songview/quick/drawer/AutomationMenu.qml:135-154 Keys.onPressed; src/ui/songview/quick/drawer/AutomationPage.qml:218 Keys.onEscapePressed->handleEscape).
 Original expression:
   QVERIFY2(!menu.session->isOpen(), "Escape did not dismiss the point menu")
 
@@ -1240,7 +1240,7 @@ Original expression:
 
 A188 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:739
 Disposition: GAP
-Mapping/reason: Native focus delivery: the original requires the text input of the inline prompt to hold the active focus of the quick window after the Set Value pick on the switched lane; the counterpart asserts the prompt opening ([S046]) but publishes no active-focus fact.
+Mapping/reason: GAP-retain: same QML-owned prompt focus as A021. Proven half: the production Set Value route ([S095]-[S102]). The prompt opening stays matched ([S046]).
 Original expression:
   QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value pick")
 
@@ -1373,7 +1373,7 @@ Original expression:
 
 A209 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:804
 Disposition: GAP
-Mapping/reason: Native focus delivery: the original requires the fresh Tempo prompt to take active focus; the counterpart asserts the Tempo prompt and its acceptance ([S048], [S049]) but publishes no active-focus fact.
+Mapping/reason: GAP-retain: the fresh Tempo prompt window focus is QML-owned (same takeFocus route, src/ui/songview/quick/drawer/AutomationPrompt.qml:36-44); the rendered selectedText has no Swift ingress, the Swift draft carries the stored string only. The Tempo prompt and its acceptance stay matched ([S048], [S049]).
 Original expression:
   QVERIFY2(freshPrompt, "the fresh Tempo prompt did not take active focus")
 
@@ -1472,17 +1472,18 @@ Original expression:
 
 A225 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:832
 Disposition: GAP
-Mapping/reason: Native focus delivery: the original requires the automation input to own the active focus of the quick window again after the Tempo acceptance is undone; the counterpart asserts the acceptance and its undo ([S027], [S049]) but publishes no focus owner.
+Mapping/reason: GAP-retain: same QML-owned focus return as A031. The Tempo acceptance and its undo stay matched ([S027], [S049]).
 Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
 Swift executable assertion index
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
-S001-S027 index drawerAutomationPromptTransactions, S028-S038 and S079
-drawerAutomationPointMenuDeleteAndStale, S039-S052 drawerAutomationDuplicatePromptAndParameterSwitch,
-S053-S078 plus S080-S081 drawerAutomationLaneDeleteConfirmation and
-S082-S090 drawerAutomationOutsidePressRetarget, all in
+S001-S027 and S091-S094 index drawerAutomationPromptTransactions, S028-S038 and S079
+drawerAutomationPointMenuDeleteAndStale, S039-S052 and S095-S103
+drawerAutomationDuplicatePromptAndParameterSwitch, S053-S078 plus S080-S081 and S104-S109
+drawerAutomationLaneDeleteConfirmation and S082-S090 plus S110-S114
+drawerAutomationOutsidePressRetarget, all in
 src/checks/automation/automationpointmenus.swift.
 
 S001 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:15
@@ -1619,316 +1620,412 @@ Swift expression:
     report.expect(tempoFixture.undo() && tempoFixture.tempoValues == ["0:120"], cppID: drawerAutomationPromptID,
                   message: "one undo restores Tempo's stored microseconds")
 
-S028 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:96
+S028 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:102
 Swift expression:
     report.expect(page.menuTargetIsPoint, cppID: id,
                   message: "the written point owns its captured menu target")
 
-S029 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:98
+S029 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:104
 Swift expression:
     report.expect(page.publishedMenuRows.first {
         $0.actionId == AutomationMenuAction.deleteNode.rawValue
     }?.enabled == true, cppID: id, message: "the point menu enables Delete on a written node")
 
-S030 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:101
+S030 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:107
 Swift expression:
     report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
                   cppID: id, message: "the Delete row is consumed")
 
-S031 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:103
+S031 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:109
 Swift expression:
     report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id,
                        what: "Delete removes the targeted node and keeps the other")
 
-S032 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:105
+S032 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:111
 Swift expression:
     report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
                        what: "one Delete is one revision")
 
-S033 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:107
+S033 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:113
 Swift expression:
     report.expect(fixture.undo(), cppID: id, message: "the Delete undoes")
 
-S034 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:108
+S034 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:114
 Swift expression:
     report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores the deleted node")
 
-S035 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:110
+S035 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:116
 Swift expression:
     report.expect(!fixture.document.history.canUndo, cppID: id,
                   message: "the Delete recorded exactly one history entry")
 
-S036 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:121
+S036 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:127
 Swift expression:
     report.expect(stale.page.menuTargetIsPoint, cppID: staleID,
                   message: "the stale target opens its point menu")
 
-S037 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:126
+S037 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:132
 Swift expression:
     report.expect(!stale.page.consumeMenuAction(
         actionId: AutomationMenuAction.deleteNode.rawValue), cppID: staleID,
                   message: "a stale point menu cannot delete its target")
 
-S038 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:129
+S038 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:135
 Swift expression:
     report.expectEqual(rewritten, stale.snapshot, cppID: staleID,
                        what: "the rejected Delete leaves the rewritten lane intact")
 
-S039 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:142
+S039 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:148
 Swift expression:
     report.expectEqual(["24:30", "24:90"], fixture.values(fixture.panLane), cppID: id,
                        what: "both duplicate occurrences stage")
 
-S040 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:145
+S040 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:151
 Swift expression:
     report.expect(fixture.page.openPrompt(tick: 24, value: 30), cppID: id,
                   message: "a prompt opens on the duplicate tick")
 
-S041 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:147
+S041 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:153
 Swift expression:
     report.expect(fixture.page.acceptPrompt(displayedValue: -14), cppID: id,
                   message: "the duplicate value commits")
 
-S042 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:149
+S042 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:155
 Swift expression:
     report.expectEqual(["24:30", "24:50"], fixture.values(fixture.panLane), cppID: id,
                        what: "only the targeted duplicate occurrence moves")
 
-S043 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:151
+S043 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:157
 Swift expression:
     report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
                        what: "one duplicate acceptance is one revision")
 
-S044 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:153
+S044 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:159
 Swift expression:
     report.expect(fixture.undo(), cppID: id, message: "the duplicate acceptance undoes")
 
-S045 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:154
+S045 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:160
 Swift expression:
     report.expectEqual(["24:30", "24:90"], fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores both duplicate occurrences")
 
-S046 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:160
+S046 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:166
 Swift expression:
     report.expect(switched.page.openPrompt(tick: 24, value: 64), cppID: switchID,
                   message: "a prompt opens on the CC lane")
 
-S047 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:163
+S047 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:169
 Swift expression:
     report.expect(!switched.page.hasPrompt, cppID: switchID,
                   message: "switching parameters closes the CC prompt")
 
-S048 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:166
+S048 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:172
 Swift expression:
     report.expect(switched.page.openPrompt(tick: 0, value: 120), cppID: switchID,
                   message: "Tempo opens its own prompt")
 
-S049 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:168
+S049 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:174
 Swift expression:
     report.expect(switched.page.acceptPrompt(displayedValue: 150), cppID: switchID,
                   message: "Tempo commits its prompt")
 
-S050 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:170
+S050 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:176
 Swift expression:
     report.expectEqual(["0:150"], switched.tempoValues, cppID: switchID,
                        what: "the tempo point stores the prompted BPM")
 
-S051 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:172
+S051 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:178
 Swift expression:
     report.expectEqual(["24:64"], switched.values(switched.panLane), cppID: switchID,
                        what: "the CC lane stays untouched")
 
-S052 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:174
+S052 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:180
 Swift expression:
     report.expectEqual(tempoBefore.revision + 1, switched.document.revision, cppID: switchID,
                        what: "Tempo's acceptance is one revision")
 
-S053 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:188
+S053 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:208
 Swift expression:
     report.expect(page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0),
                   cppID: id, message: "the lane menu opens")
 
-S054 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:190
+S054 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:210
 Swift expression:
     report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue),
                   cppID: id, message: "the Delete events row is consumed")
 
-S055 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:192
+S055 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:212
 Swift expression:
     report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id,
                        what: "the row opens the delete confirmation")
 
-S056 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:194
+S056 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:214
 Swift expression:
     report.expect(page.promptMessage.contains("2 written events"), cppID: id,
                   message: "the confirmation names the written count")
 
-S057 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:196
+S057 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:216
 Swift expression:
     report.expectEqual(before, fixture.snapshot, cppID: id,
                        what: "opening the confirmation writes nothing")
 
-S058 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:198
+S058 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:218
 Swift expression:
     report.expect(page.acceptPromptDraft(), cppID: id, message: "the confirmation accepts")
 
-S059 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:199
+S059 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:219
 Swift expression:
     report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
                        what: "accept removes only the target lane")
 
-S060 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:201
+S060 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:221
 Swift expression:
     report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
                        what: "the volume lane is preserved")
 
-S061 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:203
+S061 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:223
 Swift expression:
     report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
                        what: "one acceptance is one revision")
 
-S062 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:205
+S062 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:225
 Swift expression:
     report.expect(fixture.undo(), cppID: id, message: "the acceptance undoes")
 
-S063 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:206
+S063 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:226
 Swift expression:
     report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores the target lane")
 
-S064 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:208
+S064 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:228
 Swift expression:
     report.expect(!fixture.document.history.canUndo, cppID: id,
                   message: "the acceptance recorded exactly one history entry")
 
-S065 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:216
+S065 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:236
 Swift expression:
     report.expect(!page.hasPrompt, cppID: cancelID, message: "cancelling drops the confirmation")
 
-S066 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:217
+S066 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:237
 Swift expression:
     report.expectEqual(cancelBefore, fixture.snapshot, cppID: cancelID,
                        what: "cancelling leaves document and history untouched")
 
-S067 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:226
+S067 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:246
 Swift expression:
     report.expect(!page.acceptPromptDraft(), cppID: staleID,
                   message: "a stale confirmation cannot delete its target")
 
-S068 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:228
+S068 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:248
 Swift expression:
     report.expectEqual(rewritten, fixture.snapshot, cppID: staleID,
                        what: "the rejected confirmation leaves the rewritten lane intact")
 
-S069 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:240
+S069 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:260
 Swift expression:
     report.expect(synthetic.page.publishedMenuRows.first {
         $0.actionId == AutomationMenuAction.deleteLaneEvents.rawValue
     }?.enabled == false, cppID: syntheticID,
                   message: "the eventless lane disables Delete events")
 
-S070 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:244
+S070 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:264
 Swift expression:
     report.expect(!synthetic.page.consumeMenuAction(
         actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: syntheticID,
                   message: "the disabled row is refused")
 
-S071 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:247
+S071 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:267
 Swift expression:
     report.expect(!synthetic.page.hasPrompt, cppID: syntheticID,
                   message: "no confirmation opens for the eventless lane")
 
-S072 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:258
+S072 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:278
 Swift expression:
     report.expect(single.page.consumeMenuAction(
         actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: countID,
                   message: "the Delete events row is consumed")
 
-S073 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:261
+S073 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:281
 Swift expression:
     report.expect(single.page.promptMessage.contains("1 written events"), cppID: countID,
                   message: "the confirmation counts written events only")
 
-S074 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:263
+S074 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:283
 Swift expression:
     report.expect(single.page.acceptPromptDraft(), cppID: countID,
                   message: "the confirmation accepts")
 
-S075 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:265
+S075 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:285
 Swift expression:
     report.expectEqual([String](), single.values(single.volumeLane), cppID: countID,
                        what: "accept removes the written event")
 
-S076 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:267
+S076 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:287
 Swift expression:
     report.expect(single.page.catalogIndex(of: single.volumeLane) >= 0, cppID: countID,
                   message: "the volume parameter remains in the catalog")
 
-S077 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:269
+S077 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:289
 Swift expression:
     report.expect(single.undo(), cppID: countID, message: "the acceptance undoes")
 
-S078 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:270
+S078 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:290
 Swift expression:
     report.expectEqual(["48:70"], single.values(single.volumeLane), cppID: countID,
                        what: "undo restores the written event")
 
-S079 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:131
+S079 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:137
 Swift expression:
     report.expectEqual(["24:64", "120:40", "168:5"], stale.values(stale.panLane), cppID: staleID,
                        what: "the rejected Delete preserves the rewritten points")
 
-S080 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:230
+S080 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:250
 Swift expression:
     report.expectEqual(["24:60", "120:40", "168:5"], fixture.values(fixture.panLane),
                        cppID: staleID,
                        what: "the rejected confirmation preserves the rewritten points")
 
-S081 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:249
+S081 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:269
 Swift expression:
     report.expectEqual(syntheticBefore, synthetic.snapshot, cppID: syntheticID,
                        what: "the refused row writes nothing")
 
-S082 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:286
+S082 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:316
 Swift expression:
     report.expect(page.menuTargetIsPoint, cppID: id,
                   message: "the first point owns its captured menu target")
 
-S083 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:290
+S083 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:320
 Swift expression:
     report.expect(page.menuTargetIsPoint, cppID: id,
                   message: "an outside right press on another node retargets the menu")
 
-S084 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:292
+S084 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:322
 Swift expression:
     report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
                   cppID: id, message: "the retargeted Delete row is consumed")
 
-S085 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:294
+S085 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:324
 Swift expression:
     report.expectEqual(["24:64"], fixture.values(fixture.panLane), cppID: id,
                        what: "the retargeted Delete removes the second node only")
 
-S086 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:296
+S086 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:326
 Swift expression:
     report.expect(fixture.undo(), cppID: id, message: "the retargeted Delete undoes")
 
-S087 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:302
+S087 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:332
 Swift expression:
     report.expect(page.menuTargetIsPoint, cppID: id,
                   message: "the point menu reopens")
 
-S088 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:306
+S088 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:336
 Swift expression:
     report.expect(!page.menuOpen, cppID: id, message: "the miss closes the shared menu")
 
-S089 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:307
+S089 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:337
 Swift expression:
     report.expect(!page.pointerRelease(x: fixture.x(168), y: 60, button: AutomationQtButton.right),
                   cppID: id, message: "the paired release claims no band")
 
-S090 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:309
+S090 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:339
 Swift expression:
     report.expectEqual(missBefore, fixture.snapshot, cppID: id,
                        what: "the dismissed menu writes nothing")
+
+S091 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:83
+Swift expression:
+    report.expect(fixture.page.hasPrompt && fixture.page.interactionActive, cppID: drawerAutomationPromptID, message: "the prompt reopens for the Escape route")
+
+S092 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:84
+Swift expression:
+    report.expect(fixture.page.handleEscape(), cppID: drawerAutomationPromptID, message: "Escape claims the open prompt")
+
+S093 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:85
+Swift expression:
+    report.expect(!fixture.page.hasPrompt && !fixture.page.interactionActive, cppID: drawerAutomationPromptID, message: "Escape drops the prompt and the interaction")
+
+S094 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:86
+Swift expression:
+    report.expectEqual(escapeBefore, fixture.snapshot, cppID: drawerAutomationPromptID, what: "Escape cancellation writes nothing")
+
+S095 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:186
+Swift expression:
+    report.expect(routed.page.menuTargetIsPoint, cppID: id, message: "the written point owns its Set Value menu target")
+
+S096 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:187
+Swift expression:
+    report.expect(routed.page.menuOpen, cppID: id, message: "the point menu opens for the Set Value route")
+
+S097 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:188
+Swift expression:
+    report.expect(routed.page.publishedMenuRows.first { $0.actionId == AutomationMenuAction.setValue.rawValue }?.enabled == true, cppID: id, message: "the point menu enables Set Value on a written node")
+
+S098 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:189
+Swift expression:
+    report.expect(routed.page.consumeMenuAction(actionId: AutomationMenuAction.setValue.rawValue), cppID: id, message: "the Set Value row is consumed")
+
+S099 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:190
+Swift expression:
+    report.expect(routed.page.promptOpen, cppID: id, message: "the Set Value pick opens the value prompt")
+
+S100 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:191
+Swift expression:
+    report.expectEqual(AutomationPromptKind.value.rawValue, routed.page.promptKind, cppID: id, what: "the Set Value pick opens the value form")
+
+S101 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:192
+Swift expression:
+    report.expect(routed.page.interactionActive, cppID: id, message: "the open value prompt marks the page interacting")
+
+S102 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:193
+Swift expression:
+    report.expect(!routed.page.promptDraft.isEmpty, cppID: id, message: "the value prompt carries its initial draft")
+
+S103 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:195
+Swift expression:
+    report.expect(!routed.page.hasPrompt && !routed.page.interactionActive, cppID: id, message: "cancelling the routed prompt drops the prompt and the interaction")
+
+S104 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:294
+Swift expression:
+    report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id, what: "the reopened row owns the delete confirmation")
+
+S105 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:295
+Swift expression:
+    report.expect(page.promptOpen, cppID: id, message: "the delete confirmation is open")
+
+S106 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:296
+Swift expression:
+    report.expect(page.interactionActive, cppID: id, message: "the open confirmation marks the page interacting")
+
+S107 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:299
+Swift expression:
+    report.expect(page.handleEscape(), cppID: escapeID, message: "Escape claims the open confirmation")
+
+S108 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:300
+Swift expression:
+    report.expect(!page.promptOpen && !page.interactionActive, cppID: escapeID, message: "Escape drops the confirmation and the interaction")
+
+S109 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:301
+Swift expression:
+    report.expectEqual(confirmationEscapeBefore, fixture.snapshot, cppID: escapeID, what: "Escape cancellation writes nothing")
+
+S110 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:344
+Swift expression:
+    report.expect(page.menuTargetIsPoint, cppID: foreignID, message: "the point menu reopens for the Escape route")
+
+S111 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:345
+Swift expression:
+    report.expect(page.menuOpen, cppID: foreignID, message: "the reopened point menu is open")
+
+S112 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:347
+Swift expression:
+    report.expect(page.handleEscape(), cppID: foreignID, message: "Escape claims the open point menu")
+
+S113 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:348
+Swift expression:
+    report.expect(!page.menuOpen, cppID: foreignID, message: "Escape closes the open point menu")
+
+S114 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:349
+Swift expression:
+    report.expectEqual(menuEscapeBefore, fixture.snapshot, cppID: foreignID, what: "Escape dismissal writes nothing")

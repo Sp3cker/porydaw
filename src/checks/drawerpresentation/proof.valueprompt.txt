@@ -4,7 +4,7 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/drawerpresentation/valueprompt.cpp
 Original SHA-256: fe22f6c7cc53ff6c156e216811a8e2d45196b6518017a165a687212a213ea8f0
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
@@ -301,8 +301,8 @@ Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A017 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:149
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S011 in src/checks/selectionkey/localinputtier_text.swift:249 — one tempo acceptance advances the revision once through the production AutomationPage prompt.
 Source context since previous assertion:
   ;
 
@@ -310,8 +310,8 @@ Original expression:
   QCOMPARE(document.revision(), revision + 1)
 
 A018 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:150
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S022 in src/checks/selectionkey/localinputtier_text.swift:276 — one tempo acceptance records one history entry via coreEditHistoryCountAtTip public undo/redo traversal.
 Source context since previous assertion:
   ;
 
@@ -319,8 +319,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex + 1)
 
 A019 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:151
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S012 in src/checks/selectionkey/localinputtier_text.swift:251 — the committed tempo point reads 90 BPM at tick 24.
 Source context since previous assertion:
   ;
 
@@ -367,8 +367,8 @@ Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A024 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:159
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S015 in src/checks/selectionkey/localinputtier_text.swift:257 — the over-maximum acceptance clamps to the maximum BPM at tick 32.
 Source context since previous assertion:
   ;
 
@@ -404,8 +404,8 @@ Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A028 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:164
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S018 in src/checks/selectionkey/localinputtier_text.swift:263 — the under-minimum acceptance clamps to the minimum BPM at tick 40.
 Source context since previous assertion:
   ;
 
@@ -413,8 +413,8 @@ Original expression:
   QCOMPARE(tempoBpmAt(document, kNodeTick + 16), CoreTimeDefaults::kMinTempoBpm)
 
 A029 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:165
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S019 in src/checks/selectionkey/localinputtier_text.swift:265 — three tempo acceptances advance the revision three times.
 Source context since previous assertion:
   ;
 
@@ -422,8 +422,8 @@ Original expression:
   QCOMPARE(document.revision(), revision + 3)
 
 A030 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:166
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S027 in src/checks/selectionkey/localinputtier_text.swift:291 — three tempo acceptances record three history entries via coreEditHistoryCountAtTip traversal.
 Source context since previous assertion:
   ;
 
@@ -481,8 +481,8 @@ Original expression:
                "the Pan parameter label did not activate")
 
 A035 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:186
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S028 in src/checks/selectionkey/localinputtier_text.swift:298 — the CC10 lane is present in the production page row stack.
 Source context since previous assertion:
   ;
       const LaneHandle cc = ccLaneHandle(*canvas);
@@ -554,8 +554,8 @@ Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A042 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:202
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S031 in src/checks/selectionkey/localinputtier_text.swift:305 — one CC insertion advances the revision once.
 Source context since previous assertion:
   ;
 
@@ -563,8 +563,8 @@ Original expression:
   QCOMPARE(document.revision(), revision + 1)
 
 A043 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:203
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S045 in src/checks/selectionkey/localinputtier_text.swift:338 — one CC insertion records one history entry via coreEditHistoryCountAtTip traversal.
 Source context since previous assertion:
   ;
 
@@ -572,8 +572,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex + 1)
 
 A044 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:205
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S032 in src/checks/selectionkey/localinputtier_text.swift:307 — the insertion leaves two lane points.
 Source context since previous assertion:
   ;
       const auto points = document.lanePoints(0, kController);
@@ -582,8 +582,8 @@ Original expression:
   QCOMPARE(points.size(), std::size_t{2})
 
 A045 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:207
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S033 in src/checks/selectionkey/localinputtier_text.swift:309 — displayed 0 commits as stored 64 through the pan center offset.
 Source context since previous assertion:
   ;
       const DocLanePoint &inserted = points[0].tick == kNodeTick ? points[1] : points[0];
@@ -624,8 +624,8 @@ Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A049 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:217
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S036 in src/checks/selectionkey/localinputtier_text.swift:315 — the lowered node is found at tick 96 after displayed -64 commits.
 Source context since previous assertion:
   ;
       DocLanePoint point;
@@ -634,8 +634,8 @@ Original expression:
   QVERIFY(document.findLanePoint(0, kController, inserted.tick, &point))
 
 A050 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:218
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S037 in src/checks/selectionkey/localinputtier_text.swift:317 — displayed -64 stores 0 through the pan offset.
 Source context since previous assertion:
   ;
 
@@ -672,8 +672,8 @@ Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A054 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:224
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S040 in src/checks/selectionkey/localinputtier_text.swift:323 — the raised node is found at tick 96 after displayed 63 commits.
 Source context since previous assertion:
   ;
 
@@ -681,8 +681,8 @@ Original expression:
   QVERIFY(document.findLanePoint(0, kController, inserted.tick, &point))
 
 A055 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:225
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S041 in src/checks/selectionkey/localinputtier_text.swift:325 — displayed 63 stores 127 through the pan offset.
 Source context since previous assertion:
   ;
 
@@ -690,8 +690,8 @@ Original expression:
   QCOMPARE(point.value, 127)
 
 A056 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:226
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S042 in src/checks/selectionkey/localinputtier_text.swift:327 — three CC acceptances advance the revision three times.
 Source context since previous assertion:
   ;
 
@@ -699,8 +699,8 @@ Original expression:
   QCOMPARE(document.revision(), revision + 3)
 
 A057 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:227
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S050 in src/checks/selectionkey/localinputtier_text.swift:353 — three CC acceptances record three history entries via coreEditHistoryCountAtTip traversal.
 Source context since previous assertion:
   ;
 
@@ -769,8 +769,8 @@ Original expression:
                "the Pan parameter label did not activate")
 
 A063 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:250
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S051 in src/checks/selectionkey/localinputtier_text.swift:360 — the CC10 lane is present in the escape-fixture production page row stack.
 Source context since previous assertion:
   ;
       const LaneHandle escapeCc = ccLaneHandle(*canvas);
@@ -874,8 +874,8 @@ Original expression:
   QVERIFY(input)
 
 A073 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:278
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S052 in src/checks/selectionkey/localinputtier_text.swift:364 — the CC10 lane is present in the focus-fixture production page row stack.
 Source context since previous assertion:
   ;
       SongDocument &document = fixture.tab->document();
@@ -953,8 +953,8 @@ Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A080 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:298
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S055 in src/checks/selectionkey/localinputtier_text.swift:374 — the original node is found at tick 24 after the document change cancels the pending prompt.
 Source context since previous assertion:
   ;
       DocLanePoint point;
@@ -963,8 +963,8 @@ Original expression:
   QVERIFY(document.findLanePoint(0, kController, kNodeTick, &point))
 
 A081 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:299
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S056 in src/checks/selectionkey/localinputtier_text.swift:376 — the cancelled prompt keeps the original value 64.
 Source context since previous assertion:
   ;
 
@@ -972,8 +972,8 @@ Original expression:
   QCOMPARE(point.value, 64)
 
 A082 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:300
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S057 in src/checks/selectionkey/localinputtier_text.swift:378 — the added point is found at tick 48.
 Source context since previous assertion:
   ;
 
@@ -981,8 +981,8 @@ Original expression:
   QVERIFY(document.findLanePoint(0, kController, kNodeTick + 24, &point))
 
 A083 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:301
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S058 in src/checks/selectionkey/localinputtier_text.swift:380 — the added point stores 32.
 Source context since previous assertion:
   ;
 
@@ -990,8 +990,8 @@ Original expression:
   QCOMPARE(point.value, 32)
 
 A084 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:302
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S059 in src/checks/selectionkey/localinputtier_text.swift:382 — the lane holds exactly the original plus the added point.
 Source context since previous assertion:
   ;
 
@@ -999,8 +999,8 @@ Original expression:
   QCOMPARE(document.lanePoints(0, kController).size(), std::size_t{2})
 
 A085 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:303
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S060 in src/checks/selectionkey/localinputtier_text.swift:384 — the document change alone advances the revision once; the pending edit never commits.
 Source context since previous assertion:
   ;
 
@@ -1008,8 +1008,8 @@ Original expression:
   QCOMPARE(document.revision(), before.revision + 1)
 
 A086 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:304
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S061 in src/checks/selectionkey/localinputtier_text.swift:388 — the document change records one history entry via coreEditHistoryCountAtTip traversal.
 Source context since previous assertion:
   ;
 
@@ -1115,8 +1115,8 @@ Original expression:
   QVERIFY(input)
 
 A096 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:335
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Equivalent predicate S062 in src/checks/selectionkey/localinputtier_text.swift:395 — the CC10 lane is present in the cancel-fixture production page row stack.
 Source context since previous assertion:
   ;
       SongDocument &document = fixture.tab->document();
@@ -1236,3 +1236,219 @@ S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:47
   report.expect(fixture.document.state == state, cppID: id,
                     message: "draft and cancellation preserve the full song contents")
+
+S009 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:245
+  report.expect(tempoFixture.page.openPrompt(tick: 24, value: 140), cppID: tempoID,
+                  message: "tempo insertion prompt opens at tick 24")
+
+S010 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:247
+  report.expect(tempoFixture.page.acceptPrompt(displayedValue: 90), cppID: tempoID,
+                  message: "tempo prompt commits 90 BPM")
+
+S011 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:249
+  report.expectEqual(tempoBaseRevision + 1, tempoFixture.document.revision, cppID: tempoID,
+                       what: "A017 one tempo acceptance advances the revision once")
+
+S012 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:251
+  report.expect(tempoFixture.tempoValues.contains("24:90"), cppID: tempoID,
+                  message: "A019 committed tempo reads 90 BPM at tick 24")
+
+S013 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:253
+  report.expect(tempoFixture.page.openPrompt(tick: 32, value: 120), cppID: tempoID,
+                  message: "tempo ceiling prompt opens at tick 32")
+
+S014 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:255
+  report.expect(tempoFixture.page.acceptPrompt(displayedValue: TimeDefaults.maximumTempoBPM + 1000),
+                  cppID: tempoID, message: "over-maximum tempo acceptance commits")
+
+S015 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:257
+  report.expect(tempoFixture.tempoValues.contains("32:\(TimeDefaults.maximumTempoBPM)"), cppID: tempoID,
+                  message: "A024 ceiling acceptance clamps to the maximum BPM")
+
+S016 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:259
+  report.expect(tempoFixture.page.openPrompt(tick: 40, value: 120), cppID: tempoID,
+                  message: "tempo floor prompt opens at tick 40")
+
+S017 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:261
+  report.expect(tempoFixture.page.acceptPrompt(displayedValue: TimeDefaults.minimumTempoBPM - 1000),
+                  cppID: tempoID, message: "under-minimum tempo acceptance commits")
+
+S018 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:263
+  report.expect(tempoFixture.tempoValues.contains("40:\(TimeDefaults.minimumTempoBPM)"), cppID: tempoID,
+                  message: "A028 floor acceptance clamps to the minimum BPM")
+
+S019 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:265
+  report.expectEqual(tempoBaseRevision + 3, tempoFixture.document.revision, cppID: tempoID,
+                       what: "A029 three tempo acceptances advance the revision three times")
+
+S020 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:270
+  report.expect(tempoDepthFixture.page.openPrompt(tick: 24, value: 140), cppID: tempoID,
+                  message: "depth tempo prompt opens at tick 24")
+
+S021 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:272
+  report.expect(tempoDepthFixture.page.acceptPrompt(displayedValue: 90), cppID: tempoID,
+                  message: "depth tempo prompt commits 90 BPM")
+
+S022 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:276
+  report.expectEqual(base + 1, afterFirst, cppID: tempoID,
+                           what: "A018 one tempo acceptance records one history entry")
+
+S023 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:281
+  report.expect(tempoDepthFixture.page.openPrompt(tick: 32, value: 120), cppID: tempoID,
+                  message: "depth tempo ceiling prompt opens at tick 32")
+
+S024 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:283
+  report.expect(tempoDepthFixture.page.acceptPrompt(displayedValue: TimeDefaults.maximumTempoBPM + 1000),
+                  cppID: tempoID, message: "depth over-maximum tempo acceptance commits")
+
+S025 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:285
+  report.expect(tempoDepthFixture.page.openPrompt(tick: 40, value: 120), cppID: tempoID,
+                  message: "depth tempo floor prompt opens at tick 40")
+
+S026 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:287
+  report.expect(tempoDepthFixture.page.acceptPrompt(displayedValue: TimeDefaults.minimumTempoBPM - 1000),
+                  cppID: tempoID, message: "depth under-minimum tempo acceptance commits")
+
+S027 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:291
+  report.expectEqual(base + 3, afterAll, cppID: tempoID,
+                           what: "A030 three tempo acceptances record three history entries")
+
+S028 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:298
+  report.expect(ccFixture.page.rows.contains { $0.parameter == ccFixture.panLane }, cppID: ccID,
+                  message: "A035 CC10 lane present in the insertion fixture row stack")
+
+S029 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:301
+  report.expect(ccFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
+                  message: "CC insertion prompt opens at empty tick 96")
+
+S030 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:303
+  report.expect(ccFixture.page.acceptPrompt(displayedValue: 0), cppID: ccID,
+                  message: "displayed 0 commits through the center offset")
+
+S031 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:305
+  report.expectEqual(ccBaseRevision + 1, ccFixture.document.revision, cppID: ccID,
+                       what: "A042 one CC insertion advances the revision once")
+
+S032 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:307
+  report.expectEqual(2, ccFixture.lanePoints(ccFixture.panLane).count, cppID: ccID,
+                       what: "A044 insertion leaves two lane points")
+
+S033 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:309
+  report.expectEqual(64, ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+                       cppID: ccID, what: "A045 inserted point stores 64")
+
+S034 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:311
+  report.expect(ccFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
+                  message: "node prompt opens on the inserted point")
+
+S035 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:313
+  report.expect(ccFixture.page.acceptPrompt(displayedValue: -64), cppID: ccID,
+                  message: "displayed -64 commits through the stored offset")
+
+S036 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:315
+  report.expect(ccFixture.lanePoints(ccFixture.panLane).contains { $0.tick == 96 }, cppID: ccID,
+                  message: "A049 lowered node found at tick 96")
+
+S037 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:317
+  report.expectEqual(0, ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+                       cppID: ccID, what: "A050 displayed -64 stores 0")
+
+S038 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:319
+  report.expect(ccFixture.page.openPrompt(tick: 96, value: 0), cppID: ccID,
+                  message: "node prompt reopens on the lowered point")
+
+S039 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:321
+  report.expect(ccFixture.page.acceptPrompt(displayedValue: 63), cppID: ccID,
+                  message: "displayed 63 commits through the stored offset")
+
+S040 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:323
+  report.expect(ccFixture.lanePoints(ccFixture.panLane).contains { $0.tick == 96 }, cppID: ccID,
+                  message: "A054 raised node found at tick 96")
+
+S041 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:325
+  report.expectEqual(127, ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+                       cppID: ccID, what: "A055 displayed 63 stores 127")
+
+S042 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:327
+  report.expectEqual(ccBaseRevision + 3, ccFixture.document.revision, cppID: ccID,
+                       what: "A056 three CC acceptances advance the revision three times")
+
+S043 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:332
+  report.expect(ccDepthFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
+                  message: "depth CC insertion prompt opens at tick 96")
+
+S044 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:334
+  report.expect(ccDepthFixture.page.acceptPrompt(displayedValue: 0), cppID: ccID,
+                  message: "depth displayed 0 commits through the center offset")
+
+S045 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:338
+  report.expectEqual(base + 1, afterFirst, cppID: ccID,
+                           what: "A043 one CC insertion records one history entry")
+
+S046 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:343
+  report.expect(ccDepthFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
+                  message: "depth node prompt opens on the inserted point")
+
+S047 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:345
+  report.expect(ccDepthFixture.page.acceptPrompt(displayedValue: -64), cppID: ccID,
+                  message: "depth displayed -64 commits")
+
+S048 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:347
+  report.expect(ccDepthFixture.page.openPrompt(tick: 96, value: 0), cppID: ccID,
+                  message: "depth node prompt reopens on the lowered point")
+
+S049 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:349
+  report.expect(ccDepthFixture.page.acceptPrompt(displayedValue: 63), cppID: ccID,
+                  message: "depth displayed 63 commits")
+
+S050 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:353
+  report.expectEqual(base + 3, afterAll, cppID: ccID,
+                           what: "A057 three CC acceptances record three history entries")
+
+S051 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:360
+  report.expect(escapeFixture.page.rows.contains { $0.parameter == escapeFixture.panLane }, cppID: escapeID,
+                  message: "A063 CC10 lane present in the escape fixture row stack")
+
+S052 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:364
+  report.expect(focusFixture.page.rows.contains { $0.parameter == focusFixture.panLane }, cppID: focusID,
+                  message: "A073 CC10 lane present in the focus fixture row stack")
+
+S053 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:368
+  report.expect(focusFixture.page.openPrompt(tick: 24, value: 64), cppID: focusID,
+                  message: "node prompt opens before the document change")
+
+S054 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:372
+  report.expect(!focusFixture.page.promptOpen, cppID: focusID,
+                  message: "document change cancels the pending prompt")
+
+S055 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:374
+  report.expect(focusFixture.lanePoints(focusFixture.panLane).contains { $0.tick == 24 }, cppID: focusID,
+                  message: "A080 original node found after the cancel")
+
+S056 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:376
+  report.expectEqual(64, focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 24 }?.value ?? -1,
+                       cppID: focusID, what: "A081 cancelled prompt keeps the original value 64")
+
+S057 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:378
+  report.expect(focusFixture.lanePoints(focusFixture.panLane).contains { $0.tick == 48 }, cppID: focusID,
+                  message: "A082 added point found at tick 48")
+
+S058 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:380
+  report.expectEqual(32, focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 48 }?.value ?? -1,
+                       cppID: focusID, what: "A083 added point stores 32")
+
+S059 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:382
+  report.expectEqual(["24:64", "48:32"], focusFixture.values(focusFixture.panLane), cppID: focusID,
+                       what: "A084 lane holds the original plus the added point")
+
+S060 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:384
+  report.expectEqual(focusBaseRevision + 1, focusFixture.document.revision, cppID: focusID,
+                       what: "A085 document change alone advances the revision once")
+
+S061 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:388
+  report.expectEqual(base + 1, afterChange, cppID: focusID,
+                           what: "A086 document change records one history entry")
+
+S062 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:395
+  report.expect(lateFixture.page.rows.contains { $0.parameter == lateFixture.panLane }, cppID: lateID,
+                  message: "A096 CC10 lane present in the cancel fixture row stack")

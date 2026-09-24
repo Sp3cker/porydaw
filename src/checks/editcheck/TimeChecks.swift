@@ -1260,10 +1260,17 @@ private func noteClipboardSemantics(_ report: CheckReport) {
 @MainActor
 private func crossTpbClipboardPaste(_ report: CheckReport) {
     let source = clipboardDocument()
-    guard let ids = try? source.addNotes([
+    let addedIDs = try? source.addNotes([
         NewNote(track: 0, tick: 0, pitch: 60, duration: 24, velocity: 100),
-    ]), let id = ids.first, let note = source.note(id),
-          let copied = ClipboardSemantics.copyNotes([note], from: 0, unterminatedDuration: 6)
+    ])
+    let copiedOptional = addedIDs?.first.flatMap(source.note).flatMap {
+        ClipboardSemantics.copyNotes([$0], from: 0, unterminatedDuration: 6)
+    }
+    report.expect(copiedOptional != nil,
+        cppID: "clipcheck/ClipCheckTest::crossTpbNotePaste",
+        message: "source note copy yields a clip before TPQN rescaling")
+    guard let ids = addedIDs, let id = ids.first, let note = source.note(id),
+          let copied = copiedOptional
     else {
         report.fail("clipcheck/ClipCheckTest::crossTpbNotePaste", "source note copy failed")
         return

@@ -28,6 +28,7 @@ func runClipboardSelectionChecks(_ report: CheckReport, suite: DocumentSession,
     clipboardLaneSelectionChecks(report, session: session)
     clipboardNoteSelectionChecks(report, session: session)
     clipboardTrackSelectionChecks(report, session: session)
+    clipboardUnifiedTimeSelectionChecks(report, suite: suite, service: service)
 }
 
 @MainActor
@@ -80,9 +81,9 @@ private func clipboardNoteSelectionChecks(_ report: CheckReport, session: Docume
                   message: "A049 one selection publication accompanies deletion reconciliation")
     changes.removeAll()
     document.renameTrack(0, to: "selection-reconcile")
-    report.expect(changes.count == 1 && changes[0].contains(.document)
+    report.expect(changes.count == 1 && changes[0] == [.document, .dirty, .history]
                   && session.selectedNoteOrder == [ids[2], ids[0]], cppID: reconcile,
-                  message: "A050 document edit preserving valid notes emits no separate selection change")
+                  message: "A050 idempotent reconciliation publishes no selection change")
     changes.removeAll()
     document.deleteNotes([ids[0], ids[2]])
     report.expect(session.selectedNoteOrder.isEmpty && session.selectedNotes.isEmpty,
@@ -325,4 +326,109 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
                   message: "A050 supported controller is present without a selection")
     report.expect(stack(selection).row(for: .controlChange(track: 0, controller: 99)) == nil,
                   cppID: factsID, message: "A051 unsupported controller is absent")
+}
+
+@MainActor
+private func clipboardUnifiedTimeSelectionChecks(_ report: CheckReport, suite: DocumentSession,
+                                                 service: ProjectService) {
+    let sanitize = "clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime"
+    let clear = "clipboard/SelectionCheckTest::clearOperationsPreserveTheOtherSelection"
+    let commit = "clipboard/SelectionCheckTest::timeSelectionAndScopeCommitAtomically"
+    let file = MidiFile(division: 24, chunks: [
+        MidiChunk(events: [
+            .channel(tick: 0, status: 0x90, data0: 60, data1: 90),
+            .channel(tick: 12, status: 0x80, data0: 60),
+            .channel(tick: 24, status: 0x90, data0: 62, data1: 91),
+            .channel(tick: 36, status: 0x80, data0: 62),
+            .channel(tick: 48, status: 0x90, data0: 64, data1: 92),
+            .channel(tick: 60, status: 0x80, data0: 64),
+        ], endTick: 96),
+    ])
+    let document = SongDocument(file: file, config: suite.document.state.config,
+                                source: suite.document.source, trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(document: document, service: service,
+                                  lease: suite.bankLease, slots: suite.bankSlots,
+                                  dirty: false, loadName: suite.bankLoadName)
+    guard document.notes(in: 0).count == 3 else {
+        report.fail(sanitize, "unified selection fixture must contain three distinct notes")
+        return
+    }
+    let page = AutomationPage()
+    page.attach(session: session, palette: GridPalette())
+    defer { page.detach() }
+    let ids = document.notes(in: 0).map(\.id)
+    let invalid = NoteID()
+    var changes: [SessionChangeDomains] = []
+    var availability = 0
+    session.onChange = { changes.append($0.domains) }
+    page.onCommandAvailabilityChanged = { availability += 1 }
+    defer { session.onChange = nil }
+    page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 10, endTick: 20), scope: .lanes, lanes: []))
+    report.expect(page.selection?.isActive == true, cppID: sanitize,
+                  message: "A009 committed time selection is active")
+    report.expect(changes.isEmpty && session.selectedNoteOrder.isEmpty, cppID: sanitize,
+                  message: "A010 time commit notifies through the page while the session stays silent")
+    report.expectEqual(1, availability, cppID: sanitize,
+                       what: "A010 time commit publishes one page availability change")
+    session.setSelectedNotes([invalid])
+    report.expect(page.selection?.isActive == true, cppID: sanitize,
+                  message: "A011 empty note guard preserves the active time selection")
+    report.expect(session.selectedNoteOrder.isEmpty, cppID: sanitize,
+                  message: "A012 empty note guard leaves no notes selected")
+    report.expect(changes.isEmpty && availability == 1, cppID: sanitize,
+                  message: "A013 empty note guard publishes nothing")
+    page.applyTimeSelection(page.selection)
+    report.expect(changes.isEmpty && availability == 1, cppID: commit,
+                  message: "A042 equivalent time and scope commit publishes nothing")
+    page.clearTimeSelection()
+    session.setSelectedNotes([ids[0]])
+    changes.removeAll()
+    page.clearTimeSelection()
+    report.expect(session.selectedNoteOrder == [ids[0]], cppID: clear,
+                  message: "A017 inactive time commit preserves the note selection")
+    report.expect(page.selection == nil, cppID: clear,
+                  message: "A018 cleared time selection stays inactive")
+    report.expect(changes.isEmpty && availability == 2, cppID: clear,
+                  message: "A019 inactive time commit publishes nothing")
+    session.clearSelectedNotes()
+    changes.removeAll()
+    session.clearSelectedNotes()
+    page.clearTimeSelection()
+    report.expect(page.selection == nil && session.selectedNoteOrder.isEmpty, cppID: clear,
+                  message: "A021 clearing empty selections changes neither owner")
+    report.expect(changes.isEmpty && availability == 2, cppID: clear,
+                  message: "A021 clearing empty selections publishes nothing")
+    page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 10, endTick: 20), scope: .lanes, lanes: []))
+    page.clearTimeSelection()
+    report.expect(page.selection == nil, cppID: sanitize,
+                  message: "A022 clearing the committed time selection deactivates it")
+    report.expect(session.selectedNoteOrder.isEmpty, cppID: sanitize,
+                  message: "A023 clearing time leaves the empty note selection empty")
+    report.expect(availability == 4 && changes.isEmpty, cppID: sanitize,
+                  message: "A024 clearing time publishes one page availability change")
+    page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 40, endTick: 80), scope: .tracks([0, 20])))
+    report.expectEqual(TimeRange(startTick: 40, endTick: 80), page.selection?.range, cppID: commit,
+                       what: "A025-A026 track-scoped commit keeps its tick endpoints")
+    let committed = page.selection
+    report.expect(committed?.covers(.controlChange(track: 0, controller: 7), usedTracks: [0]) == true
+                  && committed?.covers(.controlChange(track: 20, controller: 7), usedTracks: [0]) == false,
+                  cppID: commit, message: "A027 resolved scope drops the out-of-range track")
+    report.expectEqual(5, availability, cppID: commit,
+                       what: "A028 track-scoped commit publishes one page availability change")
+    page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 50, endTick: 90), scope: .tracks([0])))
+    report.expectEqual(TimeRange(startTick: 50, endTick: 90), page.selection?.range, cppID: commit,
+                       what: "A035-A036 second track-scoped commit keeps its tick endpoints")
+    report.expectEqual(AutomationTimeSelection.Scope.tracks([0]), page.selection?.scope, cppID: commit,
+                       what: "A034 second commit stores its track scope")
+    report.expectEqual(6, availability, cppID: commit,
+                       what: "A037 second track-scoped commit publishes one page availability change")
+    session.clearSelectedNotes()
+    report.expect(page.selection?.isActive == true, cppID: clear,
+                  message: "A043 clearing notes preserves the active time selection")
+    report.expect(changes.isEmpty && availability == 6, cppID: clear,
+                  message: "A044 clearing the empty note selection publishes nothing")
 }

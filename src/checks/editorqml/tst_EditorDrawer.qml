@@ -709,15 +709,25 @@ TestCase {
     // region's interior must be an exact blend of exactly those two colours, so a
     // glyph drawn in its own icon colours or not drawn at all still fails.
     //
-    // The tint tolerance is 24, measured rather than chosen. At the real 14px lane
-    // toggle the strongest glyph pixel is 43/43/42 against a 26/26/26 tint over
-    // the window-background button (distance 17), and 42/47/47 over the lighter
-    // selection-ring button (distance 21), both at roughly 90% antialiased
-    // coverage because no fully opaque glyph pixel exists at that size on this
-    // backend. 24 is the measured worst case plus a small margin, still below the
-    // 26 an untinted black glyph reaches, and such a glyph fails the exact blend
-    // invariant as well. The fill tolerance stays at 2.
-    function verifyToggleRendering(kind, background, message) {
+    // The tint gate is tintLimit per call, 24 by default and 40 for the thin
+    // flat-music glyph. At the real 14px lane toggle the automation and velocity
+    // glyphs peak at distance 17 over window-background and 21 over
+    // selection-ring (about 90% antialiased coverage; no fully opaque glyph pixel
+    // exists at that size on this backend), while the thin note strokes peak at
+    // 57/56/55 against the 26/26/26 tint (distance 31, about 82% coverage), so 24
+    // would fail a correct render and the voice-changes call passes 40 explicitly.
+    //
+    // 40 stays discriminating because the per-pixel sweep below is exact and
+    // unchanged for every call: each interior opaque pixel must lie on the
+    // button-fill to keyboard-tint segment within +-6 per channel. A missing glyph
+    // leaves the interior all fill, whose distance to the tint (about 175) fails
+    // even the 40 presence gate; an untinted black glyph (distance 26) passes the
+    // gate but misses the segment by 26 and fails the sweep, as does any solid
+    // near-tint colour off the segment. The only renderings admitted are tint
+    // blends at some coverage, which is exactly a correctly tinted glyph. The fill
+    // tolerance stays at 2.
+    function verifyToggleRendering(kind, background, message, maxTintDistance) {
+        var tintLimit = maxTintDistance === undefined ? 24 : maxTintDistance
         var control = testCase.toggle(kind)
         var anchor = testCase.surface
         var tint = testCase.channelsOf(testCase.drawerPalette().keyboardLabel)
@@ -735,12 +745,12 @@ TestCase {
             region = testCase.regionOf(image, anchor, control)
             fill = testCase.nearestPixel(image, region, base)
             tintMatch = testCase.nearestPixel(image, region, tint)
-            if (fill.distance <= 8 && tintMatch.distance <= 40)
+            if (fill.distance <= 8 && tintMatch.distance <= tintLimit)
                 break
             wait(50)
             waited += 50
         }
-        verify(fill.distance <= 8 && tintMatch.distance <= 40,
+        verify(fill.distance <= 8 && tintMatch.distance <= tintLimit,
                message + ": the themed control rendered"
                + testCase.renderDiagnostics(image, control, region, fill, tintMatch, base, tint))
         for (var c = 0; c < 3; ++c) {
@@ -748,7 +758,7 @@ TestCase {
                          message + ": button background channel " + c
                          + testCase.renderDiagnostics(image, control, region, fill, tintMatch,
                                                       base, tint))
-            fuzzyCompare(tintMatch.pixel[c], tint[c], 24,
+            fuzzyCompare(tintMatch.pixel[c], tint[c], tintLimit,
                          message + ": glyph tint channel " + c
                          + testCase.renderDiagnostics(image, control, region, fill, tintMatch,
                                                       base, tint))
@@ -776,6 +786,128 @@ TestCase {
                 }
             }
         }
+    }
+
+    // The bar's scan domains minus every visual that overlaps them. The three
+    // toggles live in their DrawerSection items yet paint inside the bar
+    // rectangle, so each is excluded with the same two-logical-pixel ring the
+    // interior helper insets (derived from the grab scale, never fixed); the
+    // bar's own input MouseArea paints nothing. Grips, bodies and the detent
+    // paint nowhere inside the bar by the stacking the lane asserts (S089/S090),
+    // and verifyBarRendering re-checks grip and detent disjointness at runtime,
+    // so a surviving pixel is the bar's own fill or border, not a neighbour's.
+    function exclusionOf(image, anchor, item) {
+        var region = testCase.regionOf(image, anchor, item)
+        var scaleX = item.width > 0 ? (region.x1 - region.x0 + 1) / item.width : 1
+        var scaleY = item.height > 0 ? (region.y1 - region.y0 + 1) / item.height : 1
+        var padX = Math.max(1, Math.ceil(2 * scaleX))
+        var padY = Math.max(1, Math.ceil(2 * scaleY))
+        return { x0: region.x0 - padX, y0: region.y0 - padY,
+                 x1: region.x1 + padX, y1: region.y1 + padY }
+    }
+
+    function barExclusions(image, anchor) {
+        var exclusions = []
+        var kinds = [testCase.velocityKind, testCase.voiceChangesKind, testCase.automationKind]
+        for (var i = 0; i < kinds.length; ++i) {
+            var toggle = testCase.toggle(kinds[i])
+            if (!toggle || !toggle.visible || toggle.width <= 0 || toggle.height <= 0)
+                continue
+            exclusions.push(testCase.exclusionOf(image, anchor, toggle))
+        }
+        return exclusions
+    }
+
+    function nearestBarPixel(image, bounds, exclusions, target) {
+        var best = [0, 0, 0]
+        var bestAt = "(none)"
+        var bestDistance = 256
+        for (var x = bounds.x0; x <= bounds.x1; ++x) {
+            for (var y = bounds.y0; y <= bounds.y1; ++y) {
+                if (image.alpha(x, y) !== 255)
+                    continue
+                var excluded = false
+                for (var e = 0; e < exclusions.length; ++e) {
+                    var r = exclusions[e]
+                    if (x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) {
+                        excluded = true
+                        break
+                    }
+                }
+                if (excluded)
+                    continue
+                var pixel = [image.red(x, y), image.green(x, y), image.blue(x, y)]
+                var distance = Math.max(Math.abs(pixel[0] - target[0]),
+                                        Math.abs(pixel[1] - target[1]),
+                                        Math.abs(pixel[2] - target[2]))
+                if (distance < bestDistance) {
+                    bestDistance = distance
+                    best = pixel
+                    bestAt = "(" + x + "," + y + ")"
+                }
+            }
+        }
+        return { pixel: best, at: bestAt, distance: bestDistance }
+    }
+
+    function verifyBarRendering(message) {
+        var control = testCase.bar()
+        var anchor = testCase.surface
+        var fill = testCase.channelsOf(testCase.drawerPalette().chromeBackground)
+        var edge = testCase.channelsOf(testCase.drawerPalette().outline)
+        var separation = Math.max(Math.abs(fill[0] - edge[0]), Math.abs(fill[1] - edge[1]),
+                                  Math.abs(fill[2] - edge[2]))
+        verify(separation > 2, message + ": the chrome fill and the outline must differ")
+        var barBox = testCase.renderedRect(control)
+        var kinds = [testCase.velocityKind, testCase.voiceChangesKind, testCase.automationKind]
+        for (var k = 0; k < kinds.length; ++k) {
+            var grip = testCase.grip(kinds[k])
+            if (grip.visible)
+                verify(testCase.renderedRect(grip).y + grip.height <= barBox.y + 0.01,
+                       message + ": no grip paints inside the bar")
+        }
+        var detent = findChild(testCase.drawer(), "drawerDetent")
+        if (detent && detent.visible) {
+            var detentBox = testCase.renderedRect(detent)
+            verify(detentBox.y + detentBox.height <= barBox.y + 0.01
+                   || detentBox.y >= barBox.y + barBox.height - 0.01,
+                   message + ": the detent paints outside the bar")
+        }
+        var image = null
+        var region = null
+        var fillMatch = null
+        var topMatch = null
+        var bottomMatch = null
+        var waited = 0
+        while (waited < 5000) {
+            image = grabImage(anchor)
+            region = testCase.regionOf(image, anchor, control)
+            var bounds = testCase.interiorOf(region, control)
+            var exclusions = testCase.barExclusions(image, anchor)
+            fillMatch = testCase.nearestBarPixel(image, bounds, exclusions, fill)
+            topMatch = testCase.nearestBarPixel(
+                image, { x0: region.x0, y0: region.y0, x1: region.x1, y1: region.y0 + 2 },
+                exclusions, edge)
+            bottomMatch = testCase.nearestBarPixel(
+                image, { x0: region.x0, y0: region.y1 - 2, x1: region.x1, y1: region.y1 },
+                exclusions, edge)
+            if (fillMatch.distance <= 2 && topMatch.distance <= 2 && bottomMatch.distance <= 2)
+                break
+            wait(50)
+            waited += 50
+        }
+        verify(fillMatch.distance <= 2,
+               message + ": the bar renders its opaque chrome fill (nearest "
+               + fillMatch.pixel.join("/") + " d=" + fillMatch.distance + " " + fillMatch.at
+               + ", expected " + fill.join("/") + ")")
+        verify(topMatch.distance <= 2,
+               message + ": the bar renders its opaque outline top rim (nearest "
+               + topMatch.pixel.join("/") + " d=" + topMatch.distance + " " + topMatch.at
+               + ", expected " + edge.join("/") + ")")
+        verify(bottomMatch.distance <= 2,
+               message + ": the bar renders its opaque outline bottom rim (nearest "
+               + bottomMatch.pixel.join("/") + " d=" + bottomMatch.distance + " " + bottomMatch.at
+               + ", expected " + edge.join("/") + ")")
     }
 
     // ---- cases -------------------------------------------------------------
@@ -846,6 +978,7 @@ TestCase {
         compare(testCase.bar().visible, true, "the bar is rendered")
         testCase.verifyRect(testCase.bar(), presenter.barX, presenter.barY,
                             presenter.barWidth, presenter.barHeight, "bar")
+        testCase.verifyBarRendering("bar chrome")
 
         var order = [testCase.velocityKind, testCase.voiceChangesKind, testCase.automationKind]
         var aggregate = presenter.barHeight
@@ -949,6 +1082,10 @@ TestCase {
                 "the accessible state follows the shown section")
         testCase.verifyToggleRendering(testCase.automationKind, testCase.drawerPalette().selectionRing,
                                        "checked toggle")
+        testCase.verifyToggleRendering(testCase.velocityKind, testCase.drawerPalette().windowBackground,
+                                       "unchecked velocity toggle")
+        testCase.verifyToggleRendering(testCase.voiceChangesKind, testCase.drawerPalette().windowBackground,
+                                       "unchecked voice-changes toggle", 40)
     }
 
     // Pointer and keyboard hide and re-show one section: a hidden section

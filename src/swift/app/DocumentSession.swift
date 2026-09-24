@@ -440,6 +440,7 @@ public final class DocumentSession {
         withStateChanges {
             let priorScope = selectedTracks
             let priorPrimary = selectedTrack
+            let priorNotes = selectedNoteOrder
             let survivingSelection = selectedNoteOrder.filter { document.note($0) != nil }
             if survivingSelection.count != selectedNoteOrder.count {
                 selectedNoteOrder = survivingSelection
@@ -485,8 +486,12 @@ public final class DocumentSession {
                 ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
                 lengthTicks: UInt64(timeline.lengthTicks))
             onPlayback?(timeline)
-            publishChange([.document, .selection, .dirty, .history],
-                          trackRemap: change.trackRemap)
+            var domains: SessionChangeDomains = [.document, .dirty, .history]
+            if selectedNoteOrder != priorNotes || selectedTrack != priorPrimary
+                || selectedTracks != priorScope {
+                domains.insert(.selection)
+            }
+            publishChange(domains, trackRemap: change.trackRemap)
         }
     }
 }

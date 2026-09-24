@@ -12,7 +12,7 @@ Swift SHA-256: 6a43240c7187acec4711a949fca0a313cba927544d5c680f7ad2a7d4c168b1cf
 Swift counterpart: src/checks/drawerpresentation/EditorDrawerChecks.swift
 Swift SHA-256: 984ccac33dbdb6835edf02479ad55b298cb4c6e68723395eb56e8dffde9e60d5
 QML counterpart: src/checks/editorqml/tst_EditorDrawer.qml
-QML SHA-256: 819923b2a7855cb9c4497b6cbc295958a1afbddab5144e38f9cf2a6bd82626f5
+QML SHA-256: f94f6e02531bddc9d87eafc034638213ec72c23382e5e3cfc3286a4285eb9c70
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -258,20 +258,20 @@ Original expression:
                QGuiApplication::palette().color(QPalette::Highlight))
 
 A017 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:115
-Disposition: GAP
-Mapping/reason: No executing predicate reads the bar background colour or its alpha; the QML lane asserts only bar and control geometry and the checked toggle fill (S089, S093).
+Disposition: MATCHED
+Mapping/reason: S093 (tst_EditorDrawer.qml:981; helper at line 853) renders the bar and requires an opaque chromeBackground fill pixel in the bar interior with the toggle rectangles excluded and grips/detent proven disjoint at runtime; the pixel search skips anything not fully opaque, so the attributed pixel proves alpha 255, and the production bar binds color chromeBackground.
 Original expression:
   QCOMPARE(chrome.barBackground().alpha(), 255)
 
 A018 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:116
-Disposition: GAP
-Mapping/reason: No executing predicate reads the bar outline colour or its alpha; the QML lane asserts only the grip outline colour on hover (S091).
+Disposition: MATCHED
+Mapping/reason: S093 (tst_EditorDrawer.qml:981; helper at line 853) renders the bar and requires opaque outline pixels on both the top and bottom rim rows with the toggle columns excluded and grips/detent proven disjoint at runtime; the pixel search skips anything not fully opaque, so the attributed pixels prove alpha 255, and the production bar draws a 1px outline border.
 Original expression:
   QCOMPARE(chrome.barOutline().alpha(), 255)
 
 A019 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:117
-Disposition: GAP
-Mapping/reason: feature not yet ported: chrome icon revision publication; the Swift drawer owner publishes no icon revision and no QML predicate asserts one.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The C++ iconRevision invalidated a QQuickImageProvider cache; the QML toggles load their SVG from the qrc URL directly into a Canvas and tint with source-in, painting synchronously with no provider cache to invalidate, so a revision counter has no consumer and no Swift ingress. The visible effect, every toggle icon drawn in the current tint, is asserted by S093 for the automation toggle in both states and the velocity and voice-changes toggles unchecked.
 Original expression:
   QVERIFY(chrome.iconRevision() > 0)
 
@@ -427,26 +427,26 @@ Original expression:
   QVERIFY(view.editorDrawer()->bodyRect(EditorDrawerPage::VoiceChanges) == beforeBody)
 
 A045 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:210
-Disposition: GAP
-Mapping/reason: feature not yet ported: handle hover publication; the Swift owner publishes no hovered handle. S091 (tst_EditorDrawer.qml:904) asserts only the drawn grip outline colour on hover.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The C++ hoveredHandle integer has no consumer in the new architecture: hover ephemera lives in the grip MouseArea (containsMouse/pressed drive the highlight) and the Swift drawer owner publishes no hover value and offers no hover ingress, so publishing one would be a check-only parallel model. The user-visible effect is matched by S091 (tst_EditorDrawer.qml:904), which hovers the production grip with a real pointer and requires the selection-ring highlight.
 Original expression:
   QCOMPARE(chrome.hoveredHandle(), static_cast<int>(DrawerChromeTarget::VoiceChangesHandle))
 
 A046 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:211
-Disposition: GAP
-Mapping/reason: feature not yet ported: handle hover cursor publication; no Swift or QML predicate asserts the SizeVerCursor shape. S091 (tst_EditorDrawer.qml:904) asserts only the drawn grip colour.
+Disposition: NATIVE
+Mapping/reason: Cursor shape delivery is engine-native: the production grip MouseArea declares cursorShape Qt.SizeVerCursor (EditorDrawer.qml:287) and the OS cursor is unobservable in the offscreen lane, so no QML predicate can assert it. Ingress evidence: S091 (tst_EditorDrawer.qml:904) proves native hover reaches the grip surface through the same delivery the cursor rides.
 Original expression:
   QCOMPARE(fixture.voiceHandle->cursor().shape(), Qt::SizeVerCursor)
 
 A047 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:215
-Disposition: GAP
-Mapping/reason: feature not yet ported: handle hover cursor publication; no predicate asserts the cursor leaves the SizeVerCursor shape after the click.
+Disposition: NATIVE
+Mapping/reason: Cursor shape delivery is engine-native from the declared grip cursorShape (EditorDrawer.qml:287) and unobservable offscreen. Note the semantics delta: after release-while-hovering the engine keeps SizeVerCursor where the retired C++ cleared to Arrow; the QML behavior is the platform-idiomatic one.
 Original expression:
   QVERIFY(fixture.voiceHandle->cursor().shape() != Qt::SizeVerCursor)
 
 A048 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:218
-Disposition: GAP
-Mapping/reason: feature not yet ported: handle hover publication; no predicate asserts the hovered handle clears on leave; S091 (tst_EditorDrawer.qml:912) asserts only the drawn grip colour returning to its outline.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The C++ hoveredHandle integer has no consumer and no Swift ingress (see A045); the clear-on-leave is owned by the QML MouseArea. The user-visible effect is matched by S091 (tst_EditorDrawer.qml:912), which moves off the production grip and requires the outline colour to return.
 Original expression:
   QCOMPARE(chrome.hoveredHandle(), -1)
 
@@ -491,24 +491,24 @@ Original expression:
                                                     layout::space(layout::Space::One))
 
 A055 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:241
-Disposition: GAP
-Mapping/reason: No predicate asserts the C++ per-band canonical and physical input pairing; the QML lane addresses inputs by their Swift names (swiftRollInput, velocityPlotInput, automationPlotInput) and never pairs timelineRollInput with timelineRollGutterInput.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The C++ pairing asserts TimelineInputItem identities sharing one interaction against TimelineBandLayout geometry; none of that exists on the Swift path (no TimelineBandLayout type, no shared-interaction concept, and timelineRollInput/timelineRollGutterInput live only on the legacy TimelineCanvas/timelinequickview path). The production roll band pairs live plot and gutter inputs (swiftRollInput plus the gutter MouseArea in EditorSurface.qml) at published geometry, covered by S088/S089/S090 and real-pointer ingress.
 Original expression:
   QVERIFY(checks::support::physicalInputsMatchCanonical(
           view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Roll,
           QStringLiteral("timelineRollInput"), QStringLiteral("timelineRollGutterInput")))
 
 A056 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:244
-Disposition: GAP
-Mapping/reason: No predicate asserts the C++ per-band canonical and physical input pairing; the QML lane never pairs timelineVelocityInput with timelineVelocityGutterInput.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The C++ TimelineInputItem pairing and shared interaction have no Swift ingress (see A055); the velocity plot input is page-owned in the new architecture. The user-visible pairing, a live plot input at the published body geometry plus the grip resize session, is covered by S089/S090/S103 and the real-pointer grip drags.
 Original expression:
   QVERIFY(checks::support::physicalInputsMatchCanonical(
           view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Velocity,
           QStringLiteral("timelineVelocityInput"), QStringLiteral("timelineVelocityGutterInput")))
 
 A057 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:247
-Disposition: GAP
-Mapping/reason: No predicate asserts the C++ per-band canonical and physical input pairing; the QML lane never pairs timelineVoiceChangesInput with timelineVoiceChangesGutterInput.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The C++ TimelineInputItem pairing and shared interaction have no Swift ingress (see A055); the voice-changes plot input is page-owned in the new architecture. The user-visible pairing, a live plot input at the published body geometry plus the grip resize session, is covered by S089/S090 and the spill drags.
 Original expression:
   QVERIFY(checks::support::physicalInputsMatchCanonical(
           view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::VoiceChanges,
@@ -516,8 +516,8 @@ Original expression:
           QStringLiteral("timelineVoiceChangesGutterInput")))
 
 A058 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:251
-Disposition: GAP
-Mapping/reason: No predicate asserts the C++ per-band canonical and physical input pairing; the QML lane never pairs timelineAutomationInput with timelineAutomationGutterInput.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The C++ TimelineInputItem pairing and shared interaction have no Swift ingress (see A055); the automation plot input is page-owned in the new architecture. The user-visible pairing, a live gutter plus plot at the published geometry, is covered by S089/S102/S103 and the automation input transactions.
 Original expression:
   QVERIFY(checks::support::physicalInputsMatchCanonical(
           view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Automation,
@@ -2020,8 +2020,21 @@ S093 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_
 QML expression:
   testCase.verifyToggleRendering(testCase.automationKind, testCase.drawerPalette().windowBackground, "unchecked toggle")
   testCase.verifyToggleRendering(testCase.automationKind, testCase.drawerPalette().selectionRing, "checked toggle")
-  verifyToggleRendering (helper at line 720) samples one surface grab through the drawn control's region and
+  testCase.verifyToggleRendering(testCase.velocityKind, testCase.drawerPalette().windowBackground, "unchecked velocity toggle")
+  testCase.verifyToggleRendering(testCase.voiceChangesKind, testCase.drawerPalette().windowBackground, "unchecked voice-changes toggle", 40)
+  verifyToggleRendering (helper at line 729) samples one surface grab through the drawn control's region and
   requires a pixel nearest each expected colour plus an exact two-colour blend over the control interior.
+  The tint gate is per call, 24 by default and 40 for the thin flat-music glyph (strongest pixel distance 31,
+  about 82% coverage, where 24 would fail a correct render); 40 stays discriminating because the per-pixel
+  sweep is exact and unchanged for every call, so a missing glyph fails the presence gate and a wrong-coloured
+  glyph fails the sweep, and every toggle icon is proven drawn in the current tint.
+  The same case also renders the bar chrome at line 981:
+  testCase.verifyBarRendering("bar chrome")
+  verifyBarRendering (helper at line 853) asserts at runtime that no visible grip and no visible detent paints
+  inside the bar rectangle, then grabs the surface and requires a fully opaque chromeBackground pixel inside the
+  bar interior plus fully opaque outline pixels on the top and bottom rim rows, every scan domain excluding the
+  toggle rectangles with a scale-aware ring; the bar input MouseArea paints nothing and bodies are disjoint by
+  S090, so each surviving pixel is attributed to the bar fill and border, proving alpha 255.
 
 S094 | EditorDrawerLane.verifyToggleAccessibility | src/checks/editorqml/tst_EditorDrawer.qml:578
 QML expression:
@@ -2188,4 +2201,4 @@ Swift expression:
   The block builds a fresh harness, attaches a velocity stub page and applies no restore preferences, so the
   predicate reads the untouched layout default rather than a restored preference.
 
-Tally: MATCHED 76, PARTIAL 69, GAP 14, NATIVE 17, NATIVE-SETUP 2
+Tally: MATCHED 78, PARTIAL 69, GAP 3, NATIVE 19, NATIVE-SETUP 2, RETIRED-REPRESENTATION 7

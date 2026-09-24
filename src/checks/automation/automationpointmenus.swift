@@ -78,6 +78,12 @@ func drawerAutomationPromptTransactions(_ report: CheckReport, suite: DocumentSe
                        what: "Tempo's acceptance is one revision")
     report.expect(tempoFixture.undo() && tempoFixture.tempoValues == ["0:120"], cppID: drawerAutomationPromptID,
                   message: "one undo restores Tempo's stored microseconds")
+    let escapeBefore = fixture.snapshot
+    _ = fixture.page.openPrompt(tick: 24, value: 64)
+    report.expect(fixture.page.hasPrompt && fixture.page.interactionActive, cppID: drawerAutomationPromptID, message: "the prompt reopens for the Escape route")
+    report.expect(fixture.page.handleEscape(), cppID: drawerAutomationPromptID, message: "Escape claims the open prompt")
+    report.expect(!fixture.page.hasPrompt && !fixture.page.interactionActive, cppID: drawerAutomationPromptID, message: "Escape drops the prompt and the interaction")
+    report.expectEqual(escapeBefore, fixture.snapshot, cppID: drawerAutomationPromptID, what: "Escape cancellation writes nothing")
 }
 
 @MainActor
@@ -173,6 +179,20 @@ func drawerAutomationDuplicatePromptAndParameterSwitch(_ report: CheckReport, su
                        what: "the CC lane stays untouched")
     report.expectEqual(tempoBefore.revision + 1, switched.document.revision, cppID: switchID,
                        what: "Tempo's acceptance is one revision")
+    let routed = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    routed.activate(routed.panLane)
+    _ = routed.page.pointerPress(x: routed.x(24), y: routed.y(routed.panLane, 64), surface: 1, button: AutomationQtButton.right)
+    _ = routed.page.pointerRelease(x: routed.x(24), y: routed.y(routed.panLane, 64), button: AutomationQtButton.right)
+    report.expect(routed.page.menuTargetIsPoint, cppID: id, message: "the written point owns its Set Value menu target")
+    report.expect(routed.page.menuOpen, cppID: id, message: "the point menu opens for the Set Value route")
+    report.expect(routed.page.publishedMenuRows.first { $0.actionId == AutomationMenuAction.setValue.rawValue }?.enabled == true, cppID: id, message: "the point menu enables Set Value on a written node")
+    report.expect(routed.page.consumeMenuAction(actionId: AutomationMenuAction.setValue.rawValue), cppID: id, message: "the Set Value row is consumed")
+    report.expect(routed.page.promptOpen, cppID: id, message: "the Set Value pick opens the value prompt")
+    report.expectEqual(AutomationPromptKind.value.rawValue, routed.page.promptKind, cppID: id, what: "the Set Value pick opens the value form")
+    report.expect(routed.page.interactionActive, cppID: id, message: "the open value prompt marks the page interacting")
+    report.expect(!routed.page.promptDraft.isEmpty, cppID: id, message: "the value prompt carries its initial draft")
+    routed.page.cancelPrompt()
+    report.expect(!routed.page.hasPrompt && !routed.page.interactionActive, cppID: id, message: "cancelling the routed prompt drops the prompt and the interaction")
 }
 
 @MainActor
@@ -269,6 +289,16 @@ func drawerAutomationLaneDeleteConfirmation(_ report: CheckReport, suite: Docume
     report.expect(single.undo(), cppID: countID, message: "the acceptance undoes")
     report.expectEqual(["48:70"], single.values(single.volumeLane), cppID: countID,
                        what: "undo restores the written event")
+    _ = page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0)
+    _ = page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue)
+    report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id, what: "the reopened row owns the delete confirmation")
+    report.expect(page.promptOpen, cppID: id, message: "the delete confirmation is open")
+    report.expect(page.interactionActive, cppID: id, message: "the open confirmation marks the page interacting")
+    let escapeID = "automation/AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched"
+    let confirmationEscapeBefore = fixture.snapshot
+    report.expect(page.handleEscape(), cppID: escapeID, message: "Escape claims the open confirmation")
+    report.expect(!page.promptOpen && !page.interactionActive, cppID: escapeID, message: "Escape drops the confirmation and the interaction")
+    report.expectEqual(confirmationEscapeBefore, fixture.snapshot, cppID: escapeID, what: "Escape cancellation writes nothing")
 }
 
 @MainActor
@@ -308,4 +338,13 @@ func drawerAutomationOutsidePressRetarget(_ report: CheckReport, suite: Document
                   cppID: id, message: "the paired release claims no band")
     report.expectEqual(missBefore, fixture.snapshot, cppID: id,
                        what: "the dismissed menu writes nothing")
+    let foreignID = "automation/AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives"
+    _ = page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), button: AutomationQtButton.right)
+    report.expect(page.menuTargetIsPoint, cppID: foreignID, message: "the point menu reopens for the Escape route")
+    report.expect(page.menuOpen, cppID: foreignID, message: "the reopened point menu is open")
+    let menuEscapeBefore = fixture.snapshot
+    report.expect(page.handleEscape(), cppID: foreignID, message: "Escape claims the open point menu")
+    report.expect(!page.menuOpen, cppID: foreignID, message: "Escape closes the open point menu")
+    report.expectEqual(menuEscapeBefore, fixture.snapshot, cppID: foreignID, what: "Escape dismissal writes nothing")
 }
