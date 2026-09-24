@@ -14,7 +14,6 @@ FocusScope {
     required property real baseFontPx
     readonly property var songs: controller.songListPresenter()
     readonly property int pad: Math.max(1, Math.round(baseFontPx * 0.25))
-    readonly property color warnColor: "#c08030"
 
     function focusSearch() {
         search.forceActiveFocus()
@@ -174,7 +173,9 @@ FocusScope {
                     renderType: Text.NativeRendering
                     elide: Text.ElideRight
                     verticalAlignment: Text.AlignVCenter
-                    color: row.song && row.song.warning ? root.warnColor : root.colors.windowText
+                    color: row.highlighted ? root.colors.selectionText
+                           : row.song && row.song.warning ? root.colors.warningText
+                                                          : root.colors.windowText
                 }
                 background: Rectangle {
                     visible: row.highlighted

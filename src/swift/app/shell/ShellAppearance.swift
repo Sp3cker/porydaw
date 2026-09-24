@@ -18,6 +18,10 @@ public enum ShellAppearance {
         let item: String
         let itemHover: String
         let secondary: String
+        let input: String
+        let alternate: String
+        let warning: String
+        let error: String
         let grid: String
         let roll: String
         let accidental: String
@@ -25,12 +29,18 @@ public enum ShellAppearance {
         let keyboardLabel: String
     }
 
+    // Secondary ink is the preset's own secondary walked toward black until it
+    // keeps 4.5:1 on the darkest surface it labels (vanilla chrome #BDB5AF:
+    // #57514C sat 3.87:1, #4D4742 reaches 4.53:1). Dark presets already pass.
+    // Severity inks are the legacy polyphony stolen/dropped inks; vanilla's
+    // #6E4A06/#9C2B2B are walked toward black to 4.5:1 on chrome.
     private static let vanilla = Colors(
         window: "#C9C1BB", text: "#302C29", disabledText: "#8B847E",
         outline: "#8C857F", selection: "#B9E8EE",
         accent: "#00CADB", chrome: "#BDB5AF", separator: "#5B5652", control: "#E1DBD6",
         controlHover: "#ECE7E1", controlPressed: "#F5B61C",
-        item: "#D2D0CA", itemHover: "#E7E2DC", secondary: "#57514C",
+        item: "#D2D0CA", itemHover: "#E7E2DC", secondary: "#4D4742",
+        input: "#F3F0ED", alternate: "#D1CBC5", warning: "#644100", error: "#8D1B1F",
         grid: "#3F040000", roll: "#D4CCC7", accidental: "#B4ACA6",
         keyboardSeparator: "#BCB4AF", keyboardLabel: "#1A1A1A")
 
@@ -40,6 +50,7 @@ public enum ShellAppearance {
         accent: "#037384", chrome: "#424242", separator: "#262626", control: "#1A1A1A",
         controlHover: "#5C5C5C", controlPressed: "#00D3F2",
         item: "#424242", itemHover: "#5B5B5B", secondary: "#BDBDBD",
+        input: "#252525", alternate: "#575757", warning: "#E2A854", error: "#F09999",
         grid: "#54030303", roll: "#454545", accidental: "#303030",
         keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A")
 
@@ -49,6 +60,7 @@ public enum ShellAppearance {
         accent: "#008493", chrome: "#363941", separator: "#292A2E", control: "#292A2E",
         controlHover: "#52555E", controlPressed: "#F98CBE",
         item: "#393C43", itemHover: "#51545C", secondary: "#A5A8B0",
+        input: "#25272B", alternate: "#52545C", warning: "#E2A854", error: "#F09999",
         grid: "#54030606", roll: "#3C3F46", accidental: "#282B32",
         keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A")
 
@@ -126,6 +138,13 @@ public enum ShellAppearance {
         palette.tabHoverBackground = colors.controlHover
         palette.tabSelectedBackground = colors.selection
         palette.tabPressedBackground = colors.controlPressed
+        // Qt control-palette surfaces: editable fields and tooltips use the
+        // preset's input swatch, where text and placeholder ink keep 4.5:1.
+        palette.inputBackground = colors.input
+        palette.alternateBackground = colors.alternate
+        palette.placeholderText = colors.secondary
+        palette.warningText = colors.warning
+        palette.errorText = colors.error
 
         palette.keyboardNatural = "#F4F4F4"
         palette.keyboardBlack = "#202224"
@@ -146,7 +165,8 @@ public enum ShellAppearance {
         palette.rulerPreRollMask = PaletteMath.hex(PaletteMath.mixTowardOklab(
             PaletteMath.oklab(r: chrome.r, g: chrome.g, b: chrome.b), gridLab, 0.15))
         palette.noteVelocityZero = colors.disabledText
-        palette.implicitSignature = colors.disabledText
+        palette.implicitSignature = colors.secondary
+        palette.rulerDetailText = colors.secondary
         palette.selectionRing = colors.selection
         palette.selectionFill = withAlpha(colors.selection, 30)
         palette.selectionEdge = colors.accent

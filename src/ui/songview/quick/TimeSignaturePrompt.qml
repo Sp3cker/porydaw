@@ -7,7 +7,12 @@ PromptCard {
 
     objectName: "timeSignaturePrompt"
     appearance: Object.assign({}, bridge.timeSigPromptAppearance, {
-        font: Qt.font(bridge.timeSigPromptFont)
+        font: Qt.font(bridge.timeSigPromptFont),
+        // The pressed fill is hoverChipFill (set in Swift), so pressed text
+        // must be its mate hoverChipText, not the normal button ink.
+        // bridge is the ApplicationSession, which publishes the palette.
+        pressedText: bridge.palette.hoverChipText,
+        disabledText: bridge.palette.disabledText
     })
 
     property int draftNumerator: bridge.timeSigPromptInitialNumerator
@@ -148,7 +153,11 @@ PromptCard {
                     id: denominatorText
 
                     anchors.centerIn: parent
-                    color: appearance.buttonText
+                    // Selected/pressed chips sit on the pressed fill, so they
+                    // take the pressed ink; unselected chips keep buttonText
+                    // on the button fill.
+                    color: denominatorTap.pressed || denominatorButton.selected
+                           ? appearance.pressedText : appearance.buttonText
                     font: appearance.font
                     text: String(1 << denominatorButton.modelData)
                     renderType: Text.NativeRendering

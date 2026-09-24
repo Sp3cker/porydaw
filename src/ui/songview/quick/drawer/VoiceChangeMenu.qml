@@ -19,6 +19,7 @@ FocusScope {
     readonly property real baseFontPx: model ? model.baseFontPx : 13
     readonly property font bodyFont: ApplicationWindow.window
         ? ApplicationWindow.window.font : Application.font
+    readonly property var menuColors: menuRoot.pageItem ? menuRoot.pageItem.gridPalette : null
     readonly property point anchor: pageItem && parent
         ? pageItem.mapToItem(parent, model ? model.menuX : 0, model ? model.menuY : 0)
         : Qt.point(model ? model.menuX : 0, model ? model.menuY : 0)
@@ -67,12 +68,11 @@ FocusScope {
         textX: Math.round(menuRoot.baseFontPx / 2)
         textRight: menuWidth - textX
         highlightedRow: menuRoot.currentRow
-        appearance: ({
-            background: "#302C29", outline: "#8C857F", text: "#F4F4F4",
-            hoverBackground: "#2A2724", hoverText: "#F4F4F4",
-            pressedBackground: "#57514C", pressedText: "#F4F4F4",
-            disabledText: "#8C857F", separator: "#8C857F",
-            font: menuRoot.bodyFont
-        })
+        appearance: menuRoot.menuColors ? ({
+            background: menuRoot.menuColors.menuBackground, outline: menuRoot.menuColors.outline,
+            text: menuRoot.menuColors.windowText, hoverBackground: menuRoot.menuColors.menuHoverBackground,
+            hoverText: menuRoot.menuColors.windowText, disabledText: menuRoot.menuColors.disabledText,
+            separator: menuRoot.menuColors.separator, font: menuRoot.bodyFont
+        }) : null
     }
 }

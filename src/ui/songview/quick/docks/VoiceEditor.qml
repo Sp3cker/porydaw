@@ -8,7 +8,7 @@ ColumnLayout {
     id: editor
     objectName: "voicegroupEditor"
     required property QtObject controller
-    required property var palette
+    required property var colors
     required property real baseFontPx
     readonly property var draft: controller.editorModel()
     readonly property int spacingPx: Math.max(1, Math.round(baseFontPx * 0.16))
@@ -59,7 +59,7 @@ ColumnLayout {
         text: editor.draft.notice
         wrapMode: Text.WordWrap
         font.pixelSize: editor.baseFontPx
-        color: editor.palette.primaryText
+        color: editor.colors.primaryText
         Layout.preferredHeight: editor.noticeHeight
     }
 
@@ -72,7 +72,7 @@ ColumnLayout {
             text: qsTr("Type")
             Layout.preferredWidth: editor.fieldLabelWidth
             font.pixelSize: editor.baseFontPx
-            color: editor.palette.primaryText
+            color: editor.colors.primaryText
         }
         ComboBox {
             id: typePicker
@@ -117,7 +117,7 @@ ColumnLayout {
                   : editor.draft.macro === 12 ? qsTr("Drumkit") : qsTr("Sample")
             Layout.preferredWidth: editor.fieldLabelWidth
             font.pixelSize: editor.baseFontPx
-            color: editor.palette.primaryText
+            color: editor.colors.primaryText
         }
         SamplePicker {
             objectName: "vgSymbolPicker"
@@ -127,7 +127,7 @@ ColumnLayout {
             Layout.minimumHeight: 0
             controller: editor.controller
             draft: editor.draft
-            colors: editor.palette
+            colors: editor.colors
             baseFontPx: editor.baseFontPx
             waveMode: editor.draft.macro === 7 || editor.draft.macro === 8
             onPicked: symbol => editor.draft.changeType(editor.draft.macro, symbol)
@@ -188,7 +188,7 @@ ColumnLayout {
             text: qsTr("Waveform")
             Layout.preferredWidth: editor.fieldLabelWidth
             font.pixelSize: editor.baseFontPx
-            color: editor.palette.primaryText
+            color: editor.colors.primaryText
         }
         ComboBox {
             objectName: "vgSynthWaveformCombo"
@@ -209,7 +209,7 @@ ColumnLayout {
             text: qsTr("Duty LFO")
             Layout.preferredWidth: editor.fieldLabelWidth
             font.pixelSize: editor.baseFontPx
-            color: editor.palette.primaryText
+            color: editor.colors.primaryText
         }
         Repeater {
             model: [{ name: "BaseDuty", field: "baseDuty", detail: qsTr("Base duty cycle") },
@@ -243,7 +243,7 @@ ColumnLayout {
             text: qsTr("Sweep")
             Layout.preferredWidth: editor.fieldLabelWidth
             font.pixelSize: editor.baseFontPx
-            color: editor.palette.primaryText
+            color: editor.colors.primaryText
         }
         SpinBox {
             objectName: "vgSweepSpin"
@@ -265,7 +265,7 @@ ColumnLayout {
             text: qsTr("Duty")
             Layout.preferredWidth: editor.fieldLabelWidth
             font.pixelSize: editor.baseFontPx
-            color: editor.palette.primaryText
+            color: editor.colors.primaryText
         }
         ComboBox {
             objectName: "vgDutyCombo"
@@ -285,7 +285,7 @@ ColumnLayout {
             text: qsTr("Period")
             Layout.preferredWidth: editor.fieldLabelWidth
             font.pixelSize: editor.baseFontPx
-            color: editor.palette.primaryText
+            color: editor.colors.primaryText
         }
         ComboBox {
             objectName: "vgPeriodCombo"
@@ -305,7 +305,7 @@ ColumnLayout {
             text: qsTr("ADSR")
             Layout.preferredWidth: editor.fieldLabelWidth
             font.pixelSize: editor.baseFontPx
-            color: editor.palette.primaryText
+            color: editor.colors.primaryText
         }
         Repeater {
             model: ["attack", "decay", "sustain", "release"]

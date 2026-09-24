@@ -17,16 +17,20 @@ FocusScope {
     enabled: showing
 
     readonly property real baseFontPx: model ? model.baseFontPx : 13
+    readonly property var pickerColors: pickerRoot.pageItem ? pickerRoot.pageItem.gridPalette : null
     QtObject {
         id: pickerAppearance
-        readonly property color background: "#E9E4E0"
-        readonly property color outline: "#8C857F"
-        readonly property color text: "#302C29"
-        readonly property color focus: "#0084DB"
-        readonly property color pressedBackground: "#D5CEC8"
-        readonly property color pressedText: "#302C29"
-        readonly property color buttonBackground: "#BDB5AF"
-        readonly property color buttonText: "#302C29"
+        readonly property color background: pickerRoot.pickerColors ? pickerRoot.pickerColors.windowBackground : "transparent"
+        readonly property color outline: pickerRoot.pickerColors ? pickerRoot.pickerColors.outline : "transparent"
+        readonly property color text: pickerRoot.pickerColors ? pickerRoot.pickerColors.windowText : "transparent"
+        readonly property color focus: pickerRoot.pickerColors ? pickerRoot.pickerColors.focusOutline : "transparent"
+        readonly property color pressedBackground: pickerRoot.pickerColors ? pickerRoot.pickerColors.buttonPressedBackground : "transparent"
+        readonly property color pressedText: pickerRoot.pickerColors ? pickerRoot.pickerColors.buttonPressedText : "transparent"
+        readonly property color buttonBackground: pickerRoot.pickerColors ? pickerRoot.pickerColors.buttonBackground : "transparent"
+        readonly property color buttonText: pickerRoot.pickerColors ? pickerRoot.pickerColors.buttonText : "transparent"
+        readonly property color placeholder: pickerRoot.pickerColors ? pickerRoot.pickerColors.placeholderText : "transparent"
+        readonly property color selection: pickerRoot.pickerColors ? pickerRoot.pickerColors.tabSelectedBackground : "transparent"
+        readonly property color selectionText: pickerRoot.pickerColors ? pickerRoot.pickerColors.selectionText : "transparent"
         readonly property real borderWidth: 1
         readonly property real radius: Math.max(1, pickerRoot.baseFontPx / 4)
         readonly property real dialogPadding: Math.round(pickerRoot.baseFontPx / 2)
@@ -123,7 +127,7 @@ FocusScope {
                 verticalAlignment: Text.AlignVCenter
                 text: qsTr("Search voices...")
                 visible: search.text.length === 0
-                color: card.appearance.outline
+                color: card.appearance.placeholder
                 font: card.appearance.font
                 renderType: Text.NativeRendering
             }
@@ -139,8 +143,8 @@ FocusScope {
                 rightPadding: leftPadding
                 topPadding: card.appearance.verticalPadding + card.appearance.borderWidth
                 bottomPadding: topPadding
-                selectionColor: card.appearance.focus
-                selectedTextColor: card.appearance.text
+                selectionColor: card.appearance.selection
+                selectedTextColor: card.appearance.selectionText
                 renderType: TextInput.NativeRendering
                 activeFocusOnTab: true
                 selectByMouse: true

@@ -2588,15 +2588,18 @@ TestCase {
                   "Ctrl-click paints the secondary selected-track overlay")
         compare(primary.titleBold, true, "Ctrl-click retains the original primary")
         compare(secondary.titleBold, false, "secondary track does not become primary")
-        fuzzyCompare(secondary.overlayColor.a, 99 / 255, 0.001,
-                     "secondary overlay retains the original alpha")
+        // 0x40, not the legacy 0x63: above it windowText drops below 4.5:1 on
+        // the dark-theme tint (docs/adr/0002-text-contrast-first.md).
+        var tintAlpha = 0x40 / 255
+        fuzzyCompare(secondary.overlayColor.a, tintAlpha, 0.001,
+                     "secondary overlay uses the legible tint alpha")
         waitForRendering(secondary)
         var image = grabImage(testCase.surface)
         var region = testCase.regionOf(image, testCase.surface, secondary)
         var background = testCase.channelsOf(secondary.baseColor)
         var overlay = testCase.channelsOf(secondary.overlayColor)
         var blended = background.map(function(value, index) {
-            return Math.round(value * (1 - 99 / 255) + overlay[index] * 99 / 255)
+            return Math.round(value * (1 - tintAlpha) + overlay[index] * tintAlpha)
         })
         verify(testCase.nearestPixel(image, region, blended).distance <= 1,
                "the original overlay primitive renders the secondary scope color")

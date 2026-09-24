@@ -1,11 +1,11 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import ".." as Shell
 
-ApplicationWindow {
+Shell.ThemedWindow {
     id: dialog
     objectName: "settingsDialog"
     required property QtObject store
-    required property QtObject colors
     property font applicationFont: Qt.application.font
     readonly property real unit: Math.max(1, baseFont.pixelSize) / 12
     property int selectedTab: 0
@@ -20,13 +20,6 @@ ApplicationWindow {
     modality: Qt.WindowModal
     color: colors.windowBackground
     font: applicationFont
-    palette.window: colors.windowBackground
-    palette.windowText: colors.windowText
-    palette.base: colors.tabHoverBackground
-    palette.text: colors.windowText
-    palette.button: colors.buttonBackground
-    palette.buttonText: colors.buttonText
-    palette.highlight: colors.tabSelectedBackground
     visible: false
     FontInfo {
         id: baseFont
@@ -80,6 +73,9 @@ ApplicationWindow {
                 width: 64 + 42 * (dialog.unit - 1)
                 text: qsTr("Engine")
                 font.weight: Font.Bold
+                palette.active.buttonText: dialog.selectedTab === 0 ? dialog.colors.selectionText : dialog.colors.buttonText
+                palette.inactive.buttonText: dialog.selectedTab === 0 ? dialog.colors.selectionText : dialog.colors.buttonText
+                palette.disabled.buttonText: dialog.colors.disabledText
                 onClicked: dialog.selectedTab = 0
                 background: Rectangle {
                     color: dialog.selectedTab === 0 ? dialog.colors.tabSelectedBackground
@@ -96,6 +92,9 @@ ApplicationWindow {
                       ? qsTr("Song (%1)").arg(dialog.store.songLabel) : qsTr("Song")
                 font.weight: Font.Bold
                 enabled: dialog.store.songAvailable
+                palette.active.buttonText: dialog.selectedTab === 1 ? dialog.colors.selectionText : dialog.colors.buttonText
+                palette.inactive.buttonText: dialog.selectedTab === 1 ? dialog.colors.selectionText : dialog.colors.buttonText
+                palette.disabled.buttonText: dialog.colors.disabledText
                 onClicked: dialog.selectedTab = 1
                 background: Rectangle {
                     color: dialog.selectedTab === 1 ? dialog.colors.tabSelectedBackground

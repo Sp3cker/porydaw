@@ -222,7 +222,7 @@ extension AutomationPage {
             let width = max(fontPx(2), (captionMetrics?.advance(label.text) ?? 0).rounded())
             let y = min(max(0, label.y - height / 2), max(0, plotHeight - height))
             labels.append(SceneText(rect: (Double(pad), y.rounded(), width, height),
-                                    text: label.text, color: palette.secondaryText,
+                                    text: label.text, color: palette.primaryText,
                                     font: captionFont))
         }
         syncRects(valueLines, lines)

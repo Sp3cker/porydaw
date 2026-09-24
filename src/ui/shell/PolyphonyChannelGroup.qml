@@ -12,7 +12,7 @@ Column {
     Text {
         height: Math.round(group.em * 1.5)
         text: group.caption
-        color: group.colors.disabledText
+        color: group.colors.secondaryText
         font.pixelSize: group.em
         font.weight: Font.DemiBold
         verticalAlignment: Text.AlignVCenter
@@ -28,13 +28,14 @@ Column {
                 width: Math.round(group.em * 46 / 12)
                 height: Math.round(group.em * 34 / 12)
                 radius: group.em / 4
-                color: state === 3 ? "#2859A4"
-                    : state === 2 ? "#B98527"
-                    : state === 1 ? "#228445" : group.colors.buttonBackground
+                color: state === 3 ? group.colors.polyphonyShadowFill
+                    : state === 2 ? group.colors.polyphonyReleasingFill
+                    : state === 1 ? group.colors.polyphonyActiveFill : group.colors.buttonBackground
                 Text {
                     anchors.fill: parent
                     text: label
-                    color: state === 0 ? group.colors.disabledText : "#FFFFFF"
+                    color: state === 2 ? group.colors.polyphonyReleasingText
+                        : state === 1 || state === 3 ? group.colors.polyphonyCellText : group.colors.secondaryText
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     font.pixelSize: group.em * 0.83

@@ -264,7 +264,7 @@ Rectangle {
                     anchors.centerIn: parent
                     text: qsTr("Fold")
                     font: bar.toolbarFont
-                    color: fold.enabled ? bar.colors.buttonText : bar.colors.disabledText
+                    color: !fold.enabled ? bar.colors.disabledText : bar.presenter.scaleFold ? bar.colors.buttonPressedText : bar.colors.buttonText
                 }
                 HoverHandler { id: foldHover }
                 TapHandler {
@@ -295,7 +295,8 @@ Rectangle {
             verticalAlignment: Text.AlignVCenter
             leftPadding: 2 * bar.inset
             font: bar.toolbarFont
-            color: bar.presenter.state === 0 ? bar.colors.disabledText : bar.colors.windowText
+            enabled: bar.presenter.state !== 0
+            color: enabled ? bar.colors.windowText : bar.colors.disabledText
             text: qsTr("Volume")
         }
         Shared.DragInput {

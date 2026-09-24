@@ -11,20 +11,21 @@ FocusScope {
     property bool showing: false
     readonly property bool confirming: model.promptKind === 1
     readonly property real baseFontPx: model.baseFontPx
+    readonly property var promptPalette: root.pageItem ? root.pageItem.gridPalette : null
     QtObject {
         id: promptAppearance
-        readonly property color background: "#F0F0F0"
-        readonly property color text: "#302C29"
-        readonly property color outline: "#8C857F"
-        readonly property color focus: "#4477AA"
+        readonly property color background: root.promptPalette ? root.promptPalette.windowBackground : "transparent"
+        readonly property color text: root.promptPalette ? root.promptPalette.windowText : "transparent"
+        readonly property color outline: root.promptPalette ? root.promptPalette.outline : "transparent"
+        readonly property color focus: root.promptPalette ? root.promptPalette.focusOutline : "transparent"
         readonly property real borderWidth: 1
         readonly property real radius: 4
         readonly property real dialogPadding: root.baseFontPx / 2
         readonly property real spacing: root.baseFontPx / 3
         readonly property real buttonPadding: root.baseFontPx / 3
-        readonly property color buttonBackground: "#E7E1DB"
-        readonly property color pressedBackground: "#D0C8C0"
-        readonly property color buttonText: "#302C29"
+        readonly property color buttonBackground: root.promptPalette ? root.promptPalette.buttonBackground : "transparent"
+        readonly property color pressedBackground: root.promptPalette ? root.promptPalette.buttonPressedBackground : "transparent"
+        readonly property color buttonText: root.promptPalette ? root.promptPalette.buttonText : "transparent"
         readonly property font font: Qt.font(root.model.captionFont)
     }
     signal closed()
@@ -143,7 +144,7 @@ FocusScope {
             objectName: "automationPromptError"
             visible: root.model.promptError.length > 0
             text: root.model.promptError
-            color: "#B00000"
+            color: root.promptPalette ? root.promptPalette.errorText : "transparent"
             font: promptAppearance.font
             renderType: Text.NativeRendering
         }

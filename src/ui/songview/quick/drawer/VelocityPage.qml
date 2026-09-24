@@ -44,28 +44,33 @@ FocusScope {
     readonly property var pageModel: page.model !== null && page.model !== undefined
                                      ? page.model : emptyModel
 
-    /// The session's grid presenter while a document presentation exists, and the
-    /// palette this page draws with. The page can be re-evaluated during scene
-    /// teardown, after the session released the grid, so every palette and
-    /// geometry read below goes through these guarded expressions instead of a
-    /// call that would fail in that window.
     readonly property var gridModel: page.applicationSession
                                      && page.applicationSession.songOpen
                                      ? page.applicationSession.gridPresenter()
                                      : null
+    /// The palette this page draws with. The page can be re-evaluated during scene
+    /// teardown, after the session released the grid, so every palette read
+    /// below goes through this guarded expression; the fallback draws nothing.
     readonly property var gridPalette: page.gridModel ? page.gridModel.palette : fallbackPalette
 
     QtObject {
         id: fallbackPalette
 
         /// Neutral colors for the window between scene removal and the session's
-        /// release; nothing drawn then reaches a frame.
+        /// release; nothing drawn then reaches a frame. Covers every role this
+        /// page reads plus the roles VelocityPrompt reads through promptPalette.
         readonly property color chromeBackground: "transparent"
         readonly property color rollBackground: "transparent"
-        readonly property color outline: "transparent"
-        readonly property color selectionRing: "transparent"
         readonly property color primaryText: "transparent"
-        readonly property color secondaryText: "transparent"
+        readonly property color windowBackground: "transparent"
+        readonly property color windowText: "transparent"
+        readonly property color outline: "transparent"
+        readonly property color focusOutline: "transparent"
+        readonly property color buttonBackground: "transparent"
+        readonly property color buttonText: "transparent"
+        readonly property color buttonPressedBackground: "transparent"
+        readonly property color buttonPressedText: "transparent"
+        readonly property color disabledText: "transparent"
     }
     QtObject {
         id: emptyModel
@@ -83,7 +88,7 @@ FocusScope {
         readonly property double rampY0: 0
         readonly property double rampLength: 0
         readonly property double rampSlopeY: 0
-        readonly property string rampColor: "#302C29"
+        readonly property string rampColor: page.gridPalette.primaryText
         readonly property bool contextUnsupported: false
         readonly property string contextDiagnostic: ""
         readonly property bool readoutVisible: false
@@ -384,7 +389,7 @@ FocusScope {
             y: (page.pageModel ? page.pageModel.rampY0 : 0)
             width: (page.pageModel ? page.pageModel.rampLength : 0)
             height: 1
-            color: (page.pageModel ? page.pageModel.rampColor : "#302C29")
+            color: (page.pageModel ? page.pageModel.rampColor : page.gridPalette.primaryText)
             transformOrigin: Item.TopLeft
             rotation: (page.pageModel ? page.pageModel.rampLength : 0) > 0
                       ? Math.atan2((page.pageModel ? page.pageModel.rampSlopeY : 0), (page.pageModel ? page.pageModel.rampLength : 0)) * 180 / Math.PI
@@ -401,7 +406,7 @@ FocusScope {
             y: 4
             width: Math.max(0, plot.width - 8)
             text: (page.pageModel ? page.pageModel.contextDiagnostic : "")
-            color: page.gridPalette.secondaryText
+            color: page.gridPalette.primaryText
             font.pixelSize: Math.max(1, page.baseFontPx)
             textFormat: Text.PlainText
             wrapMode: Text.WordWrap

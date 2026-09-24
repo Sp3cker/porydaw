@@ -54,21 +54,22 @@ FocusScope {
     readonly property var pageModel: page.model !== null && page.model !== undefined
                                      ? page.model : emptyModel
 
-    /// The session's grid presenter while a document presentation exists, and the
-    /// palette this page draws with. The page can be re-evaluated during scene
-    /// teardown, after the session released the grid, so every palette and
-    /// geometry read below goes through these guarded expressions.
     readonly property var gridModel: page.applicationSession
                                      && page.applicationSession.songOpen
                                      ? page.applicationSession.gridPresenter()
                                      : null
+    /// The session's grid presenter while a document presentation exists, and the
+    /// palette this page draws with. The page can be re-evaluated during scene
+    /// teardown, after the session released the grid, so every palette read
+    /// below goes through this guarded expression; the fallback draws nothing.
     readonly property var gridPalette: page.gridModel ? page.gridModel.palette : fallbackPalette
 
     QtObject {
         id: fallbackPalette
 
         /// Neutral colors for the window between scene removal and the session's
-        /// release; nothing drawn then reaches a frame.
+        /// release; nothing drawn then reaches a frame. Covers every role this
+        /// page reads plus the roles AutomationTabs reads through pagePalette.
         readonly property color chromeBackground: "transparent"
         readonly property color rollBackground: "transparent"
         readonly property color outline: "transparent"
@@ -77,6 +78,8 @@ FocusScope {
         readonly property color selectionRing: "transparent"
         readonly property color selectionFill: "transparent"
         readonly property color selectionEdge: "transparent"
+        readonly property color selectionText: "transparent"
+        readonly property color windowText: "transparent"
     }
 
     QtObject {
@@ -314,7 +317,7 @@ FocusScope {
                 width: model.labelRect.width
                 height: model.labelRect.height
                 text: model.labelText
-                color: model.labelColor
+                color: page.gridPalette.primaryText
                 font: Qt.font(model.labelFont)
                 textFormat: Text.PlainText
                 renderType: Text.NativeRendering
@@ -493,7 +496,7 @@ FocusScope {
             width: (page.pageModel ? page.pageModel.readoutRect.width : 0)
             height: (page.pageModel ? page.pageModel.readoutRect.height : 0)
             text: (page.pageModel ? page.pageModel.readoutText : "")
-            color: page.gridPalette.secondaryText
+            color: page.gridPalette.primaryText
             font: Qt.font(page.pageModel ? page.pageModel.titleFont : {})
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
@@ -511,7 +514,7 @@ FocusScope {
                      && (page.pageModel ? page.pageModel.plotMessage : "").length > 0
             anchors.centerIn: parent
             text: (page.pageModel ? page.pageModel.plotMessage : "")
-            color: page.gridPalette.secondaryText
+            color: page.gridPalette.primaryText
             font: Qt.font(page.pageModel ? page.pageModel.captionFont : {})
             textFormat: Text.PlainText
             renderType: Text.NativeRendering

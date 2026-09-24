@@ -10,7 +10,7 @@ ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette (application
 palette pins plus a poison-calibration swatch proving the widget zoo grabs
 would reveal a leaked platform palette). Source context preserves setup,
 helpers, and guards between assertions verbatim.
-Disposition tally: 21 sites: 10 MATCHED, 0 PARTIAL, 0 GAP, 11 NATIVE. There is
+Disposition tally: 21 sites: 10 MATCHED, 0 PARTIAL, 0 GAP, 11 RETIRED-REPRESENTATION. There is
 no QWidget layer in the Swift app, now or later: combo-box, QStyle and
 
 Command: deno task verify --filter swiftcore --verbose
@@ -41,10 +41,8 @@ covers label, button, line edit, checkbox, radio, combo, progress, slider,
 tabs, group box, and scrollbar widgets.
 
 A001 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:85
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_chrome.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: the combo widget
-must become visible before style geometry and pixel grabs mean anything. A
-presenter check cannot establish native widget visibility.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired native combo-widget visibility fixture: the Swift app has no QComboBox/QWidget layer now or later, so no Swift check can establish it; combo-list legibility is observed through the shell-text-contrast audit instead.
 Source context since previous assertion:
   #include "checks/themelayout/tst_themelayout.h"
 
@@ -134,10 +132,8 @@ Original expression:
   QTRY_VERIFY(combo.isVisible());
 
 A002 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:91
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_chrome.cpp) no longer builds or runs. Previous native note: Original native style obligation: the native style must report
-a non-empty combo-arrow sub-control rect. A presenter check cannot establish
-native style geometry.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired QStyle combo-arrow geometry (subControlRect): the Swift app has no QStyle layer now or later, so no Swift check can report it.
 Source context since previous assertion:
   ;
 
@@ -149,9 +145,8 @@ Original expression:
   QVERIFY(!arrowRect.isEmpty());
 
 A003 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:93
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_chrome.cpp) no longer builds or runs. Previous native note: Original native rendering obligation: grabbing the resting
-combo must produce a non-null image before any pixel predicate is meaningful.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired native resting-combo grab precondition: the Swift app has no QWidget grab layer; the arrow-ink predicates it served stay MATCHED via S001/S002.
 Source context since previous assertion:
   ;
       const QImage restingImage = combo.grab().toImage();
@@ -167,9 +162,8 @@ Disposition: MATCHED
 Mapping: S001, S002
 
 A006 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:105
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_chrome.cpp) no longer builds or runs. Previous native note: Original native style obligation: the hover-state option must
-still cover the same arrow-center position the test will paint.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired QStyle hover-state arrow geometry: the Swift app has no QStyle layer now or later, so no Swift check can report it.
 Source context since previous assertion:
   ;
 
@@ -193,9 +187,8 @@ A009 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelay
 Disposition: MATCHED
 
 A010 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:130
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_chrome.cpp) no longer builds or runs. Previous native note: Original native rendering obligation: grabbing the popup must
-produce a non-null image before the outline-pixel predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired native popup-grab precondition: the Swift app has no QWidget grab layer; the popup-outline predicate it served stays MATCHED via S001/S002.
 Source context since previous assertion:
   ;
       const QImage popupImage = popup->grab().toImage();
@@ -219,10 +212,8 @@ Disposition: MATCHED
 Mapping: S001
 
 A015 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:148
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_chrome.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: the poison
-calibration swatch must become visible before its grab calibrates the poison
-detector.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired poison-calibration swatch visibility fixture: the Swift app has no QWidget layer now or later, so no Swift check can establish it.
 Source context since previous assertion:
   ;
 
@@ -236,19 +227,16 @@ A016 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/c
 Disposition: RETIRED-REPRESENTATION
 
 A017 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:151
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_chrome.cpp) no longer builds or runs. Previous native note: Original native calibration obligation: the swatch grab must
-contain at least one poison pixel, proving the detector would catch a leaked
-platform palette before A021 asserts its absence in the zoo.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired poison-detector calibration on a test-only QWidget swatch: the Swift app has no poison mechanism; leak sensitivity is built into the shell-text-contrast audit (light offscreen platform palette) instead.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(poisonPixelCount(calibrationImage) > 0);
 
 A018 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:188
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_chrome.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: the eleven-widget
-zoo must become visible before its grab is meaningful.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired eleven-widget zoo visibility fixture: the Swift app has no QWidget layer now or later, so no Swift check can establish it.
 Source context since previous assertion:
   ;
 
@@ -294,9 +282,8 @@ A019 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/c
 Disposition: RETIRED-REPRESENTATION
 
 A020 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:191
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_chrome.cpp) no longer builds or runs. Previous native note: Original native rendering obligation: the zoo grab must have
-positive extent before the poison scan.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired native zoo-grab extent precondition: the Swift app has no QWidget grab layer; the zero-poison predicate it served stays MATCHED via S001/S002/S010.
 Source context since previous assertion:
   ;
 Original expression:

@@ -572,8 +572,8 @@ Item {
                         outline: root.gridModel.palette.separator,
                         text: root.gridModel.palette.primaryText,
                         hoverBackground: root.gridModel.palette.hoverChipFill,
-                        hoverText: root.gridModel.palette.primaryText,
-                        disabledText: root.gridModel.palette.secondaryText,
+                        hoverText: root.gridModel.palette.hoverChipText,
+                        disabledText: root.gridModel.palette.disabledText,
                         font: Application.font
                     })
                     rowHeight: Math.round(root.gridModel.baseFontPx * 1.8)
@@ -618,8 +618,8 @@ Item {
                         outline: root.gridModel.palette.separator,
                         text: root.gridModel.palette.primaryText,
                         hoverBackground: root.gridModel.palette.hoverChipFill,
-                        hoverText: root.gridModel.palette.primaryText,
-                        disabledText: root.gridModel.palette.secondaryText,
+                        hoverText: root.gridModel.palette.hoverChipText,
+                        disabledText: root.gridModel.palette.disabledText,
                         font: root.applicationFont
                     })
                     rowHeight: Math.round(root.gridModel.baseFontPx * 1.8)
@@ -665,8 +665,8 @@ Item {
                         outline: root.gridModel.palette.separator,
                         text: root.gridModel.palette.primaryText,
                         hoverBackground: root.gridModel.palette.hoverChipFill,
-                        hoverText: root.gridModel.palette.primaryText,
-                        disabledText: root.gridModel.palette.secondaryText,
+                        hoverText: root.gridModel.palette.hoverChipText,
+                        disabledText: root.gridModel.palette.disabledText,
                         font: Application.font
                     })
                     rowHeight: Math.round(root.gridModel.baseFontPx * 1.8)
@@ -724,6 +724,7 @@ Item {
                     width: implicitWidth
                     height: implicitHeight
                     bridge: root.rulerMenu
+                    promptPalette: root.gridModel.palette
                 }
             }
         }

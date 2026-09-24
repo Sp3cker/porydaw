@@ -64,6 +64,8 @@ FocusScope {
                                                                       buttonBackground)
     readonly property color buttonPressedBackground: appearanceValue("buttonPressedBackground",
                                                                         buttonHoverBackground)
+    readonly property color buttonPressedText: appearanceValue("buttonPressedText", buttonText)
+    readonly property color disabledText: appearanceValue("disabledText", tableSecondaryText)
     readonly property color buttonOutline: appearanceValue("buttonOutline", tableOutline)
     readonly property color inputBackground: appearanceValue("inputBackground", tableBackground)
     readonly property color inputText: appearanceValue("inputText", tableText)
@@ -320,8 +322,7 @@ FocusScope {
                                                     : page.headerHorizontalPadding
             anchors.verticalCenter: parent.verticalCenter
             clip: true
-            color: page.buttonText
-            font: page.controlFont
+            color: control.pressed ? page.buttonPressedText : page.buttonText
             text: control.label
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
@@ -337,8 +338,7 @@ FocusScope {
             anchors.rightMargin: page.headerHorizontalPadding
             anchors.verticalCenter: parent.verticalCenter
             visible: control.showArrow
-            color: page.buttonText
-            font: page.controlFont
+            color: control.pressed ? page.buttonPressedText : page.buttonText
             text: "\u25be"
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
@@ -467,7 +467,7 @@ FocusScope {
             visible: !cell.editing || cell.column === 1
             clip: true
             color: cell.selected ? page.tableSelectedText
-                                 : cell.endRow ? page.tableSecondaryText : page.tableText
+                                 : cell.endRow && cell.row % 2 ? page.tableSecondaryText : page.tableText
             font: cell.cellFont
             text: cell.displayedText
             textFormat: Text.PlainText
@@ -502,8 +502,8 @@ FocusScope {
             rightPadding: page.cellHorizontalPadding
             topPadding: 1
             bottomPadding: 1
-            selectionColor: page.focusOutline
-            selectedTextColor: page.inputText
+            selectionColor: page.tableSelectedBackground
+            selectedTextColor: page.tableSelectedText
             renderType: TextInput.NativeRendering
             horizontalAlignment: cell.horizontalAlignment
             verticalAlignment: TextInput.AlignVCenter
@@ -1253,7 +1253,9 @@ FocusScope {
                         text: page.buttonText,
                         hoverBackground: page.buttonHoverBackground,
                         hoverText: page.buttonText,
-                        disabledText: page.tableSecondaryText,
+                        pressedBackground: page.buttonPressedBackground,
+                        pressedText: page.buttonPressedText,
+                        disabledText: page.disabledText,
                         font: page.controlFont
                     })
                     rowHeight: page.rowHeight

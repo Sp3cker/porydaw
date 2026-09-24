@@ -19,9 +19,12 @@ FocusScope {
     readonly property real rowHeight: Math.round(model.baseFontPx * 1.6)
     readonly property point anchor: pageItem && parent
         ? pageItem.mapToItem(parent, model.menuX, model.menuY) : Qt.point(model.menuX, model.menuY)
-    readonly property var appearance: ({background: "#2E2C29", outline: "#8C857F",
-        text: "#F4F4F4", hoverBackground: "#44403C", hoverText: "#F4F4F4",
-        disabledText: "#8C857F", separator: "#8C857F", font: Qt.font(model.captionFont)})
+    readonly property var menuColors: root.pageItem ? root.pageItem.gridPalette : null
+    readonly property var appearance: root.menuColors ? ({background: root.menuColors.menuBackground,
+        outline: root.menuColors.outline, text: root.menuColors.windowText,
+        hoverBackground: root.menuColors.menuHoverBackground, hoverText: root.menuColors.windowText,
+        disabledText: root.menuColors.disabledText, separator: root.menuColors.separator,
+        font: Qt.font(model.captionFont)}) : null
     onShowingChanged: {
         childOpen = false
         currentRow = -1

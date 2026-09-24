@@ -52,15 +52,20 @@ Item {
         anchors.centerIn: parent
         width: implicitWidth
         height: implicitHeight
+        // Every palette read is null-safe: a transiently missing palette must
+        // still yield an object (transparent = draw nothing), never throw the
+        // whole map away.
         appearance: Object.assign({}, promptRoot.model.promptAppearance, {
             font: Qt.font(promptRoot.model.promptFont),
-            background: promptRoot.promptPalette.windowBackground,
-            outline: promptRoot.promptPalette.outline, text: promptRoot.promptPalette.windowText,
-            focus: promptRoot.promptPalette.focusOutline,
-            buttonBackground: promptRoot.promptPalette.buttonBackground,
-            buttonText: promptRoot.promptPalette.buttonText,
-            pressedBackground: promptRoot.promptPalette.buttonPressedBackground,
-            pressedText: promptRoot.promptPalette.buttonPressedText
+            background: promptRoot.promptPalette?.windowBackground ?? "transparent",
+            outline: promptRoot.promptPalette?.outline ?? "transparent",
+            text: promptRoot.promptPalette?.windowText ?? "transparent",
+            focus: promptRoot.promptPalette?.focusOutline ?? "transparent",
+            buttonBackground: promptRoot.promptPalette?.buttonBackground ?? "transparent",
+            buttonText: promptRoot.promptPalette?.buttonText ?? "transparent",
+            pressedBackground: promptRoot.promptPalette?.buttonPressedBackground ?? "transparent",
+            pressedText: promptRoot.promptPalette?.buttonPressedText ?? "transparent",
+            disabledText: promptRoot.promptPalette?.disabledText ?? "transparent"
         })
 
         readonly property int draft: Number(promptRoot.model.promptDraft)

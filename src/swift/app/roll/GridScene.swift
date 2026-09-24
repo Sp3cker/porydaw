@@ -119,6 +119,7 @@ public final class GridScene {
     public var hoverChipVisible: Bool = false
     public var hoverChipText: String = ""
     public var hoverChipFill: String = "#E6303030"
+    public var hoverChipTextColor: String = "#FFFFFF"
     public var hoverChipFont: [String: QVariantSettable] = [:]
     public var hoverChipRadius: Double = 0
 
@@ -737,6 +738,7 @@ public final class GridScene {
         sync(pianoKeyboardHighlights, highlights)
         hoverChipVisible = chipVisible
         hoverChipFill = p.hoverChipFill
+        hoverChipTextColor = p.hoverChipText
         hoverChipRadius = m.chipRadius
     }
 

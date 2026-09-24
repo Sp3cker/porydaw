@@ -29,6 +29,8 @@ Item {
     readonly property color scrollbarHandle: appearance.scrollbarHandle
     readonly property color scrollbarHandleHover: appearance.scrollbarHandleHover
     readonly property color reorderIndicator: appearance.reorderIndicator
+    readonly property color selectionBackground: appearance.selectionBackground
+    readonly property color selectionText: appearance.selectionText
 
     width: bandRect.width
     height: bandRect.height
@@ -725,6 +727,8 @@ Item {
                     anchors.rightMargin: 2
                     clip: true
                     color: root.inputText
+                    selectionColor: root.selectionBackground
+                    selectedTextColor: root.selectionText
                     font: root.controlFont
                     selectByMouse: true
 

@@ -42,7 +42,13 @@ Rectangle {
         id: label
 
         anchors.centerIn: parent
-        color: button.appearance.buttonText
+        // Pressed and inactive states must keep a legal ink for their
+        // surface: pressedText on the pressed fill, disabledText inside a
+        // disabled button. Appearances that predate a key fall back to the
+        // normal button ink; a missing appearance draws nothing, never throws.
+        color: (!button.enabled ? button.appearance?.disabledText
+                : tap.pressed ? button.appearance?.pressedText : null)
+               ?? button.appearance?.buttonText ?? "transparent"
         font: button.appearance.font
         text: button.text
         textFormat: Text.PlainText

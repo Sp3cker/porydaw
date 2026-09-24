@@ -9,12 +9,12 @@ import "qrc:/porydaw/swiftroll" as SwiftRoll
 import "qrc:/porydaw/docks" as Docks
 import "settings" as SettingsUi
 
-ApplicationWindow {
+ThemedWindow {
     id: root
     objectName: "shellWindow"
     readonly property alias shellPresenter: shell
     readonly property alias sceneLoader: editorScene
-    readonly property QtObject colors: shell.session.palette
+    colors: shell.session.palette
     property bool establishApplicationIdentity: false
     property int actionRevision: 0
     readonly property int bodyFontPx: Math.max(1, Math.round(baseFontInfo.pixelSize * 1.125))

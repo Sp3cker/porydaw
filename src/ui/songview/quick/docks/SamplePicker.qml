@@ -176,9 +176,17 @@ Item {
                     height: picker.baseFontPx * 1.83
                     enabled: !!modelData.symbol
                     highlighted: list.currentIndex === index
-                    text: modelData.label
                     font.pixelSize: picker.baseFontPx
                     font.bold: !modelData.symbol
+                    contentItem: Label {
+                        text: entry.modelData.label
+                        font: entry.font
+                        elide: Text.ElideRight
+                        verticalAlignment: Text.AlignVCenter
+                        color: !entry.modelData.symbol ? picker.colors.secondaryText
+                               : entry.highlighted ? picker.colors.selectionText
+                                                   : picker.colors.windowText
+                    }
                     onClicked: {
                         const symbol = modelData.symbol
                         if (symbol === picker.clickedSymbol) {

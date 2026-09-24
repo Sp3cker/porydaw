@@ -16,6 +16,19 @@ enum ShellQmlLane {
         /// run_checks.ts windowing: "offscreen", or "window-system" for real
         /// focus/activation delivery (run serially, never beside other windows).
         var windowing = "offscreen"
+        /// Qt Quick Test selectors run when the caller passes none, so one
+        /// input file can back several entries, each within the harness timeout.
+        var testFunctions: [String] = []
+    }
+
+    /// The rendered text-contrast audit: one entry per shell state and theme.
+    private static let textContrastEntries: [Entry] = ["empty", "song"].flatMap { state in
+        ["vanilla", "dark-neutral-high", "immaterial"].map { mode in
+            Entry(name: "shell-text-contrast-\(state)-\(mode)",
+                  inputFileName: "tst_TextContrast.qml",
+                  fixtureFiles: songs("mus_route101"),
+                  testFunctions: ["TextContrast::test_\(state)ShellText:\(mode)"])
+        }
     }
 
     /// Project tables, samples and the original `_fixture_rich` voicegroups.
@@ -86,7 +99,7 @@ enum ShellQmlLane {
               ]),
         Entry(name: "shell-settings", inputFileName: "tst_ShellSettings.qml",
               fixtureFiles: songs("mus_route101")),
-    ]
+    ] + textContrastEntries
 
     private static var manifestLine: String {
         let checks = entries.map { entry in
@@ -121,6 +134,11 @@ enum ShellQmlLane {
         var payload = Array(arguments.dropFirst(2))
         if let separator = payload.firstIndex(of: "--qt") {
             payload = Array(payload[(separator + 1)...])
+        }
+        // run_checks always forwards Qt options (-maxwarnings); an entry's own
+        // selectors apply unless the caller named test functions itself.
+        if !payload.contains(where: { $0.contains("::") }) {
+            payload += entry.testFunctions
         }
         guard !payload.contains("-input") else {
             return fail("\(entry.name) owns its -input file: \(entry.inputFileName)")

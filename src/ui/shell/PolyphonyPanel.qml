@@ -101,7 +101,7 @@ Item {
                             height: panel.headingHeight
                             visible: panel.presenter.showingShadow
                             text: qsTr("Lost sounds currently playing (solo overflow):")
-                            color: panel.colors.disabledText
+                            color: panel.colors.secondaryText
                             font: panel.applicationFont
                         }
                         PolyphonyChannelGroup {
@@ -247,7 +247,7 @@ Item {
                         visible: panel.presenter.counterCount === 0
                         text: qsTr("No overflow recorded")
                         font: panel.applicationFont
-                        color: panel.colors.disabledText
+                        color: panel.colors.secondaryText
                     }
                 }
             }
@@ -290,8 +290,8 @@ Item {
                             anchors.fill: parent
                             text: eventRow.text
                             font: panel.applicationFont
-                            color: eventRow.kind === 0 ? "#A02C26"
-                                : eventRow.kind === 1 ? "#694900" : panel.colors.disabledText
+                            color: eventRow.kind === 0 ? panel.colors.errorText
+                                : eventRow.kind === 1 ? panel.colors.warningText : panel.colors.secondaryText
                             elide: Text.ElideRight
                         }
                         TapHandler {

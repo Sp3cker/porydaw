@@ -326,6 +326,16 @@ qt_add_resources(porydaw_app "drawer_cursors"
         resources/pencil.png
 )
 
+# The application owns its Quick Controls style on every platform: Fusion
+# draws entirely from the themed window palette. Platform styles (macOS,
+# Windows, FluentWinUI3) follow the OS appearance instead of the theme.
+qt_add_resources(porydaw_app "controls_style"
+    PREFIX "/"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    FILES
+        resources/qtquickcontrols2.conf
+)
+
 target_include_directories(porydaw_app PUBLIC
     src
 )
@@ -387,6 +397,7 @@ target_link_libraries(porydaw_shell_entry PRIVATE QtBridge PorydawApp)
 set(shell_qml
     src/ui/shell/PorydawApplication.qml
     src/ui/shell/ShellWindow.qml
+    src/ui/shell/ThemedWindow.qml
     src/ui/shell/TransportBar.qml
     src/ui/shell/TransportButton.qml
     src/ui/shell/TransportOutputDial.qml

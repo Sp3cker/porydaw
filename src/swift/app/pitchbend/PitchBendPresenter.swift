@@ -66,6 +66,8 @@ public final class PitchBendPresenter {
                 "text": palette.buttonText,
                 "outline": palette.outline,
                 "focus": palette.focusOutline,
+                "selection": palette.tabSelectedBackground,
+                "selectionText": palette.selectionText,
                 "font": ["pixelSize": fontPx] as [String: QVariantSettable],
                 "radius": geometry.hairline,
                 "borderWidth": geometry.hairline,

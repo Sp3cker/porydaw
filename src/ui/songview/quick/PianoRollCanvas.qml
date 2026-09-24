@@ -182,7 +182,7 @@ Item {
         height: root.timelineScene.hoverChipRect.height
         visible: root.timelineScene.hoverChipVisible
         text: root.timelineScene.hoverChipText
-        color: "white"
+        color: root.timelineScene.hoverChipTextColor
         font: Qt.font(root.timelineScene.hoverChipFont)
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter

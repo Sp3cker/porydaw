@@ -12,7 +12,7 @@ ColumnLayout {
     required property QtObject controller
     readonly property var grid: applicationSession.songOpen
                                 ? applicationSession.gridPresenter() : null
-    readonly property var palette: grid ? grid.palette : fallbackPalette
+    readonly property QtObject colors: applicationSession.palette
     readonly property real baseFontPx: grid ? grid.baseFontPx : 12
     readonly property int rowHeight: Math.round(baseFontPx * 1.33)
     readonly property int headerHeight: Math.round(baseFontPx * 1.83)
@@ -24,16 +24,6 @@ ColumnLayout {
                                       "piano-keyboard.svg", "drum.svg"]
     spacing: 0
 
-    QtObject {
-        id: fallbackPalette
-        readonly property color windowBackground: "#e0dedb"
-        readonly property color chromeBackground: "#e0dedb"
-        readonly property color primaryText: "#292929"
-        readonly property color secondaryText: "#666666"
-        readonly property color selectionRing: "#abd9e3"
-        readonly property color outline: "#999999"
-    }
-
     RowLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: panel.baseFontPx * 2.17
@@ -44,7 +34,7 @@ ColumnLayout {
             text: qsTr("voicegroup_")
             Layout.preferredWidth: Math.round(panel.baseFontPx * 6.08)
             font.pixelSize: panel.baseFontPx
-            color: panel.palette.primaryText
+            color: panel.colors.primaryText
         }
         ComboBox {
             id: selector
@@ -76,9 +66,9 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.minimumHeight: panel.rowHeight * 3
-        color: panel.palette.windowBackground
+        color: panel.colors.windowBackground
         border.width: 1
-        border.color: panel.palette.outline
+        border.color: panel.colors.outline
 
         Rectangle {
             id: treeHeader
@@ -89,7 +79,7 @@ ColumnLayout {
             anchors.margins: 1
             anchors.rightMargin: Math.round(panel.baseFontPx * 0.58)
             height: panel.headerHeight
-            color: panel.palette.chromeBackground
+            color: panel.colors.chromeBackground
             RowLayout {
                 anchors.fill: parent
                 spacing: 0
@@ -98,19 +88,19 @@ ColumnLayout {
                     Layout.fillWidth: true
                     Layout.leftMargin: Math.round(panel.baseFontPx * 0.25)
                     font.pixelSize: panel.baseFontPx
-                    color: panel.palette.primaryText
+                    color: panel.colors.primaryText
                 }
                 Label {
                     text: qsTr("Type")
                     Layout.preferredWidth: panel.typeWidth
                     font.pixelSize: panel.baseFontPx
-                    color: panel.palette.primaryText
+                    color: panel.colors.primaryText
                 }
                 Label {
                     text: qsTr("ADSR")
                     Layout.preferredWidth: panel.adsrWidth
                     font.pixelSize: panel.baseFontPx
-                    color: panel.palette.primaryText
+                    color: panel.colors.primaryText
                 }
             }
         }
@@ -119,7 +109,7 @@ ColumnLayout {
             anchors.right: treeHeader.right
             anchors.top: treeHeader.bottom
             height: 1
-            color: panel.palette.outline
+            color: panel.colors.outline
         }
         ListView {
             id: voiceList
@@ -147,9 +137,9 @@ ColumnLayout {
                 objectName: "voicegroupRow_" + slot
                 width: voiceList.width - Math.round(panel.baseFontPx * 0.67)
                 height: panel.rowHeight
-                color: panel.controller.currentSlot === slot ? panel.palette.selectionRing
-                       : used ? Qt.tint(panel.palette.windowBackground, "#22b4e4ee")
-                              : panel.palette.windowBackground
+                color: panel.controller.currentSlot === slot ? panel.colors.selectionRing
+                       : used ? Qt.tint(panel.colors.windowBackground, "#22b4e4ee")
+                              : panel.colors.windowBackground
                 RowLayout {
                     anchors.fill: parent
                     spacing: 0
@@ -159,7 +149,8 @@ ColumnLayout {
                         Layout.leftMargin: Math.round(panel.baseFontPx * 0.25)
                         font.pixelSize: panel.baseFontPx
                         font.bold: row.used
-                        color: panel.palette.primaryText
+                        color: panel.controller.currentSlot === row.slot ? panel.colors.selectionText
+                                                                       : panel.colors.primaryText
                         elide: Text.ElideRight
                     }
                     Item {
@@ -172,7 +163,7 @@ ColumnLayout {
                             width: panel.baseFontPx * 1.25
                             height: width
                             radius: height * 0.25
-                            color: Qt.tint(panel.palette.windowBackground, "#59666666")
+                            color: Qt.tint(panel.colors.windowBackground, "#59666666")
                             visible: row.altChip
                         }
                         Image {
@@ -192,8 +183,8 @@ ColumnLayout {
                             source: sourceGlyph
                             visible: row.typeIconKey >= 0
                             colorization: 1
-                            colorizationColor: row.altChip ? panel.palette.windowBackground
-                                                           : panel.palette.primaryText
+                            colorizationColor: row.altChip ? panel.colors.windowBackground
+                                                           : panel.colors.primaryText
                         }
                         ToolTip.text: row.typeName
                         ToolTip.visible: iconHover.hovered && row.typeName.length > 0
@@ -204,7 +195,8 @@ ColumnLayout {
                         text: row.adsr
                         font.pixelSize: panel.baseFontPx
                         font.bold: row.used
-                        color: panel.palette.primaryText
+                        color: panel.controller.currentSlot === row.slot ? panel.colors.selectionText
+                                                                       : panel.colors.primaryText
                         elide: Text.ElideRight
                     }
                 }
@@ -251,7 +243,7 @@ ColumnLayout {
             width: editorScroll.width
             height: editorScroll.contentHeight
             controller: panel.controller
-            palette: panel.palette
+            colors: panel.colors
             baseFontPx: panel.baseFontPx
         }
     }

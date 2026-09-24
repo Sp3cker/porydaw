@@ -110,7 +110,8 @@ Item {
             id: caption
             text: button.text
             font: button.font
-            color: root.controller.palette.windowText
+            color: button.down ? root.controller.palette.buttonPressedText
+                               : root.controller.palette.windowText
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
@@ -214,7 +215,12 @@ Item {
                                 height: Math.max(root.closeExtent, Math.round(bodyMetrics.height))
                                 text: selectButton.text
                                 font: selectButton.font
-                                color: root.controller.palette.windowText
+                                color: selectButton.down
+                                       ? root.controller.palette.buttonPressedText
+                                       : (selectButton.checked && !selectButton.hovered
+                                          && !closeButton.hovered)
+                                         ? root.controller.palette.selectionText
+                                         : root.controller.palette.windowText
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                                 renderType: Text.NativeRendering
@@ -223,7 +229,7 @@ Item {
                         background: Rectangle {
                             y: root.tabMargin
                             height: selectButton.height - root.tabMargin
-                            color: selectButton.checked ? root.controller.palette.tabSelectedBackground : (selectButton.hovered || closeButton.hovered) ? root.controller.palette.tabHoverBackground : root.controller.palette.tabBackground
+                            color: selectButton.down ? root.controller.palette.tabPressedBackground : selectButton.checked && !selectButton.hovered && !closeButton.hovered ? root.controller.palette.tabSelectedBackground : (selectButton.hovered || closeButton.hovered) ? root.controller.palette.tabHoverBackground : root.controller.palette.tabBackground
                             border.width: 1
                             border.color: root.controller.palette.outline
                         }
@@ -241,7 +247,12 @@ Item {
                             icon.source: "tabart/window-close.svg"
                             icon.width: root.scrollExtent
                             icon.height: root.scrollExtent
-                            icon.color: root.controller.palette.windowText
+                            icon.color: selectButton.down
+                                          ? root.controller.palette.buttonPressedText
+                                          : (selectButton.checked && !selectButton.hovered
+                                             && !closeButton.hovered)
+                                            ? root.controller.palette.selectionText
+                                            : root.controller.palette.windowText
                             background: Item {}
                             Accessible.name: qsTr("Close %1").arg(selectButton.session.title)
                             ToolTip.visible: hovered

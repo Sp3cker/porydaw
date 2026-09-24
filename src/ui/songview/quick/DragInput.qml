@@ -151,8 +151,8 @@ Item {
         rightPadding: control.appearance.horizontalPadding + control.appearance.borderWidth
         topPadding: control.appearance.verticalPadding + control.appearance.borderWidth
         bottomPadding: control.appearance.verticalPadding + control.appearance.borderWidth
-        selectionColor: control.appearance.focus
-        selectedTextColor: control.appearance.text
+        selectionColor: control.appearance?.selection ?? control.appearance?.focus ?? "transparent"
+        selectedTextColor: control.appearance?.selectionText ?? control.appearance?.text ?? "transparent"
         renderType: TextInput.NativeRendering
         horizontalAlignment: TextInput.AlignHCenter
         verticalAlignment: TextInput.AlignVCenter

@@ -196,7 +196,9 @@ Item {
                     height: parent.height
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
-                    color: Qt.alpha(row.rowTextColor, 0.6)
+                    // Same state ink as the label: alpha-dimmed text cannot
+                    // hold contrast on hover/pressed fills.
+                    color: row.rowTextColor
                     font: panel.menuFont
                     text: row.itemData.shortcutText ?? ""
                     textFormat: Text.PlainText

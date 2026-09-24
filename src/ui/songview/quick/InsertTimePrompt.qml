@@ -4,10 +4,19 @@ PromptCard {
     id: prompt
 
     required property var bridge
+    // GridPalette instance from the host (EditorSurface passes
+    // root.gridModel.palette). Supplies the pressed/disabled inks, which the
+    // bridge's appearance map does not carry. Nullable until the host wires
+    // it; every read below is null-safe so the map stays an object.
+    property var promptPalette: null
 
     objectName: "insertTimePrompt"
     appearance: Object.assign({}, bridge.insertTimePromptAppearance, {
-        font: Qt.font(bridge.insertTimePromptFont)
+        font: Qt.font(bridge.insertTimePromptFont),
+        // The pressed fill is hoverChipFill (set in Swift), so pressed text
+        // must be its mate hoverChipText, not the normal button ink.
+        pressedText: prompt.promptPalette?.hoverChipText ?? "transparent",
+        disabledText: prompt.promptPalette?.disabledText ?? "transparent"
     })
 
     property int draftBars: bridge.insertTimePromptInitialBars

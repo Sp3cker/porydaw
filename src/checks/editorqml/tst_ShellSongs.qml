@@ -174,20 +174,23 @@ TestCase {
         const warningRow = row(firstWarningId)
         const origin = warningRow.mapToItem(shell.contentItem, 0, 0)
         const scale = image.width / shell.contentItem.width
-        let paintedAmber = false
+        // The legacy amber #C08030 sat 2.0:1 on the window; the warning ink is
+        // the theme's warningText (docs/adr/0002-text-contrast-first.md).
+        const warningInk = Qt.color(shell.shellPresenter.session.palette.warningText)
+        let paintedWarning = false
         for (let y = Math.floor(origin.y * scale);
-            y < Math.ceil((origin.y + warningRow.height) * scale) && !paintedAmber; ++y) {
+            y < Math.ceil((origin.y + warningRow.height) * scale) && !paintedWarning; ++y) {
             for (let x = Math.floor(origin.x * scale);
                 x < Math.ceil((origin.x + warningRow.width) * scale); ++x) {
-                if (Math.abs(image.red(x, y) - 0xc0) <= 3
-                    && Math.abs(image.green(x, y) - 0x80) <= 3
-                    && Math.abs(image.blue(x, y) - 0x30) <= 3) {
-                    paintedAmber = true
+                if (Math.abs(image.red(x, y) - Math.round(warningInk.r * 255)) <= 3
+                    && Math.abs(image.green(x, y) - Math.round(warningInk.g * 255)) <= 3
+                    && Math.abs(image.blue(x, y) - Math.round(warningInk.b * 255)) <= 3) {
+                    paintedWarning = true
                     break
                 }
             }
         }
-        verify(paintedAmber, "the mounted warning row paints the QWidget amber foreground")
+        verify(paintedWarning, "the mounted warning row paints the theme warning ink")
         const category = findChild(shell, "songListCategory")
         compare(category.displayText, "All (10)",
                 "the visible category caption updates after loading the project")

@@ -108,7 +108,7 @@ Item {
                             anchors.centerIn: parent
                             text: qsTr("Tap")
                             font: Qt.font(root.pageModel.captionFont)
-                            color: root.pagePalette.primaryText
+                            color: tapPress.pressed ? root.pagePalette.selectionText : root.pagePalette.primaryText
                             Accessible.ignored: true
                         }
                         MouseArea {
@@ -159,15 +159,15 @@ Item {
                             minimumPixelSize: Math.round(root.pageModel.baseFontPx / 2)
                             elide: Text.ElideNone
                             Layout.fillWidth: true
-                            color: tab.checked ? root.pagePalette.primaryText : root.pagePalette.secondaryText
+                            color: tab.checked ? root.pagePalette.selectionText : tab.hovered ? root.pagePalette.windowText : root.pagePalette.secondaryText
                         }
                         Text {
                             objectName: "automationParameterEventCount"
-                            opacity: tab.checked && tab.model.eventCount > 0 ? 0.7 : 0
+                            opacity: tab.checked && tab.model.eventCount > 0 ? 1 : 0
                             text: tab.model.eventCount === 1 ? qsTr("1 event") : qsTr("%1 events").arg(tab.model.eventCount)
                             textFormat: Text.PlainText
                             font: Qt.font(root.pageModel.captionFont)
-                            color: root.pagePalette.secondaryText
+                            color: root.pagePalette.selectionText
                         }
                         Text {
                             objectName: tab.tempoParameter ? "automationTempoTapDraft" : ""
@@ -175,7 +175,7 @@ Item {
                             text: root.pageModel.tapTempoTapCount >= 2 ? qsTr("%1 BPM").arg(root.pageModel.tapTempoDraftBpm) : "..."
                             textFormat: Text.PlainText
                             font: Qt.font(root.pageModel.captionFont)
-                            color: root.pagePalette.secondaryText
+                            color: tab.checked ? root.pagePalette.selectionText : tab.hovered ? root.pagePalette.windowText : root.pagePalette.secondaryText
                         }
                     }
                     background: Rectangle {

@@ -139,16 +139,21 @@ struct TrackHeadersGeometry {
 
     @MainActor
     static func appearance(palette: GridPalette) -> [String: QVariantSettable] {
-        // Vanilla role resolution matches the existing GridPalette surface.
-        ["buttonBackground": "#E1DBD6", "buttonText": palette.windowText,
-         "buttonHoverBackground": "#ECE7E1", "buttonHoverText": palette.windowText,
-         "buttonPressedBackground": "#F5B61C", "buttonPressedText": palette.windowText,
+        // Every fill pairs with its legal ink: button fills with buttonText
+        // (hover has no dedicated ink role), pressed and checked-mute fills
+        // with buttonPressedText, checked-solo and text-selection fills with
+        // selectionText. Checked solo uses the selection surface because the
+        // accent edge color cannot carry one ink in all three themes.
+        ["buttonBackground": palette.buttonBackground, "buttonText": palette.buttonText,
+         "buttonHoverBackground": palette.buttonHoverBackground, "buttonHoverText": palette.buttonText,
+         "buttonPressedBackground": palette.buttonPressedBackground, "buttonPressedText": palette.buttonPressedText,
          "buttonOutline": palette.outline, "focusOutline": palette.selectionEdge,
-         "muteCheckedBackground": "#F5B61C", "muteCheckedText": palette.windowText,
-         "soloCheckedBackground": palette.selectionEdge, "soloCheckedText": palette.windowText,
-         "inputBackground": "#F3F0ED", "inputText": palette.windowText,
-         "inputOutline": palette.outline, "scrollbarHandle": "#A49D97",
-         "scrollbarHandleHover": palette.outline, "reorderIndicator": palette.selectionEdge]
+         "muteCheckedBackground": palette.buttonPressedBackground, "muteCheckedText": palette.buttonPressedText,
+         "soloCheckedBackground": palette.tabSelectedBackground, "soloCheckedText": palette.selectionText,
+         "inputBackground": palette.inputBackground, "inputText": palette.windowText,
+         "inputOutline": palette.outline, "scrollbarHandle": palette.outline,
+         "scrollbarHandleHover": palette.focusOutline, "reorderIndicator": palette.selectionEdge,
+         "selectionBackground": palette.tabSelectedBackground, "selectionText": palette.selectionText]
     }
 }
 
@@ -233,10 +238,15 @@ extension TrackHeadersPresenter {
         row.subtitleRect = rects.1
         row.baseColor = primary ? palette.selectionRing : palette.windowBackground
         if !primary && session.selectedTracks.contains(track) {
-            row.overlayColor = "#63\(palette.selectionRing.suffix(6))"
+            // 0x40 tint keeps windowText >= 4.5:1 on the composited mix in every theme; secondaryText fails above 0x16-0x27 alpha.
+            row.overlayColor = "#40\(palette.selectionRing.suffix(6))"
+            row.titleColor = palette.windowText
+            row.subtitleColor = palette.windowText
         }
-        row.titleColor = primary ? palette.windowText : palette.primaryText
-        row.subtitleColor = primary ? palette.windowText : palette.secondaryText
+        // Selected rows sit on a selection surface, so every text in the row
+        // uses the selection ink.
+        row.titleColor = primary ? palette.selectionText : palette.primaryText
+        row.subtitleColor = primary ? palette.selectionText : palette.secondaryText
         row.muteChecked = session.mutedTracks.contains(track)
         row.soloChecked = session.soloedTracks.contains(track)
         let program = program ?? resolvedProgram(

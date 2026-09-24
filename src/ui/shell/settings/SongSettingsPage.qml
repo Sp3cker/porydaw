@@ -139,6 +139,6 @@ Item {
     Text {
         x: 0; y: 199 * page.unit
         text: qsTr("Saved to this song's mid2agb flags (midi.cfg or songs.mk).")
-        color: page.colors.disabledText; font: page.applicationFont
+        color: page.colors.secondaryText; font: page.applicationFont
     }
 }

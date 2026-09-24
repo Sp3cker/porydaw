@@ -163,6 +163,25 @@ public final class GridPalette {
     public var menuHoverBackground: String = "#E7E2DC"
     public var disabledText: String = "#8B847E"
     public var selectionText: String = "#302C29"
+    /// Editable-field and tooltip surface: the preset's input swatch, which
+    /// keeps text and placeholder ink above 4.5:1 in every theme.
+    public var inputBackground: String = "#F3F0ED"
+    /// Alternating list-row surface.
+    public var alternateBackground: String = "#D1CBC5"
+    /// Placeholder ink in empty fields; legible text, never the disabled ink.
+    public var placeholderText: String = "#4D4742"
+    /// Severity inks for warning and error text on window, chrome, item,
+    /// control, and input surfaces. Selected rows use `selectionText` instead.
+    public var warningText: String = "#644100"
+    public var errorText: String = "#8D1B1F"
+
+    /// Polyphony channel cells: fixed identity fills shared by every theme,
+    /// each with the ink that keeps 4.5:1 on it (white on amber is 3.26:1).
+    public var polyphonyActiveFill: String = "#228445"
+    public var polyphonyReleasingFill: String = "#B98527"
+    public var polyphonyShadowFill: String = "#2859A4"
+    public var polyphonyCellText: String = "#FFFFFF"
+    public var polyphonyReleasingText: String = "#1A1A1A"
 
     /// The tab strip's chrome: the window chrome one step lighter per state, the
     /// active tab's accent, the pressed (dropping) fill, and the strip's own
@@ -208,19 +227,17 @@ public final class GridPalette {
 
     public var primaryText: String = "#302C29"
     public var windowText: String = "#302C29"
-    public var secondaryText: String = "#57514C"
+    public var secondaryText: String = "#4D4742"
     public var editCursor: String = "#302C29"
     public var playhead: String = "#E24242"
     public var hoverChipFill: String = "#E6303030"
     public var hoverChipText: String = "#FFFFFF"
-    public var implicitSignature: String = "#8B847E"
-
-    public var rulerDetailText: String = {
-        let fg = (0x57, 0x51, 0x4C), bg = (0xBD, 0xB5, 0xAF)
-        let recede = { (191 * $0 + 64 * $1 + 127) / 255 }
-        return PaletteMath.hex(r: recede(fg.0, bg.0), g: recede(fg.1, bg.1),
-                               b: recede(fg.2, bg.2))
-    }()
+    /// Implicit time signatures recede to the secondary ink; the disabled ink
+    /// is reserved for inactive controls and fails text contrast.
+    public var implicitSignature: String = "#4D4742"
+    /// Ruler beat labels. Secondary ink: every ruler label keeps 4.5:1 on the
+    /// chrome surface (docs/adr/0002-text-contrast-first.md).
+    public var rulerDetailText: String = "#4D4742"
 
     public init() {}
 }

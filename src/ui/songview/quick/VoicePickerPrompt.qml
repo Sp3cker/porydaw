@@ -42,13 +42,20 @@ FocusScope {
         height: implicitHeight
         appearance: Object.assign({}, pickerRoot.model.promptAppearance, {
             font: Qt.font(pickerRoot.model.promptFont),
-            background: pickerRoot.promptPalette.windowBackground,
-            outline: pickerRoot.promptPalette.outline, text: pickerRoot.promptPalette.windowText,
-            focus: pickerRoot.promptPalette.focusOutline,
-            buttonBackground: pickerRoot.promptPalette.buttonBackground,
-            buttonText: pickerRoot.promptPalette.buttonText,
-            pressedBackground: pickerRoot.promptPalette.buttonPressedBackground,
-            pressedText: pickerRoot.promptPalette.buttonPressedText
+            background: pickerRoot.promptPalette?.windowBackground ?? "transparent",
+            outline: pickerRoot.promptPalette?.outline ?? "transparent",
+            text: pickerRoot.promptPalette?.windowText ?? "transparent",
+            focus: pickerRoot.promptPalette?.focusOutline ?? "transparent",
+            buttonBackground: pickerRoot.promptPalette?.buttonBackground ?? "transparent",
+            buttonText: pickerRoot.promptPalette?.buttonText ?? "transparent",
+            pressedBackground: pickerRoot.promptPalette?.buttonPressedBackground ?? "transparent",
+            pressedText: pickerRoot.promptPalette?.buttonPressedText ?? "transparent",
+            // Search-hint ink: placeholderText is the legible hint ink on the
+            // window surface; outline is a line color and fails as text.
+            placeholderText: pickerRoot.promptPalette?.placeholderText ?? "transparent",
+            disabledText: pickerRoot.promptPalette?.disabledText ?? "transparent",
+            selection: pickerRoot.promptPalette?.tabSelectedBackground ?? "transparent",
+            selectionText: pickerRoot.promptPalette?.selectionText ?? "transparent"
         })
         minimumWidth: prompt.appearance.minimumWidth
         property bool viewReady: false
@@ -130,7 +137,7 @@ FocusScope {
                 anchors.leftMargin: prompt.appearance.horizontalPadding + prompt.appearance.borderWidth
                 anchors.rightMargin: anchors.leftMargin
                 verticalAlignment: Text.AlignVCenter
-                color: prompt.appearance.outline
+                color: prompt.appearance.placeholderText
                 font: prompt.appearance.font
                 text: qsTr("Search voices...")
                 visible: search.text.length === 0
@@ -159,8 +166,8 @@ FocusScope {
                 rightPadding: leftPadding
                 topPadding: prompt.appearance.verticalPadding + prompt.appearance.borderWidth
                 bottomPadding: topPadding
-                selectionColor: prompt.appearance.focus
-                selectedTextColor: prompt.appearance.text
+                selectionColor: prompt.appearance.selection ?? prompt.appearance.focus
+                selectedTextColor: prompt.appearance.selectionText ?? prompt.appearance.text
                 renderType: TextInput.NativeRendering
                 activeFocusOnTab: true
                 selectByMouse: true

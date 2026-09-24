@@ -68,6 +68,7 @@ internal func runThemeColorChecks(_ report: CheckReport) {
     themeColorMathChecks(report)
     themeModeAndContrastValidation(report)
     themePresetValueChecks(report)
+    themeTextContrastChecks(report)
     themeGridContrastChecks(report)
     themeTrackIdentityChecks(report)
     themeCommitPreviewRevertChecks(report)
@@ -147,9 +148,12 @@ private func themeModeAndContrastValidation(_ report: CheckReport) {
 // MARK: - Preset values and role contracts (themeCompleteness, lane legibility)
 
 // Literals below come from presetcolors.h makeVanilla (lines 316-372),
-// makeDarkNeutralHigh (375-432) and makeImmaterial (434-489). The pressed-text
-// rule (vanilla resting text, dark presets resting-button surface) comes from
-// themeresolver.cpp:38-52.
+// makeDarkNeutralHigh (375-432) and makeImmaterial (434-489), with two
+// intentional text-contrast walks: vanilla secondary is #4D4742 (preset
+// #57514C sat 3.87:1 on chrome #BDB5AF) and implicitSignature/rulerDetailText
+// alias the secondary ink in every theme (never the disabled ink). The
+// pressed-text rule (vanilla resting text, dark presets resting-button
+// surface) comes from themeresolver.cpp:38-52.
 private struct ThemePresetRow {
     let mode: String
     let window: String
@@ -179,7 +183,7 @@ private let themePresetRows: [ThemePresetRow] = [
                    outline: "#8C857F", selection: "#B9E8EE", accent: "#00CADB",
                    chrome: "#BDB5AF", separator: "#5B5652", control: "#E1DBD6",
                    controlHover: "#ECE7E1", controlPressed: "#F5B61C", pressedText: "#302C29",
-                   item: "#D2D0CA", itemHover: "#E7E2DC", secondary: "#57514C",
+                   item: "#D2D0CA", itemHover: "#E7E2DC", secondary: "#4D4742",
                    grid: "#3F040000", roll: "#D4CCC7", accidental: "#B4ACA6",
                    keyboardSeparator: "#BCB4AF"),
     ThemePresetRow(mode: "dark-neutral-high",
@@ -307,8 +311,10 @@ private func themePresetValueChecks(_ report: CheckReport) {
                            cppID: themeCompletenessID, what: "\(tag): playhead stays the identity red")
         report.expectEqual(row.disabled, palette.noteVelocityZero,
                            cppID: themeCompletenessID, what: "\(tag): zero-velocity ink")
-        report.expectEqual(row.disabled, palette.implicitSignature,
-                           cppID: themeCompletenessID, what: "\(tag): implicit-signature ink")
+        report.expectEqual(row.secondary, palette.implicitSignature,
+                           cppID: themeCompletenessID, what: "\(tag): implicit-signature ink aliases secondary")
+        report.expectEqual(row.secondary, palette.rulerDetailText,
+                           cppID: themeCompletenessID, what: "\(tag): ruler-detail ink aliases secondary")
 
         // Menu/control contrast floors (verifyMenuAndControlContracts plus the
         // disabled-text floor), judged by the independent reference.
@@ -337,6 +343,139 @@ private func themePresetValueChecks(_ report: CheckReport) {
         let selectedText = row.mode == "vanilla" ? palette.windowText : palette.buttonPressedText
         report.expect(themeRefContrast(selectedText, palette.tabPressedBackground) >= 3.0,
                       cppID: themeLegibilityID, message: "\(tag): selected-tab floor")
+    }
+}
+
+// MARK: - Text contrast (WCAG AA 4.5:1 on every legal ink/surface pair)
+
+// Composite an 8-digit foreground hex over an opaque background hex by alpha,
+// matching how the chip fill draws over the roll surface.
+private func themeCompositeHex(_ foreground: String, over background: String) -> String {
+    let fg = themeRefChannels(foreground)
+    let bg = themeRefChannels(background)
+    let alpha = Double(fg.a) / 255.0
+    func mix(_ f: Int, _ b: Int) -> Int {
+        Int((Double(f) * alpha + Double(b) * (1.0 - alpha)).rounded())
+    }
+    return String(format: "#%02X%02X%02X", mix(fg.r, bg.r), mix(fg.g, bg.g), mix(fg.b, bg.b))
+}
+
+/// Every legal text ink keeps 4.5:1 on each surface it may label, in all three
+/// presets (docs/adr/0002-text-contrast-first.md). One declarative pair table;
+/// each pair's measured ratio rides in the message so failures are diagnosable.
+@MainActor
+private func themeTextContrastChecks(_ report: CheckReport) {
+    typealias Pair = (ink: KeyPath<GridPalette, String>, inkName: String,
+                      surface: KeyPath<GridPalette, String>, surfaceName: String)
+    let pairs: [Pair] = [
+        // Primary inks on every neutral surface.
+        (\GridPalette.windowText, "windowText", \GridPalette.windowBackground, "windowBackground"),
+        (\GridPalette.windowText, "windowText", \GridPalette.chromeBackground, "chromeBackground"),
+        (\GridPalette.windowText, "windowText", \GridPalette.buttonBackground, "buttonBackground"),
+        (\GridPalette.windowText, "windowText", \GridPalette.buttonHoverBackground, "buttonHoverBackground"),
+        (\GridPalette.windowText, "windowText", \GridPalette.tabBackground, "tabBackground"),
+        (\GridPalette.windowText, "windowText", \GridPalette.tabHoverBackground, "tabHoverBackground"),
+        (\GridPalette.windowText, "windowText", \GridPalette.menuBackground, "menuBackground"),
+        (\GridPalette.windowText, "windowText", \GridPalette.menuHoverBackground, "menuHoverBackground"),
+        (\GridPalette.windowText, "windowText", \GridPalette.inputBackground, "inputBackground"),
+        (\GridPalette.windowText, "windowText", \GridPalette.alternateBackground, "alternateBackground"),
+        (\GridPalette.windowText, "windowText", \GridPalette.rollBackground, "rollBackground"),
+        (\GridPalette.windowText, "windowText", \GridPalette.accidentalLane, "accidentalLane"),
+        (\GridPalette.primaryText, "primaryText", \GridPalette.windowBackground, "windowBackground"),
+        (\GridPalette.primaryText, "primaryText", \GridPalette.chromeBackground, "chromeBackground"),
+        (\GridPalette.primaryText, "primaryText", \GridPalette.buttonBackground, "buttonBackground"),
+        (\GridPalette.primaryText, "primaryText", \GridPalette.buttonHoverBackground, "buttonHoverBackground"),
+        (\GridPalette.primaryText, "primaryText", \GridPalette.tabBackground, "tabBackground"),
+        (\GridPalette.primaryText, "primaryText", \GridPalette.tabHoverBackground, "tabHoverBackground"),
+        (\GridPalette.primaryText, "primaryText", \GridPalette.menuBackground, "menuBackground"),
+        (\GridPalette.primaryText, "primaryText", \GridPalette.menuHoverBackground, "menuHoverBackground"),
+        (\GridPalette.primaryText, "primaryText", \GridPalette.inputBackground, "inputBackground"),
+        (\GridPalette.primaryText, "primaryText", \GridPalette.alternateBackground, "alternateBackground"),
+        (\GridPalette.primaryText, "primaryText", \GridPalette.rollBackground, "rollBackground"),
+        (\GridPalette.primaryText, "primaryText", \GridPalette.accidentalLane, "accidentalLane"),
+        (\GridPalette.buttonText, "buttonText", \GridPalette.windowBackground, "windowBackground"),
+        (\GridPalette.buttonText, "buttonText", \GridPalette.chromeBackground, "chromeBackground"),
+        (\GridPalette.buttonText, "buttonText", \GridPalette.buttonBackground, "buttonBackground"),
+        (\GridPalette.buttonText, "buttonText", \GridPalette.buttonHoverBackground, "buttonHoverBackground"),
+        (\GridPalette.buttonText, "buttonText", \GridPalette.tabBackground, "tabBackground"),
+        (\GridPalette.buttonText, "buttonText", \GridPalette.tabHoverBackground, "tabHoverBackground"),
+        (\GridPalette.buttonText, "buttonText", \GridPalette.menuBackground, "menuBackground"),
+        (\GridPalette.buttonText, "buttonText", \GridPalette.menuHoverBackground, "menuHoverBackground"),
+        (\GridPalette.buttonText, "buttonText", \GridPalette.inputBackground, "inputBackground"),
+        (\GridPalette.buttonText, "buttonText", \GridPalette.alternateBackground, "alternateBackground"),
+        (\GridPalette.buttonText, "buttonText", \GridPalette.rollBackground, "rollBackground"),
+        (\GridPalette.buttonText, "buttonText", \GridPalette.accidentalLane, "accidentalLane"),
+        // Secondary-family inks (placeholder, severity, implicit, ruler detail
+        // all resolve to the secondary ink) on window, chrome, button, tab,
+        // menu, and input surfaces only.
+        (\GridPalette.secondaryText, "secondaryText", \GridPalette.windowBackground, "windowBackground"),
+        (\GridPalette.secondaryText, "secondaryText", \GridPalette.chromeBackground, "chromeBackground"),
+        (\GridPalette.secondaryText, "secondaryText", \GridPalette.buttonBackground, "buttonBackground"),
+        (\GridPalette.secondaryText, "secondaryText", \GridPalette.tabBackground, "tabBackground"),
+        (\GridPalette.secondaryText, "secondaryText", \GridPalette.menuBackground, "menuBackground"),
+        (\GridPalette.secondaryText, "secondaryText", \GridPalette.inputBackground, "inputBackground"),
+        (\GridPalette.placeholderText, "placeholderText", \GridPalette.windowBackground, "windowBackground"),
+        (\GridPalette.placeholderText, "placeholderText", \GridPalette.chromeBackground, "chromeBackground"),
+        (\GridPalette.placeholderText, "placeholderText", \GridPalette.buttonBackground, "buttonBackground"),
+        (\GridPalette.placeholderText, "placeholderText", \GridPalette.tabBackground, "tabBackground"),
+        (\GridPalette.placeholderText, "placeholderText", \GridPalette.menuBackground, "menuBackground"),
+        (\GridPalette.placeholderText, "placeholderText", \GridPalette.inputBackground, "inputBackground"),
+        (\GridPalette.warningText, "warningText", \GridPalette.windowBackground, "windowBackground"),
+        (\GridPalette.warningText, "warningText", \GridPalette.chromeBackground, "chromeBackground"),
+        (\GridPalette.warningText, "warningText", \GridPalette.buttonBackground, "buttonBackground"),
+        (\GridPalette.warningText, "warningText", \GridPalette.tabBackground, "tabBackground"),
+        (\GridPalette.warningText, "warningText", \GridPalette.menuBackground, "menuBackground"),
+        (\GridPalette.warningText, "warningText", \GridPalette.inputBackground, "inputBackground"),
+        (\GridPalette.errorText, "errorText", \GridPalette.windowBackground, "windowBackground"),
+        (\GridPalette.errorText, "errorText", \GridPalette.chromeBackground, "chromeBackground"),
+        (\GridPalette.errorText, "errorText", \GridPalette.buttonBackground, "buttonBackground"),
+        (\GridPalette.errorText, "errorText", \GridPalette.tabBackground, "tabBackground"),
+        (\GridPalette.errorText, "errorText", \GridPalette.menuBackground, "menuBackground"),
+        (\GridPalette.errorText, "errorText", \GridPalette.inputBackground, "inputBackground"),
+        (\GridPalette.implicitSignature, "implicitSignature", \GridPalette.windowBackground, "windowBackground"),
+        (\GridPalette.implicitSignature, "implicitSignature", \GridPalette.chromeBackground, "chromeBackground"),
+        (\GridPalette.implicitSignature, "implicitSignature", \GridPalette.buttonBackground, "buttonBackground"),
+        (\GridPalette.implicitSignature, "implicitSignature", \GridPalette.tabBackground, "tabBackground"),
+        (\GridPalette.implicitSignature, "implicitSignature", \GridPalette.menuBackground, "menuBackground"),
+        (\GridPalette.implicitSignature, "implicitSignature", \GridPalette.inputBackground, "inputBackground"),
+        (\GridPalette.rulerDetailText, "rulerDetailText", \GridPalette.windowBackground, "windowBackground"),
+        (\GridPalette.rulerDetailText, "rulerDetailText", \GridPalette.chromeBackground, "chromeBackground"),
+        (\GridPalette.rulerDetailText, "rulerDetailText", \GridPalette.buttonBackground, "buttonBackground"),
+        (\GridPalette.rulerDetailText, "rulerDetailText", \GridPalette.tabBackground, "tabBackground"),
+        (\GridPalette.rulerDetailText, "rulerDetailText", \GridPalette.menuBackground, "menuBackground"),
+        (\GridPalette.rulerDetailText, "rulerDetailText", \GridPalette.inputBackground, "inputBackground"),
+        // Selection and pressed inks on their own surfaces.
+        (\GridPalette.selectionText, "selectionText", \GridPalette.tabSelectedBackground, "tabSelectedBackground"),
+        (\GridPalette.selectionText, "selectionText", \GridPalette.selectionRing, "selectionRing"),
+        (\GridPalette.selectionText, "selectionText", \GridPalette.keyboardActiveKey, "keyboardActiveKey"),
+        (\GridPalette.buttonPressedText, "buttonPressedText", \GridPalette.buttonPressedBackground, "buttonPressedBackground"),
+        (\GridPalette.buttonPressedText, "buttonPressedText", \GridPalette.tabPressedBackground, "tabPressedBackground"),
+        // Translucent hover chip over the roll surface it floats above.
+        (\GridPalette.hoverChipText, "hoverChipText", \GridPalette.hoverChipFill, "hoverChipFill"),
+        // Fixed piano-key label and polyphony identity pairs.
+        (\GridPalette.keyboardLabel, "keyboardLabel", \GridPalette.keyboardNatural, "keyboardNatural"),
+        (\GridPalette.polyphonyCellText, "polyphonyCellText", \GridPalette.polyphonyActiveFill, "polyphonyActiveFill"),
+        (\GridPalette.polyphonyCellText, "polyphonyCellText", \GridPalette.polyphonyShadowFill, "polyphonyShadowFill"),
+        (\GridPalette.polyphonyReleasingText, "polyphonyReleasingText", \GridPalette.polyphonyReleasingFill, "polyphonyReleasingFill"),
+    ]
+    for row in themePresetRows {
+        let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
+        let tag = "mode=\(row.mode)"
+        for pair in pairs {
+            let ink = palette[keyPath: pair.ink]
+            let surface: String
+            let surfaceLabel: String
+            if pair.surfaceName == "hoverChipFill" {
+                surface = themeCompositeHex(palette[keyPath: pair.surface], over: palette.rollBackground)
+                surfaceLabel = "hoverChipFill over rollBackground"
+            } else {
+                surface = palette[keyPath: pair.surface]
+                surfaceLabel = pair.surfaceName
+            }
+            let ratio = themeRefContrast(ink, surface)
+            report.expect(ratio >= 4.5, cppID: themeCompletenessID,
+                          message: "\(tag): \(pair.inkName) on \(surfaceLabel) contrast \(String(format: "%.2f", ratio)) (floor 4.5)")
+        }
     }
 }
 

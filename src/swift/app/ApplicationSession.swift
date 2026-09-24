@@ -235,6 +235,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
         appearance["buttonBackground"] = palette.chromeBackground
         appearance["pressedBackground"] = palette.hoverChipFill
         appearance["focus"] = palette.editCursor
+        appearance["selection"] = palette.tabSelectedBackground
+        appearance["selectionText"] = palette.selectionText
         appearance["outline"] = palette.separator
         timeSigPromptAppearance = appearance
         timeSigMenuOpen = false
