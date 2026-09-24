@@ -134,10 +134,6 @@ TestCase {
         compare(field.text, draft, "the transport key does not change numeric text")
     }
 
-    // Production session creation: RewriteWindow.cpp builds
-    // "import PorydawApp\nApplicationSession {}\n" and injects that instance
-    // into the composition. The bootstrap holds it through the framework's
-    // QML-child seam.
     EditorQmlBootstrap {
         id: bootstrap
 
@@ -186,12 +182,6 @@ TestCase {
         }
     }
 
-    // The staged route101 project and song open through the real production path:
-    // RewriteWindow.cpp builds "import PorydawApp\nApplicationSession {}\n" and
-    // calls openProjectAndSong(path:label:) with the project root and the label
-    // the staged project's song table declares (sound/song_table.inc). The open is
-    // asynchronous, so the lane drives the event loop, stops as soon as the
-    // session reports a failure, and names the cause it was given.
     function initTestCase() {
         verify(bootstrap.start("mus_route101"), "the staged route101 project starts opening")
         var waited = 0
@@ -4932,9 +4922,6 @@ TestCase {
         compare(grid.cameraScrollX, parked, "the case handed the shared camera back")
     }
 
-    // Bare Space delivery through page-owned input surfaces. The original
-    // TabButton has native key handling; its window-shortcut priority requires
-    // RewriteWindow smoke, not this harness's parent Keys counter.
     function test_productionAutomationSpacePriority() {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")

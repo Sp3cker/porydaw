@@ -234,8 +234,6 @@ ApplicationWindow {
         anchors.fill: parent
         active: shell.sceneActive
         focus: true
-        // RewriteWindow's scene FocusOut cancels input. Loader is a focus scope,
-        // so moving focus between its editor children does not cancel it.
         onActiveFocusChanged: {
             if (item && !activeFocus)
                 shell.session.cancelGridInput(0)

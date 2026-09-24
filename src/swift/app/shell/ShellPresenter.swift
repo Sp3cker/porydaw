@@ -1,9 +1,6 @@
 import Foundation
 import QtBridge
 
-/// Swift owner of the old RewriteWindow's actions, editor key arbitration and
-/// close handshake. QML delivers events and dialogs; it never decides which
-/// domain command a key or menu item means.
 @MainActor
 @QtBridgeable
 public final class ShellPresenter: QmlInstantiableStatus {
@@ -19,8 +16,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
         }
     }
 
-    // RewriteWindow.cpp:138-163,585-627. Open Song is the old unscripted
-    // picker action, not a fabricated file.new_song keymap binding.
     private static let actions: [Action] = [
         Action("file.open_project", "Open Project…"),
         Action("file.open_song", "Open Song…"),
@@ -125,8 +120,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
         keybindings.sequences(id).first?.nativeText ?? ""
     }
 
-    /// Matches RewriteWindow::updateWindowActions/updateGridActions. Query the
-    /// selected document live rather than caching transient gesture availability.
     public func actionEnabled(id: String) -> Bool {
         guard sceneActive, let action = Self.byId[id] else { return false }
         if let command = action.command {
@@ -172,9 +165,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
         }
     }
 
-    /// RewriteWindow.cpp:324-336,629-647: Escape first (not on repeat), then
-    /// editor-scope matches. The arbiter decides decline/consume/execute; only
-    /// execute performs the command, and it does so exactly once.
     public func routeEditorKey(key: Int, modifiers: Int, autoRepeat: Bool) -> Bool {
         guard sceneActive, session.songOpen else { return false }
         if key == 0x0100_0000 && !autoRepeat && session.handleGridEscape() { return true }
@@ -234,7 +224,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
         closeReady = true
     }
 
-    /// Mirrors RewriteWindow::openStartup's project-then-optional-song path.
     public func openStartup() {
         let arguments = CommandLine.arguments
         var project = ""
@@ -274,13 +263,10 @@ public final class ShellPresenter: QmlInstantiableStatus {
         session.openSong(label: label)
     }
 
-    /// RewriteWindow::attachGridScene announces a successfully opened song.
     public func songOpenChanged() {
         if session.songOpen { statusText = "Song open" }
     }
 
-    /// RewriteWindow.cpp:396-425 chooses severity and title; QML only renders
-    /// the dialog and forwards these session notifications.
     public func saveStateChanged() {
         guard !session.saveInProgress, !session.lastSaveError.isEmpty else { return }
         criticalRequested(title: "Save Failed", message: session.lastSaveError)

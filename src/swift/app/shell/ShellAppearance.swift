@@ -1,10 +1,6 @@
 import Foundation
 import CoreFoundation
 
-/// The palette slice used by the Swift shell and shared editor. Values come from
-/// `themes::preset_colors` and the role mapping in `src/ui/theme/presetcolors.h`;
-/// grid contrast and derived colors follow `themeresolver.cpp` and
-/// `RewriteWindow::applyGridPalette`, respectively.
 @MainActor
 public enum ShellAppearance {
     private struct Colors {
