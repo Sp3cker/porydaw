@@ -94,10 +94,17 @@ FocusScope {
                                                        + 2 * headerHorizontalPadding)
 
     signal navigationFocusRequested()
-    onNavigationFocusRequested: forceActiveFocus(Qt.OtherFocusReason)
+    onNavigationFocusRequested: navigationFocus.forceActiveFocus(Qt.OtherFocusReason)
     Component.onCompleted: {
         controller.setVisible(visible)
         publishTableRows()
+    }
+
+    // The scope remembers its last focused child. Return from cell editing
+    // to a non-text leaf so Delete and Select All reach the shared router.
+    Item {
+        id: navigationFocus
+        focus: true
     }
 
     FontMetrics {
@@ -1188,16 +1195,6 @@ FocusScope {
         sequence: "PageDown"
         enabled: page.navigationEnabled
         onActivated: page.pageCurrent(1, Qt.NoModifier)
-    }
-    Shortcut {
-        sequences: [StandardKey.SelectAll]
-        enabled: page.navigationEnabled
-        onActivated: page.controller.selectAll()
-    }
-    Shortcut {
-        sequence: "Delete"
-        enabled: page.navigationEnabled
-        onActivated: page.controller.deleteSelected()
     }
     Shortcut {
         sequence: "F2"

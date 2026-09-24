@@ -81,6 +81,13 @@ public enum EditKeyArbiter {
             return .decline  // editkeyrouting.cpp:444-445
         }
 
+        // Event rows are a distinct selection domain. The same Select All
+        // and Delete bindings target the visible list, even when the song has
+        // an unrelated note or time selection. No grid command runs here.
+        if surface.origin == .eventList && (command == .selectAll || command == .delete) {
+            return .execute
+        }
+
         switch policy.keyRoute {  // editkeyrouting.cpp:447
         case .alwaysConsume:
             // The executor no-ops when the command is ineligible.

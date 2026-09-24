@@ -463,6 +463,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public func performEventListCommand(command: Int) {
         guard let command = EditCommand(rawValue: command), eventList.attached else { return }
         switch command {
+        case .selectAll: eventList.selectAll()
+        case .delete: eventList.deleteSelected()
         case .moveEventUp: eventList.moveEvent(delta: -1)
         case .moveEventDown: eventList.moveEvent(delta: 1)
         default: commandRouter?.perform(command)

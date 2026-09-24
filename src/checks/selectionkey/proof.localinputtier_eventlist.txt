@@ -7,75 +7,12 @@ Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
-
-SelectionLocalInputTierTest::eventListKeepsRowLocalKeys runs on the fresh
+Command: deno task verify; deno task verify:shell --verbose
+Result: Swift checks 31/31; mounted Shell checks 19/19.
 
 A001 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:57
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the event-list page surface precondition requires the native
-window and cannot be established by a presenter-level Swift check.
-Source context since previous assertion:
-  // Selection keyboard routing, protected-local-input tier: the event list page.
-  // Row-local navigation, Select All, and Delete stay inside the
-  // page/controller, the registered reorder binding fires once through the
-  // shared MoveEventRow command while an unrelated note selection survives
-  // untouched, Copy with event-list focus fires exactly once through its one
-  // window owner, and Delete removes exactly the selected raw-event rows while
-  // a note selected in the song — but not in the page — survives untouched
-  // (plan 11). Every key posts into the production Quick window; the
-  // destructive Delete runs last in the case.
-  #include "checks/selectionkey/tst_localinputtier.h"
-
-  #include "ui/eventtablemodel.h"
-  #include "ui/songview/quick/eventlistcontroller.h"
-  #include "ui/songview/quick/timelinequickview.h"
-
-  #include <QGuiApplication>
-  #include <QQuickWindow>
-
-  #include <QtTest>
-
-  #include <algorithm>
-  #include <optional>
-  #include <vector>
-
-  namespace {
-
-  constexpr int kTrack = 0;
-  constexpr uint64_t kProtectedTick = 6720;
-
-  int totalEvents(const SongDocument &document)
-  {
-      int total = 0;
-      for (const SmfTrack &track : document.smf().tracks)
-          total += int(track.events.size());
-      return total;
-  }
-
-  QString rowSummary(const eventlist::EventTableModel *model, int row)
-  {
-      return model->data(model->index(row, eventlist::EventTableModel::ColSummary), Qt::DisplayRole)
-          .toString();
-  }
-
-  } // namespace
-
-  void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
-  {
-      SongView &view = this->view();
-      SongDocument &document = this->document();
-      const selectionkey::ScenarioRollback rollback(view, document);
-      // The pitch-bend overlay self-activated on top of the shell; the window
-      // Copy owner below only fires while the shell is the active window again.
-      activateShellForCommands();
-      view.setEventListVisible(true);
-      selectionkey::settle();
-      auto *const controller = view.eventListController();
-Original expression:
-  QVERIFY2(controller && controller->isVisible(), "the event list page is unavailable")
+Disposition: MATCHED
+Mapping: S009 proves the mounted Event List page is visible.
 
 A002 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:59
 Disposition: RETIRED-REPRESENTATION
@@ -84,153 +21,44 @@ A003 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/sele
 Disposition: RETIRED-REPRESENTATION
 
 A004 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:64
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the row-count floor below is pure page state a presenter-level
-Swift check could in principle assert, but none does. Original predicate and
-setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      QQuickWindow *const quickWindow = quick->quickWindow();
-      const int rows = model->rowCount();
-Original expression:
-  QVERIFY2(rows >= 4, "the event-list fixture has too few rows")
+Disposition: MATCHED
+Mapping: S010 checks four or more rows on the mounted Event List.
 
 A005 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:83
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; native Quick-window focus acquisition requires the native window
-and cannot be established by a presenter-level Swift check.
-Source context since previous assertion:
-  ;
-      const int copyBefore = m_counts.copy;
-
-      // Production keeps timelineEventListInput focused while the list is the
-      // visible surface: page window-Shortcuts (nav keys, Select All) match at
-      // the window, and the interaction chain consumes its local commands.
-      const auto focusAndStageInput = [quick, quickWindow]() {
-          if (!quick->focusEventListInput(Qt::OtherFocusReason))
-              return false;
-          selectionkey::settle();
-          return checks::async_wait::waitUntil([] { return true; },
-                                               [quick, quickWindow] {
-                                                   return quick->eventListSurfaceFocused() &&
-                                                          quickWindow->isActive() &&
-                                                          QGuiApplication::focusWindow() ==
-                                                              quickWindow;
-                                               },
-                                               5000, 10) == checks::async_wait::Result::Ready;
-      };
-Original expression:
-  QVERIFY2(focusAndStageInput(),
-               "the event-list input did not acquire native Quick-window focus")
+Disposition: MATCHED
+Mapping: S011 checks keyboard focus on the active mounted Event List window.
 
 A006 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:91
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the row-navigation result below is pure page state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-      // Row navigation stays list-local.
-      controller->selectRow(0, Qt::NoModifier);
-      selectionkey::settle();
-      QTest::keyClick(quickWindow, Qt::Key_Down);
-      selectionkey::settle();
-Original expression:
-  QCOMPARE(controller->currentRow(), 1)
+Disposition: MATCHED
+Mapping: S012 observes Down moving the mounted event cursor from row zero to one.
 
 A007 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:94
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the row-navigation result below is pure page state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      QTest::keyClick(quickWindow, Qt::Key_Up);
-      selectionkey::settle();
-Original expression:
-  QCOMPARE(controller->currentRow(), 0)
+Disposition: MATCHED
+Mapping: S013 observes Up returning the mounted event cursor to row zero.
 
 A008 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:99
-Disposition: PARTIAL
-Mapping/reason: EventListPageChecks.swift asserts Select All selects every visible row; live keyboard shortcut delivery and check execution remain unproved.
-Source context since previous assertion:
-  ;
-
-      // Select All stays local to the event rows.
-      QTest::keyClick(quickWindow, Qt::Key_A, Qt::ControlModifier);
-      selectionkey::settle();
-Original expression:
-  QCOMPARE(controller->selectedRows().count(), rows)
+Disposition: MATCHED
+Mapping: S014 observes mounted Ctrl+A selecting every event row.
 
 A009 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:106
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the live keymap binding query has no Swift counterpart. Original
-predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-
-      // The registered reorder binding routes once through the shared
-      // MoveEventRow command and swaps adjacent rows without changing the
-      // event set. An unrelated note selected in the song neither disables
-      // nor retargets the move and survives untouched.
-      const auto moveUp = selectionkey::firstBinding(QStringLiteral("eventlist.move_up"));
-Original expression:
-  QVERIFY2(moveUp.has_value(), "eventlist.move_up has no single binding")
+Disposition: MATCHED
+Mapping: S015 sends Alt+Up through the mounted Event List binding and observes reordering.
 
 A010 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:108
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; unrelated-selection fixture presence is pure document state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      const std::vector<DocNote> fixtureNotes = document.notesForTrack(kTrack);
-Original expression:
-  QVERIFY2(!fixtureNotes.empty(), "the fixture has no note for the unrelated selection")
+Disposition: MATCHED
+Mapping: S016 selects an actual rendered roll note before switching to Event List.
 
 A011 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:115
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; native Quick-window focus reacquisition requires the native
-window and cannot be established by a presenter-level Swift check.
-Source context since previous assertion:
-  ;
-      const DocNote unrelatedNote = fixtureNotes.front();
-      const int totalBefore = totalEvents(document);
-      const QString row0Before = rowSummary(model, 0);
-      const QString row1Before = rowSummary(model, 1);
-      controller->selectRow(1, Qt::NoModifier);
-      selectionkey::settle();
-Original expression:
-  QVERIFY2(focusAndStageInput(),
-               "the event-list input did not reacquire native Quick-window focus")
+Disposition: MATCHED
+Mapping: S011 and S015 prove mounted page focus and subsequent Alt+Up key delivery.
 
 A012 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:121
-Disposition: PARTIAL
-Mapping/reason: EventListPageChecks.swift asserts adjacent same-tick raw rows swap; its drag path does not establish the original Alt+Up key delivery or execution.
-Source context since previous assertion:
-  ;
-      view.selectionModel().setNoteSelection({unrelatedNote.noteId});
-      selectionkey::settle();
-      QTest::keyClick(quickWindow, moveUp->key(), moveUp->keyboardModifiers());
-      selectionkey::settle();
-Original expression:
-  QVERIFY2(rowSummary(model, 0) == row1Before && rowSummary(model, 1) == row0Before,
-               "the reorder key did not swap the first two rows")
+Disposition: MATCHED
+Mapping: S015 verifies Alt+Up swaps the selected raw event with its same-tick neighbor in the mounted page.
 
 A013 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:123
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the event-count invariance below is pure document state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S017 verifies mounted row count is unchanged by Alt+Up; independent raw-document event count remains unproved.
 Source context since previous assertion:
   ;
 Original expression:
@@ -238,56 +66,20 @@ Original expression:
                "reordering changed the event count")
 
 A014 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:127
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the unrelated-note survival below is pure document state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      const std::optional<DocNote> unrelatedAfter =
-          selectionkey::noteById(document, unrelatedNote.noteId);
-Original expression:
-  QVERIFY2(unrelatedAfter.has_value() && unrelatedAfter->tick == unrelatedNote.tick &&
-                   unrelatedAfter->key == unrelatedNote.key,
-               "the reorder key mutated the unrelated note selection")
+Disposition: MATCHED
+Mapping: S018 checks selected roll note identity, tick, and pitch after mounted event reorder.
 
 A015 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:133
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the live keymap binding query has no Swift counterpart. Original
-predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      // Copy with event-list focus keeps exactly one window Copy owner; the
-      // delivery is window-scoped, so the shell must be the active window.
-      const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
-Original expression:
-  QVERIFY2(copy.has_value(), "Copy has no single-key binding")
+Disposition: MATCHED
+Mapping: S019 and S020 prove window Copy is bound and activated from event-list focus.
 
 A016 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:135
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; native Quick-window focus acquisition for Copy requires the
-native window and cannot be established by a presenter-level Swift check.
-Source context since previous assertion:
-  ;
-      activateShellForCommands();
-Original expression:
-  QVERIFY2(focusAndStageInput(),
-               "the event-list input did not acquire native Quick-window focus for Copy")
+Disposition: MATCHED
+Mapping: S011 and S020 prove focused Event List still yields Copy to the active window.
 
 A017 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:139
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the exactly-once window Copy count observes the native window
-action owner and cannot be established by a presenter-level Swift check.
-Source context since previous assertion:
-  ;
-      QTest::keyClick(quickWindow, copy->key(), copy->keyboardModifiers());
-      selectionkey::settle();
-Original expression:
-  QCOMPARE(m_counts.copy, copyBefore + 1)
+Disposition: MATCHED
+Mapping: S020 observes exactly one mounted window Copy shortcut activation.
 
 A018 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:144
 Disposition: GAP
@@ -331,130 +123,40 @@ Original expression:
   QVERIFY2(!duplicateProtectedTick, "the protected tick is not unique in the fixture")
 
 A020 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:161
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the protected-row lookup below is pure page state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(protectedRow >= 0, "the protected note row is missing")
+Disposition: MATCHED
+Mapping: S026 confirms the selected, protected roll note has a mounted event row.
 
 A021 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:187
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the two-victim staging count below is pure page state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      // Victims need a list-unique tick so the post-delete scan cannot be
-      // confused by a second event sharing their tick. Only raw-event rows
-      // qualify: a tempo row's Delete is the tempo-map operation, not the
-      // raw-event removal this scenario asserts, and the protected note's
-      // note-end row belongs to the note that must survive untouched.
-      const auto countRowsWithTick = [&](uint64_t tick) {
-          int count = 0;
-          for (int row = 0; row < model->rowCount(); ++row) {
-              const auto rowTick = model->exactTickForRow(row);
-              if (rowTick && *rowTick == tick)
-                  ++count;
-          }
-          return count;
-      };
-      std::vector<int> victimRows;
-      std::vector<uint64_t> victimTicks;
-      for (int row = 0; row < model->rowCount() && int(victimRows.size()) < 2; ++row) {
-          const auto tick = model->exactTickForRow(row);
-          if (!tick || !model->rawEventIndexForRow(row).has_value() || row == protectedRow ||
-              *tick == protectedNote->note.tick || *tick == protectedEndTick ||
-              countRowsWithTick(*tick) != 1)
-              continue;
-          victimRows.push_back(row);
-          victimTicks.push_back(*tick);
-      }
-Original expression:
-  QCOMPARE(int(victimRows.size()), 2)
+Disposition: MATCHED
+Mapping: S022 selects two raw rows at individually unique ticks away from the selected note.
 
 A022 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:193
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; native Quick-window focus acquisition for Delete requires the
-native window and cannot be established by a presenter-level Swift check.
-Source context since previous assertion:
-  ;
-      // Select All ran earlier and every document refresh preserves valid row
-      // positions, so drop whatever selection survived before staging the two
-      // victims — otherwise Delete would remove every selected raw event.
-      controller->selectRow(-1, Qt::NoModifier);
-      selectionkey::settle();
-Original expression:
-  QVERIFY2(focusAndStageInput(),
-               "the event-list input did not acquire native Quick-window focus for Delete")
+Disposition: MATCHED
+Mapping: S021 and S024 prove keyboard focus returns from text editing and mounted Delete reaches event rows.
 
 A023 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:198
-Disposition: PARTIAL
-Mapping/reason: EventListPageChecks.swift selects and asserts exactly two raw-event victims by Ctrl-click semantics; live pointer delivery and execution remain unproved.
-Source context since previous assertion:
-  ;
-      controller->selectRow(victimRows.front(), Qt::NoModifier);
-      controller->selectRow(victimRows.back(), Qt::ControlModifier);
-      selectionkey::settle();
-Original expression:
-  QVERIFY2(controller->selectedRows().contains(victimRows.front()) &&
-                   controller->selectedRows().contains(victimRows.back()),
-               "the two victim rows were not both selected")
+Disposition: MATCHED
+Mapping: S023 uses a real row click and Ctrl-click to select both raw-event victims.
 
 A024 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:207
-Disposition: PARTIAL
-Mapping/reason: EventListPageChecks.swift asserts two rows disappear after event-list Delete; native key delivery and check execution remain unproved.
-Source context since previous assertion:
-  ;
-      view.selectionModel().setNoteSelection({protectedNote->id});
-
-      const int rowsBeforeDelete = model->rowCount();
-      const int totalBeforeDelete = totalEvents(document);
-      QTest::keyClick(quickWindow, Qt::Key_Delete);
-      selectionkey::settle();
-Original expression:
-  QCOMPARE(model->rowCount(), rowsBeforeDelete - 2)
+Disposition: MATCHED
+Mapping: S024 observes mounted Delete removing exactly the two selected event rows.
 
 A025 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:208
 Disposition: PARTIAL
-Mapping/reason: EventListPageChecks.swift asserts raw document event count decreases by exactly two; live key delivery and execution remain unproved.
+Mapping/reason: S024 proves two visible raw rows are removed via mounted Delete; independent document-wide raw-event count is not exposed by this QML check.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(totalEvents(document), totalBeforeDelete - 2)
 
 A026 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:215
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the victim-tick scan below is pure page state a presenter-level
-Swift check could in principle assert, but none does. Original predicate and
-setup below remain an open obligation.
-Source context since previous assertion:
-  ;
-      int victimRowsRemaining = 0;
-      for (int row = 0; row < model->rowCount(); ++row) {
-          const auto tick = model->exactTickForRow(row);
-          if (tick && std::find(victimTicks.begin(), victimTicks.end(), *tick) != victimTicks.end())
-              ++victimRowsRemaining;
-      }
-Original expression:
-  QCOMPARE(victimRowsRemaining, 0)
+Disposition: MATCHED
+Mapping: S027 verifies neither deleted raw-event tick remains in the mounted Event List.
 
 A027 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:217
-Disposition: PARTIAL
-Mapping/reason: EventListPageChecks.swift asserts the unrelated selected note keeps its identity, tick, pitch, and duration after raw-row Delete; live key delivery and execution remain unproved.
-Source context since previous assertion:
-  ;
-      const std::optional<DocNote> survivor = selectionkey::noteById(document, protectedNote->id);
-Original expression:
-  QVERIFY2(survivor.has_value() && survivor->tick == protectedNote->note.tick &&
-                   survivor->key == protectedNote->note.key && !survivor->unterminated(),
-               "event-list Delete mutated the note-selection target instead of its rows")
+Disposition: MATCHED
+Mapping: S025 checks unrelated selected roll note identity, tick, pitch, and finite duration after mounted Delete.
 
 Remaining original source (closing sequence and helper bodies):
                "event-list Delete mutated the note-selection target instead of its rows");
@@ -487,3 +189,60 @@ Anchor: message "cancellation leaves the original document unchanged"
 
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "draft and cancellation preserve the full song contents"
+
+S009 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "event list is mounted"
+
+S010 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "event-list fixture has at least four rows"
+
+S011 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "event list owns keyboard focus"
+
+S012 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Down moves the event-row cursor"
+
+S013 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Up moves the event-row cursor"
+
+S014 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Select All targets every event row"
+
+S015 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Alt+Up moves the selected event ahead of its same-tick neighbor"
+
+S016 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "a real roll click selects the note before event-list focus"
+
+S017 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "reordering preserves the event count"
+
+S018 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "same-tick reorder preserves the unrelated selected roll note"
+
+S019 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "window Copy shortcut is mounted"
+
+S020 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "window Copy runs exactly once under event-list focus"
+
+S021 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "leaving the event cell restores page navigation focus"
+
+S022 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "fixture has two unrelated raw event rows"
+
+S023 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Ctrl-click selects both unrelated event rows"
+
+S024 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Delete removes exactly two event rows, not the roll selection"
+
+S025 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "event-row Delete preserves the unrelated selected roll note"
+
+S026 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the selected roll note has an event-list row"
+
+S027 | test_keyboardSelectionStaysOnMountedEventRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "both deleted raw-event ticks are absent from the Event List"
