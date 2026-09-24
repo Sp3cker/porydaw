@@ -45,6 +45,10 @@ enum ShellQmlLane {
     private static let entries = [
         Entry(name: "shellwindow", inputFileName: "tst_ShellWindow.qml",
               fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
+        Entry(name: "shell-grid-input", inputFileName: "tst_ShellGridInput.qml",
+              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
+        Entry(name: "shell-clipboard", inputFileName: "tst_ShellClipboard.qml",
+              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
     ]
 
     private static var manifestLine: String {
@@ -92,6 +96,7 @@ enum ShellQmlLane {
         ApplicationSession.registerQmlElement()
         ShellPresenter.registerQmlElement()
         ShellQmlBootstrap.registerQmlElement()
+        GridInputClipProbe.registerQmlElement()
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .appendingPathComponent(entry.inputFileName).path
         let arguments = [CommandLine.arguments.first ?? "shell_qml_tests", "-input", inputFile] + payload
