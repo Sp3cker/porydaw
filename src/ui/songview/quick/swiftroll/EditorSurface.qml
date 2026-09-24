@@ -273,6 +273,7 @@ Item {
                         acceptedButtons: Qt.LeftButton | Qt.RightButton
                         activeFocusOnTab: true
                         onDoubleClicked: (mouse) => {
+                            rulerMoves.flush()
                             if (mouse.button !== Qt.LeftButton)
                                 return
                             const tick = root.timeSigHost.timeSigChipTick(mouse.x)
@@ -280,6 +281,7 @@ Item {
                                 root.timeSigHost.openTimeSigPrompt(tick)
                         }
                         onPressed: (mouse) => {
+                            rulerMoves.flush()
                             if (mouse.button === Qt.LeftButton) {
                                 root.rulerMenu.beginSweep(mouse.x)
                             } else if (mouse.button === Qt.RightButton) {
@@ -290,13 +292,24 @@ Item {
                         }
                         onPositionChanged: (mouse) => {
                             if (mouse.buttons & Qt.LeftButton)
-                                root.rulerMenu.updateSweep(mouse.x)
+                                rulerMoves.enqueue(mouse.x, mouse.y,
+                                                   mouse.buttons, mouse.modifiers)
                         }
                         onReleased: (mouse) => {
+                            rulerMoves.flush()
                             if (mouse.button === Qt.LeftButton)
                                 root.rulerMenu.endSweep(mouse.x)
                         }
-                        onCanceled: root.rulerMenu.cancelSweep()
+                        onCanceled: {
+                            rulerMoves.flush()
+                            root.rulerMenu.cancelSweep()
+                        }
+                        MoveCoalescer {
+                            id: rulerMoves
+                            dispatch: (x, y, buttons, modifiers) => {
+                                root.rulerMenu.updateSweep(x)
+                            }
+                        }
                     }
                 }
             }
@@ -395,6 +408,7 @@ Item {
                         }
 
                         onPressed: function(mouse) {
+                            rollMoves.flush()
                             if (mouse.button === Qt.MiddleButton)
                                 root.gridModel.beginPan(mouse.x, mouse.y)
                             else if (mouse.button === Qt.RightButton) {
@@ -415,27 +429,16 @@ Item {
                             mouse.accepted = true
                         }
                         onDoubleClicked: function(mouse) {
+                            rollMoves.flush()
                             if (mouse.button === Qt.LeftButton)
                                 root.gridModel.doublePointer(mouse.x, mouse.y)
                             mouse.accepted = true
                         }
                         onPositionChanged: function(mouse) {
-                            if (mouse.buttons & Qt.MiddleButton)
-                                root.gridModel.updatePan(mouse.x, mouse.y)
-                            else if (mouse.buttons & Qt.RightButton) {
-                                if (rightSweepActive)
-                                    root.rulerMenu.updateSweep(mouse.x)
-                                else if (!timeMenuPressHandled)
-                                    root.gridModel.updateRightPointer(mouse.x, mouse.y)
-                            }
-                            else if (mouse.buttons & Qt.LeftButton)
-                                root.gridModel.updatePointer(mouse.x, mouse.y)
-                            else {
-                                root.gridModel.updateHover(mouse.x, mouse.y)
-                                root.applicationSession.playheadGuidesPresenter().updateHover(mouse.x)
-                            }
+                            rollMoves.enqueue(mouse.x, mouse.y, mouse.buttons, mouse.modifiers)
                         }
                         onReleased: function(mouse) {
+                            rollMoves.flush()
                             if (mouse.button === Qt.MiddleButton)
                                 root.gridModel.endPan()
                             else if (mouse.button === Qt.RightButton) {
@@ -451,6 +454,7 @@ Item {
                             mouse.accepted = true
                         }
                         onCanceled: {
+                            rollMoves.flush()
                             timeMenuPressHandled = false
                             if (rightSweepActive)
                                 root.rulerMenu.cancelSweep()
@@ -458,9 +462,29 @@ Item {
                             root.gridModel.inputCancelled(root.cancelReasonPointerUngrabbed)
                         }
                         onExited: {
+                            rollMoves.flush()
                             if (pressedButtons === Qt.NoButton) {
                                 root.gridModel.clearKeyboardHover()
                                 root.applicationSession.playheadGuidesPresenter().clearHover()
+                            }
+                        }
+                        MoveCoalescer {
+                            id: rollMoves
+                            dispatch: (x, y, buttons, modifiers) => {
+                                if (buttons & Qt.MiddleButton)
+                                    root.gridModel.updatePan(x, y)
+                                else if (buttons & Qt.RightButton) {
+                                    if (rollInput.rightSweepActive)
+                                        root.rulerMenu.updateSweep(x)
+                                    else if (!rollInput.timeMenuPressHandled)
+                                        root.gridModel.updateRightPointer(x, y)
+                                }
+                                else if (buttons & Qt.LeftButton)
+                                    root.gridModel.updatePointer(x, y)
+                                else {
+                                    root.gridModel.updateHover(x, y)
+                                    root.applicationSession.playheadGuidesPresenter().updateHover(x)
+                                }
                             }
                         }
                     }

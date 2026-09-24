@@ -227,6 +227,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/DragInput.qml
         src/ui/songview/quick/PitchBendPopup.qml
         src/ui/songview/quick/HoverHint.qml
+        src/ui/songview/quick/MoveCoalescer.qml
         src/ui/songview/quick/TimelineScrollbar.qml
         src/ui/songview/quick/HintProfiles.qml
         src/ui/songview/quick/QuickMenuPanel.qml

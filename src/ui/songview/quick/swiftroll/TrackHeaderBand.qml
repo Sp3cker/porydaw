@@ -432,28 +432,41 @@ Item {
                 Accessible.description: qsTr("Track headers")
 
                 onPressed: (mouse) => {
+                    headerMoves.flush()
                     forceActiveFocus(Qt.MouseFocusReason)
                     mouse.accepted = root.headersModel.beginPointer(mouse.x, mouse.y,
                                                                     mouse.button, mouse.modifiers)
                 }
                 onPositionChanged: (mouse) => {
-                    if (pressed)
-                        root.headersModel.updatePointer(mouse.x, mouse.y, mouse.modifiers)
-                    else
-                        root.headersModel.updateHover(mouse.x, mouse.y)
+                    headerMoves.enqueue(mouse.x, mouse.y, mouse.buttons, mouse.modifiers)
                 }
                 onReleased: (mouse) => {
+                    headerMoves.flush()
                     mouse.accepted = root.headersModel.endPointer(mouse.x, mouse.y,
                                                                   mouse.button, mouse.modifiers)
                 }
                 onDoubleClicked: (mouse) => {
+                    headerMoves.flush()
                     mouse.accepted = root.headersModel.doublePointer(mouse.x, mouse.y,
                                                                      mouse.button, mouse.modifiers)
                 }
-                onCanceled: root.headersModel.inputCancelled(1) // PointerUngrabbed
+                onCanceled: {
+                    headerMoves.flush()
+                    root.headersModel.inputCancelled(1) // PointerUngrabbed
+                }
                 onExited: {
+                    headerMoves.flush()
                     if (!pressed)
                         root.headersModel.clearHover()
+                }
+                MoveCoalescer {
+                    id: headerMoves
+                    dispatch: (x, y, buttons, modifiers) => {
+                        if (buttons !== Qt.NoButton)
+                            root.headersModel.updatePointer(x, y, modifiers)
+                        else
+                            root.headersModel.updateHover(x, y)
+                    }
                 }
 
                 // As in TimelineScrollbar, exactly one handler owns diagonal input.

@@ -3,7 +3,7 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-struct GridNote {
+struct GridNote: Equatable {
     let noteId: NoteID
     let tick: Int
     let duration: Int
@@ -75,6 +75,11 @@ public final class PianoGrid {
     @QtIgnored private var staticBaseFontPx = 0.0
     @QtIgnored private var staticDevicePixelRatio = 0.0
     @QtIgnored private var staticContentEndTick = GridMetrics.songLengthTicks
+    /// Last note/selection state baked into `noteSummary`. The summary string
+    /// is a check-facing probe: rebuilding it per pointer sample serialized
+    /// the whole document, so it is only re-encoded when its inputs change.
+    @QtIgnored private var summaryNotes: [GridNote]?
+    @QtIgnored private var summarySelection: [NoteID]?
 
     @QtTracked public var scene = GridScene()
     /// The palette the roll draws with: assigned once by `init`, either the
@@ -186,12 +191,12 @@ public final class PianoGrid {
         let count = session.document.engineTracks.usedTrackCount
         if count == 0 {
             session.selectedTrack = nil
-            trackIndex = 0
+            if trackIndex != 0 { trackIndex = 0 }
             notes = []
         } else {
             let valid = min(max(0, session.selectedTrack ?? trackIndex), count - 1)
             session.selectedTrack = valid
-            trackIndex = valid
+            if trackIndex != valid { trackIndex = valid }
             notes = session.document.notes(in: valid).map { note in
                 GridNote(noteId: note.id, tick: Int(note.tick),
                          duration: Int(note.isUnterminated
@@ -201,8 +206,10 @@ public final class PianoGrid {
                          velocity: Int(note.velocity), ghost: false)
             }
         }
-        appliedRevisionText = String(session.document.revision)
-        editCursorTick = Int(session.editCursor)
+        let revisionText = String(session.document.revision)
+        if appliedRevisionText != revisionText { appliedRevisionText = revisionText }
+        let cursorTick = Int(session.editCursor)
+        if editCursorTick != cursorTick { editCursorTick = cursorTick }
         updateTimeAxis()
         staticSceneDirty = true
         refreshNotes()
@@ -236,7 +243,8 @@ public final class PianoGrid {
     /// Applies the session-owned edit cursor without rebuilding document content.
     @QtIgnored
     public func refreshCursorPresentation() {
-        editCursorTick = Int(session.editCursor)
+        let cursorTick = Int(session.editCursor)
+        if editCursorTick != cursorTick { editCursorTick = cursorTick }
     }
 
     @QtIgnored
@@ -576,7 +584,9 @@ public final class PianoGrid {
     public func beginPan(x: Double, y: Double) {
         guard !interactionActive else { return }
         gesture = .pan(GridGesture.Pan(pressX: x, pressY: y))
-        cursorKind = GridCursorKind.closedHand.rawValue
+        if cursorKind != GridCursorKind.closedHand.rawValue {
+            cursorKind = GridCursorKind.closedHand.rawValue
+        }
         publishOutputs()
     }
 
@@ -598,7 +608,9 @@ public final class PianoGrid {
     public func endPan() {
         guard case .pan = gesture else { return }
         gesture = nil
-        cursorKind = GridCursorKind.arrow.rawValue
+        if cursorKind != GridCursorKind.arrow.rawValue {
+            cursorKind = GridCursorKind.arrow.rawValue
+        }
         publishOutputs()
     }
 
@@ -810,7 +822,9 @@ public final class PianoGrid {
     @QtIgnored
     private func cancelInput() {
         if case .pan = gesture {
-            cursorKind = GridCursorKind.arrow.rawValue
+            if cursorKind != GridCursorKind.arrow.rawValue {
+                cursorKind = GridCursorKind.arrow.rawValue
+            }
         }
         if case .band = rightGesture {
             session.setSelectedNotes(selectionAtRightPress)
@@ -999,7 +1013,7 @@ public final class PianoGrid {
             displayedNote: { self.displayedNote($0) },
             isSelected: { self.session.selectedNotes.contains($0) },
             drawPreview: drawPreview, lastVelocity: lastVelocity,
-            hoverKey: hoverKey, selectionBand: selectionBand)
+            hoverKey: hoverKey, selectionBand: selectionBand,
     }
 
     @QtIgnored
@@ -1065,7 +1079,9 @@ public final class PianoGrid {
         let measured = GridTypography(fonts: measurementFonts, rowHeight: cameraRowHeight)
         typography = measured
         typographyKey = key
-        rulerHeight = measured.boldHeight + 1 + measured.rulerHeight + 1
+        if rulerHeight != measured.boldHeight + 1 + measured.rulerHeight + 1 {
+            rulerHeight = measured.boldHeight + 1 + measured.rulerHeight + 1
+        }
         return true
     }
 
@@ -1077,18 +1093,22 @@ public final class PianoGrid {
     @QtIgnored
     private func publishGeometry() {
         let snapshot = session.camera.snapshot
-        beatWidth = snapshot.pixelsPerBeat
-        rowHeight = snapshot.keyHeight
-        cameraScrollX = snapshot.scrollX
-        cameraScrollY = snapshot.scrollY
-        cameraMaxVScroll = snapshot.maxVScroll
-        cameraMinHScroll = snapshot.minHScroll
-        cameraMaxHScroll = snapshot.maxHScroll
-        keyboardWidth = metrics.keyboardWidth
-        trackHeaderWidth = fontPx(baseFontPx, 17.5)
-        ticksPerBeat = Int(max(1, session.document.ticksPerBeat))
-        snapTicks = metrics.snapTicks(camera: session.camera)
-        visibleGridTicks = metrics.visibleGridTicks(camera: session.camera)
+        if beatWidth != snapshot.pixelsPerBeat { beatWidth = snapshot.pixelsPerBeat }
+        if rowHeight != snapshot.keyHeight { rowHeight = snapshot.keyHeight }
+        if cameraScrollX != snapshot.scrollX { cameraScrollX = snapshot.scrollX }
+        if cameraScrollY != snapshot.scrollY { cameraScrollY = snapshot.scrollY }
+        if cameraMaxVScroll != snapshot.maxVScroll { cameraMaxVScroll = snapshot.maxVScroll }
+        if cameraMinHScroll != snapshot.minHScroll { cameraMinHScroll = snapshot.minHScroll }
+        if cameraMaxHScroll != snapshot.maxHScroll { cameraMaxHScroll = snapshot.maxHScroll }
+        if keyboardWidth != metrics.keyboardWidth { keyboardWidth = metrics.keyboardWidth }
+        let headerWidth = fontPx(baseFontPx, 17.5)
+        if trackHeaderWidth != headerWidth { trackHeaderWidth = headerWidth }
+        let tpb = Int(max(1, session.document.ticksPerBeat))
+        if ticksPerBeat != tpb { ticksPerBeat = tpb }
+        let snap = metrics.snapTicks(camera: session.camera)
+        if snapTicks != snap { snapTicks = snap }
+        let gridTicks = metrics.visibleGridTicks(camera: session.camera)
+        if visibleGridTicks != gridTicks { visibleGridTicks = gridTicks }
     }
 
     @QtIgnored
@@ -1182,39 +1202,50 @@ public final class PianoGrid {
     }
 
     @QtIgnored
-    private func publishOutputs() {
-        renderedNoteCount = notes.count
-        let parts = notes.map { note in
-            "{\"id\":\(note.noteId.rawValue),\"tick\":\(note.tick),"
-                + "\"duration\":\(note.duration),\"pitch\":\(note.pitch),"
-                + "\"track\":\(note.track),\"velocity\":\(note.velocity),"
-                + "\"selected\":\(session.selectedNotes.contains(note.noteId))}"
-        }
-        noteSummary = "[" + parts.joined(separator: ",") + "]"
+    private func currentStatusText() -> String {
         if let gesture {
             switch gesture {
             case .pendingDraw(let state):
-                statusText = "Pending draw at tick \(metrics.snapTick(state.pressTick, camera: session.camera))"
+                return "Pending draw at tick \(metrics.snapTick(state.pressTick, camera: session.camera))"
             case .draw(let state):
-                statusText = "Drawing — tick \(state.tick), duration \(state.duration), pitch \(state.key)"
+                return "Drawing — tick \(state.tick), duration \(state.duration), pitch \(state.key)"
             case .velocity:
-                statusText = "Changing velocity"
+                return "Changing velocity"
             case .move(let state):
-                statusText = "Moving \(session.selectedNotes.count) note(s) — dTick \(state.dTick), dKey \(state.dKey)"
+                return "Moving \(session.selectedNotes.count) note(s) — dTick \(state.dTick), dKey \(state.dKey)"
             case .resize:
-                statusText = "Resizing \(session.selectedNotes.count) note(s)"
+                return "Resizing \(session.selectedNotes.count) note(s)"
             case .pendingMenu:
-                statusText = "\(notes.count) notes, \(session.selectedNotes.count) selected"
+                return "\(notes.count) notes, \(session.selectedNotes.count) selected"
             case .band:
-                statusText = "Selecting \(session.selectedNotes.count) note(s)"
+                return "Selecting \(session.selectedNotes.count) note(s)"
             case .pan:
-                statusText = "Panning"
+                return "Panning"
             }
-        } else if case .band = rightGesture {
-            statusText = "Selecting \(session.selectedNotes.count) note(s)"
-        } else {
-            statusText = "\(notes.count) notes, \(session.selectedNotes.count) selected"
         }
+        if case .band = rightGesture {
+            return "Selecting \(session.selectedNotes.count) note(s)"
+        }
+        return "\(notes.count) notes, \(session.selectedNotes.count) selected"
+    }
+
+    @QtIgnored
+    private func publishOutputs() {
+        if renderedNoteCount != notes.count { renderedNoteCount = notes.count }
+        let selection = session.selectedNoteOrder
+        if notes != summaryNotes || selection != summarySelection {
+            summaryNotes = notes
+            summarySelection = selection
+            let parts = notes.map { note in
+                "{\"id\":\(note.noteId.rawValue),\"tick\":\(note.tick),"
+                    + "\"duration\":\(note.duration),\"pitch\":\(note.pitch),"
+                    + "\"track\":\(note.track),\"velocity\":\(note.velocity),"
+                    + "\"selected\":\(session.selectedNotes.contains(note.noteId))}"
+            }
+            noteSummary = "[" + parts.joined(separator: ",") + "]"
+        }
+        let status = currentStatusText()
+        if statusText != status { statusText = status }
         let availability = EditCommand.allCases.map { commands.isAvailable($0) }
         if availability != lastCommandAvailability || interactionActive != lastCommandGestureActive {
             lastCommandAvailability = availability

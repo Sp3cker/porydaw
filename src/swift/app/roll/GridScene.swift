@@ -68,6 +68,22 @@ public final class SceneText {
         labelHorizontalAlignment = horizontal
         labelVerticalAlignment = vertical
     }
+
+    @QtIgnored
+    var signature: String {
+        sceneTextDictSignature(labelRect) + "|"
+            + sceneTextDictSignature(labelBackgroundRect) + "|"
+            + sceneTextDictSignature(labelClipRect) + "|"
+            + sceneTextDictSignature(labelFont) + "|"
+            + labelText + "|" + labelColor + "|" + labelBackground + "|"
+            + "\(labelHorizontalAlignment)|\(labelVerticalAlignment)"
+    }
+}
+
+private func sceneTextDictSignature(_ dict: [String: QVariantSettable]) -> String {
+    dict.keys.sorted().map { key in
+        "\(key)=\(dict[key].map { "\($0)" } ?? "")"
+    }.joined(separator: ",")
 }
 
 // Everything a scene rebuild needs, projected out of PianoGrid once per
@@ -113,6 +129,24 @@ public final class GridScene {
     public var pianoKeyboardTextModel: QListModel<SceneText> = QListModel()
     public var pianoLoadingTextModel: QListModel<SceneText> = QListModel()
     public var rulerTextModel: QListModel<SceneText> = QListModel()
+
+    @QtIgnored private var rulerTextSignatures: [String] = []
+    @QtIgnored private var keyboardTextSignatures: [String] = []
+    @QtIgnored private var noteTextSignatures: [String] = []
+    @QtIgnored private var loadingTextSignatures: [String] = []
+
+    /// QListModel.reset always emits modelReset, which tears down every text
+    /// delegate. Rebuilds run per pointer sample, so skip the reset when the
+    /// published records are unchanged.
+    private func syncText(
+        _ model: QListModel<SceneText>, _ records: [SceneText],
+        signatures: inout [String]
+    ) {
+        let next = records.map(\.signature)
+        guard next != signatures else { return }
+        signatures = next
+        model.reset(to: records)
+    }
 
     public var hoverChipRect: [String: QVariantSettable] =
         ["x": 0.0, "y": 0.0, "width": 0.0, "height": 0.0]
@@ -394,7 +428,7 @@ public final class GridScene {
 
         guard let t = input.typography else {
             sync(rulerMarks, [])
-            rulerTextModel.reset(to: [])
+            syncText(rulerTextModel, [], signatures: &rulerTextSignatures)
             return
         }
         let markerHeight = t.boldHeight + 1
@@ -543,7 +577,7 @@ public final class GridScene {
         }
 
         sync(rulerMarks, marks)
-        rulerTextModel.reset(to: labels)
+        syncText(rulerTextModel, labels, signatures: &rulerTextSignatures)
     }
 
     private func maxRulerBar(_ input: GridSceneInput, end: Tick) -> Int {
@@ -581,7 +615,7 @@ public final class GridScene {
                 text: GridScene.keyName(key), color: input.palette.keyboardLabel,
                 font: input.fontSpec(.keyLabel), horizontal: 0x2))
         }
-        pianoKeyboardTextModel.reset(to: records)
+        syncText(pianoKeyboardTextModel, records, signatures: &keyboardTextSignatures)
     }
 
     @QtIgnored
@@ -683,8 +717,8 @@ public final class GridScene {
         sync(pianoDrawPreviewFill, preview)
         sync(pianoOverlay, overlay)
 
-        pianoNoteTextModel.reset(to: [])
-        pianoLoadingTextModel.reset(to: [])
+        syncText(pianoNoteTextModel, [], signatures: &noteTextSignatures)
+        syncText(pianoLoadingTextModel, [], signatures: &loadingTextSignatures)
     }
 
     @QtIgnored

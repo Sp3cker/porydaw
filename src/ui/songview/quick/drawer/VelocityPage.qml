@@ -239,19 +239,33 @@ FocusScope {
             hoverEnabled: true
             preventStealing: true
 
-            onPressed: (mouse) => mouse.accepted =
-                page.pageModel.pointerPress(mouse.x, mouse.y, page.rulerSurface, mouse.button,
-                                        mouse.modifiers)
-            onPositionChanged: (mouse) => page.pageModel.pointerMove(mouse.x, mouse.y, mouse.buttons)
+            onPressed: (mouse) => {
+                rulerMoves.flush()
+                mouse.accepted =
+                    page.pageModel.pointerPress(mouse.x, mouse.y, page.rulerSurface,
+                                                mouse.button, mouse.modifiers)
+            }
+            onPositionChanged: (mouse) => rulerMoves.enqueue(
+                mouse.x, mouse.y, mouse.buttons, mouse.modifiers)
             onReleased: (mouse) => {
+                rulerMoves.flush()
                 rulerHint.settleRelease(rulerInput.mapToItem(null, mouse.x, mouse.y))
                 mouse.accepted = page.pageModel.pointerRelease(mouse.x, mouse.y, mouse.button)
             }
             onCanceled: {
+                rulerMoves.flush()
                 rulerHint.settleRelease(rulerHint.point.scenePosition)
                 page.pageModel.cancelSectionInteraction()
             }
-            onExited: page.pageModel.pointerLeave()
+            onExited: {
+                rulerMoves.flush()
+                page.pageModel.pointerLeave()
+            }
+            MoveCoalescer {
+                id: rulerMoves
+                dispatch: (x, y, buttons, modifiers) =>
+                    page.pageModel.pointerMove(x, y, buttons)
+            }
         }
 
         HoverHint {
@@ -419,19 +433,33 @@ FocusScope {
             hoverEnabled: true
             preventStealing: true
 
-            onPressed: (mouse) => mouse.accepted =
-                page.pageModel.pointerPress(mouse.x, mouse.y, page.plotSurface, mouse.button,
-                                        mouse.modifiers)
-            onPositionChanged: (mouse) => page.pageModel.pointerMove(mouse.x, mouse.y, mouse.buttons)
+            onPressed: (mouse) => {
+                plotMoves.flush()
+                mouse.accepted =
+                    page.pageModel.pointerPress(mouse.x, mouse.y, page.plotSurface,
+                                                mouse.button, mouse.modifiers)
+            }
+            onPositionChanged: (mouse) => plotMoves.enqueue(
+                mouse.x, mouse.y, mouse.buttons, mouse.modifiers)
             onReleased: (mouse) => {
+                plotMoves.flush()
                 plotHint.settleRelease(plotInput.mapToItem(null, mouse.x, mouse.y))
                 mouse.accepted = page.pageModel.pointerRelease(mouse.x, mouse.y, mouse.button)
             }
             onCanceled: {
+                plotMoves.flush()
                 plotHint.settleRelease(plotHint.point.scenePosition)
                 page.pageModel.cancelSectionInteraction()
             }
-            onExited: page.pageModel.pointerLeave()
+            onExited: {
+                plotMoves.flush()
+                page.pageModel.pointerLeave()
+            }
+            MoveCoalescer {
+                id: plotMoves
+                dispatch: (x, y, buttons, modifiers) =>
+                    page.pageModel.pointerMove(x, y, buttons)
+            }
         }
 
         HoverHint {
