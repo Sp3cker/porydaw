@@ -4,10 +4,10 @@ Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/midi/tst_midismf.cpp
 Original SHA-256: 8020c4710e4f59b87aac42d18cd70d595cf81260c9c12dfd64581a7361efe5c3
 Swift counterpart: src/checks/midi/MidiChecks.swift
-Swift SHA-256: b6da19e467b226ad8c2e9d1956095bf7f57691640f791152a4b6ec2ff7a8a26d
+Swift SHA-256: 5d9a117c9b98b1c32c568358e5f91b3f319f560f4f4869dc69e822dd1de2527c
 Additional covering Swift files:
 src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: c921bfbc5b1d6dfaa763e7611eb3baa263dfa4caf7e53aa721d8390b21dcb2d2
+Swift SHA-256: bdc3462bbab22accf93f21fa10386443e617728fe783982e6e58a3d41555dfab
 src/checks/editcheck/EventChecks.swift
 Swift SHA-256: 401aa1ae13ed0ed92d2cb26b33029f4b6ec90ef99d0dd61894ba165a00002705
 
@@ -30,15 +30,14 @@ target (src/checks/CMakeLists.txt lists only midi/tst_midiexport.cpp) and in no
 check catalog or registry, so the original is uncompiled and unregistered; its
 remaining GAP sites are native-only obligations with no executing lane.
 Swift pairing command: deno task verify --filter swiftcore --verbose
-Result: controller-observed run 2026-09-24 — build OK; SwiftCoreTest::midiCodec,
-::noteEdits, and ::midiImport PASS. The overall suite failed only on five
-peer-owned clipboard projectSession assertions (A028-A034) from another slice;
-this reconciliation did not re-run the lane. The cited predicates execute in
+Result: controller-observed run 2026-09-24 — build ok; ok: swiftcore (10.20s);
+verify: 1/6 ok (5 skipped); run_checks: PASS. This reconciliation did not
+re-run the lane. The cited predicates execute in
 that lane: runMidiCodecSuite (fixture and synthetic codec cases with the cppIDs
 below, plus tempoConversionProjection and engineMappingProjection),
 runMusicalSemanticsSuite (per-CC oracle rows), runNoteEditsSuite (document
 pairing predicates plus lifecycleFixturePairing, interleavedFixturePairing, and
-unterminatedPairingStress), and runMidiImportSuite (import-analysis predicates
+unterminatedPairingLargeFixture), and runMidiImportSuite (import-analysis predicates
 plus importSmfReportRows).
 
 Execution ownership
@@ -57,8 +56,8 @@ field formulas, so S013 covers every conductor, group, and note event.
 runMusicalSemanticsSuite emits per-CC oracle rows consumed through
 coreMidiExpectOracleValue/Text. NoteChecks.swift adoptionAndPairing and
 movementAndResize emit the document-pairing predicates; lifecycleFixturePairing,
-interleavedFixturePairing, and unterminatedPairingStress emit the fixture pairing
-predicates (S081-S101). EventChecks.swift importAnalysis emits the
+interleavedFixturePairing, and unterminatedPairingLargeFixture emit the fixture pairing
+predicates (S081-S100). EventChecks.swift importAnalysis emits the
 shared-selector and 0x4B predicates, and importSmfReportRows emits the per-row
 import-report predicates (S102-S110). runMidiCodecSuite also calls
 tempoConversionProjection and engineMappingProjection (S035-S080), the Swift
@@ -83,7 +82,7 @@ analyzeChannelTrack; ccRow/xcmdRow) at the reference revision remain
 authoritative. The Swift counterparts reconstruct the same fixtures, traffic,
 and rows in memory: MidiChecks.swift tempoConversionProjection and
 engineMappingProjection, NoteChecks.swift lifecycleFixturePairing,
-interleavedFixturePairing, and unterminatedPairingStress, and EventChecks.swift
+interleavedFixturePairing, and unterminatedPairingLargeFixture, and EventChecks.swift
 importSmfReportRows. Pairing, projection, and report-row observables are
 therefore asserted, while scratch/disk staging and by-pointer lookup guards stay
 unproved at the sites marked GAP or PARTIAL.
@@ -2793,7 +2792,7 @@ Original expression:
 
 A262 | MidiSmfTest::unterminatedNotePairingStaysLinear | src/checks/midi/tst_midismf.cpp:620
 Disposition: MATCHED
-Mapping/reason: Swift S096 in src/checks/editcheck/NoteChecks.swift unterminatedPairingStress (NoteChecks.swift:176) builds the same 300000 note-on chunk and asserts the pairing count equals 300000 under the same test cppID.
+Mapping/reason: Swift S096 in src/checks/editcheck/NoteChecks.swift unterminatedPairingLargeFixture (NoteChecks.swift:174) builds the same 300000 note-on chunk and asserts the pairing count equals 300000 under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -2807,7 +2806,7 @@ Original expression:
 
 A263 | MidiSmfTest::unterminatedNotePairingStaysLinear | src/checks/midi/tst_midismf.cpp:621
 Disposition: MATCHED
-Mapping/reason: Swift S099 (NoteChecks.swift:182) asserts the first paired note is unterminated and S097 (NoteChecks.swift:178) pins its index 0, both under the same test cppID.
+Mapping/reason: Swift S099 (NoteChecks.swift:180) asserts the first paired note is unterminated and S097 (NoteChecks.swift:176) pins its index 0, both under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -2816,7 +2815,7 @@ Original expression:
 
 A264 | MidiSmfTest::unterminatedNotePairingStaysLinear | src/checks/midi/tst_midismf.cpp:622
 Disposition: MATCHED
-Mapping/reason: Swift S100 (NoteChecks.swift:184) asserts the last paired note is unterminated and S098 (NoteChecks.swift:180) pins its index noteCount - 1, both under the same test cppID.
+Mapping/reason: Swift S100 (NoteChecks.swift:182) asserts the last paired note is unterminated and S098 (NoteChecks.swift:178) pins its index noteCount - 1, both under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -2824,8 +2823,8 @@ Original expression:
   QVERIFY(notes.back().unterminated())
 
 A265 | MidiSmfTest::unterminatedNotePairingStaysLinear | src/checks/midi/tst_midismf.cpp:623
-Disposition: MATCHED
-Mapping/reason: Swift S101 (NoteChecks.swift:186) measures the same 300000-note pairing and fails when the elapsed time exceeds 10_000 ms under the same test cppID.
+Disposition: GAP
+Mapping/reason: linear-time parity unclaimed: no timing assertion remains in src/checks/editcheck/NoteChecks.swift; unterminatedPairingLargeFixture asserts only pairing predicates S096-S100, so this elapsed-time site stays unproved.
 Source context since previous assertion:
   ;
 
@@ -4071,11 +4070,11 @@ S020 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:70
                     cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
                     message: "note-end status is retained during adoption")
 
-S021 | movementAndResize | src/checks/editcheck/NoteChecks.swift:301
+S021 | movementAndResize | src/checks/editcheck/NoteChecks.swift:297
           report.fail("smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                       "unterminated fixture was not projected")
 
-S022 | movementAndResize | src/checks/editcheck/NoteChecks.swift:306
+S022 | movementAndResize | src/checks/editcheck/NoteChecks.swift:302
       report.expect(unterminated.note(unterminatedID)?.isUnterminated == true,
                     cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                     message: "moving an unterminated note does not invent an end")
@@ -4374,29 +4373,25 @@ S095 | interleavedFixturePairing | src/checks/editcheck/NoteChecks.swift:150
       report.expectEqual([false, false, false, true, false], notes.map(\.isUnterminated),
                          cppID: cppID, what: "unterminated note visibility")
 
-S096 | unterminatedPairingStress | src/checks/editcheck/NoteChecks.swift:176
+S096 | unterminatedPairingLargeFixture | src/checks/editcheck/NoteChecks.swift:174
       report.expectEqual(noteCount, notes.count, cppID: cppID,
                          what: "unterminated note pairing count")
 
-S097 | unterminatedPairingStress | src/checks/editcheck/NoteChecks.swift:178
+S097 | unterminatedPairingLargeFixture | src/checks/editcheck/NoteChecks.swift:176
       report.expectEqual(0, notes.first?.onIndex, cppID: cppID,
                          what: "first unterminated note index")
 
-S098 | unterminatedPairingStress | src/checks/editcheck/NoteChecks.swift:180
+S098 | unterminatedPairingLargeFixture | src/checks/editcheck/NoteChecks.swift:178
       report.expectEqual(noteCount - 1, notes.last?.onIndex, cppID: cppID,
                          what: "last unterminated note index")
 
-S099 | unterminatedPairingStress | src/checks/editcheck/NoteChecks.swift:182
+S099 | unterminatedPairingLargeFixture | src/checks/editcheck/NoteChecks.swift:180
       report.expectEqual(true, notes.first?.isUnterminated, cppID: cppID,
                          what: "first note has no end")
 
-S100 | unterminatedPairingStress | src/checks/editcheck/NoteChecks.swift:184
+S100 | unterminatedPairingLargeFixture | src/checks/editcheck/NoteChecks.swift:182
       report.expectEqual(true, notes.last?.isUnterminated, cppID: cppID,
                          what: "last note has no end")
-
-S101 | unterminatedPairingStress | src/checks/editcheck/NoteChecks.swift:186
-      report.expect(milliseconds <= 10_000, cppID: cppID,
-                    message: "pairing \(noteCount) unterminated notes took \(milliseconds) ms")
 
 S102 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:354
       report.expectEqual(row.controllers.count, analysis.controllers.count,

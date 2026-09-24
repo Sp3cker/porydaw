@@ -6,7 +6,7 @@ Original SHA-256: f2da92c80fb6c53a5606010f5d862dd700bdd3c06382588fef27f6164723fa
 Swift counterpart: src/checks/editcheck/TimeChecks.swift
 Swift SHA-256: 690e9d390b39ffdcd9b781e6538c3b5ed95e78a8d28cf387ed687590f0f7c21a
 Additional Swift counterpart: src/checks/editorqml/tst_ShellClipboard.qml
-Additional Swift SHA-256: 38daa5a39fac6ba6e6aa7bdf2f4505d0fde6d9dc1ad3792f6b3905baf55ebd68
+Additional Swift SHA-256: a996207fec7b6a221307f4e0b429f7d78ae1d5d09a46374ec757ff9079f34b28
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -33,11 +33,11 @@ Tally: MATCHED 49, PARTIAL 8, GAP 34, NATIVE 8.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS (full-lane rerun, 10.58 s; reported by the implementer 2026-09-24,
-not rerun by this ledger pass).
+Result: PASS: build ok; "ok: swiftcore (10.20s)"; "verify: 1/6 ok (5 skipped)";
+"run_checks: PASS" (reported for this round-2 re-pin, not rerun by this ledger pass).
 Command: deno task verify:shell --filter shell-clipboard --verbose
-Result: PASS (1/11 ok; run_checks PASS including the invalid-MIME paste guard;
-reported by the implementer 2026-09-24, not rerun by this ledger pass).
+Result: PASS: "ok: shell-clipboard (1.15s)"; "verify: 1/11 ok"; "run_checks: PASS"
+(reported for this round-2 re-pin, not rerun by this ledger pass).
 The hashes above pin the tree these mappings were written against.
 
 Execution ownership
@@ -123,7 +123,7 @@ Original expression:
 
 A003 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:40
 Disposition: GAP
-Mapping/reason: Synthetic roll-key injection has no Swift predicate; the Swift suite calls ClipboardSemantics directly. Shell supplement (separate shell lane): tst_ShellClipboard.qml:204-233 delivers a real Copy key sequence and reads the native clipboard bytes back.
+Mapping/reason: Synthetic roll-key injection has no Swift predicate; the Swift suite calls ClipboardSemantics directly. Shell supplement (separate shell lane): tst_ShellClipboard.qml:210-239 delivers a real Copy key sequence and reads the native clipboard bytes back.
 Source context since previous assertion:
   source->document().addNotes(0, {{24, 60, 24, 100}, {36, 64, 12, 80}});
   source->view().selectionModel().setNoteSelection(noteIds(source->document(), 0));
@@ -183,7 +183,7 @@ Original expression:
 
 A010 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:58
 Disposition: GAP
-Mapping/reason: Synthetic roll-key paste injection has no Swift predicate; the Swift suite calls ClipboardSemantics directly. Shell supplement: tst_ShellClipboard.qml:250-293 pastes with a real Paste key sequence.
+Mapping/reason: Synthetic roll-key paste injection has no Swift predicate; the Swift suite calls ClipboardSemantics directly. Shell supplement: tst_ShellClipboard.qml:256-299 pastes with a real Paste key sequence.
 Source context since previous assertion:
   target->document().addNotes(0, {{0, 70, 24, 90}});
   target->view().selectTrack(1);
@@ -213,7 +213,7 @@ Original expression:
 
 A013 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:62
 Disposition: PARTIAL
-Mapping/reason: Related predicate S001 (TimeChecks.swift:1225, insertedNoteIDs.count == 2); unproved: the native view selection model receives the two pasted notes. Shell supplement: tst_ShellClipboard.qml:171 selects two notes with real pointer input and :253-262 re-selects the two pasted notes.
+Mapping/reason: Related predicate S001 (TimeChecks.swift:1225, insertedNoteIDs.count == 2); unproved: the native view selection model receives the two pasted notes on the native fixture. Shell supplement: tst_ShellClipboard.qml:177 selects two notes with real pointer input, :259-268 re-selects the two pasted notes of the span-0 paste, and :317-362 exercises the cross-track paste (:317 copied bytes survive the switch; :321-333 retargets both selected notes with pitch/duration/velocity; :337-339 source notes intact; :343-362 Undo/Redo); shell fixtures are non-identical to the native tick-72 fixture, so this stays PARTIAL.
 Source context since previous assertion:
   ;
 Original expression:
@@ -221,7 +221,7 @@ Original expression:
 
 A014 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:63
 Disposition: PARTIAL
-Mapping/reason: Related predicate S001 (TimeChecks.swift:1225, nextCursor == 72); unproved: the native view editCursorTick advances to 72. Shell supplement: tst_ShellClipboard.qml:253-262 commits the real grid edit cursor to the paste end.
+Mapping/reason: Related predicate S001 (TimeChecks.swift:1225, nextCursor == 72); unproved: the native view editCursorTick advances to 72 on the native fixture. Shell supplement: tst_ShellClipboard.qml:259-268 commits the real grid edit cursor to the span-0 paste end, :321-333 advances the destination cursor cross-track (destinationCursor + copiedEnd), and :343-362 restores it through Undo/Redo; shell fixtures are non-identical (native tick 72 vs shell cursors), so this stays PARTIAL.
 Source context since previous assertion:
   ;
 Original expression:
@@ -251,7 +251,7 @@ Original expression:
 
 A017 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:75
 Disposition: GAP
-Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml:204-233 delivers the real Copy key sequence.
+Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml:210-239 delivers the real Copy key sequence.
 Source context since previous assertion:
   rig->document().addNotes(0, {{24, 60, 24, 100}});
   rig->view().selectionModel().setNoteSelection(noteIds(rig->document(), 0));
@@ -294,7 +294,7 @@ Original expression:
 
 A022 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:86
 Disposition: GAP
-Mapping/reason: Synthetic roll-key paste injection has no Swift predicate; see A010. Shell supplement: tst_ShellClipboard.qml:250-293 delivers the real Paste key sequence.
+Mapping/reason: Synthetic roll-key paste injection has no Swift predicate; see A010. Shell supplement: tst_ShellClipboard.qml:256-299 delivers the real Paste key sequence.
 Source context since previous assertion:
 
   rig->view().selectionModel().clearNoteSelection();
@@ -313,7 +313,7 @@ Original expression:
 
 A024 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:89
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, insertedNoteIDs.count == 1); unproved: the native view selection model receives the one pasted note. Shell supplement: tst_ShellClipboard.qml:253-262 re-selects the two pasted notes of its two-note paste.
+Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, insertedNoteIDs.count == 1); unproved: the native view selection model receives the one pasted note. Shell supplement: tst_ShellClipboard.qml:259-268 re-selects the two pasted notes of its two-note paste.
 Source context since previous assertion:
   ;
 Original expression:
@@ -321,7 +321,7 @@ Original expression:
 
 A025 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:90
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, nextCursor == 72); unproved: the native view editCursorTick advances to 72. Shell supplement: tst_ShellClipboard.qml:253-262 commits the real grid edit cursor to the paste end.
+Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, nextCursor == 72); unproved: the native view editCursorTick advances to 72. Shell supplement: tst_ShellClipboard.qml:259-268 commits the real grid edit cursor to the paste end.
 Source context since previous assertion:
   ;
 Original expression:
@@ -351,7 +351,7 @@ Original expression:
 
 A028 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:101
 Disposition: GAP
-Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml:204-233 delivers the real Copy key sequence.
+Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml:210-239 delivers the real Copy key sequence.
 Source context since previous assertion:
   rig->document().addNotes(0, {{24, 60, 24, 100}});
   rig->view().selectionModel().setNoteSelection(noteIds(rig->document(), 0));
@@ -360,7 +360,7 @@ Original expression:
 
 A029 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:102
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, same-view payload round trip); unproved in the Swift core lane: the roll-key copy writes a live system-clipboard clip. Shell supplement: tst_ShellClipboard.qml:206-233 reads the native clipboard bytes back after a real Copy key.
+Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, same-view payload round trip); unproved in the Swift core lane: the roll-key copy writes a live system-clipboard clip. Shell supplement: tst_ShellClipboard.qml:212-239 reads the native clipboard bytes back after a real Copy key.
 Source context since previous assertion:
   ;
 Original expression:
@@ -368,7 +368,7 @@ Original expression:
 
 A030 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:106
 Disposition: GAP
-Mapping/reason: No Swift predicate routes a paste through the song-view key path; the Swift suite pastes via ClipboardSemantics directly. Shell supplement: tst_ShellClipboard.qml:343-364 pastes into the replacement surface through a real Paste key sequence.
+Mapping/reason: No Swift predicate routes a paste through the song-view key path; the Swift suite pastes via ClipboardSemantics directly. Shell supplement: tst_ShellClipboard.qml:416-437 pastes into the replacement surface through a real Paste key sequence.
 Source context since previous assertion:
 
   rig->view().selectionModel().clearNoteSelection();
@@ -378,7 +378,7 @@ Original expression:
 
 A031 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:107
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, identical ["24:60:24:100", "48:60:24:100"] outcome); unproved: the outcome arrives via the view-key delivery path. Shell supplement: tst_ShellClipboard.qml:250-293 publishes the pasted notes through a real Paste key sequence.
+Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, identical ["24:60:24:100", "48:60:24:100"] outcome); unproved: the outcome arrives via the view-key delivery path. Shell supplement: tst_ShellClipboard.qml:256-299 publishes the pasted notes through a real Paste key sequence.
 Source context since previous assertion:
   ;
 Original expression:
@@ -387,7 +387,7 @@ Original expression:
 
 A032 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:109
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, insertedNoteIDs.count == 1); unproved: the native view selection model and the view-key path. Shell supplement: tst_ShellClipboard.qml:253-262 re-selects the two pasted notes of its two-note paste.
+Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, insertedNoteIDs.count == 1); unproved: the native view selection model and the view-key path. Shell supplement: tst_ShellClipboard.qml:259-268 re-selects the two pasted notes of its two-note paste.
 Source context since previous assertion:
   ;
 Original expression:
@@ -395,7 +395,7 @@ Original expression:
 
 A033 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:110
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, nextCursor == 72); unproved: the native view editCursorTick and the view-key path. Shell supplement: tst_ShellClipboard.qml:253-262 commits the real grid edit cursor to the paste end.
+Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, nextCursor == 72); unproved: the native view editCursorTick and the view-key path. Shell supplement: tst_ShellClipboard.qml:259-268 commits the real grid edit cursor to the paste end.
 Source context since previous assertion:
   ;
 Original expression:
@@ -425,7 +425,7 @@ Original expression:
 
 A036 | ClipCheckTest::timeSelectionCopy | src/checks/clipboard/clipcheck_copy.cpp:123
 Disposition: GAP
-Mapping/reason: No Swift predicate observes the native selection model; timeRangeClipboardCopyAndExpansion passes TimeRange/TimeScope values directly.
+Mapping/reason: No Swift predicate observes the native selection model; timeRangeClipboardCopyAndExpansion passes TimeRange/TimeScope values directly. Architectural divergence: Swift AutomationPage.selection is @QtIgnored (AutomationPage.swift:93) and applyTimeSelection (AutomationPage.swift:537-544) preserves note selection by design, while native setTimeSelection clears note selection when the time selection is active (editorselectionmodel.cpp:94-101). The time-selection storage sites here and at A037-A041/A051-A055/A086 record that divergence; they are not evidence the copy semantics are absent.
 Source context since previous assertion:
   rig->document().addNotes(0, {{0, 60, 24, 100}});
   rig->view().selectionModel().setNoteSelection(noteIds(rig->document(), 0));
@@ -476,7 +476,7 @@ Original expression:
 
 A042 | ClipCheckTest::timeSelectionCopy | src/checks/clipboard/clipcheck_copy.cpp:130
 Disposition: GAP
-Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml:204-233 exercises the real Copy key on a note selection, not this time range.
+Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml:210-239 exercises the real Copy key on a note selection, not this time range.
 Source context since previous assertion:
   ;
 Original expression:
@@ -606,7 +606,7 @@ Original expression:
 
 A056 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:166
 Disposition: GAP
-Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml:204-233 exercises the real Copy key on a note selection, not this scoped time range.
+Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml:210-239 exercises the real Copy key on a note selection, not this scoped time range.
 Source context since previous assertion:
   ;
 Original expression:
@@ -675,7 +675,7 @@ Original expression:
 
 A063 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:192
 Disposition: GAP
-Mapping/reason: Synthetic roll-key paste injection has no Swift predicate; see A010. Shell supplement: tst_ShellClipboard.qml:250-293 pastes with a real Paste key sequence, but not a track-expanding clip.
+Mapping/reason: Synthetic roll-key paste injection has no Swift predicate; see A010. Shell supplement: tst_ShellClipboard.qml:256-299 pastes with a real Paste key sequence, but not a track-expanding clip.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1079,15 +1079,17 @@ S013 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift:1576
   ["24:60:24:100", "96:64:24:80"] via clipboardNoteShape, voice lane ==
   ["0:0", "24:3", "96:5"] and tempo == ["24:600000", "96:400000"].
 
-S014 | ShellClipboard::test_roundTripReplacement (shell lane, supplementary) | src/checks/editorqml/tst_ShellClipboard.qml:204
-  real keySequence(StandardKey.Copy) at :204 with the native clipboard bytes read back
-  through GridInputClipProbe at :206-209; copied payload schema at :211-219;
-  payloadContains(source) at :232 and payloadContains(secondSource) at :233;
-  real keySequence(StandardKey.Paste) at :250 publishing two selected notes and the
-  committed cursor at :253-262; real Undo/Redo at :269-293; replacement-surface Paste
-  at :343-364; invalid-MIME Paste guard at :371-380; empty-clip Paste no-op at
-  :386-391; span-96 tile pastes and cursors at :419-427 and :428-436 with tiled
-  Undos at :437-450. Cited only as a shell supplement; it does not convert a site.
+S014 | ShellClipboard::test_roundTripReplacement (shell lane, supplementary) | src/checks/editorqml/tst_ShellClipboard.qml:210
+  real keySequence(StandardKey.Copy) at :210 with the native clipboard bytes read back
+  through GridInputClipProbe at :211-215; copied payload schema at :217-225;
+  payloadContains(source) at :236 and payloadContains(secondSource) at :237;
+  real keySequence(StandardKey.Paste) at :256 publishing two selected notes and the
+  committed cursor at :259-268; real Undo/Redo at :275-299; cross-track paste at
+  :301-366 (copied bytes survive the switch at :317, retarget at :321-333, source
+  intact at :337-339, Undo/Redo at :343-362); replacement-surface Paste
+  at :416-437; invalid-MIME Paste guard at :444-452; empty-clip Paste no-op at
+  :459-464; span-96 tile pastes and cursors at :492-500 and :501-509 with tiled
+  Undos at :510-524. Cited only as a shell supplement; it does not convert a site.
 
 Shared helpers
 All Swift helpers executing these checks (clipboardDocument, clipboardUndoEntryDelta,

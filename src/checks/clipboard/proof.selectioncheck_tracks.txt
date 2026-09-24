@@ -4,7 +4,7 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/clipboard/selectioncheck_tracks.cpp
 Original SHA-256: c0fa3450cb285e33ceb356561d3055af065b6fc341901fea52f96135ae14f7dd
 Swift counterpart: src/checks/editcheck/SelectionChecks.swift
-Swift SHA-256: c16412db06cd49c7daef980860375fb759340f29f6ce6bd6b77396b16be34e97
+Swift SHA-256: 7371e9f4f9e9267a778392fe52356c06f6781e769a061c527c6b3c8feb71e25b
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -13,10 +13,12 @@ including notification-transition guards. Source context preserves setup and
 guards between assertions verbatim. The current Swift counterpart is
 src/checks/editcheck/SelectionChecks.swift :: clipboardTrackSelectionChecks; its
 executed predicates cover the primary-track transitions, the toggle/plain/range
-scope gestures, the note handoff and the out-of-range guard, and are indexed as
-S001-S019 below. The PARTIAL sites map to predicates that execute without the
-native active-time-selection precondition (the Swift DocumentSession holds no
-time-selection state), and that condition is stated per site. The remaining
+scope gestures, the note handoff, the out-of-range guard and the remap
+primary/scope/note/coalesced-publication values, and are indexed as S001-S023
+below. No production change in this reconciliation: src/swift/app/DocumentSession.swift handleDocumentChange keeps the reference-revision fallback (min(priorPrimary, usedTrackCount - 1); scope = remapped scope plus fallback primary), matching EditorSelectionModel::applyRemap at the reference revision. It is verified by the untagged deleted-primary predicates at SelectionChecks.swift:197-203.
+The PARTIAL sites map
+to predicates that execute without the native active-time-selection precondition
+(the Swift DocumentSession holds no time-selection state), and that condition is stated per site. The remaining
 families have no predicate under this cppID and stay GAP:
 A008/A010-A015/A018/A020-A021/A024-A025 record an active time selection across
 gestures and its previousTrackTime/trackTime payloads (anchor A008);
@@ -29,27 +31,31 @@ RETIRED-REPRESENTATION without ingress evidence that the raw-mask API is gone
 (anchor A058);
 A065-A079 record resetForSongSwap, which is not ported (replacing a song in the
 app is a different owner; anchor A065);
-A080-A105 record remap scenarios. Track remap does exist in the Swift document
-(DocumentChange.trackRemap), but these exact scenarios have no predicate under
-this cppID; that absence is a coverage gap and is not evidence the feature is
-absent (anchor A080).
+A080-A083 execute the remap primary/scope/note values and the one coalesced
+publication as PARTIAL (structural moveTrack fixture, not an engineTrackMap
+remap; exact PrimaryTrack|TrackScope mask unproved). A084-A105 stay GAP:
+previous/trackTime payloads, lane-list remap with duplicate collapse and
+deleted-primary/deleted-lane drops have no predicate under this cppID; that
+absence is a coverage gap and is not evidence the feature is absent (anchor
+A084).
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted check.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 11, PARTIAL 8, GAP 86, NATIVE 0.
+Tally: MATCHED 11, PARTIAL 12, GAP 82, NATIVE 0.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS on this worktree: build ok; "ok: swiftcore (10.58s)";
-"verify: 1/6 ok (10.61s, 5 skipped)"; "run_checks: PASS (all harnesses in 10.61s)".
-Provenance: recorded by the lane controller after every lane edit settled (CC21,
-Tempo, reversed-order, clipboard velocity, MIDI A320); this proof-only
-reconciliation did not rebuild or re-run the suite. LSP diagnostics were clean
-on all touched files. The Swift SHA-256 above is the final checked-in
-counterpart source; no native run and no differential comparison against the
-C++ original is claimed.
+Result: PASS: build ok; "ok: swiftcore (10.20s)"; "verify: 1/6 ok (5 skipped)";
+"run_checks: PASS".
+Provenance: observed verification reported for this round-2 re-pin; this
+proof-only reconciliation did not rebuild or re-run any suite. LSP diagnostics
+were clean on all touched files. The Swift SHA-256 above is the final
+checked-in counterpart source; no native run and no differential comparison
+against the C++ original is claimed.
+Command: deno task verify:shell --filter shell-clipboard --verbose
+Result: PASS: "ok: shell-clipboard (1.15s)"; "verify: 1/11 ok"; "run_checks: PASS".
 
 Execution ownership
 The executing entry point is clipboardTrackSelectionChecks, called from
@@ -836,8 +842,8 @@ Original expression:
   QCOMPARE(transition.trackTime.trackScope, uint32_t{0});
 
 A080 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:234
-Disposition: GAP
-Mapping/reason: GAP: no equivalent Swift predicate under this cppID. Track remap does exist in the Swift document (DocumentChange.trackRemap), but the scenarios here (primary/scope remap with note selection preserved, lane-list remap with duplicate collapse, deleted-primary and deleted-lane drop) have no predicate under this cppID. The absence is a coverage gap and is not evidence the feature is absent. Family anchor for A080-A105. Unproved: remap of primary/scope/lanes and deleted-track drops.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S020 (SelectionChecks.swift:182-183) executes the primary-follows-remap value: after the structural track moves the primary is 4. The fixture drives document.moveTrack calls rather than an engineTrackMap remap, and no predicate observes the native kPrimaryTrack notification mask; the one coalesced document-plus-selection publication is S023. Family anchor for A084-A105 (previous/trackTime payloads, lane-list remap with duplicate collapse, deleted-primary and deleted-lane drops), which stay GAP. Unproved: exact PrimaryTrack transition mask.
 Source context since previous assertion:
   ;
   }
@@ -861,24 +867,24 @@ Original expression:
   QCOMPARE(model.primaryTrack(), 4);
 
 A081 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:235
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S021 (SelectionChecks.swift:184-185) executes the scope-follows-remap value: the scope is exactly {2, 4}. Same fixture and mask conditions as A080: structural moveTrack calls, no native kTrackScope notification-mask observation (one coalesced publication is S023). Unproved: exact TrackScope transition mask.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(model.storedTrackScope(), trackBit(2) | trackBit(4));
 
 A082 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:236
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S022 (SelectionChecks.swift:186-187) executes the note-identity value: the selected note order is still [note] after the structural track moves. Same fixture and mask conditions as A080; the predicate observes identity survival, not the native notification mask. Unproved: exact PrimaryTrack|TrackScope transition mask.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY((model.noteSelection() == std::vector<NoteId>{NoteId{91}}));
 
 A083 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:237
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established; see the GAP family notes in the preamble.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S023 (SelectionChecks.swift:188-190) executes one coalesced change containing both .document and .selection. It is not the original mask: the original asserts exactly kPrimaryTrack|kTrackScope on the native NotificationLog transition, which no Swift predicate observes. Unproved: exact PrimaryTrack|TrackScope mask.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1245,6 +1251,35 @@ Covers: A061
 Swift expression:
   report.expect(changes.isEmpty, cppID: bounds,
                 message: "A061 ignored out-of-range action publishes nothing")
+
+S020 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:182-183
+cppID: clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection
+Covers: A080
+Swift expression:
+  report.expectEqual(4, session.selectedTrack, cppID: remapID,
+                     what: "A080 primary follows track 1 to track 4")
+
+S021 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:184-185
+cppID: clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection
+Covers: A081
+Swift expression:
+  report.expectEqual(Set([2, 4]), session.selectedTracks, cppID: remapID,
+                     what: "A081 scope follows tracks 0 and 1 to tracks 2 and 4")
+
+S022 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:186-187
+cppID: clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection
+Covers: A082
+Swift expression:
+  report.expectEqual([note], session.selectedNoteOrder, cppID: remapID,
+                     what: "A082 selected note identity survives structural track moves")
+
+S023 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:188-190
+cppID: clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection
+Covers: A083
+Swift expression:
+  report.expect(changes.count == 1 && changes[0].contains(.document)
+                && changes[0].contains(.selection), cppID: remapID,
+                message: "A083 remap and selected scope publish one coalesced change")
 
 Shared helpers
 None: the fixture above is local to the counterpart function and carries no
