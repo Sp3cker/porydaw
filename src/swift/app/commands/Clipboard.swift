@@ -1,7 +1,7 @@
 import CoreFoundation
 import Foundation
 import PorydawCore
-import PorydawProjectService
+import PorydawBankLease
 
 public let porydawClipMimeType = "application/x-porydaw-clip"
 

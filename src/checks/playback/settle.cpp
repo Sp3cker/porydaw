@@ -10,7 +10,6 @@
 #include "checks/playback/transportfixture.h"
 #include "checks/playback/tst_transport.h"
 #include "checks/support/audioengineaccess.h"
-#include "project/voicegroupsource.h"
 
 namespace checks {
 

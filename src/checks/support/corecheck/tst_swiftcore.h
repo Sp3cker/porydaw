@@ -44,6 +44,7 @@ class SwiftCoreTest final : public QObject
     void projectStoreEdit();
     void projectStoreSave();
     void bankLeases();
+    void exportChecks();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

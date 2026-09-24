@@ -62,6 +62,8 @@ PdBankLease *pd_bank_lease_adopt(const PdAdoptedBank *adopted);
 #include <utility>
 
 class VoicegroupLease;
+// C++-only native audio borrow; the opaque lease remains C-mode clean.
+const VoicegroupLease &pd_bank_lease_native(const PdBankLease *lease);
 
 // Adopts one worker-owned bank exactly once; the last lease releases it with
 // voicegroup_free.

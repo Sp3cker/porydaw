@@ -1,6 +1,8 @@
 Assertion correspondence: visual/browsers.cpp
 
 Reference revision: 4346c26abdcab317ccf97e178c959a82301081c9
+Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/visual/browsers.cpp
 Original SHA-256: 3f358911eebfb7b37f1327fccbf2449627c1be34ca20e2c6595a0b199d17a59d
 Swift counterpart: none identified

@@ -4,7 +4,6 @@
 #include <optional>
 
 #include "enginesettingsdialog.h"
-#include "project/decompproject.h"
 
 class QTabWidget;
 class EngineSettingsWidget;

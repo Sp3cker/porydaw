@@ -77,7 +77,7 @@ add_library(PorydawApp STATIC
     headers/TrackHeadersInput.swift
 )
 
-# Generated like the playback module map: the service header lives at the
+# Generated like the playback module map: the bank-lease header lives at the
 # repo's src/project, not beside this module map.
 configure_file(
     module.modulemap.in

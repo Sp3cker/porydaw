@@ -189,7 +189,8 @@ public final class VoicegroupStore {
     /// - Returns: The clean publication, or nil if the source write fails.
     /// - Throws: `VoicegroupStoreError` for an unloaded bank or a failed reload.
     public func saveVoicegroup(id: VoicegroupId) throws -> LoadedBankView? {
-        guard try refreshIfStale(id: id), var record = records[id] else {
+        // A failed stale reload must not hide the error from the actual write attempt.
+        guard (try? refreshIfStale(id: id)) != false, var record = records[id] else {
             throw VoicegroupStoreError.operationFailed("Voicegroup is not loaded: \(id.sourceRelativePath)")
         }
         let saved: Bool

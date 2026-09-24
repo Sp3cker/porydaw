@@ -197,20 +197,8 @@ qt_add_library(porydaw_app STATIC
     src/audio/stb_vorbis_impl.c
     src/project/banklease.cpp
     src/project/banklease.h
-    src/project/decompproject.cpp
-    src/project/decompproject.h
     src/project/projectidentity.cpp
     src/project/projectidentity.h
-    src/project/songregistry.cpp
-    src/project/songregistry.h
-    src/project/songsmk.cpp
-    src/project/songsmk.h
-    src/project/swift_project_service.cpp
-    src/project/swift_project_service.h
-    src/project/voicegroupprojectcontext.cpp
-    src/project/voicegroupprojectcontext.h
-    src/project/voicegroupsource.cpp
-    src/project/voicegroupsource.h
     src/ui/applicationstartup.cpp
     src/ui/applicationstartup.h
     src/ui/keymap.cpp

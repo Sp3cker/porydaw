@@ -28,6 +28,14 @@ public final class ProjectBankLease: @unchecked Sendable {
 
     /// Returns the underlying bank's address as a diagnostic identity.
     public var bankToken: UInt { UInt(pd_bank_lease_bank_token(handle)) }
+
+    /// Borrows the adopted native lease box only for the duration of `body`.
+    /// The pointer must not be stored or escape the call.
+    /// - Parameter body: A synchronous operation on the borrowed box.
+    /// - Returns: The operation's result.
+    public func withNativeBank<T>(_ body: (OpaquePointer) -> T) -> T {
+        withExtendedLifetime(self) { body(handle) }
+    }
 }
 
 extension ProjectStore {

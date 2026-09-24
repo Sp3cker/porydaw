@@ -62,11 +62,6 @@ qt_add_executable(porydaw_checks
     ${PROJECT_SOURCE_DIR}/src/ui/activity/trackactivity.h
     support/songfixture.cpp
     support/songfixture.h
-    voicegroup/tst_voicegroupbank.cpp
-    voicegroup/voicegrouptestfixture.cpp
-    voicegroup/voicegrouptestfixture.h
-    midi/tst_midiexport.cpp
-    midi/tst_midiexport.h
     midi/tst_midiengine.cpp
     midi/tst_midiengine.h
     playback/tst_transport.cpp
@@ -214,6 +209,7 @@ if(APPLE)
         projectstore/ProjectStoreEditChecks.swift
         projectstore/ProjectStoreSaveChecks.swift
         projectstore/BankLeasesChecks.swift
+        projectstore/ExportChecks.swift
         workspace/session_support.swift
         workspace/session_fixtures.swift
         workspace/session_editor_semantics.swift

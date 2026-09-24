@@ -182,6 +182,11 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         runProjectStoreSaveSuite(report)
     case 31:
         runBankLeasesSuite(report)
+    case 32:
+        let boxedExport = ReportBox(report)
+        MainActor.assumeIsolated {
+            runExportChecks(boxedExport.report)
+        }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

@@ -4,7 +4,6 @@
 #include "audio/audioengine.h"
 #include "checks/playback/transportfixture.h"
 #include "checks/playback/tst_transport.h"
-#include "project/voicegroupsource.h"
 
 namespace checks {
 

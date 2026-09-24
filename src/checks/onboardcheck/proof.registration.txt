@@ -1,6 +1,8 @@
 Assertion correspondence: onboardcheck/registration.cpp
 
 Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
+Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/onboardcheck/registration.cpp
 Original SHA-256: e58930fa08408a1f4beb425fb8ce1ed0ef6f5a4ffce2b392161f7c9d2ac6e651
 Swift counterpart: none identified

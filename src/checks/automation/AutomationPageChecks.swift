@@ -1,7 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
-import PorydawProjectService
+import PorydawBankLease
 
 // Direct coverage for the pure Swift Automation domain and its page owner. The
 // projection, parameter metadata, snapping and frozen transactions are driven

@@ -1,7 +1,6 @@
 import Foundation
 import PorydawApp
 import PorydawCore
-import PorydawProjectService
 
 // Shared fixture and suite entry order live in AutomationPageChecks.swift.
 

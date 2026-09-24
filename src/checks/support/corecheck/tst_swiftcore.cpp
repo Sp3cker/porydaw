@@ -178,6 +178,11 @@ void SwiftCoreTest::bankLeases()
     pdc_suite_run(PDC_SUITE_BANK_LEASES, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::exportChecks()
+{
+    pdc_suite_run(PDC_SUITE_EXPORT_CHECKS, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);

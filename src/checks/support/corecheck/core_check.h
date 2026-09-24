@@ -38,6 +38,7 @@ enum PdcSuite {
     PDC_SUITE_PROJECTSTORE_EDIT = 29,
     PDC_SUITE_PROJECTSTORE_SAVE = 30,
     PDC_SUITE_BANK_LEASES = 31,
+    PDC_SUITE_EXPORT_CHECKS = 32,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);

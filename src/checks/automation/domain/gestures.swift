@@ -1,7 +1,6 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
-import PorydawProjectService
 
 // Existing scenarios paired with gestures.cpp.
 // Entry order remains in AutomationPageChecks.swift.

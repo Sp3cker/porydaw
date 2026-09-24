@@ -36,16 +36,6 @@ int qtWithApplication(QApplication &application, const QStringList &,
     return Run(application, qtArguments);
 }
 
-int midiExport(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
-{
-    return runExportCheck(argumentAt(arguments, 1), argumentAt(arguments, 2), qtArguments);
-}
-
-int voicegroupBank(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
-{
-    return runVgBankCheck(argumentAt(arguments, 1), argumentAt(arguments, 2), qtArguments);
-}
-
 #ifdef __APPLE__
 int swiftCore(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
 {
@@ -57,6 +47,16 @@ int swiftCore(QApplication &, const QStringList &arguments, const QStringList &q
         selected.append(arguments.at(3));
     selected.append(qtArguments);
     return runSwiftCoreCheck(argumentAt(arguments, 1), selected);
+}
+
+int swiftBank(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
+{
+    return runSwiftCoreCheck(argumentAt(arguments, 1), QStringList{"bankLeases"} + qtArguments);
+}
+
+int swiftExport(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
+{
+    return runSwiftCoreCheck(argumentAt(arguments, 1), QStringList{"exportChecks"} + qtArguments);
 }
 
 int swiftGrid(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
@@ -93,19 +93,6 @@ const std::vector<CheckDefinition> &catalog()
         const QStringList bank =
             project + strings({"sound/songs/midi/mus_gym.mid", "sound/songs/midi/mus_oldale.mid"}) +
             rich;
-        const auto native = [](const char *name, const char *command, const char *song,
-                               const QStringList &files, Handler handler = midiExport) {
-            return CheckDefinition{
-                .name = name,
-                .argv = {QStringLiteral("--") + QString::fromUtf8(command),
-                         QStringLiteral("{scratch}"), QString::fromUtf8(song)},
-                .handler = handler,
-                .scratchKind = ScratchKind::ExistingDirectory,
-                .fixtureRootKind = FixtureRootKind::DecompProject,
-                .fixtureFiles = files,
-                .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}},
-            };
-        };
 
         std::vector<CheckDefinition> result;
         result.push_back({.name = "production-startup",
@@ -373,14 +360,28 @@ const std::vector<CheckDefinition> &catalog()
                 .windowing = Windowing::WindowSystem,
             });
         }
-#endif
-        const auto appendNative = [&](const char *name, const char *command, const char *song,
-                                      const QStringList &files, Handler handler = midiExport) {
-            result.push_back(native(name, command, song, files, handler));
+        const auto native = [](const char *name, const char *command, const char *song,
+                               const QStringList &files, Handler handler) {
+            return CheckDefinition{
+                .name = name,
+                .argv = {QStringLiteral("--") + QString::fromUtf8(command),
+                         QStringLiteral("{scratch}"), QString::fromUtf8(song)},
+                .handler = handler,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = files,
+                .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}},
+            };
         };
-        appendNative("vgbankcheck", "vgbankcheck", "mus_gym", bank, voicegroupBank);
-        appendNative("exportcheck-loop", "exportcheck", "mus_route101", route101);
-        appendNative("exportcheck-tail", "exportcheck", "mus_route102", route102);
+        // Like swiftcore, swiftrollgated, swiftbandkeys, swiftqtml, and selectionkey,
+        // these flipped lanes are Apple-gated. The grid lanes need
+        // Windowing::WindowSystem; a non-Apple full gate legitimately skips them.
+        result.push_back(native("vgbankcheck", "vgbankcheck", "mus_gym", bank, swiftBank));
+        result.push_back(
+            native("exportcheck-loop", "exportcheck", "mus_route101", route101, swiftExport));
+        result.push_back(
+            native("exportcheck-tail", "exportcheck", "mus_route102", route102, swiftExport));
+#endif
         result.push_back({.name = "themecheck",
                           .argv = strings({"--themecheck"}),
                           .handler = qtWithApplication<runThemeLayoutThemeCheck>,

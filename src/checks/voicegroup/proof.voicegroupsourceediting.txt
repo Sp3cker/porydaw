@@ -1,6 +1,8 @@
 Assertion correspondence: voicegroup/voicegroupsourceediting.cpp
 
 Reference revision: fbe1015aaf056089f5d773f99d961ba906246cff
+Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/voicegroup/voicegroupsourceediting.cpp
 Original SHA-256: c837c97a48a868618574a575613652e4e138678f8519528c7f5285d7e905812b
 Swift counterpart: src/checks/projectstore/VoicegroupEditingChecks.swift

@@ -3,15 +3,19 @@
 #include <QByteArray>
 #include <QDir>
 #include <QFile>
+#include <QHash>
+#include <QList>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QStringList>
+#include <QTextStream>
 
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <utility>
 
 #include "checks/playback/sustainvoicegroup.h"
-#include "project/decompproject.h"
 
 extern "C" {
 #include "m4a_engine.h"
@@ -54,9 +58,130 @@ bool compileMidi(const QString &midiPath, const QStringList &flags, QByteArray &
     return true;
 }
 
-const SongInfo *songWithLabel(const DecompProject &project, const QString &label)
+// Harness-local song metadata: no dependency on the project service or the removed C++ registry.
+struct SongInfo {
+    QString label;
+    QString midPath;
+    bool hasMid = false;
+    struct {
+        QStringList rawFlags;
+    } cfg;
+
+    bool isPlayable() const { return hasMid; }
+};
+
+QString expandVariables(QString text, const QHash<QString, QString> &variables)
 {
-    for (const SongInfo &song : project.songs()) {
+    static const QRegularExpression reference(QStringLiteral(R"(\$\(([A-Za-z_][A-Za-z0-9_]*)\))"));
+    for (int depth = 0; depth < 8 && text.contains(QLatin1Char('$')); ++depth) {
+        QString expanded;
+        qsizetype position = 0;
+        auto matches = reference.globalMatch(text);
+        if (!matches.hasNext())
+            break;
+        while (matches.hasNext()) {
+            const auto match = matches.next();
+            expanded += text.mid(position, match.capturedStart() - position);
+            expanded += variables.value(match.captured(1));
+            position = match.capturedEnd();
+        }
+        expanded += text.mid(position);
+        text = std::move(expanded);
+    }
+    return text;
+}
+
+bool readSongTable(const QString &root, QList<SongInfo> &songs)
+{
+    QFile table(root + QStringLiteral("/sound/song_table.inc"));
+    if (!table.open(QIODevice::ReadOnly | QIODevice::Text))
+        return false;
+
+    static const QRegularExpression songPattern(
+        QStringLiteral(R"(^\s*song\s+(\w+)\s*,\s*(\w+)\s*,\s*(\w+))"));
+    const QString midiDir = root + QStringLiteral("/sound/songs/midi/");
+    QTextStream tableLines(&table);
+    while (!tableLines.atEnd()) {
+        const auto match = songPattern.match(tableLines.readLine());
+        if (!match.hasMatch())
+            continue;
+        SongInfo song;
+        song.label = match.captured(1);
+        song.midPath = midiDir + song.label + QStringLiteral(".mid");
+        song.hasMid = QFile::exists(song.midPath);
+        songs.append(std::move(song));
+    }
+    if (songs.isEmpty())
+        return false;
+
+    QHash<QString, QStringList> flagsByLabel;
+    QFile cfg(midiDir + QStringLiteral("midi.cfg"));
+    if (cfg.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream lines(&cfg);
+        while (!lines.atEnd()) {
+            QString line = lines.readLine().trimmed();
+            const int hash = line.indexOf(QLatin1Char('#'));
+            if (hash >= 0)
+                line = line.left(hash).trimmed();
+            const int colon = line.indexOf(QLatin1Char(':'));
+            if (colon <= 0)
+                continue;
+            QString name = line.left(colon).trimmed();
+            if (name.endsWith(QStringLiteral(".mid"), Qt::CaseInsensitive))
+                name.chop(4);
+            flagsByLabel.insert(name,
+                                line.mid(colon + 1).split(QLatin1Char(' '), Qt::SkipEmptyParts));
+        }
+    } else {
+        QFile mk(root + QStringLiteral("/songs.mk"));
+        if (mk.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            static const QRegularExpression variablePattern(
+                QStringLiteral(R"(^([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?=\s*(.*)$)"));
+            static const QRegularExpression rulePattern(
+                QStringLiteral(R"(^(?:\$\(MID_SUBDIR\)|sound/songs/midi)/(\w+)\.s\s*:)"));
+            static const QRegularExpression whitespace(QStringLiteral("\\s+"));
+            QHash<QString, QString> variables;
+            QString pendingLabel;
+            QTextStream lines(&mk);
+            while (!lines.atEnd()) {
+                const QString line = lines.readLine();
+                if (line.startsWith(QLatin1Char('\t'))) {
+                    if (!pendingLabel.isEmpty() && line.contains(QStringLiteral("$(MID)"))) {
+                        QStringList flags;
+                        for (const QString &token :
+                             line.trimmed().split(whitespace, Qt::SkipEmptyParts)) {
+                            if (token.startsWith(QLatin1Char('-')))
+                                flags << expandVariables(token, variables);
+                        }
+                        flagsByLabel.insert(pendingLabel, std::move(flags));
+                        pendingLabel.clear();
+                    }
+                    continue;
+                }
+                const auto rule = rulePattern.match(line);
+                if (rule.hasMatch()) {
+                    pendingLabel = rule.captured(1);
+                    continue;
+                }
+                pendingLabel.clear();
+                QString text = line;
+                const int hash = text.indexOf(QLatin1Char('#'));
+                if (hash >= 0)
+                    text = text.left(hash);
+                const auto assignment = variablePattern.match(text);
+                if (assignment.hasMatch())
+                    variables.insert(assignment.captured(1), assignment.captured(2).trimmed());
+            }
+        }
+    }
+    for (SongInfo &song : songs)
+        song.cfg.rawFlags = flagsByLabel.value(song.label);
+    return true;
+}
+
+const SongInfo *songWithLabel(const QList<SongInfo> &songs, const QString &label)
+{
+    for (const SongInfo &song : songs) {
         if (song.label == label && song.isPlayable())
             return &song;
     }
@@ -127,9 +252,8 @@ extern "C" PdcMidiExportResult pdc_check_midi_exports()
         return result;
     }
 
-    DecompProject project;
-    QString projectError;
-    if (!project.open(fixtureRoot, &projectError)) {
+    QList<SongInfo> songs;
+    if (!readSongTable(fixtureRoot, songs)) {
         result.projectOpenFailed = 1;
         return result;
     }
@@ -137,7 +261,7 @@ extern "C" PdcMidiExportResult pdc_check_midi_exports()
     for (size_t index = 0; index < kRoundtripSongs.size(); ++index) {
         const uint32_t bit = uint32_t{1} << index;
         const QString label = QString::fromUtf8(kRoundtripSongs[index]);
-        const SongInfo *song = songWithLabel(project, label);
+        const SongInfo *song = songWithLabel(songs, label);
         if (!song) {
             result.missingSongBits |= bit;
             continue;
@@ -186,11 +310,10 @@ extern "C" int32_t pdc_check_compile_saved_midi(const char *projectRoot, const c
     if (!projectRoot || !songLabel || gMid2agbPath.isEmpty())
         return 0;
 
-    DecompProject project;
-    QString projectError;
-    if (!project.open(QFile::decodeName(projectRoot), &projectError))
+    QList<SongInfo> songs;
+    if (!readSongTable(QFile::decodeName(projectRoot), songs))
         return 0;
-    const SongInfo *song = songWithLabel(project, QFile::decodeName(songLabel));
+    const SongInfo *song = songWithLabel(songs, QFile::decodeName(songLabel));
     if (!song)
         return 0;
 

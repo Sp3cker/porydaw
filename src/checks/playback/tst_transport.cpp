@@ -8,7 +8,6 @@
 
 #include "audio/audioengine.h"
 #include "checks/playback/transportfixture.h"
-#include "project/voicegroupsource.h"
 
 namespace checks {
 

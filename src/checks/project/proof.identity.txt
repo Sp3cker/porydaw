@@ -1,6 +1,8 @@
 Assertion correspondence: project/identity.cpp
 
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/project/identity.cpp
 Original SHA-256: eb1c1ce402caed41c83397af9c262da13d2589dbe7216512eed5b0a979575399
 Swift counterpart: src/checks/editcheck/NoteChecks.swift
@@ -26,7 +28,10 @@ NATIVE identifies an observation only a native window/rendering/harness run can 
 Portable identity API blocker: the Swift surface exposes SongSource as an unvalidated
 label/path value, LoadedSong's resolved source label, and NativeBankLease's resolved
 bank path/section strings. It exposes no SongName or VoicegroupId creation,
-normalization, equality, or hashing API. Reimplementing those native identity rules
+normalization, equality, or hashing API in that surface (PorydawProject does provide
+SongName/VoicegroupId creation, equality and hashing directly, which
+ProjectIdentityChecks.swift exercises), so the A001-A019 mapping below still cites the
+older app-facing observations. Reimplementing those native identity rules
 inside this check would test a fabricated parallel implementation, not the Swift
 product. Therefore A001–A019 remain PARTIAL; their existing ProjectService
 observations do not establish the direct creation predicates, empty-section value,
@@ -38,7 +43,8 @@ Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution and ownership
-runDocumentHistorySuite (NoteChecks.swift) owns gestureAndIdentityHistory and historyMergeContracts. runProjectSessionSuite (SessionChecks.swift) owns the native identity checks via ProjectService open paths against the staged swiftcore-session-test project built by stageTestProject. No dedicated project-identity Swift suite exists.
+runDocumentHistorySuite (NoteChecks.swift) owns gestureAndIdentityHistory and historyMergeContracts. runProjectSessionSuite (SessionChecks.swift) owns the native identity checks via ProjectService open paths against the staged swiftcore-session-test project built by stageTestProject.
+Superseded in part: no dedicated project-identity Swift suite existed at the time of this inventory, but src/checks/projectstore/ProjectIdentityChecks.swift (S1 Task 5) now carries executing report.expect/report.expectEqual predicates whose messages name A001-A036, under cppIDs project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash (A001-A008), ::voicegroupId_rejections (A009) and ::voicegroupId_normalizationAndSectionHash (A010-A019), plus the reassigned savedRecipe cppIDs swiftproject/ProjectIdentityChecks::savedRecipe_selectionFallbacks and ::savedRecipe_legacySingleLabelAndEmpty (A020-A036). The per-site PARTIAL dispositions above were not re-audited against that successor in the S6 cutover, so this inventory is conservative for A001-A036; A037-A052 have no successor and stay PARTIAL.
 
 Fixture, sequence and row constraints
 voicegroupId_rejections_data expands one site over 7 rows (empty, absolute, parent, parent-file, nested-parent, project-root, normalizes-to-root). Merge cases hinge on kFirstGesture/kSecondGesture ids and HistoryCountCommand deltas (+1/+2, +4, +1/-1); the saved-boundary and cancelling cases depend on markDocumentSaved sequencing.

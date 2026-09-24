@@ -1,6 +1,8 @@
 Assertion correspondence: project/save.cpp
 
 Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
+Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
+Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/project/save.cpp
 Original SHA-256: 5f5306be9e71206a513833ec502664570672a044a793d9061915d0c400e2964b
 Swift counterpart: src/checks/workspace/SessionChecks.swift
