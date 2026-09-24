@@ -25,6 +25,8 @@ add_library(PorydawProject STATIC
     ProjectStore+Bank.swift
     ProjectStore+Edit.swift
     ProjectStore+Save.swift
+    ProjectStore+Picker.swift
+    ProjectStore+Synth.swift
 )
 
 configure_file(

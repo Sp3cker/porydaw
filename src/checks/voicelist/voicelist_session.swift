@@ -68,6 +68,8 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     }
 
     let list = VoiceListController()
+    let bankViewID = "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates"
+    let originalRow = list.rows[0]
     list.refresh(from: session)
 
     // The staged test_vg binds: three editable CGB voices, then blanks.
@@ -139,6 +141,10 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     report.expectEqual("2 3 12 4", list.rows[0].adsr, cppID: editID,
                        what: "rows hold the pre-edit state until refresh")
     list.refresh(from: session)
+    report.expect(list.rows[0] === originalRow && list.bankDirty
+                  && list.panelTitle == "Voicegroup*",
+                  cppID: bankViewID,
+                  message: "bank edit republishes the dirty view on the same voice row handle")
     report.expectEqual("2 3 12 \(edited.release & 7)", list.rows[0].adsr, cppID: editID,
                        what: "refresh re-derives the edited row")
     do {
@@ -148,6 +154,10 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         return
     }
     list.refresh(from: session)
+    report.expect(list.rows[0] === originalRow && !list.bankDirty
+                  && list.panelTitle == "Voicegroup",
+                  cppID: bankViewID,
+                  message: "bank undo republishes the clean view on the same voice row handle")
     report.expectEqual(original, session.bankSlots[0].voice, cppID: editID,
                        what: "voice edit undo restores the published voice")
     report.expectEqual("2 3 12 4", list.rows[0].adsr, cppID: editID,
@@ -194,6 +204,10 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         return
     }
     list.refresh(from: session)
+    report.expect(list.rows[0] === originalRow
+                  && list.rows[0].title == "000  Square 2",
+                  cppID: bankViewID,
+                  message: "voicegroup rebind publishes the alternate voice on the original row handle")
     report.expectEqual(true, session.document.isDirty, cppID: selectorID,
                        what: "the selected -G marks the song config dirty")
     report.expectEqual("other", list.selectorText, cppID: selectorID,
@@ -211,6 +225,10 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         return
     }
     list.refresh(from: session)
+    report.expect(list.rows[0] === originalRow
+                  && list.rows[0].title == "000  Square 1",
+                  cppID: bankViewID,
+                  message: "voicegroup undo rebind restores the original voice on the original row handle")
     report.expectEqual("test_vg", list.selectorText, cppID: selectorID,
                        what: "-G undo restores the original selector")
     report.expectEqual("test_vg", session.bankLoadName, cppID: selectorID,

@@ -28,19 +28,27 @@ ColumnLayout {
     readonly property bool hasDuty: draft.editable && (draft.macro >= 3 && draft.macro <= 6)
     readonly property bool hasPeriod: draft.editable && (draft.macro === 9 || draft.macro === 10)
     readonly property bool hasAdsr: draft.editable && draft.macro !== 11 && draft.macro !== 12
+    readonly property bool hasSynth: draft.editable && draft.isSynth
+    readonly property bool hasPulse: hasSynth && draft.waveform === 0
     readonly property int visibleRows: 1 + Number(hasSymbol) + Number(hasSweep)
                                        + Number(hasDuty) + Number(hasPeriod) + Number(hasAdsr)
+                                       + Number(hasSynth) + Number(hasPulse)
+                                       + Number(draft.editable && draft.notice.length > 0)
     // QFormLayout's visible rows, half-space gaps, button inset, and outer
     // top offset. A nested ColumnLayout otherwise expands into the tree's
     // fill-height slack; this editor must take only its native form height.
     Layout.minimumHeight: 0
     Layout.fillHeight: false
-    Layout.preferredHeight: (draft.editable ? regularHeight : noticeHeight)
+    Layout.preferredHeight: (draft.editable ? regularHeight
+                                           + (draft.notice.length > 0 ? noticeHeight : 0)
+                                           : noticeHeight)
                             + Number(hasSymbol) * regularHeight
                             + Number(hasSweep) * spinHeight
                             + Number(hasDuty) * regularHeight
                             + Number(hasPeriod) * regularHeight
                             + Number(hasAdsr) * spinHeight
+                            + Number(hasSynth) * regularHeight
+                            + Number(hasPulse) * spinHeight
                             + buttonHeight + (visibleRows + 1) * spacingPx
     spacing: spacingPx
     Layout.leftMargin: Math.round(baseFontPx * 0.33)
@@ -51,7 +59,7 @@ ColumnLayout {
     Label {
         objectName: "voicegroupEditorNotice"
         Layout.fillWidth: true
-        visible: !editor.draft.editable && text.length > 0
+        visible: editor.draft.notice.length > 0
         text: editor.draft.notice
         wrapMode: Text.WordWrap
         font.pixelSize: editor.baseFontPx
@@ -77,17 +85,27 @@ ColumnLayout {
             Layout.minimumHeight: 0
             Layout.preferredHeight: editor.baseFontPx * 1.85
             font.pixelSize: editor.baseFontPx
-            model: [{ name: qsTr("Sample"), macro: 0 },
-                    { name: qsTr("Sample (no resample)"), macro: 1 },
-                    { name: qsTr("Sample (alt)"), macro: 2 },
-                    { name: qsTr("Drumkit"), macro: 12 },
-                    { name: qsTr("Square 1"), macro: 3 },
-                    { name: qsTr("Square 2"), macro: 5 },
-                    { name: qsTr("Wave"), macro: 7 },
-                    { name: qsTr("Noise"), macro: 9 }]
+            model: {
+                const revision = editor.controller.catalogRevision
+                const types = [{ name: qsTr("Sample"), macro: 0 },
+                               { name: qsTr("Sample (no resample)"), macro: 1 },
+                               { name: qsTr("Sample (alt)"), macro: 2 },
+                               { name: qsTr("Drumkit"), macro: 12 },
+                               { name: qsTr("Square 1"), macro: 3 },
+                               { name: qsTr("Square 2"), macro: 5 },
+                               { name: qsTr("Wave"), macro: 7 },
+                               { name: qsTr("Noise"), macro: 9 }]
+                if (editor.controller.canMintSynths
+                        || editor.controller.synthCatalogChoices().length > 0
+                        || editor.draft.isSynth)
+                    types.push({ name: qsTr("Synth (Golden Sun)"), macro: -1 })
+                return types
+            }
             textRole: "name"
             valueRole: "macro"
-            currentIndex: indexOfValue(editor.draft.macro === 11 ? 0 : editor.draft.macro)
+            currentIndex: indexOfValue(editor.draft.isSynth ? -1
+                                                              : editor.draft.macro === 11 ? 0
+                                                                                          : editor.draft.macro)
             onActivated: index => editor.draft.changeType(valueAt(index), editor.draft.symbol)
         }
     }
@@ -98,34 +116,54 @@ ColumnLayout {
         Layout.minimumHeight: 0
         spacing: editor.spacingPx
         Label {
-            text: editor.draft.macro === 7 || editor.draft.macro === 8 ? qsTr("Wave")
+            text: editor.draft.isSynth ? qsTr("Synth")
+                  : editor.draft.macro === 7 || editor.draft.macro === 8 ? qsTr("Wave")
                   : editor.draft.macro === 12 ? qsTr("Drumkit") : qsTr("Sample")
             Layout.preferredWidth: editor.fieldLabelWidth
             font.pixelSize: editor.baseFontPx
             color: editor.palette.primaryText
         }
-        ComboBox {
-            id: symbolPicker
-            objectName: "vgSamplePickerButton"
+        SamplePicker {
+            objectName: "vgSymbolPicker"
+            visible: editor.draft.macro !== 12 && !editor.draft.isSynth
             Layout.fillWidth: true
             Layout.preferredHeight: editor.baseFontPx * 1.5
             Layout.minimumHeight: 0
-            editable: true
+            controller: editor.controller
+            draft: editor.draft
+            colors: editor.palette
+            baseFontPx: editor.baseFontPx
+            waveMode: editor.draft.macro === 7 || editor.draft.macro === 8
+            onPicked: symbol => editor.draft.changeType(editor.draft.macro, symbol)
+        }
+        ComboBox {
+            objectName: "vgSynthCombo"
+            visible: editor.draft.isSynth
+            Layout.fillWidth: true
+            Layout.preferredHeight: editor.regularHeight
             font.pixelSize: editor.baseFontPx
             model: {
-                editor.controller.catalogRevision
-                return editor.draft.macro === 7 || editor.draft.macro === 8
-                    ? editor.controller.waveChoices()
-                    : editor.draft.macro === 12 ? editor.controller.drumkitChoices()
-                    : editor.controller.samplePickerSymbols()
+                const revision = editor.controller.catalogRevision
+                return editor.controller.synthCatalogChoices()
             }
+            currentIndex: model.indexOf(editor.draft.symbol)
+            displayText: editor.draft.symbol
+            onActivated: editor.draft.changeType(-1, currentText)
+        }
+        ComboBox {
+            visible: editor.draft.macro === 12
+            Layout.fillWidth: true
+            Layout.preferredHeight: editor.baseFontPx * 1.5
+            font.pixelSize: editor.baseFontPx
+            editable: true
+            model: editor.controller.drumkitChoices()
             editText: editor.draft.symbol
             onActivated: editor.draft.changeType(editor.draft.macro, currentText)
             onAccepted: editor.draft.changeType(editor.draft.macro, editText)
         }
         ToolButton {
             objectName: "vgNewSampleButton"
-            visible: editor.draft.macro <= 2
+            visible: editor.draft.macro <= 2 && !editor.draft.isSynth
             Layout.preferredWidth: editor.baseFontPx * 2.08
             Layout.minimumHeight: 0
             Layout.preferredHeight: editor.baseFontPx * 1.83
@@ -135,13 +173,68 @@ ColumnLayout {
         }
         ToolButton {
             objectName: "vgEditSampleButton"
-            visible: editor.draft.macro <= 2 && !editor.draft.materializesBlank
+            visible: editor.draft.macro <= 2 && !editor.draft.isSynth
             Layout.preferredWidth: editor.baseFontPx * 2.08
             Layout.preferredHeight: editor.baseFontPx * 1.83
             Layout.minimumHeight: 0
             text: "✎"
             font.pixelSize: editor.baseFontPx
             onClicked: editor.controller.requestEditSample(editor.controller.currentSlot)
+        }
+    }
+
+    RowLayout {
+        visible: editor.hasSynth
+        Layout.preferredHeight: editor.regularHeight
+        Layout.minimumHeight: 0
+        spacing: editor.spacingPx
+        Label {
+            text: qsTr("Waveform")
+            Layout.preferredWidth: editor.fieldLabelWidth
+            font.pixelSize: editor.baseFontPx
+            color: editor.palette.primaryText
+        }
+        ComboBox {
+            objectName: "vgSynthWaveformCombo"
+            Layout.fillWidth: true
+            font.pixelSize: editor.baseFontPx
+            model: [qsTr("Pulse"), qsTr("Saw"), qsTr("Triangle")]
+            currentIndex: editor.draft.waveform
+            onActivated: index => editor.draft.changeSynth("waveform", index)
+        }
+    }
+
+    RowLayout {
+        visible: editor.hasPulse
+        Layout.preferredHeight: editor.spinHeight
+        Layout.minimumHeight: 0
+        spacing: editor.spacingPx
+        Label {
+            text: qsTr("Duty LFO")
+            Layout.preferredWidth: editor.fieldLabelWidth
+            font.pixelSize: editor.baseFontPx
+            color: editor.palette.primaryText
+        }
+        Repeater {
+            model: [{ name: "BaseDuty", field: "baseDuty", detail: qsTr("Base duty cycle") },
+                    { name: "DutyStep", field: "dutyStep", detail: qsTr("Step per frame") },
+                    { name: "ModDepth", field: "modDepth", detail: qsTr("Modulation amount") },
+                    { name: "Phase", field: "phase", detail: qsTr("LFO phase offset") }]
+            SpinBox {
+                required property var modelData
+                objectName: "vgSynth" + modelData.name + "Spin"
+                Layout.fillWidth: true
+                Layout.minimumWidth: editor.baseFontPx * 3.3
+                Layout.preferredHeight: editor.spinHeight
+                Layout.minimumHeight: 0
+                from: 0
+                to: 255
+                value: editor.draft[modelData.field]
+                font.pixelSize: editor.baseFontPx
+                ToolTip.text: modelData.detail
+                ToolTip.visible: hovered
+                onValueModified: editor.draft.changeSynth(modelData.field, value)
+            }
         }
     }
 
@@ -237,13 +330,26 @@ ColumnLayout {
             }
         }
     }
-    Button {
-        text: qsTr("New...")
+    RowLayout {
         Layout.topMargin: editor.spacingPx
         Layout.preferredHeight: editor.buttonHeight
         Layout.minimumHeight: 0
-        font.pixelSize: editor.baseFontPx
-        focusPolicy: Qt.NoFocus
-        onClicked: editor.controller.requestNewVoicegroup()
+        Button {
+            text: qsTr("New...")
+            Layout.preferredHeight: editor.buttonHeight
+            Layout.minimumHeight: 0
+            font.pixelSize: editor.baseFontPx
+            focusPolicy: Qt.NoFocus
+            onClicked: editor.controller.requestNewVoicegroup()
+        }
+        Button {
+            objectName: "vgSaveButton"
+            text: qsTr("Save")
+            Layout.preferredHeight: editor.buttonHeight
+            Layout.minimumHeight: 0
+            font.pixelSize: editor.baseFontPx
+            enabled: editor.controller.bankDirty
+            onClicked: editor.controller.requestSave()
+        }
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawProject
 
 // MARK: - Public session types
 
@@ -300,6 +301,7 @@ public final class DocumentSession {
             throw ProjectServiceError.operationFailed(
                 "A bank transition is already in progress.")
         }
+        if !bankDirty { document.history.sealBankMerge() }
         guard let transition = document.history.beginBankTransition() else {
             throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
         }
@@ -321,9 +323,17 @@ public final class DocumentSession {
         return result
     }
 
+    /// Reserves a synth symbol in the project without changing this document.
+    /// - Parameter descriptor: The desired waveform and pulse parameters.
+    /// - Returns: The reusable assembler symbol.
+    /// - Throws: A project failure when the required synth macros are absent.
+    public func mintSynth(_ descriptor: VgSynthDesc) async throws -> String {
+        try requireOpen()
+        return try await service.mintSynth(descriptor)
+    }
+
     /// Retargets the song's -G argument only after its replacement bank loads.
-    /// The config mutation is a normal undoable document edit; the lease swap
-    /// publishes separately so the active renderer adopts the new voices.
+    /// A failed load leaves the document, lease and history untouched.
     public func selectVoicegroup(_ arg: String) async throws {
         try requireOpen()
         guard !arg.isEmpty, arg != document.state.config.voicegroupArgument,
@@ -336,54 +346,66 @@ public final class DocumentSession {
         guard document.state.config.voicegroupArgument == previous else {
             throw ProjectServiceError.operationFailed("Voicegroup changed during load.")
         }
-        var config = document.state.config
-        config.voicegroupArgument = arg
-        document.setConfig(config)
-        guard document.state.config.voicegroupArgument == arg else { return }
-        adoptBank(bank)
-        publishChange([.bank, .dirty, .history])
+        withStateChanges {
+            var config = document.state.config
+            config.voicegroupArgument = arg
+            document.setConfig(config)
+            guard document.state.config.voicegroupArgument == arg else { return }
+            adoptBank(bank)
+            publishChange([.bank, .dirty, .history])
+        }
     }
 
     @discardableResult
     public func undo() async throws -> Bool {
-        try requireOpen()
-        guard !bankPersistenceInFlight else { return false }
-        let previousArg = document.state.config.voicegroupArgument
-        let undone = try await document.history.undo()
-        var domains: SessionChangeDomains = [.dirty, .history]
-        if undone, document.state.config.voicegroupArgument != previousArg {
-            let bank = try await service.loadBank(
-                voicegroupArg: document.state.config.voicegroupArgument)
-            adoptBank(bank)
-            domains.insert(.bank)
-        }
-        if undone, let result = inbox.drain() {
-            adoptBank(result)
-            domains.insert(.bank)
-        }
-        publishChange(domains)
-        return undone
+        try await stepHistory(.undo)
     }
 
     @discardableResult
     public func redo() async throws -> Bool {
+        try await stepHistory(.redo)
+    }
+
+    /// Rebind before crossing an undoable -G edit. An unavailable target
+    /// cannot leave the history cursor on a config whose bank never loaded.
+    private func stepHistory(_ direction: BankHistoryDirection) async throws -> Bool {
         try requireOpen()
         guard !bankPersistenceInFlight else { return false }
+        var preparedBank: AppliedBankEdit?
+        if let arg = document.history.voicegroupArgumentAfter(direction) {
+            guard let token = document.history.beginBankTransition() else { return false }
+            bankPersistenceInFlight = true
+            do {
+                preparedBank = try await service.loadBank(voicegroupArg: arg)
+                try requireOpen()
+            } catch {
+                document.history.endBankTransition(token)
+                bankPersistenceInFlight = false
+                throw error
+            }
+            document.history.endBankTransition(token)
+        }
+        defer { bankPersistenceInFlight = false }
         let previousArg = document.state.config.voicegroupArgument
-        let redone = try await document.history.redo()
-        var domains: SessionChangeDomains = [.dirty, .history]
-        if redone, document.state.config.voicegroupArgument != previousArg {
-            let bank = try await service.loadBank(
-                voicegroupArg: document.state.config.voicegroupArgument)
-            adoptBank(bank)
-            domains.insert(.bank)
+        let changed: Bool
+        switch direction {
+        case .undo: changed = try await document.history.undo()
+        case .redo: changed = try await document.history.redo()
         }
-        if redone, let result = inbox.drain() {
-            adoptBank(result)
-            domains.insert(.bank)
+        withStateChanges {
+            var domains: SessionChangeDomains = [.dirty, .history]
+            if changed, let preparedBank,
+               document.state.config.voicegroupArgument != previousArg {
+                adoptBank(preparedBank)
+                domains.insert(.bank)
+            }
+            if changed, let result = inbox.drain() {
+                adoptBank(result)
+                domains.insert(.bank)
+            }
+            publishChange(domains)
         }
-        publishChange(domains)
-        return redone
+        return changed
     }
 
     /// Breaks document and presenter callbacks without stopping the project worker.

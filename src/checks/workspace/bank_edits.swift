@@ -91,6 +91,82 @@ internal func bankBlankMaterialization(report: CheckReport, session: DocumentSes
     }
 }
 
+/// A saved document identity is not a bank edit boundary. The first edit
+/// against the newly clean bank, rather than the save receipt, seals that edit.
+@MainActor
+internal func bankSaveMergeBoundaryParity(report: CheckReport, fixtureRoot: String) {
+    let id = "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules"
+    let document = SongDocument(file: MidiFile(chunks: [
+        MidiChunk(events: [.channel(status: 0xC0, data0: 0)]),
+    ]))
+    let first = MergingBoundaryAction(before: 0, after: 1)
+    document.history.recordConfirmedBank(first)
+    document.history.markSaved(document.history.currentIdentity)
+    document.history.recordConfirmedBank(MergingBoundaryAction(before: 1, after: 2))
+    report.expect(document.history.undoCount == 1 && document.history.undoIndex == 1
+                  && first.merges == 1,
+                  cppID: id, message: "A038: markSaved keeps adjacent bank edits mergeable")
+    document.history.sealBankMerge()
+    document.history.recordConfirmedBank(MergingBoundaryAction(before: 2, after: 3))
+    let undone = (try? runBlocking { try await document.history.undo() }) == true
+    report.expect(document.history.undoCount == 2 && document.history.undoIndex == 1 && undone,
+                  cppID: id, message: "A039: explicit seal leaves two reachable bank steps")
+
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-bank-save-seal")
+    let service = ProjectService()
+    do {
+        let session = try runBlocking {
+            try await service.open(root: root)
+            return try await DocumentSession.open(service: service, label: "mus_session_test")
+        }
+        guard let original = session.bankSlots[0].voice else {
+            report.fail(id, "fixture has no editable voice in slot zero")
+            return
+        }
+        var firstEdit = original
+        firstEdit.pan = original.pan == 20 ? 21 : 20
+        let editedLease = try runBlocking {
+            try await session.applyBankEdit(slot: 0, value: firstEdit, expected: original)
+        }.lease.bankToken
+        try runBlocking { try await session.save() }
+        let cleanLease = session.bankLease.bankToken
+        report.expect(!session.bankDirty && cleanLease != editedLease,
+                      cppID: id, message: "save receipt publishes a fresh clean bank lease")
+        var secondEdit = firstEdit
+        secondEdit.pan = firstEdit.pan == 25 ? 26 : 25
+        _ = try runBlocking {
+            try await session.applyBankEdit(slot: 0, value: secondEdit, expected: firstEdit)
+            return try await session.undo()
+        }
+        report.expect(session.bankSlots[0].voice == firstEdit
+                      && session.document.history.canUndo,
+                      cppID: id, message: "post-save clean-bank edit seals the earlier command")
+    } catch {
+        report.fail(id, "bank save merge boundary threw: \(error)")
+    }
+}
+
+@MainActor
+private final class MergingBoundaryAction: BankHistoryAction {
+    let before: Int
+    let after: Int
+    var merges = 0
+
+    init(before: Int, after: Int) {
+        self.before = before
+        self.after = after
+    }
+
+    var isRedundant: Bool { before == after }
+    func apply(direction: BankHistoryDirection) async throws {}
+
+    func merged(with newer: any BankHistoryAction) -> (any BankHistoryAction)? {
+        guard let newer = newer as? MergingBoundaryAction else { return nil }
+        merges += 1
+        return MergingBoundaryAction(before: before, after: newer.after)
+    }
+}
+
 @MainActor
 internal func bankMergeSealing(report: CheckReport, session: DocumentSession) {
     // 3. Scalar Edit Merging and Sealing

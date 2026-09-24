@@ -486,8 +486,37 @@ public actor ProjectService {
                 drumkits: groups.drumkits,
                 keysplits: Dictionary(groups.keysplits.map { ($0.symbol, $0.table) },
                                       uniquingKeysWith: { _, latest in latest }),
-                synths: direct.synths.defs.map(\.symbol), defaults: defaults)
+                synths: direct.synths.defs.map(\.symbol),
+                synthDefinitions: Dictionary(direct.synths.defs.map { ($0.symbol, $0.descriptor) },
+                                             uniquingKeysWith: { first, _ in first }),
+                canMintSynths: direct.synths.creatable(), defaults: defaults)
         }
+    }
+
+    /// Resolves a picker audition through the project's own loader.
+    /// - Parameters:
+    ///   - symbol: The full sample, wave, or keysplit symbol.
+    ///   - kind: The picker row's instrument family.
+    /// - Returns: Detached playable bytes, or nil when the symbol cannot load.
+    public func pickerSound(symbol: String, kind: VoiceListAuditionKind) async -> PickerSound? {
+        guard let store else { return nil }
+        let family: String
+        switch kind {
+        case .sample: family = "sample"
+        case .wave: family = "wave"
+        case .keysplit: family = "keysplit"
+        }
+        return await store.pickerSound(symbol: symbol, kind: family)
+    }
+
+    /// Mints a memory-only synth definition for a pending voicegroup edit.
+    /// - Parameter descriptor: Waveform and pulse parameters to resolve.
+    /// - Returns: An existing or newly reserved assembler symbol.
+    /// - Throws: A project failure if the required macros are unavailable.
+    public func mintSynth(_ descriptor: VgSynthDesc) async throws -> String {
+        let store = try requireStore()
+        do { return try await store.mintSynth(descriptor) }
+        catch { throw projectFailure(error) }
     }
 
     /// Opens a playable song: raw MIDI bytes, metadata and the owned bank lease.

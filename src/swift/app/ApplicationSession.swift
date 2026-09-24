@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawProject
 import QtBridge
 
 /// The application behind the mounted surface: the project service, the one
@@ -58,6 +59,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private let eventList: EventListPresenter
     private let transportBar: TransportBarPresenter
     private let voiceList = VoiceListController()
+    private var pickerAuditionRevision = 0
     private let mouseHints = MouseHints()
     /// The workspaces whose rows have left the strip and whose pages have not
     /// reported their destruction yet. The page holds the C++ proxy for every
@@ -131,6 +133,51 @@ public final class ApplicationSession: QmlInstantiableStatus {
                     self?.voiceList.refresh(from: session)
                 }
             }
+        }
+        voiceList.onSaveRequested = { [weak self] in self?.requestSave() }
+        voiceList.onSampleAuditionRequested = { [weak self] symbol, kind, adsr in
+            guard let self, let service = self.catalogService,
+                  let session = self.selectedDocument else { return }
+            self.voiceList.pickerSampleDetail = ""
+            self.voiceList.pickerSampleLoop = false
+            self.audio?.auditionSampleOff()
+            self.pickerAuditionRevision += 1
+            let revision = self.pickerAuditionRevision
+            Task { [weak self, weak session] in
+                let sound = await service.pickerSound(symbol: symbol, kind: kind)
+                guard let self, let session, self.selectedDocument === session,
+                      self.catalogService === service,
+                      self.pickerAuditionRevision == revision,
+                      let audio = self.audio, let sound else { return }
+                let chosen = AudioADSR(
+                    attack: UInt8(truncatingIfNeeded: adsr.attack),
+                    decay: UInt8(truncatingIfNeeded: adsr.decay),
+                    sustain: UInt8(truncatingIfNeeded: adsr.sustain),
+                    release: UInt8(truncatingIfNeeded: adsr.release))
+                switch sound {
+                case let .sample(bytes, frequency, loopStart, looped, toneKey, envelope):
+                    let envelope = envelope.map {
+                        AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
+                    } ?? chosen
+                    _ = audio.auditionSample(samples: bytes, frequency: frequency,
+                                             loopStart: loopStart, looped: looped,
+                                             key: 60, adsr: envelope, toneKey: toneKey)
+                    self.voiceList.pickerSampleDetail = "\(bytes.count) samples · \(frequency) Hz"
+                    self.voiceList.pickerSampleLoop = looped
+                case let .wave(bytes, envelope):
+                    let envelope = envelope.map {
+                        AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
+                    } ?? chosen
+                    _ = audio.auditionWave(wave16: bytes, key: 60, adsr: envelope)
+                    self.voiceList.pickerSampleDetail = "16 samples"
+                }
+            }
+        }
+        voiceList.onSampleAuditionStopRequested = { [weak self] in
+            self?.pickerAuditionRevision += 1
+            self?.voiceList.pickerSampleDetail = ""
+            self?.voiceList.pickerSampleLoop = false
+            self?.audio?.auditionSampleOff()
         }
         songTabs.attach(app: self)
         transportBar.attach(session: self)
@@ -791,6 +838,18 @@ public final class ApplicationSession: QmlInstantiableStatus {
         Task { [weak self] in
             do {
                 try await session.save()
+                if let self, let service = self.catalogService,
+                   self.selectedDocument === session {
+                    let catalog = try await service.voicegroupCatalog()
+                    if self.catalogService === service {
+                        self.voiceList.synthChoices = catalog.synths
+                        self.voiceList.synthDefinitions.merge(catalog.synthDefinitions) {
+                            _, saved in saved
+                        }
+                        self.voiceList.synthSymbols.formUnion(catalog.synths)
+                        self.voiceList.catalogRevision += 1
+                    }
+                }
             } catch {
                 self?.lastSaveError = String(describing: error)
             }
@@ -868,6 +927,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
         voiceList.drumkitSymbols = catalog.drumkits
         voiceList.keysplitTables = catalog.keysplits
         voiceList.synthSymbols = Set(catalog.synths)
+        voiceList.synthChoices = catalog.synths
+        voiceList.synthDefinitions = catalog.synthDefinitions
+        voiceList.canMintSynths = catalog.canMintSynths
         voiceList.adsrDefaults = catalog.defaults
         voiceList.catalogRevision += 1
         projectOpen = true

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawProject
 import QtBridge
 
 // MARK: - Voice list controller
@@ -138,6 +139,7 @@ public final class VoiceListController {
     /// changed) and the bank needs a reload to audition.
     @QtIgnored public var onVoiceEditRequested: ((_ slot: Int, _ voice: BankVoice, _ structural: Bool) -> Void)?
     @QtIgnored public var onNewVoicegroupRequested: (() -> Void)?
+    @QtIgnored public var onSaveRequested: (() -> Void)?
     /// "New sample…" beside the sample picker: create a sample and point
     /// this slot's voice at it; the owner runs the dialog and applies the
     /// assignment as an undo command.
@@ -171,16 +173,28 @@ public final class VoiceListController {
     @QtIgnored public var synthSymbols: Set<String> = [] {
         didSet { if synthSymbols != oldValue { rederiveRows() } }
     }
+    @QtIgnored public var synthDefinitions: [String: VgSynthDesc] = [:]
+    @QtIgnored public var synthChoices: [String] = []
+    @QtTracked public var canMintSynths = false
+    @QtTracked public var pickerSampleDetail = ""
+    @QtTracked public var pickerSampleLoop = false
     @QtIgnored public var adsrDefaults = VoiceListAdsrDefaults()
     @QtIgnored public var waveSymbols: [String] = []
     @QtIgnored public var drumkitSymbols: [String] = []
 
-    public func sampleSymbols() -> [String] { sampleChoices }
+    public func sampleSymbols() -> [String] {
+        sampleChoices.filter { !$0.contains("Phoneme") }
+    }
+    public func phonemeSymbols() -> [String] {
+        sampleChoices.filter { $0.contains("Phoneme") }
+    }
     public func samplePickerSymbols() -> [String] {
         keysplitTables.keys.sorted() + sampleChoices
     }
     public func waveChoices() -> [String] { waveSymbols }
+    public func keysplitPickerSymbols() -> [String] { keysplitTables.keys.sorted() }
     public func drumkitChoices() -> [String] { drumkitSymbols }
+    public func synthCatalogChoices() -> [String] { synthChoices }
 
     @QtIgnored private weak var session: DocumentSession?
 
@@ -492,8 +506,25 @@ public final class VoiceListController {
         return try await session.applyBankEdit(slot: slot, value: voice, expected: expected)
     }
 
+    @QtIgnored
+    public func synthDescriptor(symbol: String) -> VgSynthDesc? {
+        synthDefinitions[symbol] ?? mintedSynthDesc(symbol: symbol)
+    }
+
+    @QtIgnored
+    public func mintSynth(_ descriptor: VgSynthDesc) async throws -> String {
+        guard let session else {
+            throw ProjectServiceError.operationFailed("No document session is bound.")
+        }
+        return try await session.mintSynth(descriptor)
+    }
+
     public func requestNewVoicegroup() {
         onNewVoicegroupRequested?()
+    }
+
+    public func requestSave() {
+        onSaveRequested?()
     }
 
     public func requestNewSample(slot: Int) {

@@ -90,6 +90,7 @@ extension ProjectStore {
 
         let snapshot = ProjectSnapshot(root: projectRoot, songs: catalog.songs,
                                        players: catalog.players, trackBudgets: budgets)
+        pickerSamples = nil
         projectContext = context
         voicegroupStore = VoicegroupStore(projectRoot: projectRoot, context: context)
         openedSnapshot = snapshot

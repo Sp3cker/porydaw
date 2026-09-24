@@ -73,6 +73,10 @@ extension BankHandle {
     /// Fills only unresolved direct-sound voices carrying canonical minted synth symbols.
     /// - Parameter source: The editable voicegroup that produced this loader bank.
     func graftMintedSynths(source: VoicegroupSource) {
+        let definitions = Dictionary(
+            VoicegroupSource.synthInstruments(source.projectRoot).defs.map {
+                ($0.symbol, $0.descriptor)
+            }, uniquingKeysWith: { first, _ in first })
         withUnsafeMutablePointer(to: &raw.pointee.voices) { tuple in
             tuple.withMemoryRebound(to: ToneData.self, capacity: 128) { tones in
                 for slot in 0..<128 {
@@ -81,7 +85,8 @@ extension BankHandle {
                     case .directSound, .directSoundNoResample, .directSoundAlt: break
                     default: continue
                     }
-                    guard let descriptor = mintedSynthDesc(symbol: voice.symbol) else { continue }
+                    guard let descriptor = definitions[voice.symbol]
+                        ?? mintedSynthDesc(symbol: voice.symbol) else { continue }
                     let storage = mintedStorage ?? MintedSynthStorage()
                     mintedStorage = storage
                     tones[slot].wav = storage.graft(slot: slot, descriptor: descriptor)

@@ -599,17 +599,6 @@ private func confirmedBankOrdering(_ report: CheckReport) {
                   cppID: "editcheck/EditCheckTest::documentSavedIdentity",
                   message: "confirmed bank entries preserve document identity")
 
-    if let snapshot = try? document.captureSave() {
-        document.didSave(snapshot)
-    }
-    document.history.recordConfirmedBank(ProbeBankAction(value: 3, counter: counter))
-    report.expectEqual(1, counter.count,
-                       cppID: "editcheck/EditCheckTest::documentSavedIdentity",
-                       what: "save seals the preceding bank merge run")
-    document.history.recordConfirmedBank(ProbeBankAction(value: 4, counter: counter))
-    report.expectEqual(2, counter.count,
-                       cppID: "editcheck/EditCheckTest::documentSavedIdentity",
-                       what: "post-save bank records begin a new merge run")
 }
 
 @MainActor
