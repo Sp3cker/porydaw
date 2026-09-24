@@ -7,7 +7,7 @@ Original SHA-256: 07fd50abf49010fc921a3a0a99cdf56e1b5f41d919f29b19f017fe67f696c7
 Swift counterpart: src/checks/editcheck/ScaleChecks.swift
 Swift SHA-256: b798695cfe6e80893e43f5857d16fbd95e03d4bf15cd82e439a500586386ed64
 Additional Swift counterpart: src/swift/core/MusicalScale.swift
-Swift SHA-256: 034cd82d8bea5d13dd3df21d9a25f5ef67923b3c88c4fb19fb9459bca76c77e5
+Swift SHA-256: 71e93b8ad7c766c5a58fb232572a3249204363e13c5a9a0c1fdf670571a5244b
 
 Covered native implementation: src/porydaw_scale.cpp, src/porydaw_scale.h :: cScaleCount, cRootCount, displayOrder, scaleDisplayName, scaleMask, rootDisplayName, defaultScale, defaultRoot, isScalePitch, firstScalePitchAbove, firstScalePitchBelow, nextScalePitch, resolveDiatonicDestinations.
 Native engine status: The C++ check and implementation were deleted in this lane: src/checks/editcheck/tst_scale.{cpp,h}, src/porydaw_scale.{cpp,h}; the registration was removed from src/checks/checkcatalog.cpp and the source entries from src/checks/CMakeLists.txt. Active checks use Swift PorydawCore (src/swift/core/MusicalScale.swift). No live native run or differential comparison is claimed.
