@@ -18,11 +18,11 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-All 49 sites in this file are GAP: registerAction and deleteAction drive a real MainWindow, workspace project state, QMessageBox dialogs (Register/Delete/fallback-refusal), a QSettings guard, and async_wait::waitUntil polls on ProjectOpenState::Ready. No Swift predicate establishes any of them — feature not yet ported: onboarding register/delete dialog flow (the QML Register/Delete confirmation dialogs are absent and ShellPresenter's file.register_song is unwired), and the native harness is uncompiled in all CMake targets and unregistered in checkcatalog, so these sites never execute in any lane.
-Site tally: 49 sites (49 GAP).
+The mounted Songs dock and shell-songs/test_mountedSongDockAndConfirmationRoundTrips supply QML confirmation and deletion-outcome assertions for nine PARTIAL sites; 40 remain GAP (fixture-specific writes, widget mechanics, fallback refusal and tab-close checks). The old MainWindow/QMessageBox harness is uncompiled and unregistered; converted QML execution passed deno task verify:shell --filter shell-songs --verbose (1/13 selected); the native QWidget harness remains unexecuted.
+Site tally: 49 sites (9 PARTIAL, 40 GAP).
 
 Execution and ownership
-The native harness runOnboardCheck (support.cpp) is the only owner of these checks (QTest::qExec of OnboardingTest), but the file is uncompiled in all CMake targets and unregistered in checkcatalog, so no lane executes it. No Swift entry point executes these checks either; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf), checks/onboardcheck/onboardingtest.h (openSong, waitForDialog, closeWorkspace, readFile/writeFile, defaultCfg, midiDirectory), checks/support/asyncwait.h (waitUntil), and the file-local SettingsGuard/buttonWithRole helpers.
+The native harness runOnboardCheck (support.cpp) is the only owner of these checks (QTest::qExec of OnboardingTest), but the file is uncompiled in all CMake targets and unregistered in checkcatalog, so no lane executes it. The new shell-songs QML entry exercises related converted surface behavior, not these original native checks; there are no S entries or shared-helper expects in this ledger. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf), checks/onboardcheck/onboardingtest.h (openSong, waitForDialog, closeWorkspace, readFile/writeFile, defaultCfg, midiDirectory), checks/support/asyncwait.h (waitUntil), and the file-local SettingsGuard/buttonWithRole helpers.
 
 Fixture, sequence and row constraints
 deleteAction_data expands fallback=false (delete-open-song) and fallback=true (fallback-refusal) into distinct runs. registerAction strips the plan's charmap line, opens the song in a MainWindow, clicks the AcceptRole dialog button, then polls with waitUntil until the snapshot shows the song registered with empty gaps and the register action disabled. deleteAction clicks the DestructiveRole button and polls until songTabFor is null; the fallback row instead runs a QTimer that closes the refusal QMessageBox, then asserts every snapshotted file is byte-identical and the .mid is retained. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
@@ -273,8 +273,8 @@ Original expression:
   QVERIFY(window.m_workspace->isSongListed(label));
 
 A017 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:107
-Disposition: GAP
-Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: shell-songs/test_mountedSongDockAndConfirmationRoundTrips opens mounted QML Register Song dialog from a real staged plan; original QMessageBox identity and integrated execution are not asserted.
 Source context since previous assertion:
 
       window.m_workspace->registerSelectedSong();
@@ -284,8 +284,8 @@ Original expression:
   QVERIFY2(dialog, qPrintable(error));
 
 A018 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:109
-Disposition: GAP
-Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: shell-songs/test_mountedSongDockAndConfirmationRoundTrips locates and clicks the mounted Register dialog action; QMessageBox AcceptRole is retired widget mechanics and integrated execution remains pending.
 Source context since previous assertion:
 
       QAbstractButton *button = buttonWithRole(*dialog, QMessageBox::AcceptRole);
@@ -294,8 +294,8 @@ Original expression:
   QVERIFY(button);
 
 A019 | OnboardingTest::registerAction | src/checks/onboardcheck/action.cpp:111
-Disposition: GAP
-Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: shell-songs/test_mountedSongDockAndConfirmationRoundTrips confirms registration and waits for canRegister to turn false after the project feed refresh; original ProjectOpenState::Ready predicate and integrated execution remain unproved.
 Source context since previous assertion:
 
       button->click();
@@ -600,8 +600,8 @@ Original expression:
   QVERIFY(QFile::exists(midPath(root, label)));
 
 A042 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:235
-Disposition: GAP
-Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: shell-songs/test_mountedSongDockAndConfirmationRoundTrips opens mounted QML Delete Song dialog from a real staged deletion plan; original QMessageBox identity and integrated execution remain unproved.
 Source context since previous assertion:
 
       } else {
@@ -612,8 +612,8 @@ Original expression:
   QVERIFY2(dialog, qPrintable(error));
 
 A043 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:237
-Disposition: GAP
-Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: shell-songs/test_mountedSongDockAndConfirmationRoundTrips clicks the mounted Delete confirmation button; original QMessageBox DestructiveRole is retired widget mechanics and integrated execution remains pending.
 Source context since previous assertion:
 
           QAbstractButton *button = buttonWithRole(*dialog, QMessageBox::DestructiveRole);
@@ -647,8 +647,8 @@ Original expression:
                    checks::async_wait::Result::Ready);
 
 A046 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:247
-Disposition: GAP
-Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: shell-songs/test_mountedSongDockAndConfirmationRoundTrips asserts the deleted row disappears from the mounted dock; original WorkspaceUi.isSongListed and integrated execution remain unproved.
 Source context since previous assertion:
 
 
@@ -656,8 +656,8 @@ Original expression:
   QVERIFY(!window.m_workspace->isSongListed(label));
 
 A047 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:248
-Disposition: GAP
-Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: shell-songs/test_mountedSongDockAndConfirmationRoundTrips asserts mounted song count drops from ten to nine after deletion; original WorkspaceUi count and integrated execution remain unproved.
 Source context since previous assertion:
 
 
@@ -665,8 +665,8 @@ Original expression:
   QCOMPARE(window.m_workspace->listedSongCount(), listed - 1);
 
 A048 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:249
-Disposition: GAP
-Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: shell-songs/test_mountedSongDockAndConfirmationRoundTrips asserts the staged source MIDI no longer exists after QML Delete; original fixture identity and integrated execution remain unproved.
 Source context since previous assertion:
 
 
@@ -674,8 +674,8 @@ Original expression:
   QVERIFY(!QFile::exists(midPath(root, label)));
 
 A049 | OnboardingTest::deleteAction | src/checks/onboardcheck/action.cpp:250
-Disposition: GAP
-Mapping/reason: feature not yet ported: onboarding register/delete dialog flow; the QML Register/Delete confirmation dialogs are absent (ShellPresenter's file.register_song is unwired) and the MainWindow/QMessageBox mechanics are unexecuted.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: shell-songs/test_mountedSongDockAndConfirmationRoundTrips asserts the deleted MIDI exists under .porydaw/trash after QML confirmation; original fixture identity and integrated execution remain unproved.
 Source context since previous assertion:
 
 

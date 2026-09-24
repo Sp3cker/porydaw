@@ -57,7 +57,7 @@ private func categoryNames(_ presenter: SongListPresenter) -> [String] {
 @MainActor
 private func selectCategory(_ presenter: SongListPresenter, _ prefix: String) {
     for index in 0..<presenter.categories.count where presenter.categories[index].prefix == prefix {
-        presenter.categoryIndex = index
+        presenter.selectCategory(index: index)
         return
     }
 }
@@ -153,41 +153,41 @@ private func songListSearch(_ report: CheckReport) {
     presenter.setSongs(songListFixture())
 
     // Per-word AND over label + constant.
-    presenter.searchText = "mus route"
+    presenter.updateSearch(text: "mus route")
     report.expectEqual(["mus_route101", "mus_route102"], rowLabels(presenter), cppID: id,
                        what: "multi-word query requires every word")
-    presenter.searchText = "route stray"
+    presenter.updateSearch(text: "route stray")
     report.expectEqual([], rowLabels(presenter), cppID: id,
                        what: "no song contains both words")
     report.expectEqual("0 of 8 songs", presenter.countText, cppID: id,
                        what: "empty result count caption")
 
     // The constant participates: MUS_STRAY's constant matches "stray".
-    presenter.searchText = "mus_stray"
+    presenter.updateSearch(text: "mus_stray")
     report.expectEqual(["mus_stray"], rowLabels(presenter), cppID: id,
                        what: "constant text matches")
 
     // Single-word fuzzy fallback: subsequence, not substring.
-    presenter.searchText = "musrival"
+    presenter.updateSearch(text: "musrival")
     report.expectEqual([], rowLabels(presenter), cppID: id,
                        what: "non-subsequence finds nothing")
-    presenter.searchText = "msray"
+    presenter.updateSearch(text: "msray")
     report.expectEqual(["mus_stray"], rowLabels(presenter), cppID: id,
                        what: "subsequence query finds mus_stray")
     // Fuzzy applies to single-word queries only.
-    presenter.searchText = "ms ray"
+    presenter.updateSearch(text: "ms ray")
     report.expectEqual([], rowLabels(presenter), cppID: id,
                        what: "multi-word queries never fall back to fuzzy")
 
     // Search composes with the category.
-    presenter.searchText = ""
+    presenter.updateSearch(text: "")
     selectCategory(presenter, "mus_")
-    presenter.searchText = "route"
+    presenter.updateSearch(text: "route")
     report.expectEqual(["mus_route101", "mus_route102"], rowLabels(presenter), cppID: id,
                        what: "search narrows inside the category")
 
     // Clearing restores the full category.
-    presenter.searchText = "  "
+    presenter.updateSearch(text: "  ")
     report.expectEqual(4, presenter.rowCount, cppID: id,
                        what: "whitespace-only search is empty")
 }
@@ -205,11 +205,11 @@ private func songListSort(_ report: CheckReport) {
         songListing(3, "se_door"),
     ])
 
-    presenter.sortIndex = 1
+    presenter.selectSort(index: 1)
     report.expectEqual(["mus_Alpha", "mus_alpha", "mus_beta", "se_door"],
                        rowLabels(presenter), cppID: id,
                        what: "A–Z is case-insensitive with an ID tie-break")
-    presenter.sortIndex = 0
+    presenter.selectSort(index: 0)
     report.expectEqual(["mus_beta", "mus_Alpha", "mus_alpha", "se_door"],
                        rowLabels(presenter), cppID: id,
                        what: "ID order restores snapshot order")
@@ -247,7 +247,7 @@ private func songListSelectionAndActivation(_ report: CheckReport) {
                        what: "rebuild re-selects the loaded song")
 
     // Mid-search the selection clears so Enter takes the first match.
-    presenter.searchText = "route"
+    presenter.updateSearch(text: "route")
     report.expectEqual(-1, presenter.selectedSongId, cppID: id,
                        what: "search clears the selection")
     presenter.activateSelection()
@@ -255,7 +255,7 @@ private func songListSelectionAndActivation(_ report: CheckReport) {
                        what: "Enter activates the first visible match")
 
     // A filtered-out loaded song deselects; -1 deselects outright.
-    presenter.searchText = ""
+    presenter.updateSearch(text: "")
     selectCategory(presenter, "se_")
     report.expectEqual(-1, presenter.selectedSongId, cppID: id,
                        what: "filtered-out loaded song deselects")
@@ -276,7 +276,7 @@ private func songListSelectionAndActivation(_ report: CheckReport) {
     report.expectEqual([6], deleted, cppID: id, what: "delete emits the native ID")
 
     // Activating an id that isn't visible is a no-op.
-    presenter.searchText = "route101"
+    presenter.updateSearch(text: "route101")
     presenter.activateSong(songId: 6)
     report.expectEqual([0, 6], activated, cppID: id,
                        what: "invisible ids cannot activate")
@@ -292,7 +292,7 @@ private func songListSelectionAndActivation(_ report: CheckReport) {
                        what: "invisible ids cannot register")
     report.expectEqual([6], deleted, cppID: id,
                        what: "invisible ids cannot delete")
-    presenter.searchText = ""
+    presenter.updateSearch(text: "")
     presenter.requestRegister(songId: 0)
     report.expectEqual([6], registered, cppID: id,
                        what: "a fully registered song cannot register")
