@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationpointmenus.cpp
 Original SHA-256: b15a2e6646fb4e2878367a6ef67473926f9ac2522c626266ce2c090755355325
 Swift counterpart: src/checks/automation/automationpointmenus.swift
-Swift SHA-256: 822fea2845eaa09f0131e003db1155aba4da35f14af27e633887b7c426017630
+Swift SHA-256: 02e53ba32c703c92a5a6f596f62857f5a97173514cb51732da1b563f10ebfd25
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,7 +23,10 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Verification: deno task verify --filter swiftcore --verbose — ok: swiftcore on this worktree (1/14 harnesses selected, ~10s) on the tree at 19aca868 plus the lane uncommitted check edits; drawerAutomationOutsidePressRetarget executes green in runAutomationPageChecks with no FAIL lines for its cppID, alongside drawerAutomationPointMenuDeleteAndStale, drawerAutomationDuplicatePromptAndParameterSwitch and drawerAutomationLaneDeleteConfirmation. Recorded by the lane controller from that run; this proof-only reconciliation did not re-run the build or the suite.
+Reference revision pin: the recovered original at the recorded revision hashes to the recorded Original SHA-256; the counterpart hash above is the final checked-in source.
+Registered run path: src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks -> src/checks/workspace/SessionChecks.swift :: runProjectSessionSuite -> projectSession (swiftcore suite 10); the counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
+Execution boundary: MATCHED identifies equivalent executing predicates at the cited S entries. Native popup rendering and pointer delivery, native focus and key delivery with no Swift ingress (each recorded as GAP with its observed outcome), retired representation and the residual unproved conditions stay recorded per site; parser success is not semantic parity.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -70,653 +73,653 @@ src/checks/automation/automationpointmenus.cpp:810 | QTest::keyClick(&quickWindo
 Original assertion inventory
 
 A001 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:109
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift scenario stages the same written CC lane and asserts its points through the values predicates ([S031], [S034]); the C++ label-row lookup has no separate Swift assertion.
 Original expression:
   QVERIFY(cc.valid())
 
 A002 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift pointer route reaches the point-menu target predicate and the published Delete row for the staged lane ([S028], [S029]).
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A003 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The published point menu enables Delete on a written node ([S029]).
 Original expression:
   QVERIFY2(deleteRow && deleteRow->enabled, "the Delete row never rendered enabled")
 
 A004 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered row click is not exercised; the Swift predicate dispatches the same action through the presenter.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*menu.session, menu.deleteNodeRow),
                "the Delete row did not receive a real click")
 
 A005 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:126
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared menu open state after the pick is not observed in Swift; the Swift predicate asserts the dispatch outcome through consumeMenuAction.
 Original expression:
   QVERIFY2(!menu.session->isOpen(), "the Delete pick left the point menu open")
 
 A006 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:128
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires Delete to remove the targeted node and keep the sibling ([S031]).
 Original expression:
   QVERIFY(!songTab.document().findLanePoint(0, kController, kPointTick, &point))
 
 A007 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:129
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the sibling node to survive the Delete ([S031]).
 Original expression:
   QVERIFY(songTab.document().findLanePoint(0, kController, kOtherPointTick, &point))
 
 A008 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:130
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the surviving sibling to keep its value ([S031]).
 Original expression:
   QCOMPARE(point.value, kOtherPointValue)
 
 A009 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One Delete publishes one revision ([S032]).
 Original expression:
   QCOMPARE(songTab.document().revision(), revision + 1)
 
 A010 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One Delete is one revision and one history entry ([S032], [S035]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndex + 1)
 
 A011 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:135
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the Delete to be undoable ([S033]).
 Original expression:
   QVERIFY(songTab.history().canUndo())
 
 A012 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:136
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires one undo to consume the Delete ([S033]).
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(songTab.history().requestUndo()))
 
 A013 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:137
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires undo to restore the deleted node ([S034]).
 Original expression:
   QVERIFY(songTab.document().findLanePoint(0, kController, kPointTick, &point))
 
 A014 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:138
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the restored node to keep its value ([S034]).
 Original expression:
   QCOMPARE(point.value, kPointValue)
 
 A015 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:139
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The restored lane values plus the consumed single history entry ([S034], [S035]) are the public-API representation of the restored serialization.
 Original expression:
   QCOMPARE(songTab.document().smf().write(), before)
 
 A016 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:150
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the staged duplicate lane through its exact values ([S039]).
 Original expression:
   QVERIFY(cc.valid())
 
 A017 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift duplicate scenario opens the prompt through the presenter entry point ([S040]) rather than the node right-press and the Set Value row.
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A018 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:158
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered row click is not exercised; the Swift predicate dispatches the same action through the presenter.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*menu.session, menu.setValueRow),
                "the Set Value row did not receive a real click")
 
 A019 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:167
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared menu open state after the pick is not observed in Swift; the Swift predicate asserts the dispatch outcome through consumeMenuAction.
 Original expression:
   QVERIFY2(!menu.session->isOpen(), "the Set Value pick left the point menu open")
 
 A020 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:168
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the prompt to open on the written node ([S040]).
 Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A021 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:170
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the original requires the text input of the inline prompt to hold the active focus of the quick window after the Set Value pick; the counterpart observes the prompt opening and marking the page interacting ([S001], [S002]) but publishes no active-focus fact.
 Original expression:
   QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value pick")
 
 A022 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift supplies the displayed value and asserts the mapped stored value lands ([S041], [S042]), exercising the same stored-to-displayed mapping; the rendered field text itself is not read.
 Original expression:
   QCOMPARE(prompt->property("selectedText").toString(), QStringLiteral("32"))
 
 A023 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:174
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicate asserts the acceptance commits one revision ([S041], [S043]); the prompt being gone afterwards is not asserted in this scenario.
 Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A024 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:177
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires both duplicate occurrences to stand after the acceptance ([S042]).
 Original expression:
   QCOMPARE(points.size(), std::size_t{2})
 
 A025 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:178
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the first duplicate occurrence to keep its tick ([S042]).
 Original expression:
   QCOMPARE(points[0].tick, kPointTick)
 
 A026 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the untargeted duplicate occurrence to keep its value ([S042]).
 Original expression:
   QCOMPARE(points[0].value, 32)
 
 A027 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the targeted duplicate occurrence to keep its tick ([S042]).
 Original expression:
   QCOMPARE(points[1].tick, kPointTick)
 
 A028 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires only the targeted duplicate occurrence to move ([S042]).
 Original expression:
   QCOMPARE(points[1].value, 64)
 
 A029 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:182
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One duplicate acceptance publishes one revision ([S043]).
 Original expression:
   QCOMPARE(songTab.document().revision(), revision + 1)
 
 A030 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:183
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One duplicate acceptance is one history entry ([S043]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndex + 1)
 
 A031 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:184
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the original requires the plot automation input to own the active focus of the quick window again after the commit and its undo; the counterpart asserts the committed value, the one revision and the undo ([S008], [S009], [S013], [S014]) but publishes no focus owner.
 Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
 A032 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:195
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires a prompt to open on a written node, which requires the staged lane ([S004]).
 Original expression:
   QVERIFY(cc.valid())
 
 A033 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:202
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift prompt scenario opens the prompt through the presenter entry point ([S001]) rather than the node right-press and the Set Value row.
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A034 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:203
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered row click is not exercised; the Swift predicate dispatches the same action through the presenter.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*menu.session, menu.setValueRow),
                "the Set Value row did not receive a real click")
 
 A035 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:207
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the prompt to open on the written node ([S001]).
 Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A036 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:209
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page claims an open prompt with Escape through the cancel route the predicate exercises: cancelling an open prompt drops the prompt and the live interaction ([S022]) and commits nothing ([S021]).
 Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A037 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:211
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route commits nothing ([S021]).
 Original expression:
   QCOMPARE(songTab.document().revision(), revision)
 
 A038 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:212
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route publishes no document change ([S021]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndex)
 
 A039 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:213
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route leaves the staged lane alone ([S021]).
 Original expression:
   QCOMPARE(songTab.document().lanePoints(0, kController).size(), std::size_t{1})
 
 A040 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:214
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the original requires the automation input to own the active focus of the quick window again after the Escape-cancelled prompt; the counterpart asserts the prompt drop and the untouched document and history ([S021], [S022]) but publishes no focus owner.
 Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
 A041 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:221
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No Swift scenario stages a second track in this family; the Swift switch scenario changes the parameter instead ([S046], [S047]).
 Original expression:
   QCOMPARE(songTab.document().addTrack(0), 1)
 
 A042 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:226
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift fixture activates the row through the presenter catalogue index without asserting the activation result; the staged row behaviour is asserted instead.
 Original expression:
   QVERIFY(activateParameter(trackA))
 
 A043 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:229
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift switch scenario opens the prompt through the presenter entry point ([S046]) rather than the node right-press and the Set Value row.
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A044 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:230
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered row click is not exercised; the Swift predicate dispatches the same action through the presenter.
 Original expression:
   QVERIFY(quick_popup::clickMenuRow(*menu.session, menu.setValueRow))
 
 A045 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:232
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the prompt to open on the CC lane before the switch ([S046]).
 Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A046 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:233
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the original requires the focused text input of the quick window to belong to the inline prompt before the track switch; the counterpart asserts the prompt and its parameter-switch drop ([S046], [S047]) but publishes no focused-input fact.
 Original expression:
   QVERIFY(automation_valueprompt::focusedTextInput(quickWindow()))
 
 A047 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:252
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift scenario switches the parameter directly ([S047]); the original prompt-changed callback that switches the track is not staged.
 Original expression:
   QVERIFY(switched)
 
 A048 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:253
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The second track is not staged in Swift; the Swift switch scenario keeps the single-track fixture ([S051]).
 Original expression:
   QVERIFY(findRow(trackB).valid())
 
 A049 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:254
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The target track disappears in the original; the Swift switch scenario keeps one track and instead asserts the prompt drop ([S047]).
 Original expression:
   QVERIFY(!findRow(trackA).valid())
 
 A050 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:255
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the parameter switch to close the CC prompt ([S047]).
 Original expression:
   QVERIFY(!canvas->valuePromptVisible())
 
 A051 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:256
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the switched parameter to leave the CC lane untouched ([S051]).
 Original expression:
   QCOMPARE(songTab.document().smf().write(), before)
 
 A052 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The switch itself publishes no revision: Swift requires the prompt dropped ([S047]) and the CC lane untouched ([S051]) with only the later tempo acceptance advancing the revision ([S052]).
 Original expression:
   QCOMPARE(songTab.document().revision(), revision)
 
 A053 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:258
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: With the switch writing nothing the history state is unchanged ([S047], [S051]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndex)
 
 A054 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:264
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the guard establishes the native automation band focus and the active focus item of the quick window through the deleted C++ harness, and the ported page publishes no focused-band fact, so no executing predicate observes this precondition.
 Original expression:
   QVERIFY(focusAutomationBand())
 
 A055 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:266
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift scenario stages the same two-point CC lane and asserts it through the values predicates ([S031], [S034]).
 Original expression:
   QVERIFY(cc.valid())
 
 A056 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:274
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift retarget scenario opens the first point menu through the same node right-press and asserts its captured point target ([S082]); the sibling delete scenario asserts the same route ([S028]).
 Original expression:
   QVERIFY2(first.session, qUtf8Printable(first.diagnostic))
 
 A057 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:283
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift retarget scenario delivers the outside right press on the second written node through the page outside-press route and asserts the captured point target ([S083]); the consumed Delete then removes the second node only ([S085]), so the retargeted menu names the newly hit node.
 Original expression:
   QVERIFY2(retargeted.session, qUtf8Printable(retargeted.diagnostic))
 
 A058 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:287
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The published point menu enables Delete on the written node ([S029]); in the retarget scenario the consumed Delete row proves the retargeted menu published it enabled ([S084]).
 Original expression:
   QVERIFY2(deleteItem && deleteItem->enabled, "the retargeted menu lost its Delete row")
 
 A059 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:288
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered row click is not exercised; the Swift retarget scenario dispatches the same action through the presenter and asserts the consumption ([S084]).
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*retargeted.session, deleteRow),
                "the retargeted Delete row did not receive a real click")
 
 A060 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:291
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared menu open state after the retargeted pick is not observed in Swift; the Swift predicate asserts the dispatch outcome through consumeMenuAction ([S084]).
 Original expression:
   QVERIFY2(!retargeted.session->isOpen(), "the retargeted Delete pick left the menu open")
 
 A061 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:293
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the retargeted Delete to spare the first written node ([S085]) and its undo to restore both written nodes ([S086], [S034]).
 Original expression:
   QVERIFY(songTab.document().findLanePoint(0, kController, kPointTick, &point))
 
 A062 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:294
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the retargeted Delete to remove exactly the second written node ([S085]), the node the outside press hit ([S083]).
 Original expression:
   QVERIFY(!songTab.document().findLanePoint(0, kController, kOtherPointTick, &point))
 
 A063 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:295
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the original re-reads the focused band of the native quick view after the retargeted Delete pick; the ported page publishes no focused-band fact and this counterpart has no predicate for the return of native band focus.
 Original expression:
   QTRY_VERIFY2(songTab.view().quickView()->focusedBand() == songview::TimelineBand::Automation,
                    "the retargeted Delete pick did not return the band focus")
 
 A064 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:312
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift retarget scenario reopens the point menu through the same node right-press at the witness node and asserts its captured point target ([S087]).
 Original expression:
   QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic))
 
 A065 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:318
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift retarget scenario reopens the point menu and delivers the outside press on empty plot space through the page outside-press route, then requires the shared menu to be closed ([S088]).
 Original expression:
   QVERIFY2(!reopened.session->isOpen(), "a miss right press did not dismiss the point menu")
 
 A066 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:319
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The release of the Swift page after the miss press claims no band ([S089]) and the paired sequence writes nothing ([S090]); the production QML underlay swallowing that release before it reaches the page is not observed here.
 Original expression:
   QVERIFY2(!quick_popup::popupSession(songTab.view())->isOpen(),
                "the dismissed point menu leaked its paired release into a new menu")
 
 A067 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:321
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift retarget scenario captures the document state with the menu dismissed, before the empty-space press, and requires it unchanged across the miss press and its paired release ([S090]).
 Original expression:
   QCOMPARE(songTab.document().smf().write(), before)
 
 A068 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:322
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the original re-reads the focused band of the native quick view after the miss dismissal; the ported page publishes no focused-band fact and this counterpart has no predicate for the return of native band focus.
 Original expression:
   QTRY_VERIFY2(songTab.view().quickView()->focusedBand() == songview::TimelineBand::Automation,
                    "the miss dismissal did not restore the automation band focus")
 
 A069 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:331
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native pointer delivery and the shared time-selection menu only; no Swift predicate in this family covers the plot-miss fallback menu.
 Original expression:
   QVERIFY2(fallback.session, qUtf8Printable(fallback.diagnostic))
 
 A070 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:332
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The time-selection fallback rows belong to the shared native popup model; no Swift predicate in this family covers them.
 Original expression:
   QVERIFY2(fallback.model->rowForId(int(songview::TimeSelectionAction::Clear)) >= 0,
                "the fallback menu offered no time-selection rows")
 
 A071 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:336
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native key delivery: the original dismisses the native plot-miss fallback menu with a physical Escape; the fallback time-selection menu has no Swift predicate in this counterpart and no executing predicate routes Escape into an open menu and re-reads its state.
 Original expression:
   QVERIFY2(!fallback.session->isOpen(), "Escape did not dismiss the fallback menu")
 
 A072 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:347
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift pointer route opens the point menu and asserts its captured target ([S028]).
 Original expression:
   QVERIFY2(selectionInvalidated.session, qUtf8Printable(selectionInvalidated.diagnostic))
 
 A073 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:351
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The selection-change seam is not staged in Swift; the Swift stale scenario retires a pending point menu through a document write and the stale Delete refusal ([S037], [S038]).
 Original expression:
   QVERIFY2(!selectionInvalidated.session->isOpen(),
                "a selection change did not dismiss the owned point menu")
 
 A074 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:353
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The shared popup session ownership and its replacement popup are retired native popup rendering.
 Original expression:
   QVERIFY2(!quick_popup::popupSession(songTab.view())->isOpen(),
                "point-menu invalidation left a replacement popup open")
 
 A075 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:355
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale scenario snapshot equality includes the revision ([S038]).
 Original expression:
   QCOMPARE(songTab.document().revision(), revisionBeforeInvalidation)
 
 A076 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:356
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The snapshot equality plus the one-entry undo traversal ([S035]) prove the history state is unchanged ([S038]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndexBeforeInvalidation)
 
 A077 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:357
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The snapshot equality is the public-API representation of the unchanged serialization ([S038]).
 Original expression:
   QCOMPARE(songTab.document().smf().write(), beforeInvalidation)
 
 A078 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:364
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift pointer route opens the point menu and asserts its captured target ([S028]).
 Original expression:
   QVERIFY2(valueMenu.session, qUtf8Printable(valueMenu.diagnostic))
 
 A079 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:365
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered row click is not exercised; the Swift predicate dispatches the same action through the presenter.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*valueMenu.session, valueMenu.setValueRow),
                "the Set Value row did not receive a real click")
 
 A080 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:368
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the prompt to open on the written node ([S001]).
 Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A081 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:372
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift parameter-switch predicate drops the prompt ([S047]); the selection-change seam that must spare the independent node-value prompt is not staged.
 Original expression:
   QVERIFY2(automation_valueprompt::promptVisible(chrome),
                "a selection change cancelled the independent node-value prompt")
 
 A082 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:375
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page claims an open prompt with Escape through the cancel route the predicate exercises: cancelling the prompt on the written node drops the prompt and the interaction ([S022]) and commits nothing ([S021]).
 Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A083 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:376
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route commits nothing ([S021]).
 Original expression:
   QCOMPARE(songTab.document().revision(), revisionBeforeInvalidation)
 
 A084 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:377
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route publishes no document change ([S021]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndexBeforeInvalidation)
 
 A085 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:378
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift cancel route leaves the document unchanged ([S021]).
 Original expression:
   QCOMPARE(songTab.document().smf().write(), beforeInvalidation)
 
 A086 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:386
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift confirmation owns the shared session with its confirm-lane-delete prompt kind ([S053], [S055]).
 Original expression:
   QVERIFY2(laneDelete.session && laneDelete.root && laneDelete.cancelButton,
                qUtf8Printable(laneDelete.diagnostic))
 
 A087 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:391
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The selection-change seam is not staged; the Swift predicates assert the confirmation content at open and through its own accept and cancel routes ([S055], [S065]).
 Original expression:
   QVERIFY2(laneDelete.session->isOpen(),
                "a selection change cancelled the independent lane-delete confirmation")
 
 A088 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:393
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The selection-change seam is not staged; the Swift predicate asserts the confirmation prompt kind ([S055]) but not that the selection change spared it.
 Original expression:
   QVERIFY2(quick_popup::promptItem(*laneDelete.session, QLatin1String("ccDeleteConfirm")) !=
                    nullptr,
                "the selection change removed the lane-delete confirmation content")
 
 A089 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:396
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered Cancel button click is not exercised; the Swift presenter cancels through its own route ([S065]).
 Original expression:
   QVERIFY2(quick_popup::clickPromptButton(*laneDelete.session, QLatin1String("cancelButton")),
                "the confirmation Cancel button did not receive a real click")
 
 A090 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:398
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires cancelling the confirmation to drop the prompt ([S065]).
 Original expression:
   QTRY_VERIFY(!laneDelete.session->isOpen())
 
 A091 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:399
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The confirmation cancel route leaves document and history untouched ([S066]).
 Original expression:
   QCOMPARE(songTab.document().revision(), revisionBeforeInvalidation)
 
 A092 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:400
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The confirmation cancel route leaves the history state untouched ([S066]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndexBeforeInvalidation)
 
 A093 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:401
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The cancel snapshot equality is the public-API representation of the unchanged serialization ([S066]).
 Original expression:
   QCOMPARE(songTab.document().smf().write(), beforeInvalidation)
 
 A094 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:420
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift synthetic and written-count scenarios stage the volume lane and assert its written events ([S075]).
 Original expression:
   QVERIFY(volume.valid())
 
 A095 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:424
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift fixture activates the row through the presenter catalogue index without asserting the activation result; the staged row behaviour is asserted instead.
 Original expression:
   QVERIFY(activateParameter(
           {EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume}))
 
 A096 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:426
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered lane body is native rendering; the Swift predicate asserts the parameter stays in the catalogue ([S076]) but not its plot.
 Original expression:
   QTRY_VERIFY(!laneBody(volume).isEmpty())
 
 A097 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:427
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift eventless lane disables Delete events ([S069]), the public statement that the lane carries no written events.
 Original expression:
   QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty())
 
 A098 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:430
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift predicate requires the volume parameter to remain in the catalogue ([S076]).
 Original expression:
   QVERIFY(volumeIndex >= 0)
 
 A099 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:431
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The parallel canvas event-count and label arrays are retired C++ data plumbing with no consumer-visible effect; the Swift page publishes lane snapshots and the written count through the confirmation message ([S073]).
 Original expression:
   QCOMPARE(page().canvas()->parameterEventCounts().size(),
                page().canvas()->parameterLabels().size())
 
 A100 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:433
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The disabled Delete row states that the lane carries no written events ([S069]); when the lane is written the same row is enabled and consumed ([S072]).
 Original expression:
   QVERIFY(!page().canvas()->parameterEventCounts().at(volumeIndex).toBool())
 
 A101 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:443
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift scenario stages the lane menu Delete-events guard on the eventless lane ([S069]); the synthetic node own point menu is not opened.
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A102 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:445
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the eventless lane to render Delete disabled ([S069]).
 Original expression:
   QVERIFY2(deleteRow && !deleteRow->enabled,
                "the synthetic default's Delete row rendered enabled")
 
 A103 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:448
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The synthetic node point menu rows are not staged in Swift; the Swift prompt entry point stages insertions on written parameters instead ([S015], [S016]).
 Original expression:
   QVERIFY2(setValueRow && setValueRow->enabled,
                "the synthetic default's Set Value row rendered disabled")
 
 A104 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:456
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered menu panel is native popup rendering.
 Original expression:
   QVERIFY2(menuPanel, "the synthetic default's point menu lost its rendered panel")
 
 A105 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:458
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The accessibility interface of the rendered delegate is native rendering.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&menuPanel, &menu, &deleteAccessible] {
                    QQuickItem *const rowItem =
@@ -729,276 +732,276 @@ Original expression:
                "the rendered Delete row is not exposed as disabled to accessibility")
 
 A106 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:470
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered row click is not exercised; the Swift predicate dispatches the same action through the presenter.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*menu.session, menu.deleteNodeRow),
                "the disabled Delete row never rendered for the no-op probe")
 
 A107 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:473
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared menu open state after the pick is not observed in Swift; the Swift predicate asserts the dispatch outcome through consumeMenuAction.
 Original expression:
   QVERIFY2(menu.session->isOpen(), "clicking the disabled Delete row closed the point menu")
 
 A108 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:474
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The synthetic scenario now asserts the refused dispatch leaves the document snapshot unchanged, the revision included ([S081], [S070]).
 Original expression:
   QCOMPARE(songTab.document().revision(), revision)
 
 A109 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:475
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The refused dispatch leaves the document snapshot unchanged, which includes undo availability ([S081], [S070]), and the confirmation traversal proves its history depth ([S064]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndex)
 
 A110 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:476
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The refused dispatch leaves the document snapshot unchanged ([S081], [S070]); the confirmation own traversal proves that no second history entry ever landed ([S064]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->count(), undoCount)
 
 A111 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:477
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The refused dispatch leaves the document snapshot unchanged and the eventless lane keeps no written events ([S081], [S070], [S071]).
 Original expression:
   QCOMPARE(songTab.document().smf().write(), before)
 
 A112 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:482
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered Set Value click is not exercised; the Swift scenario opens the prompt through the presenter entry point ([S015]).
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*menu.session, menu.setValueRow),
                "the Set Value row did not receive a real click")
 
 A113 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:485
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared menu open state after the pick is not observed in Swift; the Swift predicate asserts the dispatch outcome through consumeMenuAction.
 Original expression:
   QVERIFY2(!menu.session->isOpen(), "the Set Value pick left the point menu open")
 
 A114 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:486
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the empty-tick prompt to open ([S015]).
 Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A115 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:488
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the original requires the text input of the inline prompt to hold the active focus of the quick window after the Set Value pick on the synthetic row; the counterpart asserts the prompt and its empty-tick insertion ([S015], [S016], [S017]) but publishes no active-focus fact.
 Original expression:
   QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value pick")
 
 A116 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:489
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift acceptance supplies a displayed value that lands the mapped stored value ([S016], [S017]); the rendered field text itself is not read.
 Original expression:
   QCOMPARE(prompt->property("selectedText").toString(),
                QString::number(CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume)))
 
 A117 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:493
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicate asserts the insertion commits one revision ([S017], [S020]); the prompt being gone afterwards is not asserted in this scenario.
 Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A118 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:496
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the insertion to land exactly one point ([S017]).
 Original expression:
   QCOMPARE(points.size(), std::size_t{1})
 
 A119 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:497
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the inserted point at the captured tick ([S017]).
 Original expression:
   QCOMPARE(points[0].tick, uint64_t{0})
 
 A120 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:498
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the inserted point to store the accepted displayed value ([S016], [S017]).
 Original expression:
   QCOMPARE(points[0].value, 3)
 
 A121 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:499
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: A prompt acceptance is one revision ([S010], [S020]) and the insertion predicate asserts the inserted stream itself ([S017]).
 Original expression:
   QCOMPARE(songTab.document().revision(), revision + 1)
 
 A122 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:500
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One acceptance is one history entry, consumed by one undo ([S010], [S014]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->count(), undoCount + 1)
 
 A123 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:501
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One acceptance advances the stack by one ([S010], [S014]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndex + 1)
 
 A124 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:504
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the acceptance to be undoable ([S012]).
 Original expression:
   QVERIFY(songTab.history().canUndo())
 
 A125 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:505
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires one undo to consume the acceptance ([S012]).
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(songTab.history().requestUndo()))
 
 A126 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:506
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift scenario asserts the undo of the value-replacement acceptance ([S013]) but never undoes the empty-tick insertion ([S017]).
 Original expression:
   QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty())
 
 A127 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:507
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift scenario asserts the undo of the value-replacement acceptance ([S013]) but never undoes the empty-tick insertion, so the restored serialization is unproved.
 Original expression:
   QCOMPARE(songTab.document().smf().write(), before)
 
 A128 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:508
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the original re-checks that the automation input owns the active focus of the quick window after the promoted event is undone; the counterpart asserts the empty-tick insertion commit ([S017]) but stages neither that undo nor any focus owner.
 Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
 A129 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:519
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift stale scenario opens its point menu on the staged lane and asserts the captured target ([S036]).
 Original expression:
   QVERIFY(cc.valid())
 
 A130 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:524
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift stale scenario opens its point menu on the staged lane and asserts the captured target ([S036]).
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A131 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:530
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered Delete row centre the original presses is native rendering.
 Original expression:
   QVERIFY2(!deleteCenter.isNull(), "the Delete row never rendered")
 
 A132 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:549
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared popup state after the refused stale release is not observed; Swift asserts the refusal ([S037]) and the unchanged snapshot ([S038]).
 Original expression:
   QVERIFY2(!menu.session->isOpen(), "the stale request left a popup open")
 
 A133 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:550
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared popup session state after the stale release is not observed; Swift asserts the refusal ([S037]) and the unchanged snapshot ([S038]).
 Original expression:
   QVERIFY2(!quick_popup::popupSession(songTab.view())->isOpen(),
                "the stale request reopened a popup")
 
 A134 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:552
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale scenario snapshot equality includes the revision ([S038]).
 Original expression:
   QCOMPARE(songTab.document().revision(), revisionAfterWrite)
 
 A135 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:553
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale scenario snapshot equality is the public-API representation of the unchanged history state ([S038]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->count(), undoCountAfterWrite)
 
 A136 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:554
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale scenario snapshot equality is the public-API representation of the unchanged history state ([S038]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndexAfterWrite)
 
 A137 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:555
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale scenario snapshot equality is the public-API representation of the unchanged serialization ([S038]).
 Original expression:
   QCOMPARE(songTab.document().smf().write(), smfAfterWrite)
 
 A138 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:557
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale scenario now asserts the full post-write lane after the refused dispatch ([S079]) together with the unchanged snapshot ([S038]). The intervening write is a span write in Swift rather than the original lane replacement, so the literal point set differs while the no-op observation is asserted over the whole list.
 Original expression:
   QVERIFY(songTab.document().findLanePoint(0, kController, kRewrittenTick, &point))
 
 A139 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:558
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The post-write lane predicate names the intervening write value ([S079]) with the unchanged snapshot ([S038]), the same observation this site makes of the rewritten point.
 Original expression:
   QCOMPARE(point.value, kRewrittenValue)
 
 A140 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:559
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The post-write lane predicate asserts the complete list after the refused dispatch ([S079]): the original target tick is absent because the interrupting write replaced the lane, while the Swift interrupt keeps it and appends at 168, so the same no-op property is asserted over the whole list.
 Original expression:
   QVERIFY(!songTab.document().findLanePoint(0, kController, kPointTick, &point))
 
 A141 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:560
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The post-write lane predicate asserts the complete list after the refused dispatch ([S079]): the original second target tick is absent by that lane replacement, while the Swift interrupt keeps it and appends at 168, so the same no-op property is asserted over the whole list.
 Original expression:
   QVERIFY(!songTab.document().findLanePoint(0, kController, kOtherPointTick, &point))
 
 A142 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:561
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift stale scenario asserts the refusal and the unchanged snapshot ([S037], [S038]) but has no prompt-visible predicate.
 Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(songTab.view().editorDrawer()->chrome()))
 
 A143 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:572
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift stale scenario opens its point menu on the staged lane and asserts the captured target ([S036]).
 Original expression:
   QVERIFY(cc.valid())
 
 A144 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:580
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift stale scenario opens its point menu on the staged lane and asserts the captured target ([S036]).
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A145 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:583
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(root)
 
 A146 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:586
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(rulerInput)
 
 A147 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:588
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(ruler)
 
 A148 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:591
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(division)
 
 A149 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:596
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The shared popup session pointer is retired native popup rendering.
 Original expression:
   QVERIFY(live)
 
 A150 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:597
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The foreign ruler menu publication over the pending point menu is native popup rendering.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&live] {
                    QQuickItem *const panel = quick_popup::menuPanel(*live);
@@ -1007,273 +1010,273 @@ Original expression:
                "the foreign ruler menu did not publish over the pending point menu")
 
 A151 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:608
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The foreign division menu rows belong to the shared native popup model.
 Original expression:
   QVERIFY2(targetRow >= 0, "the foreign division menu omitted the chosen denominator")
 
 A152 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:609
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered foreign row click is native pointer delivery.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
                "the foreign division row did not receive a real click")
 
 A153 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:612
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The shared menu open state after the foreign pick is native popup rendering.
 Original expression:
   QVERIFY2(!live->isOpen(), "the foreign division pick left the shared menu open")
 
 A154 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:613
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The foreign division pick grid selection has no Swift predicate in this family; the ruler division route is native.
 Original expression:
   QCOMPARE(songTab.view().viewState().gridSelection,
                songview::GridSelection::musical(uint32_t(targetDenom)))
 
 A155 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:615
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the original requires the native ruler control to hold active focus after the foreign division pick; that foreign ruler route is native rendering and ownership with no Swift predicate in this counterpart, and the page publishes no focus owner.
 Original expression:
   QTRY_VERIFY2(division->hasActiveFocus(),
                    "the foreign pick did not return focus to the ruler control")
 
 A156 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:619
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The displaced node target writes nothing: the Swift stale scenario asserts the refusal and the unchanged snapshot ([S037], [S038]).
 Original expression:
   QCOMPARE(songTab.document().revision(), revision)
 
 A157 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:620
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The displaced target leaves the history state unchanged ([S038]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndex)
 
 A158 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:621
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The displaced target leaves the serialization unchanged ([S038]).
 Original expression:
   QCOMPARE(songTab.document().smf().write(), before)
 
 A159 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:623
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale scenario now asserts the full post-write lane ([S079]) with the unchanged snapshot ([S038]): the displaced node target wrote nothing and left the lane intact, the same observation this site makes.
 Original expression:
   QVERIFY(songTab.document().findLanePoint(0, kController, kPointTick, &point))
 
 A160 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:624
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The post-write lane predicate covers both written points and the intervening write ([S079]) with the unchanged snapshot ([S038]).
 Original expression:
   QVERIFY(songTab.document().findLanePoint(0, kController, kOtherPointTick, &point))
 
 A161 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:625
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift stale scenario has no prompt-visible predicate ([S037], [S038]).
 Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(songTab.view().editorDrawer()->chrome()))
 
 A162 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:626
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared popup session state is not observed in Swift ([S037], [S038]).
 Original expression:
   QVERIFY(!quick_popup::popupSession(songTab.view())->isOpen())
 
 A163 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:640
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift stale scenario opens its point menu on the staged lane and asserts the captured target ([S036]).
 Original expression:
   QVERIFY(cc.valid())
 
 A164 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:647
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift stale scenario opens its point menu on the staged lane and asserts the captured target ([S036]).
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A165 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:650
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The node menu model of the rendered panel is native popup rendering.
 Original expression:
   QVERIFY(nodeModel)
 
 A166 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:653
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native key delivery: the original dismisses the open point menu with a physical Escape on the popup session window; no executing predicate in this counterpart routes Escape into a menu and re-reads the page menu-open state (the consumption predicates observe the action route only, [S030], [S084]).
 Original expression:
   QVERIFY2(!menu.session->isOpen(), "Escape did not dismiss the point menu")
 
 A167 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:656
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(root)
 
 A168 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:659
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(rulerInput)
 
 A169 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:661
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(ruler)
 
 A170 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:664
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(division)
 
 A171 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:676
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The re-entrant foreign publication is the native popup reset seam; the Swift presenter has no shared popup session to publish over.
 Original expression:
   QVERIFY(foreignPublication)
 
 A172 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:690
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The surviving foreign menu open state is native popup rendering.
 Original expression:
   QVERIFY2(live && live->isOpen(),
                "the callback-published division menu did not survive the open")
 
 A173 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:693
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The surviving rendered panel is native rendering.
 Original expression:
   QVERIFY2(survivor, "the surviving division menu lost its rendered panel")
 
 A174 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:699
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The surviving foreign division rows belong to the shared native popup model.
 Original expression:
   QVERIFY2(targetRow >= 0, "the surviving division menu omitted the chosen denominator")
 
 A175 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:700
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered foreign row click is native pointer delivery.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
                "the surviving division row did not receive a real click")
 
 A176 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:703
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The shared menu open state after the foreign pick is native popup rendering.
 Original expression:
   QVERIFY2(!live->isOpen(), "the division pick left the shared menu open")
 
 A177 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:704
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The foreign pick grid selection has no Swift predicate in this family.
 Original expression:
   QCOMPARE(songTab.view().viewState().gridSelection,
                songview::GridSelection::musical(uint32_t(targetDenom)))
 
 A178 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:709
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The consumed node hit stayed consumed: the Swift stale scenario asserts the refusal and the unchanged revision ([S037], [S038]).
 Original expression:
   QCOMPARE(songTab.document().revision(), revision)
 
 A179 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:710
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The consumed node hit leaves the history state unchanged ([S038]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndex)
 
 A180 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:711
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The consumed node hit leaves the serialization unchanged ([S038]).
 Original expression:
   QCOMPARE(songTab.document().smf().write(), before)
 
 A181 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:712
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift stale scenario has no prompt-visible predicate ([S037], [S038]).
 Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(songTab.view().editorDrawer()->chrome()))
 
 A182 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:723
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift fixture activates the row through the presenter catalogue index without asserting the activation result; the staged row behaviour is asserted instead.
 Original expression:
   QVERIFY(activateParameter(ccRow))
 
 A183 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:725
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift switch scenario opens a CC prompt on the staged lane ([S046]).
 Original expression:
   QVERIFY(cc.valid())
 
 A184 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:732
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift switch scenario opens the prompt through the presenter entry point ([S046]) rather than the node right-press and the Set Value row.
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A185 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:733
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The rendered row click is not exercised; the Swift predicate dispatches the same action through the presenter.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*menu.session, menu.setValueRow),
                "the Set Value row did not receive a real click")
 
 A186 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:736
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The shared menu open state after the pick is not observed in Swift; the Swift predicate asserts the dispatch outcome through consumeMenuAction.
 Original expression:
   QVERIFY2(!menu.session->isOpen(), "the Set Value pick left the point menu open")
 
 A187 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:737
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the prompt to open on the written node ([S046]).
 Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A188 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:739
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the original requires the text input of the inline prompt to hold the active focus of the quick window after the Set Value pick on the switched lane; the counterpart asserts the prompt opening ([S046]) but publishes no active-focus fact.
 Original expression:
   QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value pick")
 
 A189 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:744
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(root)
 
 A190 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:747
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(rulerInput)
 
 A191 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:749
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(ruler)
 
 A192 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:752
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(division)
 
 A193 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:756
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The shared popup session pointer is retired native popup rendering.
 Original expression:
   QVERIFY(live)
 
 A194 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:757
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The foreign ruler menu publication over the pending prompt is native popup rendering.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&live] {
                    QQuickItem *const panel = quick_popup::menuPanel(*live);
@@ -1282,331 +1285,650 @@ Original expression:
                "the foreign ruler menu did not publish over the pending value prompt")
 
 A195 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:769
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift predicate requires the Tempo parameter index to resolve in the catalogue ([S076]), the same index lookup the original performs.
 Original expression:
   QVERIFY(tempoIndex >= 0)
 
 A196 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:771
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The switch closes the CC prompt and the Tempo row then opens its own prompt ([S047], [S048]).
 Original expression:
   QCOMPARE(page().canvas()->activeParameter(), tempoIndex)
 
 A197 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:772
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the switch to drop the owned prompt ([S047]).
 Original expression:
   QVERIFY(!page().canvas()->valuePromptVisible())
 
 A198 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:773
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the switch to drop the owned prompt ([S047]).
 Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A199 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:774
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The foreign ruler menu survival across the switch is native popup rendering.
 Original expression:
   QVERIFY2(live->isOpen(), "the parameter switch cancelled the foreign ruler menu")
 
 A200 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:776
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The switch writes nothing and the CC lane keeps its written point ([S047], [S051]).
 Original expression:
   QVERIFY(frozenDocumentState() == before)
 
 A201 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:784
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The surviving foreign division rows belong to the shared native popup model.
 Original expression:
   QVERIFY2(targetRow >= 0, "the surviving division menu omitted the chosen denominator")
 
 A202 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:785
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The rendered foreign row click is native pointer delivery.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
                "the surviving division row did not receive a real click")
 
 A203 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:788
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The shared menu open state after the foreign pick is native popup rendering.
 Original expression:
   QVERIFY2(!live->isOpen(), "the division pick left the shared menu open")
 
 A204 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:789
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The foreign pick grid selection has no Swift predicate in this family.
 Original expression:
   QCOMPARE(songTab.view().viewState().gridSelection,
                songview::GridSelection::musical(uint32_t(targetDenom)))
 
 A205 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:795
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift fixture activates the row through the presenter catalogue index without asserting the activation result; the staged row behaviour is asserted instead.
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
 
 A206 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:797
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the Tempo prompt to open on its written point ([S048]).
 Original expression:
   QVERIFY(tempo.valid())
 
 A207 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:800
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires Tempo to open its own prompt and to store the prompted BPM ([S048], [S050]).
 Original expression:
   QVERIFY(page().canvas()->openValuePromptForInsertion(tempo, kFreshTick,
                                                            CoreTimeDefaults::kTempoBpm))
 
 A208 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:802
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the Tempo prompt to open ([S048]).
 Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A209 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:804
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the original requires the fresh Tempo prompt to take active focus; the counterpart asserts the Tempo prompt and its acceptance ([S048], [S049]) but publishes no active-focus fact.
 Original expression:
   QVERIFY2(freshPrompt, "the fresh Tempo prompt did not take active focus")
 
 A210 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:805
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift tempo acceptance supplies a displayed value that lands the stored tempo ([S049], [S050]); the rendered field text itself is not read.
 Original expression:
   QCOMPARE(freshPrompt->property("selectedText").toString(),
                QString::number(CoreTimeDefaults::kTempoBpm))
 
 A211 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:811
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift predicate asserts the Tempo acceptance ([S049]); the prompt being gone afterwards is not asserted in this scenario.
 Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A212 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:813
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Tempo acceptance publishes one revision ([S052]).
 Original expression:
   QCOMPARE(songTab.document().revision(), before.revision + 1)
 
 A213 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:814
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One acceptance advances the stack by one and its undo restores the stored microseconds ([S027], [S052]).
 Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), before.undoIndex + 1)
 
 A214 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:816
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the tempo stream to hold the single inserted point ([S050]).
 Original expression:
   QCOMPARE(tempoPoints.size(), std::size_t{1})
 
 A215 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:817
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the inserted tempo point to name the prompted BPM ([S049], [S050]).
 Original expression:
   QCOMPARE(int(std::lround(
                    CoreTimeDefaults::tempoBpm(tempoPoints.front().microsecondsPerQuarterNote))),
                kFreshBpm)
 
 A216 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:821
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift switch fixture stages one CC point and asserts it survives ([S051]); the original two-point CC lane is not staged.
 Original expression:
   QCOMPARE(points.size(), std::size_t{2})
 
 A217 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:822
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the CC lane written point to keep its tick across the switch ([S051]).
 Original expression:
   QCOMPARE(points[0].tick, kPointTick)
 
 A218 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:823
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the CC lane written point to keep its value across the switch ([S051]).
 Original expression:
   QCOMPARE(points[0].value, kPointValue)
 
 A219 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:824
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The original second CC point is not staged in the Swift switch fixture ([S051]).
 Original expression:
   QCOMPARE(points[1].tick, kOtherPointTick)
 
 A220 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:825
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The original second CC point is not staged in the Swift switch fixture, so its value survival is unproved.
 Original expression:
   QCOMPARE(points[1].value, kOtherPointValue)
 
 A221 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:828
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the Tempo acceptance to be undoable ([S027]).
 Original expression:
   QVERIFY(songTab.history().canUndo())
 
 A222 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:829
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires one undo to consume the Tempo acceptance ([S027]).
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(songTab.history().requestUndo()))
 
 A223 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:830
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The undo restores the pre-accept tempo stream ([S027]); the Swift fixture names a tick-zero tempo rather than the original empty stream.
 Original expression:
   QVERIFY(songTab.document().tempoPoints().empty())
 
 A224 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:831
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The restored stream is the public-API representation of the restored serialization ([S027]).
 Original expression:
   QCOMPARE(songTab.document().smf().write(), before.smf)
 
 A225 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:832
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native focus delivery: the original requires the automation input to own the active focus of the quick window again after the Tempo acceptance is undone; the counterpart asserts the acceptance and its undo ([S027], [S049]) but publishes no focus owner.
 Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
 Swift executable assertion index
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S001-S027 index drawerAutomationPromptTransactions, S028-S038 and S079
+drawerAutomationPointMenuDeleteAndStale, S039-S052 drawerAutomationDuplicatePromptAndParameterSwitch,
+S053-S078 plus S080-S081 drawerAutomationLaneDeleteConfirmation and
+S082-S090 drawerAutomationOutsidePressRetarget, all in
+src/checks/automation/automationpointmenus.swift.
 
 S001 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:15
 Swift expression:
-  report.expect(fixture.page.openPrompt(tick: 24, value: 64), cppID: drawerAutomationPromptID,
-                    message: "a prompt opens on a written node")
+    report.expect(fixture.page.openPrompt(tick: 24, value: 64), cppID: drawerAutomationPromptID,
+                  message: "a prompt opens on a written node")
 
 S002 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:17
 Swift expression:
-  report.expect(fixture.page.hasPrompt && fixture.page.interactionActive, cppID: drawerAutomationPromptID,
-                    message: "an open prompt marks the page interacting")
+    report.expect(fixture.page.hasPrompt && fixture.page.interactionActive, cppID: drawerAutomationPromptID,
+                  message: "an open prompt marks the page interacting")
 
 S003 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:19
 Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationPromptID,
-                         what: "opening a prompt writes nothing")
+    report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationPromptID,
+                       what: "opening a prompt writes nothing")
 
 S004 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:21
 Swift expression:
-  report.expectEqual(1, fixture.lanePoints(fixture.panLane).count(where: { $0.tick == 24 }),
-                         cppID: drawerAutomationPromptID, what: "opening a prompt leaves the lane alone")
+    report.expectEqual(1, fixture.lanePoints(fixture.panLane).count(where: { $0.tick == 24 }),
+                       cppID: drawerAutomationPromptID, what: "opening a prompt leaves the lane alone")
 
 S005 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:23
 Swift expression:
-  report.expect(!fixture.page.acceptPrompt(displayedValue: 0), cppID: drawerAutomationPromptID,
-                    message: "accepting the unchanged value commits nothing")
+    report.expect(!fixture.page.acceptPrompt(displayedValue: 0), cppID: drawerAutomationPromptID,
+                  message: "accepting the unchanged value commits nothing")
 
 S006 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:25
 Swift expression:
-  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationPromptID,
-                         what: "a no-op acceptance writes nothing")
+    report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationPromptID,
+                       what: "a no-op acceptance writes nothing")
 
 S007 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:27
 Swift expression:
-  report.expect(fixture.page.openPrompt(tick: 24, value: 64), cppID: drawerAutomationPromptID,
-                    message: "the prompt reopens")
+    report.expect(fixture.page.openPrompt(tick: 24, value: 64), cppID: drawerAutomationPromptID,
+                  message: "the prompt reopens")
 
 S008 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:29
 Swift expression:
-  report.expect(fixture.page.acceptPrompt(displayedValue: 10), cppID: drawerAutomationPromptID,
-                    message: "accepting a changed value commits once")
+    report.expect(fixture.page.acceptPrompt(displayedValue: 10), cppID: drawerAutomationPromptID,
+                  message: "accepting a changed value commits once")
 
 S009 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:31
 Swift expression:
-  report.expectEqual(["24:74", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationPromptID,
-                         what: "the displayed value maps back through the prompt's offset")
+    report.expectEqual(["24:74", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationPromptID,
+                       what: "the displayed value maps back through the prompt's offset")
 
 S010 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:33
 Swift expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: drawerAutomationPromptID,
-                         what: "one acceptance is one document revision")
+    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: drawerAutomationPromptID,
+                       what: "one acceptance is one document revision")
 
 S011 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:35
 Swift expression:
-  report.expectEqual(1, fixture.lanePoints(fixture.panLane).count(where: { $0.tick == 24 }),
-                         cppID: drawerAutomationPromptID, what: "a value replacement keeps one occurrence at the tick")
+    report.expectEqual(1, fixture.lanePoints(fixture.panLane).count(where: { $0.tick == 24 }),
+                       cppID: drawerAutomationPromptID, what: "a value replacement keeps one occurrence at the tick")
 
 S012 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:37
 Swift expression:
-  report.expect(fixture.undo(), cppID: drawerAutomationPromptID, message: "the acceptance is undoable")
+    report.expect(fixture.undo(), cppID: drawerAutomationPromptID, message: "the acceptance is undoable")
 
 S013 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:38
 Swift expression:
-  report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationPromptID,
-                         what: "one undo restores the lane's values")
+    report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationPromptID,
+                       what: "one undo restores the lane's values")
 
 S014 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:40
 Swift expression:
-  report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationPromptID,
-                    message: "one undo consumes the acceptance's single history entry")
+    report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationPromptID,
+                  message: "one undo consumes the acceptance's single history entry")
 
 S015 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:44
 Swift expression:
-  report.expect(fixture.page.openPrompt(tick: 48, value: 40), cppID: drawerAutomationPromptID,
-                    message: "a prompt opens on an empty tick")
+    report.expect(fixture.page.openPrompt(tick: 48, value: 40), cppID: drawerAutomationPromptID,
+                  message: "a prompt opens on an empty tick")
 
 S016 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:46
 Swift expression:
-  report.expect(fixture.page.acceptPrompt(displayedValue: -24), cppID: drawerAutomationPromptID,
-                    message: "the empty-tick prompt commits its insertion")
+    report.expect(fixture.page.acceptPrompt(displayedValue: -24), cppID: drawerAutomationPromptID,
+                  message: "the empty-tick prompt commits its insertion")
 
 S017 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:48
 Swift expression:
-  report.expectEqual(["24:64", "48:40", "120:40"], fixture.values(fixture.panLane),
-                         cppID: drawerAutomationPromptID, what: "the insertion lands at the captured tick")
+    report.expectEqual(["24:64", "48:40", "120:40"], fixture.values(fixture.panLane),
+                       cppID: drawerAutomationPromptID, what: "the insertion lands at the captured tick")
 
 S018 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:51
 Swift expression:
-  report.expect(fixture.page.openPrompt(tick: 48, value: 40), cppID: drawerAutomationPromptID,
-                    message: "a prompt reopens on the inserted tick")
+    report.expect(fixture.page.openPrompt(tick: 48, value: 40), cppID: drawerAutomationPromptID,
+                  message: "a prompt reopens on the inserted tick")
 
 S019 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:53
 Swift expression:
-  report.expect(!fixture.page.acceptPrompt(displayedValue: -24), cppID: drawerAutomationPromptID,
-                    message: "re-inserting an existing point changes nothing")
+    report.expect(!fixture.page.acceptPrompt(displayedValue: -24), cppID: drawerAutomationPromptID,
+                  message: "re-inserting an existing point changes nothing")
 
 S020 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:55
 Swift expression:
-  report.expectEqual(revisionAfterInsert, fixture.document.revision, cppID: drawerAutomationPromptID,
-                         what: "a duplicate insertion writes no revision")
+    report.expectEqual(revisionAfterInsert, fixture.document.revision, cppID: drawerAutomationPromptID,
+                       what: "a duplicate insertion writes no revision")
 
 S021 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:62
 Swift expression:
-  report.expectEqual(beforeCancel, fixture.snapshot, cppID: drawerAutomationPromptID,
-                         what: "cancelling a prompt commits nothing")
+    report.expectEqual(beforeCancel, fixture.snapshot, cppID: drawerAutomationPromptID,
+                       what: "cancelling a prompt commits nothing")
 
 S022 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:64
 Swift expression:
-  report.expect(!fixture.page.hasPrompt && !fixture.page.interactionActive, cppID: drawerAutomationPromptID,
-                    message: "cancelling drops the prompt and the interaction")
+    report.expect(!fixture.page.hasPrompt && !fixture.page.interactionActive, cppID: drawerAutomationPromptID,
+                  message: "cancelling drops the prompt and the interaction")
 
 S023 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:71
 Swift expression:
-  report.expect(tempoFixture.page.openPrompt(tick: 0, value: 120), cppID: drawerAutomationPromptID,
-                    message: "Tempo opens the same prompt on its written point")
+    report.expect(tempoFixture.page.openPrompt(tick: 0, value: 120), cppID: drawerAutomationPromptID,
+                  message: "Tempo opens the same prompt on its written point")
 
 S024 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:73
 Swift expression:
-  report.expect(tempoFixture.page.acceptPrompt(displayedValue: 150), cppID: drawerAutomationPromptID,
-                    message: "Tempo commits its prompt")
+    report.expect(tempoFixture.page.acceptPrompt(displayedValue: 150), cppID: drawerAutomationPromptID,
+                  message: "Tempo commits its prompt")
 
 S025 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:75
 Swift expression:
-  report.expectEqual(["0:150"], tempoFixture.tempoValues, cppID: drawerAutomationPromptID,
-                         what: "the tempo point stores the prompted BPM")
+    report.expectEqual(["0:150"], tempoFixture.tempoValues, cppID: drawerAutomationPromptID,
+                       what: "the tempo point stores the prompted BPM")
 
 S026 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:77
 Swift expression:
-  report.expectEqual(tempoBefore.revision + 1, tempoFixture.document.revision, cppID: drawerAutomationPromptID,
-                         what: "Tempo's acceptance is one revision")
+    report.expectEqual(tempoBefore.revision + 1, tempoFixture.document.revision, cppID: drawerAutomationPromptID,
+                       what: "Tempo's acceptance is one revision")
 
 S027 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:79
 Swift expression:
-  report.expect(tempoFixture.undo() && tempoFixture.tempoValues == ["0:120"], cppID: drawerAutomationPromptID,
-                    message: "one undo restores Tempo's stored microseconds")
+    report.expect(tempoFixture.undo() && tempoFixture.tempoValues == ["0:120"], cppID: drawerAutomationPromptID,
+                  message: "one undo restores Tempo's stored microseconds")
+
+S028 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:96
+Swift expression:
+    report.expect(page.menuTargetIsPoint, cppID: id,
+                  message: "the written point owns its captured menu target")
+
+S029 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:98
+Swift expression:
+    report.expect(page.publishedMenuRows.first {
+        $0.actionId == AutomationMenuAction.deleteNode.rawValue
+    }?.enabled == true, cppID: id, message: "the point menu enables Delete on a written node")
+
+S030 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:101
+Swift expression:
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
+                  cppID: id, message: "the Delete row is consumed")
+
+S031 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:103
+Swift expression:
+    report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id,
+                       what: "Delete removes the targeted node and keeps the other")
+
+S032 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:105
+Swift expression:
+    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+                       what: "one Delete is one revision")
+
+S033 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:107
+Swift expression:
+    report.expect(fixture.undo(), cppID: id, message: "the Delete undoes")
+
+S034 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:108
+Swift expression:
+    report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: id,
+                       what: "undo restores the deleted node")
+
+S035 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:110
+Swift expression:
+    report.expect(!fixture.document.history.canUndo, cppID: id,
+                  message: "the Delete recorded exactly one history entry")
+
+S036 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:121
+Swift expression:
+    report.expect(stale.page.menuTargetIsPoint, cppID: staleID,
+                  message: "the stale target opens its point menu")
+
+S037 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:126
+Swift expression:
+    report.expect(!stale.page.consumeMenuAction(
+        actionId: AutomationMenuAction.deleteNode.rawValue), cppID: staleID,
+                  message: "a stale point menu cannot delete its target")
+
+S038 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:129
+Swift expression:
+    report.expectEqual(rewritten, stale.snapshot, cppID: staleID,
+                       what: "the rejected Delete leaves the rewritten lane intact")
+
+S039 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:142
+Swift expression:
+    report.expectEqual(["24:30", "24:90"], fixture.values(fixture.panLane), cppID: id,
+                       what: "both duplicate occurrences stage")
+
+S040 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:145
+Swift expression:
+    report.expect(fixture.page.openPrompt(tick: 24, value: 30), cppID: id,
+                  message: "a prompt opens on the duplicate tick")
+
+S041 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:147
+Swift expression:
+    report.expect(fixture.page.acceptPrompt(displayedValue: -14), cppID: id,
+                  message: "the duplicate value commits")
+
+S042 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:149
+Swift expression:
+    report.expectEqual(["24:30", "24:50"], fixture.values(fixture.panLane), cppID: id,
+                       what: "only the targeted duplicate occurrence moves")
+
+S043 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:151
+Swift expression:
+    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+                       what: "one duplicate acceptance is one revision")
+
+S044 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:153
+Swift expression:
+    report.expect(fixture.undo(), cppID: id, message: "the duplicate acceptance undoes")
+
+S045 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:154
+Swift expression:
+    report.expectEqual(["24:30", "24:90"], fixture.values(fixture.panLane), cppID: id,
+                       what: "undo restores both duplicate occurrences")
+
+S046 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:160
+Swift expression:
+    report.expect(switched.page.openPrompt(tick: 24, value: 64), cppID: switchID,
+                  message: "a prompt opens on the CC lane")
+
+S047 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:163
+Swift expression:
+    report.expect(!switched.page.hasPrompt, cppID: switchID,
+                  message: "switching parameters closes the CC prompt")
+
+S048 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:166
+Swift expression:
+    report.expect(switched.page.openPrompt(tick: 0, value: 120), cppID: switchID,
+                  message: "Tempo opens its own prompt")
+
+S049 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:168
+Swift expression:
+    report.expect(switched.page.acceptPrompt(displayedValue: 150), cppID: switchID,
+                  message: "Tempo commits its prompt")
+
+S050 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:170
+Swift expression:
+    report.expectEqual(["0:150"], switched.tempoValues, cppID: switchID,
+                       what: "the tempo point stores the prompted BPM")
+
+S051 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:172
+Swift expression:
+    report.expectEqual(["24:64"], switched.values(switched.panLane), cppID: switchID,
+                       what: "the CC lane stays untouched")
+
+S052 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift:174
+Swift expression:
+    report.expectEqual(tempoBefore.revision + 1, switched.document.revision, cppID: switchID,
+                       what: "Tempo's acceptance is one revision")
+
+S053 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:188
+Swift expression:
+    report.expect(page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0),
+                  cppID: id, message: "the lane menu opens")
+
+S054 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:190
+Swift expression:
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue),
+                  cppID: id, message: "the Delete events row is consumed")
+
+S055 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:192
+Swift expression:
+    report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id,
+                       what: "the row opens the delete confirmation")
+
+S056 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:194
+Swift expression:
+    report.expect(page.promptMessage.contains("2 written events"), cppID: id,
+                  message: "the confirmation names the written count")
+
+S057 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:196
+Swift expression:
+    report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "opening the confirmation writes nothing")
+
+S058 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:198
+Swift expression:
+    report.expect(page.acceptPromptDraft(), cppID: id, message: "the confirmation accepts")
+
+S059 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:199
+Swift expression:
+    report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
+                       what: "accept removes only the target lane")
+
+S060 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:201
+Swift expression:
+    report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
+                       what: "the volume lane is preserved")
+
+S061 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:203
+Swift expression:
+    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+                       what: "one acceptance is one revision")
+
+S062 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:205
+Swift expression:
+    report.expect(fixture.undo(), cppID: id, message: "the acceptance undoes")
+
+S063 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:206
+Swift expression:
+    report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
+                       what: "undo restores the target lane")
+
+S064 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:208
+Swift expression:
+    report.expect(!fixture.document.history.canUndo, cppID: id,
+                  message: "the acceptance recorded exactly one history entry")
+
+S065 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:216
+Swift expression:
+    report.expect(!page.hasPrompt, cppID: cancelID, message: "cancelling drops the confirmation")
+
+S066 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:217
+Swift expression:
+    report.expectEqual(cancelBefore, fixture.snapshot, cppID: cancelID,
+                       what: "cancelling leaves document and history untouched")
+
+S067 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:226
+Swift expression:
+    report.expect(!page.acceptPromptDraft(), cppID: staleID,
+                  message: "a stale confirmation cannot delete its target")
+
+S068 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:228
+Swift expression:
+    report.expectEqual(rewritten, fixture.snapshot, cppID: staleID,
+                       what: "the rejected confirmation leaves the rewritten lane intact")
+
+S069 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:240
+Swift expression:
+    report.expect(synthetic.page.publishedMenuRows.first {
+        $0.actionId == AutomationMenuAction.deleteLaneEvents.rawValue
+    }?.enabled == false, cppID: syntheticID,
+                  message: "the eventless lane disables Delete events")
+
+S070 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:244
+Swift expression:
+    report.expect(!synthetic.page.consumeMenuAction(
+        actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: syntheticID,
+                  message: "the disabled row is refused")
+
+S071 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:247
+Swift expression:
+    report.expect(!synthetic.page.hasPrompt, cppID: syntheticID,
+                  message: "no confirmation opens for the eventless lane")
+
+S072 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:258
+Swift expression:
+    report.expect(single.page.consumeMenuAction(
+        actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: countID,
+                  message: "the Delete events row is consumed")
+
+S073 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:261
+Swift expression:
+    report.expect(single.page.promptMessage.contains("1 written events"), cppID: countID,
+                  message: "the confirmation counts written events only")
+
+S074 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:263
+Swift expression:
+    report.expect(single.page.acceptPromptDraft(), cppID: countID,
+                  message: "the confirmation accepts")
+
+S075 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:265
+Swift expression:
+    report.expectEqual([String](), single.values(single.volumeLane), cppID: countID,
+                       what: "accept removes the written event")
+
+S076 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:267
+Swift expression:
+    report.expect(single.page.catalogIndex(of: single.volumeLane) >= 0, cppID: countID,
+                  message: "the volume parameter remains in the catalog")
+
+S077 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:269
+Swift expression:
+    report.expect(single.undo(), cppID: countID, message: "the acceptance undoes")
+
+S078 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:270
+Swift expression:
+    report.expectEqual(["48:70"], single.values(single.volumeLane), cppID: countID,
+                       what: "undo restores the written event")
+
+S079 | drawerAutomationPointMenuDeleteAndStale | src/checks/automation/automationpointmenus.swift:131
+Swift expression:
+    report.expectEqual(["24:64", "120:40", "168:5"], stale.values(stale.panLane), cppID: staleID,
+                       what: "the rejected Delete preserves the rewritten points")
+
+S080 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:230
+Swift expression:
+    report.expectEqual(["24:60", "120:40", "168:5"], fixture.values(fixture.panLane),
+                       cppID: staleID,
+                       what: "the rejected confirmation preserves the rewritten points")
+
+S081 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:249
+Swift expression:
+    report.expectEqual(syntheticBefore, synthetic.snapshot, cppID: syntheticID,
+                       what: "the refused row writes nothing")
+
+S082 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:286
+Swift expression:
+    report.expect(page.menuTargetIsPoint, cppID: id,
+                  message: "the first point owns its captured menu target")
+
+S083 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:290
+Swift expression:
+    report.expect(page.menuTargetIsPoint, cppID: id,
+                  message: "an outside right press on another node retargets the menu")
+
+S084 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:292
+Swift expression:
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
+                  cppID: id, message: "the retargeted Delete row is consumed")
+
+S085 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:294
+Swift expression:
+    report.expectEqual(["24:64"], fixture.values(fixture.panLane), cppID: id,
+                       what: "the retargeted Delete removes the second node only")
+
+S086 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:296
+Swift expression:
+    report.expect(fixture.undo(), cppID: id, message: "the retargeted Delete undoes")
+
+S087 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:302
+Swift expression:
+    report.expect(page.menuTargetIsPoint, cppID: id,
+                  message: "the point menu reopens")
+
+S088 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:306
+Swift expression:
+    report.expect(!page.menuOpen, cppID: id, message: "the miss closes the shared menu")
+
+S089 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:307
+Swift expression:
+    report.expect(!page.pointerRelease(x: fixture.x(168), y: 60, button: AutomationQtButton.right),
+                  cppID: id, message: "the paired release claims no band")
+
+S090 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:309
+Swift expression:
+    report.expectEqual(missBefore, fixture.snapshot, cppID: id,
+                       what: "the dismissed menu writes nothing")

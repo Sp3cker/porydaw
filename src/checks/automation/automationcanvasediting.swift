@@ -231,3 +231,144 @@ func drawerAutomationContextAndPublicationDiagnostics(_ report: CheckReport, sui
     report.expect(copyAvailable, cppID: drawerAutomationContextID,
                   message: "a retained command subscriber observes selection after page reattachment")
 }
+
+@MainActor
+func drawerAutomationInflightDragInvalidation(_ report: CheckReport, suite: DocumentSession,
+                                              service: ProjectService) {
+    let rebuildID = "automation/AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers"
+    let rebuilt = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 64), (120, 40)])
+    rebuilt.activate(rebuilt.panLane)
+    let page = rebuilt.page
+    report.expect(page.pointerPress(x: rebuilt.x(24), y: rebuilt.y(rebuilt.panLane, 64),
+                                     surface: 1, button: 1),
+                  cppID: rebuildID, message: "a press grabs the node")
+    _ = page.pointerMove(x: rebuilt.x(24) + 30, y: rebuilt.y(rebuilt.panLane, 64), buttons: 1)
+    report.expect(page.hasGesture, cppID: rebuildID, message: "the drag is live past the slop")
+    rebuilt.document.writeLane(track: 0, lane: .controller(TimeDefaults.ccPan), from: 168,
+                               through: 168, points: [LaneWrite(tick: 168, value: 5)])
+    report.expect(!page.hasGesture, cppID: rebuildID,
+                  message: "the document rebuild cancels the drag synchronously")
+    let afterRebuild = rebuilt.snapshot
+    _ = page.pointerRelease(x: rebuilt.x(24) + 30, y: rebuilt.y(rebuilt.panLane, 64), button: 1)
+    report.expectEqual(afterRebuild, rebuilt.snapshot, cppID: rebuildID,
+                       what: "releasing the cancelled drag commits nothing")
+    report.expect(page.pointerPress(x: rebuilt.x(24), y: rebuilt.y(rebuilt.panLane, 64),
+                                     surface: 1, button: 1),
+                  cppID: rebuildID, message: "a fresh press grabs the node after the rebuild")
+    _ = page.pointerMove(x: rebuilt.x(24) + 30, y: rebuilt.y(rebuilt.panLane, 64), buttons: 1)
+    _ = page.pointerMove(x: rebuilt.x(24) + 30, y: rebuilt.y(rebuilt.panLane, 90), buttons: 1)
+    _ = page.pointerRelease(x: rebuilt.x(24) + 30, y: rebuilt.y(rebuilt.panLane, 90), button: 1)
+    report.expectEqual(["24:90", "120:40", "168:5"], rebuilt.values(rebuilt.panLane),
+                       cppID: rebuildID, what: "the recovery drag commits normally")
+
+    let switchID = "automation/AutomationEditingTest::parameterSwitchCancelsNodeDrag"
+    let switched = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                     pan: [(24, 64), (120, 40)])
+    switched.activate(switched.panLane)
+    let switchedBefore = switched.snapshot
+    report.expect(switched.page.pointerPress(
+        x: switched.x(24), y: switched.y(switched.panLane, 64), surface: 1, button: 1),
+                  cppID: switchID, message: "a press grabs the node")
+    _ = switched.page.pointerMove(x: switched.x(24) + 30, y: switched.y(switched.panLane, 64),
+                                   buttons: 1)
+    report.expect(switched.page.hasGesture, cppID: switchID, message: "the drag is live")
+    switched.activate(switched.volumeLane)
+    report.expect(!switched.page.hasGesture, cppID: switchID,
+                  message: "switching parameters cancels the drag")
+    report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID,
+                       what: "the cancelled drag writes nothing")
+    _ = switched.page.pointerRelease(x: switched.x(24) + 30,
+                                      y: switched.y(switched.panLane, 64), button: 1)
+    report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID,
+                       what: "releasing after the switch commits nothing")
+    switched.activate(switched.panLane)
+    report.expect(switched.page.pointerPress(
+        x: switched.x(24), y: switched.y(switched.panLane, 64), surface: 1, button: 1),
+                  cppID: switchID, message: "a fresh press grabs the node after the switch")
+    _ = switched.page.pointerMove(x: switched.x(24) + 30, y: switched.y(switched.panLane, 64),
+                                   buttons: 1)
+    _ = switched.page.pointerMove(x: switched.x(24) + 30, y: switched.y(switched.panLane, 90),
+                                   buttons: 1)
+    _ = switched.page.pointerRelease(x: switched.x(24) + 30, y: switched.y(switched.panLane, 90),
+                                      button: 1)
+    report.expectEqual(["24:90", "120:40"], switched.values(switched.panLane), cppID: switchID,
+                       what: "the recovery drag commits normally")
+}
+
+@MainActor
+func drawerAutomationKeyboardIngress(_ report: CheckReport, suite: DocumentSession,
+                                     service: ProjectService) {
+    let selID = "automation/AutomationEditingTest::selectionClearingAndMultilaneReplacement"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    fixture.activate(fixture.panLane)
+    fixture.page.selectRange(from: 20, to: 60, lanes: [fixture.panLane])
+    let selected = fixture.snapshot
+    report.expect(fixture.page.handleEscape(), cppID: selID,
+                  message: "Escape with only an explicit selection claims it")
+    report.expect(fixture.page.selection == nil, cppID: selID,
+                  message: "Escape clears the explicit time selection")
+    report.expectEqual(selected, fixture.snapshot, cppID: selID,
+                       what: "clearing the selection writes nothing")
+
+    let precedence = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                       pan: [(24, 64)])
+    precedence.activate(precedence.panLane)
+    precedence.page.selectRange(from: 20, to: 60, lanes: [precedence.panLane])
+    report.expect(precedence.page.pointerPress(x: precedence.x(24),
+                                                y: precedence.y(precedence.panLane, 64),
+                                                surface: 1, button: 1),
+                  cppID: selID, message: "a press inside the selection grabs the node")
+    let grabbed = precedence.snapshot
+    report.expect(precedence.page.handleEscape(), cppID: selID,
+                  message: "Escape with a live gesture claims it")
+    report.expect(!precedence.page.hasGesture, cppID: selID,
+                  message: "Escape cancels the gesture first")
+    report.expect(precedence.page.selection != nil, cppID: selID,
+                  message: "the selection survives a gesture-first Escape")
+    report.expectEqual(grabbed, precedence.snapshot, cppID: selID,
+                       what: "a gesture-first Escape writes nothing")
+
+    let keyID = "automation/AutomationEditingTest::selectedRangeDragAndDelete"
+    let armed = EditSurfaceState(pointerGestureActive: false, timeSelectionActive: true,
+                                 noteSelectionEmpty: true, origin: .timeline, autoRepeat: false,
+                                 commandAvailable: true)
+    report.expectEqual(EditKeyDecision.execute, EditKeyArbiter.decide(command: .delete, surface: armed),
+                       cppID: keyID, what: "the Delete key routes to the active time selection")
+    report.expectEqual(EditKeyDecision.decline,
+                       EditKeyArbiter.decide(command: nil, surface: armed), cppID: keyID,
+                       what: "an unbound key stays host-owned")
+    let held = EditSurfaceState(pointerGestureActive: true, timeSelectionActive: true,
+                                 noteSelectionEmpty: true, origin: .timeline, autoRepeat: false,
+                                 commandAvailable: true)
+    report.expectEqual(EditKeyDecision.consume,
+                       EditKeyArbiter.decide(command: .delete, surface: held), cppID: keyID,
+                       what: "a live gesture swallows the Delete key without acting")
+    let quietID = "automation/AutomationEditingTest::cleanup"
+    let quiet = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    quiet.activate(quiet.panLane)
+    let quietBefore = quiet.snapshot
+    quiet.page.cancelSectionInteraction()
+    report.expectEqual(quietBefore, quiet.snapshot, cppID: quietID,
+                       what: "quiescing an idle page writes nothing")
+}
+
+@MainActor
+func drawerAutomationBandEscape(_ report: CheckReport, suite: DocumentSession,
+                                service: ProjectService) {
+    let bandID = "automation/AutomationEditingTest::rightBandPreviewIsolated"
+    let band = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    band.activate(band.panLane)
+    _ = band.page.pointerPress(x: band.x(24), y: 60, surface: 1, button: AutomationQtButton.right)
+    _ = band.page.pointerMove(x: band.x(120), y: 60, buttons: AutomationQtButton.right)
+    report.expect(band.page.bandVisible, cppID: bandID, message: "the right drag arms the band")
+    let bandBefore = band.snapshot
+    report.expect(band.page.handleEscape(), cppID: bandID, message: "Escape claims the live band")
+    report.expect(!band.page.bandVisible, cppID: bandID, message: "Escape drops the band")
+    report.expect(!band.page.isPanning, cppID: bandID,
+                  message: "no pan owns the band scenario")
+    report.expect(!band.page.hasGesture, cppID: bandID,
+                  message: "no gesture owns the band scenario")
+    report.expectEqual(bandBefore, band.snapshot, cppID: bandID,
+                       what: "dropping the band writes nothing")
+}

@@ -5,13 +5,18 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationrouting.cpp
 Original SHA-256: 009c91dba2f96807276b0077fe5421c37ac60bc636a9c0e29f3ded03d7cf427c
 Swift counterpart: src/checks/automation/automationactions.swift
-Swift SHA-256: 1529386a279c90602e10b8ab6eea604c3a13672bbccc0724c506724aaef3c435
+Swift SHA-256: d00e05534bcb9e621426c20fbe36aca9d386c8fb906c735901b97509f866fea1
+Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
+Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
+Additional Swift counterpart: src/checks/automation/automationselection.swift
+Additional Swift counterpart: src/checks/automation/domain/gestures.swift
+Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-All 96 sites in this file are GAP: middlePanIsolated, voicePressIsolated, rightBandPreviewIsolated, pencilEditTargetsOnlyItsLane, defaultBodyClickSetsCursorOnly, and firstCcRowOriginRebuildAndUndo exercise event routing isolation between middle mouse panning, voice change presses, automation band right clicks, lane targeting, and origin rebuilding.
+All 96 sites in this file are reconciled below: middlePanIsolated, voicePressIsolated, rightBandPreviewIsolated, pencilEditTargetsOnlyItsLane, defaultBodyClickSetsCursorOnly, and firstCcRowOriginRebuildAndUndo exercise event routing isolation between middle mouse panning, voice change presses, automation band right clicks, lane targeting, and origin rebuilding.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -21,7 +26,16 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: PASS provided by the controller for this worktree — 1/14 harnesses selected,
+13 skipped; swiftcore green including drawerAutomationMiddlePanIsolation
+(automationcanvaslayout.swift), drawerAutomationPointRangeAndPencilReplacements
+(domain/gestures.swift), drawerAutomationCancellationAndNoOps and
+drawerAutomationInflightDragInvalidation (automationcanvasediting.swift),
+drawerAutomationRestoredInteractionContracts / drawerAutomationBandIsolatesTempoAndCc
+(automationselection.swift) and drawerAutomationParameterSwitchAndGhosts
+(presentation/tst_automationpresentation.swift). Not re-executed by this ledger task.
+The controller additionally reports drawerAutomationBandEscape in automationcanvasediting.swift
+(the Escape band-dismissal predicates indexed at S038-S041) green in that same run.
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
@@ -37,8 +51,11 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:46
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S033 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the production page accepts a switch to another lane; the original activateParameter(controlRow(kPanController)) is the same Pan activation.
+Swift counterpart expression:
+  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
+                  message: "a parameter switch is accepted")
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -90,8 +107,8 @@ Original expression:
   QVERIFY(activateParameter(controlRow(kPanController)));
 
 A002 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:48
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped app predicates execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow(controlRow(kPanController));
@@ -100,8 +117,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A003 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:53
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const QPointF input = inputPoint(pan, 48, 64);
@@ -113,8 +130,10 @@ Original expression:
   QVERIFY(automationBefore.has_value());
 
 A004 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:59
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S013 and S014 - src/checks/automation/automationcanvaslayout.swift :: drawerAutomationMiddlePanIsolation asserts the page accepts a middle press and publishes the live pan, the same observable as canvas()->isPanning().
+Swift counterpart expression:
+  report.expect(page.isPanning, cppID: id, message: "the page publishes the live pan")
 Source context since previous assertion:
 
       const Tick cursorBefore = tab().view().editCursorTick();
@@ -127,8 +146,8 @@ Original expression:
   QVERIFY(page().canvas()->isPanning());
 
 A005 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:60
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the view-level user-gesture flag while a pan is live. The Swift pan contract asserts page.isPanning (S014) but no executing predicate publishes the view gesture flag for a pan. Unproved condition: userGestureActive during a pan.
 Source context since previous assertion:
 
 
@@ -136,8 +155,8 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A006 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:61
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the band preview does not contain the pan lane after a middle press. The Swift band contract asserts bandVisible/selection for right-press bands only (S018/S019); no predicate reads band-preview lane membership. Unproved condition: band-preview lane membership during a pan.
 Source context since previous assertion:
 
 
@@ -145,8 +164,11 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A007 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:62
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S015 - automationcanvaslayout.swift :: drawerAutomationMiddlePanIsolation asserts the complete document snapshot is unchanged by the middle press and pan, the same frozen-facts equality.
+Swift counterpart expression:
+  report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "starting a pan mutates nothing")
 Source context since previous assertion:
 
 
@@ -154,8 +176,8 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A008 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:63
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -164,8 +186,11 @@ Original expression:
               automationBefore);
 
 A009 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:65
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S016 - automationcanvaslayout.swift :: drawerAutomationMiddlePanIsolation asserts the press parks no edit cursor, the same editCursorTick equality.
+Swift counterpart expression:
+  report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
+                       what: "starting a pan parks no cursor")
 Source context since previous assertion:
 
 
@@ -173,8 +198,10 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A010 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:69
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S017 - automationcanvaslayout.swift :: drawerAutomationMiddlePanIsolation asserts releasing ends the pan.
+Swift counterpart expression:
+  report.expect(!page.isPanning, cppID: id, message: "releasing ends the pan")
 Source context since previous assertion:
 
 
@@ -185,8 +212,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A011 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:70
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the view-level user-gesture flag is cleared by the release. The Swift contract asserts !page.isPanning (S017) but no executing predicate publishes the view gesture flag. Unproved condition: userGestureActive after the release.
 Source context since previous assertion:
 
 
@@ -194,8 +221,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A012 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:71
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: same band-preview membership condition as A006 after the release; no predicate reads band-preview lane membership. Unproved condition: band-preview lane membership after the release.
 Source context since previous assertion:
 
 
@@ -203,8 +230,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A013 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:77
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native/QML obligation: the original asserts the rendered voice-changes input item has non-empty bounds (voiceChangeInput().bounds()). The voice-changes area is a separate QML item in the Swift architecture and no Swift presenter predicate measures its rendered bounds. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
   }
@@ -217,8 +244,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A014 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:79
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped app predicates execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow(controlRow(kPanController));
@@ -227,8 +254,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A015 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:83
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState();
@@ -239,8 +266,8 @@ Original expression:
   QVERIFY(automationBefore.has_value());
 
 A016 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:88
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the original asserts that a press in the voice-changes area does not start an automation pan. That cross-area isolation belongs to the retired shared canvas; in the Swift architecture the voice-changes page and the automation page are separate QML items with no shared pan state, and no executing predicate asserts the isolation. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const Tick cursorBefore = tab().view().editCursorTick();
@@ -252,8 +279,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A017 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:89
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed flag belongs to the retired shared automation canvas (AutomationCanvas pan/band-preview state and the SongView user-gesture flag). The Swift architecture presents one automation plot per page with no cross-item canvas state, and no executing predicate exposes these flags. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -261,8 +288,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A018 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:90
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed flag belongs to the retired shared automation canvas (AutomationCanvas pan/band-preview state and the SongView user-gesture flag). The Swift architecture presents one automation plot per page with no cross-item canvas state, and no executing predicate exposes these flags. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -270,8 +297,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A019 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:91
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts a press in the voice-changes area leaves the document frozen. No executing Swift predicate drives a voice-changes press and re-reads the document; the automation no-write predicates (S015/S031 and the canvas cancellation snapshot predicates) cover automation-side gestures only. Unproved condition: voice-area press isolation.
 Source context since previous assertion:
 
 
@@ -279,8 +306,8 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A020 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:92
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -289,8 +316,8 @@ Original expression:
               automationBefore);
 
 A021 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:94
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts a press in the voice-changes area leaves the edit cursor unchanged. No executing Swift predicate drives a voice-changes press and re-reads the cursor. Unproved condition: voice-area press cursor isolation.
 Source context since previous assertion:
 
 
@@ -298,8 +325,11 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A022 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:100
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S033 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the Pan switch is accepted before the band right press.
+Swift counterpart expression:
+  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
+                  message: "a parameter switch is accepted")
 Source context since previous assertion:
 
       mouseRelease(voiceChangeInput(), Qt::LeftButton, input);
@@ -312,8 +342,8 @@ Original expression:
   QVERIFY(activateParameter(controlRow(kPanController)));
 
 A023 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:102
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped app predicates execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow(controlRow(kPanController));
@@ -322,8 +352,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A024 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:107
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const QPointF input = inputPoint(pan, 144, 48);
@@ -335,8 +365,8 @@ Original expression:
   QVERIFY(automationBefore.has_value());
 
 A025 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the view user-gesture flag is live after the right press. The Swift band contract asserts the pending-band state (S018) but no executing predicate publishes the view gesture flag. Unproved condition: userGestureActive during a band.
 Source context since previous assertion:
 
       const Tick cursorBefore = tab().view().editCursorTick();
@@ -349,8 +379,8 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A026 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the right press does not start a pan. The band scenario now asserts no pan after the arm-and-Escape sequence (S041), but no executing predicate reads page.isPanning at the right-press moment itself (S013/S017 read it for middle-button pans). Unproved condition: press-time isPanning during a band.
 Source context since previous assertion:
 
 
@@ -358,8 +388,12 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A027 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S018 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts that below the Manhattan threshold the band stays pending (!page.bandVisible) with the selection preserved, the same not-yet-previewing state the original reads through !bandPreviewContainsLane.
+Swift counterpart expression:
+  report.expect(!page.bandVisible && page.selection?.range == TimeRange(
+        startTick: 0, endTick: fixture.songEndTick), cppID: id,
+                  message: "a pending band preserves selection below the Manhattan threshold")
 Source context since previous assertion:
 
 
@@ -367,8 +401,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A028 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the pending band leaves the document frozen. The Swift band predicate asserts the selection state (S018) and the completed band writes nothing (S035); no predicate compares the document mid-gesture. Unproved condition: pending-band document freeze.
 Source context since previous assertion:
 
 
@@ -376,8 +410,8 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A029 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -386,8 +420,8 @@ Original expression:
               automationBefore);
 
 A030 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the pending band leaves the edit cursor unchanged. No executing Swift predicate reads the edit cursor during a band gesture. Unproved condition: band cursor stability.
 Source context since previous assertion:
 
 
@@ -395,8 +429,11 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A031 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S019 - src/checks/automation/automationselection.swift :: drawerAutomationRestoredInteractionContracts asserts diagonal travel activates the band (page.bandVisible), the Swift form of bandPreviewContainsLane after the travel.
+Swift counterpart expression:
+  report.expect(page.bandVisible, cppID: id,
+                  message: "diagonal travel activates at Manhattan ten before Euclidean ten")
 Source context since previous assertion:
 
 
@@ -407,8 +444,8 @@ Original expression:
   QTRY_VERIFY(page().canvas()->bandPreviewContainsLane(pan));
 
 A032 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:124
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: same pending/visible band document-freeze condition as A028 for the travelled band. Unproved condition: visible-band document freeze.
 Source context since previous assertion:
 
 
@@ -416,8 +453,8 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A033 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -426,8 +463,8 @@ Original expression:
               automationBefore);
 
 A034 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:127
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: same band cursor-stability condition as A030 after the travel. Unproved condition: band cursor stability.
 Source context since previous assertion:
 
 
@@ -435,19 +472,24 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A035 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:130
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S039 and S040 - src/checks/automation/automationcanvasediting.swift:366,367 :: drawerAutomationBandEscape arms a right-button band on the pan lane (S038), delivers Escape through the page handleEscape() (S039 claims the live band), and asserts !page.bandVisible (S040) with S041 pinning the untouched document. !bandVisible is the Swift form of the retired band preview no longer containing the lane, the same observable as A027/S018.
 Source context since previous assertion:
 
 
       keyClick(Qt::Key_Escape);
 
+Swift counterpart expression:
+  report.expect(!band.page.bandVisible, cppID: bandID, message: "Escape drops the band")
 Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A036 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S042 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationBandEscape (automationcanvasediting.swift:368) asserts no pan owns the band scenario after the Escape drops the band, the same !isPanning observable the original reads.
+Swift counterpart expression:
+  report.expect(!band.page.isPanning, cppID: bandID,
+                  message: "no pan owns the band scenario")
 Source context since previous assertion:
 
 
@@ -455,8 +497,11 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A037 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S043 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationBandEscape (automationcanvasediting.swift:370) asserts no gesture owns the band scenario after the Escape drops the band. The Swift predicate reads page.hasGesture (the drawer page owns interactions in the converted architecture) where the original read the SongView userGestureActive flag: the flag owner changed, the observable - no live gesture remains - is the same.
+Swift counterpart expression:
+  report.expect(!band.page.hasGesture, cppID: bandID,
+                  message: "no gesture owns the band scenario")
 Source context since previous assertion:
 
 
@@ -464,8 +509,11 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A038 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:138
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S033 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the Pan switch is accepted before the pencil stroke.
+Swift counterpart expression:
+  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
+                  message: "a parameter switch is accepted")
 Source context since previous assertion:
 
   }
@@ -478,8 +526,8 @@ Original expression:
   QVERIFY(activateParameter(controlRow(kPanController)));
 
 A039 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:139
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped app predicates execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -487,8 +535,8 @@ Original expression:
   QTRY_VERIFY(findRow(controlRow(kPanController)).valid());
 
 A040 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native obligation: the original asserts the delivered window point lies inside the QQuick automation input item (automationInput().bounds().contains(deliveredViewport)). A Swift presenter predicate cannot establish converted-window hit delivery. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow(controlRow(kPanController));
@@ -505,8 +553,8 @@ Original expression:
   QVERIFY(automationInput().bounds().contains(deliveredViewport));
 
 A041 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:156
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const QPointF deliveredContent =
@@ -520,8 +568,11 @@ Original expression:
   QVERIFY(automationBefore.has_value());
 
 A042 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:166
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S021 and S022 - src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements asserts the pencil press starts a stroke and the page publishes the painting gesture, the same live-gesture observable as userGestureActive().
+Swift counterpart expression:
+  report.expect(committed.page.isPainting, cppID: drawerAutomationPointRangeID,
+                  message: "the page publishes the painting gesture")
 Source context since previous assertion:
 
       const LanePoints lfoBefore = lanePoints(tab().document(), kLfoController);
@@ -538,8 +589,8 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A043 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:167
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts a pencil press does not start a pan. No executing Swift predicate reads page.isPanning during a pencil press. Unproved condition: isPanning during a pencil stroke.
 Source context since previous assertion:
 
 
@@ -547,8 +598,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A044 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:168
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the pencil press leaves the band preview empty. No executing predicate reads band-preview membership during a pencil stroke (S018/S019 cover right-press bands). Unproved condition: band-preview membership during a pencil stroke.
 Source context since previous assertion:
 
 
@@ -556,8 +607,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A045 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:169
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the pencil press leaves the document frozen. The Swift pencil contract asserts the stroke commits one revision (S024) and a display-range preparation writes nothing; no predicate compares the document mid-press. Unproved condition: pencil mid-press document freeze.
 Source context since previous assertion:
 
 
@@ -565,8 +616,8 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A046 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:170
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -575,8 +626,8 @@ Original expression:
               automationBefore);
 
 A047 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the pencil press leaves the edit cursor unchanged. No executing Swift predicate reads the edit cursor during a pencil press. Unproved condition: pencil cursor stability.
 Source context since previous assertion:
 
 
@@ -584,8 +635,12 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A048 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:176
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S020 and S025 - src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements. The empty-lane completion array and the page-run stroke assertion show the stroke writes its point at the pointer tick in its own lane, which is what findLanePoint(mapped.point.tick) probes.
+Swift counterpart expression:
+  report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
+                       cppID: drawerAutomationPointRangeID,
+                       what: "the stroke writes its point and restores the lane's held value")
 Source context since previous assertion:
 
 
@@ -596,8 +651,12 @@ Original expression:
   QVERIFY(tab().document().findLanePoint(0, kPanController, mapped.point.tick, &inserted));
 
 A049 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:177
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S020 and S025 - the stroke writes the mapped value under the pointer at that tick; the exact arrays assert the tick:value pairs, the same observable as inserted.value == mapped.point.value.
+Swift counterpart expression:
+  report.expect(committed.values(committed.modulationLane).contains { $0.hasSuffix(":60") },
+                  cppID: drawerAutomationPointRangeID,
+                  message: "the released stroke writes the value under the pointer")
 Source context since previous assertion:
 
 
@@ -605,8 +664,11 @@ Original expression:
   QCOMPARE(inserted.value, mapped.point.value);
 
 A050 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:178
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S037 - src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements asserts an empty lane first stroke is a change (!stroke.completion().unchanged). That is the same no-op-versus-change observable as the original smf().write() byte comparison, which is C++ representation of the document change.
+Swift counterpart expression:
+  report.expect(!stroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
+                  message: "an empty lane's first stroke is a change")
 Source context since previous assertion:
 
 
@@ -614,8 +676,11 @@ Original expression:
   QVERIFY(tab().document().smf().write() != frozen.smf);
 
 A051 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S024 - src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements asserts one pencil press and release is exactly one revision.
+Swift counterpart expression:
+  report.expectEqual(committedBefore.revision + 1, committed.document.revision, cppID: drawerAutomationPointRangeID,
+                       what: "one pencil press and release is one revision")
 Source context since previous assertion:
 
 
@@ -623,8 +688,11 @@ Original expression:
   QCOMPARE(tab().document().revision(), frozen.revision + 1);
 
 A052 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 - src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements asserts the released stroke recorded exactly one history entry, which is the undo-stack count the original compares.
+Swift counterpart expression:
+  report.expect(!committed.document.history.canUndo, cppID: drawerAutomationPointRangeID,
+                  message: "the released stroke recorded exactly one history entry")
 Source context since previous assertion:
 
 
@@ -632,8 +700,11 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
 
 A053 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 - src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements asserts the single-entry history observable; the original reads the undo-stack index.
+Swift counterpart expression:
+  report.expect(!committed.document.history.canUndo, cppID: drawerAutomationPointRangeID,
+                  message: "the released stroke recorded exactly one history entry")
 Source context since previous assertion:
 
 
@@ -641,8 +712,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
 
 A054 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:182
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the LFO lane values are untouched by the pencil stroke. No executing Swift predicate compares a second lane in the pencil fixture (the committed fixture holds the Modulation lane only). Unproved condition: LFO lane isolation.
 Source context since previous assertion:
 
 
@@ -650,8 +721,8 @@ Original expression:
   QVERIFY(lanePoints(tab().document(), kLfoController) == lfoBefore);
 
 A055 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:183
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: same second-lane isolation condition for the Volume lane. Unproved condition: Volume lane isolation.
 Source context since previous assertion:
 
 
@@ -659,8 +730,8 @@ Original expression:
   QVERIFY(lanePoints(tab().document(), kVolumeController) == volumeBefore);
 
 A056 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: same second-lane isolation condition for the Voice lane. Unproved condition: Voice lane isolation.
 Source context since previous assertion:
 
 
@@ -668,8 +739,8 @@ Original expression:
   QVERIFY(lanePoints(tab().document(), DOC_CC_VOICE) == voiceBefore);
 
 A057 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:185
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: same second-lane isolation condition for the pitch-bend lane. Unproved condition: Bend lane isolation.
 Source context since previous assertion:
 
 
@@ -677,8 +748,8 @@ Original expression:
   QVERIFY(lanePoints(tab().document(), DOC_CC_BEND) == bendBefore);
 
 A058 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:186
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the tempo stream is untouched by the pencil stroke. No executing Swift predicate compares the tempo stream in a pencil scenario. Unproved condition: tempo isolation.
 Source context since previous assertion:
 
 
@@ -686,8 +757,8 @@ Original expression:
   QVERIFY(tab().document().tempoPoints() == tempoBefore);
 
 A059 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:187
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -696,8 +767,8 @@ Original expression:
               automationBefore);
 
 A060 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:189
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: same pencil cursor-stability condition as A047 after the release. Unproved condition: pencil cursor stability.
 Source context since previous assertion:
 
 
@@ -705,8 +776,8 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A061 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:190
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the pencil gesture ends on release. The Swift contract asserts the release commits (S023) but no predicate reads a gesture-active flag after it. Unproved condition: userGestureActive after the pencil release.
 Source context since previous assertion:
 
 
@@ -714,8 +785,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A062 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:191
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts no pan is live after the pencil release. No executing Swift predicate reads page.isPanning in a pencil scenario. Unproved condition: isPanning after the pencil release.
 Source context since previous assertion:
 
 
@@ -723,8 +794,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A063 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:192
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the band preview is empty after the pencil release. No executing predicate reads band-preview membership in a pencil scenario. Unproved condition: band-preview membership after the pencil release.
 Source context since previous assertion:
 
 
@@ -732,8 +803,11 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A064 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:198
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S033 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the Pan switch is accepted before the body click.
+Swift counterpart expression:
+  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
+                  message: "a parameter switch is accepted")
 Source context since previous assertion:
 
   }
@@ -746,8 +820,8 @@ Original expression:
   QVERIFY(activateParameter(controlRow(kPanController)));
 
 A065 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped app predicates execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow(controlRow(kPanController));
@@ -756,8 +830,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A066 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:208
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       setPencilMode(false);
@@ -772,8 +846,11 @@ Original expression:
   QVERIFY(automationBefore.has_value());
 
 A067 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S032 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationCancellationAndNoOps asserts a body press parks the edit cursor at the snapped click tick (fixture tick 72 against an initial cursor of 0), so the click-tick movement the original guards with expectedCursor != cursorBefore holds in the executed predicate.
+Swift counterpart expression:
+  report.expectEqual(snapped, empty.session.editCursor, cppID: drawerAutomationCancelID,
+                       what: "the press parks the edit cursor at the snapped tick")
 Source context since previous assertion:
 
       const Tick cursorBefore = tab().view().editCursorTick();
@@ -782,8 +859,11 @@ Original expression:
   QVERIFY(expectedCursor != cursorBefore);
 
 A068 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S029 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationCancellationAndNoOps asserts a press on the lane body (empty lane) is accepted and starts the body gesture, the same live-gesture observable as userGestureActive().
+Swift counterpart expression:
+  report.expect(empty.page.pointerPress(x: pressX, y: 60, surface: 1, button: 1), cppID: drawerAutomationCancelID,
+                  message: "a press on an empty lane starts a sweep")
 Source context since previous assertion:
 
 
@@ -795,8 +875,8 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A069 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:216
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the body press does not start a pan. No executing Swift predicate reads page.isPanning for a left body press (S013/S017 cover middle-button pans). Unproved condition: isPanning during a body press.
 Source context since previous assertion:
 
 
@@ -804,8 +884,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A070 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:217
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the body press leaves the band preview empty. No executing predicate reads band membership for a body press. Unproved condition: band-preview membership during a body press.
 Source context since previous assertion:
 
 
@@ -813,8 +893,11 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A071 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:218
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S031 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationCancellationAndNoOps asserts the parked body press leaves the document snapshot unchanged, the same frozen-facts observable.
+Swift counterpart expression:
+  report.expectEqual(emptyBefore, empty.snapshot, cppID: drawerAutomationCancelID,
+                       what: "the parked press leaves the document alone")
 Source context since previous assertion:
 
 
@@ -822,8 +905,8 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A072 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:219
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -832,8 +915,8 @@ Original expression:
               automationBefore);
 
 A073 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:221
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the original asserts the edit cursor is still at its previous tick while the body press is held. The Swift predicate asserts the parked cursor after the release (S032); no predicate reads the cursor between press and release. Unproved condition: cursor stability during the press.
 Source context since previous assertion:
 
 
@@ -841,8 +924,11 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A074 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:225
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S032 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationCancellationAndNoOps asserts the press parks the edit cursor at the snapped click tick, the same editCursorTick == expectedCursor equality.
+Swift counterpart expression:
+  report.expectEqual(snapped, empty.session.editCursor, cppID: drawerAutomationCancelID,
+                       what: "the press parks the edit cursor at the snapped tick")
 Source context since previous assertion:
 
 
@@ -853,8 +939,11 @@ Original expression:
   QTRY_COMPARE(tab().view().editCursorTick(), expectedCursor);
 
 A075 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:226
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S031 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationCancellationAndNoOps asserts the parked press leaves the document snapshot unchanged, including after the release.
+Swift counterpart expression:
+  report.expectEqual(emptyBefore, empty.snapshot, cppID: drawerAutomationCancelID,
+                       what: "the parked press leaves the document alone")
 Source context since previous assertion:
 
 
@@ -862,8 +951,8 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A076 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:227
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the observed object is the song view timeline-band layout (timelineBandLayout().geometry(TimelineBand::Automation)), part of the retired multi-band/single-canvas architecture. The Swift automation drawer is one plot with no TimelineBand layout to read, and no executing predicate exposes one. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -872,8 +961,11 @@ Original expression:
               automationBefore);
 
 A077 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:229
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S030 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationCancellationAndNoOps asserts the body press release returns false (a press that never travelled commits nothing), i.e. the gesture ended without an edit, the same observable as !userGestureActive after release.
+Swift counterpart expression:
+  report.expect(!empty.page.pointerRelease(x: pressX, y: 60, button: 1), cppID: drawerAutomationCancelID,
+                  message: "a press that never travelled commits nothing")
 Source context since previous assertion:
 
 
@@ -881,8 +973,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A078 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:230
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: same body-press isPanning condition as A069 after the release. Unproved condition: isPanning after the body release.
 Source context since previous assertion:
 
 
@@ -890,8 +982,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A079 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:231
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: same body-press band-membership condition as A070 after the release. Unproved condition: band-preview membership after the body release.
 Source context since previous assertion:
 
 
@@ -899,8 +991,11 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A080 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:237
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S034 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the page publishes its lane count (laneCount 2 for a two-lane fixture), the Swift form of the original rows.size() > 1 row-stack observation.
+Swift counterpart expression:
+  report.expectEqual(2, fixture.page.laneCount, cppID: drawerAutomationSwitchID,
+                       what: "the active lane publishes its written-event count")
 Source context since previous assertion:
 
   }
@@ -913,8 +1008,11 @@ Original expression:
   QVERIFY(rows.size() > 1);
 
 A081 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:239
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S033 - src/checks/automation/presentation/tst_automationpresentation.swift :: drawerAutomationParameterSwitchAndGhosts asserts the switch to the target lane is accepted.
+Swift counterpart expression:
+  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
+                  message: "a parameter switch is accepted")
 Source context since previous assertion:
 
       const EditorAutomationRowId firstRowId = rows[1].id;
@@ -923,8 +1021,8 @@ Original expression:
   QVERIFY(activateParameter(firstRowId));
 
 A082 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:241
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): The C++ row-handle lookup (findRow / LaneHandle::valid) has no Swift ingress: the production fixture addresses lanes as typed AutomationParameter values, and the mapped app predicates execute on that lane. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const LaneHandle firstRow = findRow(firstRowId);
@@ -933,8 +1031,8 @@ Original expression:
   QVERIFY(firstRow.valid());
 
 A083 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:243
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): laneBody(firstRow) reads the painted per-row body rectangle of the retired row-stack canvas. The Swift automation drawer is a single plot whose row geometry is not exposed, and no executing predicate reads a per-row body rect. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const QRect firstBody = laneBody(firstRow);
@@ -943,8 +1041,8 @@ Original expression:
   QVERIFY(!firstBody.isEmpty());
 
 A084 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:244
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the per-row body rectangle top (laneBody(...).top() == 0) belongs to the retired row-stack canvas geometry; the Swift single-plot page publishes no per-row body rect. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -952,8 +1050,8 @@ Original expression:
   QCOMPARE(firstBody.top(), 0);
 
 A085 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:245
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the C++ row-index model (EditorAutomationRowId kind/index lookup) has no Swift ingress; the production page addresses lanes as typed AutomationParameter values whose kind is carried by the type.
 Source context since previous assertion:
 
 
@@ -961,8 +1059,8 @@ Original expression:
   QVERIFY(firstRowId.kind == EditorAutomationRowKind::ControlChange);
 
 A086 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:250
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native obligation (native input delivery): the original asserts the delivered window point lies inside the QQuick automation input item (automationInput().bounds().contains(deliveredViewport)). A Swift presenter predicate cannot establish converted-window hit delivery. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       setPencilMode(true);
@@ -974,8 +1072,12 @@ Original expression:
   QVERIFY(automationInput().bounds().contains(deliveredViewport));
 
 A087 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:260
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S020 and S025 - src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements asserts the stroke writes its point at the pointer tick in its own lane, the same findLanePoint(firstRowId.track, controller, mapped.point.tick) probe.
+Swift counterpart expression:
+  report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
+                       cppID: drawerAutomationPointRangeID,
+                       what: "the stroke writes its point and restores the lane's held value")
 Source context since previous assertion:
 
       const QPointF deliveredContent =
@@ -993,8 +1095,12 @@ Original expression:
                                              mapped.point.tick, &committed));
 
 A088 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:262
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S020 and S025 - the stroke writes the mapped value at that tick (exact tick:value arrays), the same committed.value == mapped.point.value comparison.
+Swift counterpart expression:
+  report.expect(committed.values(committed.modulationLane).contains { $0.hasSuffix(":60") },
+                  cppID: drawerAutomationPointRangeID,
+                  message: "the released stroke writes the value under the pointer")
 Source context since previous assertion:
 
 
@@ -1002,8 +1108,11 @@ Original expression:
   QCOMPARE(committed.value, mapped.point.value);
 
 A089 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:263
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S024 - src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements asserts one pencil press and release is exactly one revision.
+Swift counterpart expression:
+  report.expectEqual(committedBefore.revision + 1, committed.document.revision, cppID: drawerAutomationPointRangeID,
+                       what: "one pencil press and release is one revision")
 Source context since previous assertion:
 
 
@@ -1011,8 +1120,11 @@ Original expression:
   QCOMPARE(tab().document().revision(), frozen.revision + 1);
 
 A090 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:264
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 - src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements asserts the released stroke recorded exactly one history entry; the original reads the undo-stack index.
+Swift counterpart expression:
+  report.expect(!committed.document.history.canUndo, cppID: drawerAutomationPointRangeID,
+                  message: "the released stroke recorded exactly one history entry")
 Source context since previous assertion:
 
 
@@ -1020,8 +1132,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
 
 A091 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:266
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the per-row body rectangle top after a document rebuild belongs to the retired row-stack canvas geometry; the Swift single-plot page exposes no per-row body rect. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       page().documentChanged();
@@ -1030,8 +1142,8 @@ Original expression:
   QTRY_COMPARE(laneBody(findRow(firstRowId)).top(), 0);
 
 A092 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:267
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the per-row body rectangle emptiness after a document rebuild belongs to the retired row-stack canvas geometry. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -1039,8 +1151,10 @@ Original expression:
   QTRY_VERIFY(!laneBody(findRow(firstRowId)).isEmpty());
 
 A093 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:269
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S026 - src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements asserts the stroke is undoable through the production history, the same requestUndo outcome the original checks.
+Swift counterpart expression:
+  report.expect(committed.undo(), cppID: drawerAutomationPointRangeID, message: "the stroke is undoable")
 Source context since previous assertion:
 
 
@@ -1049,8 +1163,11 @@ Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));
 
 A094 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:270
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S027 - src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements asserts one undo restores the pre-stroke lane (exact values). The original compares the smf().write() bytes, which is C++ representation of the same restored document.
+Swift counterpart expression:
+  report.expectEqual(["0:20"], committed.values(committed.modulationLane), cppID: drawerAutomationPointRangeID,
+                       what: "one undo restores the pre-stroke lane")
 Source context since previous assertion:
 
 
@@ -1058,8 +1175,8 @@ Original expression:
   QCOMPARE(tab().document().smf().write(), frozen.smf);
 
 A095 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:271
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the per-row body rectangle top after the undo belongs to the retired row-stack canvas geometry. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -1067,8 +1184,8 @@ Original expression:
   QTRY_COMPARE(laneBody(findRow(firstRowId)).top(), 0);
 
 A096 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): the per-row body rectangle emptiness after the undo belongs to the retired row-stack canvas geometry. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
 
@@ -1146,6 +1263,129 @@ S012 | drawerAutomationQtModifierMapping | src/checks/automation/automationactio
                          what: "the Qt control bit a QML event carries lands the drag on the neutral")
 
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
-src/checks/automation/AutomationPageChecks.swift:381
+SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
+src/checks/automation/AutomationPageChecks.swift:402
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")
+
+Cross-lane predicates cited by the mappings above (final source anchors)
+
+S013 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:95
+  report.expect(page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle),
+                  cppID: id, message: "a middle press starts the pan")
+
+S014 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:97
+  report.expect(page.isPanning, cppID: id, message: "the page publishes the live pan")
+
+S015 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:100
+  report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "starting a pan mutates nothing")
+
+S016 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:102
+  report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
+                       what: "starting a pan parks no cursor")
+
+S017 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:110
+  report.expect(!page.isPanning, cppID: id, message: "releasing ends the pan")
+
+S018 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:54
+  report.expect(!page.bandVisible && page.selection?.range == TimeRange(
+        startTick: 0, endTick: fixture.songEndTick), cppID: id,
+                  message: "a pending band preserves selection below the Manhattan threshold")
+
+S019 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:58
+  report.expect(page.bandVisible, cppID: id,
+                  message: "diagonal travel activates at Manhattan ten before Euclidean ten")
+
+S020 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:632
+  report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
+                       cppID: drawerAutomationPointRangeID,
+                       what: "the stroke writes its point and restores the lane's held value")
+
+S021 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:672
+  report.expect(committed.page.pointerPress(x: committed.x(24), y: strokeY, surface: 1, button: 1), cppID: drawerAutomationPointRangeID,
+                  message: "the pencil press starts a stroke")
+
+S022 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:674
+  report.expect(committed.page.isPainting, cppID: drawerAutomationPointRangeID,
+                  message: "the page publishes the painting gesture")
+
+S023 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:676
+  report.expect(committed.page.pointerRelease(x: committed.x(24), y: strokeY, button: 1), cppID: drawerAutomationPointRangeID,
+                  message: "the pencil release commits")
+
+S024 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:678
+  report.expectEqual(committedBefore.revision + 1, committed.document.revision, cppID: drawerAutomationPointRangeID,
+                       what: "one pencil press and release is one revision")
+
+S025 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:680
+  report.expect(committed.values(committed.modulationLane).contains { $0.hasSuffix(":60") },
+                  cppID: drawerAutomationPointRangeID,
+                  message: "the released stroke writes the value under the pointer")
+
+S026 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:683
+  report.expect(committed.undo(), cppID: drawerAutomationPointRangeID, message: "the stroke is undoable")
+
+S027 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:684
+  report.expectEqual(["0:20"], committed.values(committed.modulationLane), cppID: drawerAutomationPointRangeID,
+                       what: "one undo restores the pre-stroke lane")
+
+S028 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:686
+  report.expect(!committed.document.history.canUndo, cppID: drawerAutomationPointRangeID,
+                  message: "the released stroke recorded exactly one history entry")
+
+S029 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:80
+  report.expect(empty.page.pointerPress(x: pressX, y: 60, surface: 1, button: 1), cppID: drawerAutomationCancelID,
+                  message: "a press on an empty lane starts a sweep")
+
+S030 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:82
+  report.expect(!empty.page.pointerRelease(x: pressX, y: 60, button: 1), cppID: drawerAutomationCancelID,
+                  message: "a press that never travelled commits nothing")
+
+S031 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:84
+  report.expectEqual(emptyBefore, empty.snapshot, cppID: drawerAutomationCancelID,
+                       what: "the parked press leaves the document alone")
+
+S032 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:91
+  report.expectEqual(snapped, empty.session.editCursor, cppID: drawerAutomationCancelID,
+                       what: "the press parks the edit cursor at the snapped tick")
+
+S033 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:19
+  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
+                  message: "a parameter switch is accepted")
+
+S034 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:33
+  report.expectEqual(2, fixture.page.laneCount, cppID: drawerAutomationSwitchID,
+                       what: "the active lane publishes its written-event count")
+
+S035 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:194
+  report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "banding writes nothing")
+
+S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:62
+  report.expect(page.selection == nil, cppID: id,
+                  message: "activated zero-width band clears selection")
+
+S037 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:637
+  report.expect(!stroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
+                  message: "an empty lane's first stroke is a change")
+
+S038 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:364
+  report.expect(band.page.bandVisible, cppID: bandID, message: "the right drag arms the band")
+
+S039 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:366
+  report.expect(band.page.handleEscape(), cppID: bandID, message: "Escape claims the live band")
+
+S040 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:367
+  report.expect(!band.page.bandVisible, cppID: bandID, message: "Escape drops the band")
+
+S041 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:372
+  report.expectEqual(bandBefore, band.snapshot, cppID: bandID,
+                    what: "dropping the band writes nothing")
+
+S042 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:368
+  report.expect(!band.page.isPanning, cppID: bandID,
+                  message: "no pan owns the band scenario")
+
+S043 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:370
+  report.expect(!band.page.hasGesture, cppID: bandID,
+                  message: "no gesture owns the band scenario")

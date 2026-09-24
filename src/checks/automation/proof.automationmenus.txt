@@ -5,13 +5,13 @@ Original: src/checks/automation/automationmenus.cpp
 Original SHA-256: 21a5bbb0b1795bff9bec4f987313788e484a08ab232989d16bfb48cf6a35b8c3
 Original C++ file has been removed from current checkout; retrieve it from the reference revision.
 Swift counterpart: src/checks/automation/automationmenus.swift
-Swift SHA-256: 23e3e173b7f5aab8380eedb9f152a7726df792b8bdf5642534376f619321acbd
+Swift SHA-256: b0622b17786addbd505a92a9bc98f88f56ac079a6a6c4cdf1afdaac58060dd9d
 
 Scope: contextMenuActionsApplyEffects and laneMenuValueRangeSubmenuPickRescalesAndCloses. Other methods in the historical C++ file are NOT claimed migrated by this scoped proof. This is not a file-retirement certificate.
 
-Oracle sequences: Clear menus use tempo120 BPM and controller10=64 at tick48, clear tempo, switch CC10/tempo, clear CC10, switch tempo/CC10. Range menus use controller21 (LFO), track0, value96 at tick48; open lane label menu, hover Value range, choose64, assert closure/view range/revision/history, reopen and inspect checked64, dismiss. The Swift fixtures reproduce these parameter inputs and action order. Native pointer delivery, rendering and Escape are not proven by direct presenter calls. Keyboard/focus work is explicitly deferred by the user.
+Oracle sequences: Clear menus use tempo120 BPM and controller10=64 at tick48, clear tempo, switch CC10/tempo, clear CC10, switch tempo/CC10. Range menus use controller21 (LFO), track0, value96 at tick48; open lane label menu, hover Value range, choose64, assert closure/view range/revision/history, reopen and inspect checked64, dismiss. The Swift fixtures reproduce these parameter inputs and action order. Native pointer delivery and rendering are not proven by direct presenter calls. The Escape route is now claimed through the page own handleEscape predicate and the menu-open state it leaves (S025-S027); keyboard focus routing remains outside this proof.
 
-Verification: deno task verify --filter swiftcore --verbose passed on the current worktree at d1b7aaf9d55968b677352ff14ad80e7be94ef1a2: build ok in 32.07s; swiftcore ok in 8.49s; 1/24 harnesses selected, 23 skipped. Entry: runAutomationPageChecks -> drawerAutomationOriginalClearMenus / drawerAutomationOriginalRangeMenu. Migration-only QML captures are not acceptance criteria or evidence for this proof. MATCHED below identifies equivalent presenter/document predicates with passing execution; PARTIAL retains original UI-delivery obligations.
+Verification: deno task verify --filter swiftcore --verbose passed on the current worktree at d1b7aaf9d55968b677352ff14ad80e7be94ef1a2: build ok in 32.07s; swiftcore ok in 8.49s; 1/24 harnesses selected, 23 skipped. Entry: runAutomationPageChecks -> drawerAutomationOriginalClearMenus / drawerAutomationOriginalRangeMenu. Migration-only QML captures are not acceptance criteria or evidence for this proof. Re-verified green by the lane after the appended Escape predicates (reported by the coordinator); this proof-only reconciliation did not re-run the suite. MATCHED below identifies equivalent presenter/document predicates with passing execution; PARTIAL retains original UI-delivery obligations.
 
 contextMenuActionsApplyEffects
 
@@ -182,8 +182,8 @@ QVERIFY2(advertised && advertised->checked,
              "the reopened submenu does not advertise the applied 0-64 range")
 
 Original 338
-Disposition: DEFERRED-KEYBOARD
-Mapping: Swift dismissMenu closes the presenter, but does not prove Escape delivery. Keyboard/focus routing is explicitly deferred by the user.
+Disposition: MATCHED
+Mapping: the page handleEscape predicate claims the reopened lane menu (S026), the menu-open state it leaves is asserted false (S027), and the preceding lane write still stands through one undo (S023) with no history entries from the range picks (S024). The physical Qt key delivery itself is not asserted.
 QVERIFY2(!reopened.session->isOpen(), "Escape did not dismiss the reopened lane menu")
 
 
@@ -304,11 +304,24 @@ S022 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus
 Swift expression:
   report.expect(!page.menuOpen, cppID: id, message: "dismissal closes the reopened menu")
 
-S023 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:88
+S023 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:92
 Swift expression:
   report.expect(fixture.undo(), cppID: id, message: "one undo still reaches the preceding lane write")
 
-S024 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:89
+S024 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:93
 Swift expression:
   report.expect(fixture.document.lanePoints(track: 0, lane: .controller(21)).isEmpty,
                   cppID: id, message: "range picks inserted no history entries before the lane write")
+
+S025 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:88
+Swift expression:
+    report.expect(page.openParameterMenu(index: page.catalogIndex(of: lane), x: 0, y: 0),
+                  cppID: id, message: "the LFO menu opens for the Escape route")
+
+S026 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:90
+Swift expression:
+    report.expect(page.handleEscape(), cppID: id, message: "Escape claims the open lane menu")
+
+S027 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:91
+Swift expression:
+    report.expect(!page.menuOpen, cppID: id, message: "Escape closes the open lane menu")

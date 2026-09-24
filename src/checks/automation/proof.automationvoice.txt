@@ -17,7 +17,7 @@ Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-All 134 sites in this file are GAP: voiceHorizontalPreviewCommitsAndUndoes, voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit, voiceAltDragUsesFineSnap, voiceCollisionAndStaleRevision, voiceEscapeAndUngrabCancel, and voiceDuplicateOccurrenceMovesSingleIdentity exercise voice change lane editing, horizontal previewing, fine snapping with Alt, collision resolution, and cancellation.
+Of the 134 sites in this file, 96 are MATCHED, 10 PARTIAL, 16 NATIVE, and 12 NATIVE-SETUP. The six original slots are executed under the drawer presentation suite by drawerVoiceMarkerDragTransactions, drawerVoiceCancellationPaths, drawerVoiceAltFineClockLattice and drawerVoiceCollisionDragOutcome in src/checks/drawerpresentation/voice_interaction.swift, drawerVoiceUndoRedoRefresh in voice_lifecycle.swift, drawerVoicePickerValueReplacement in voice_picker.swift, and drawerVoiceOccurrenceIdentity / drawerVoiceMarkerProjection in voice_projection.swift (read-only counterparts owned by the drawer lane). Native Quick scene-layer revisions, native cursor feedback and native pointer grabs stay NATIVE; the retired AutomationCanvas voice row/input-item geometry is NATIVE-SETUP. The PARTIAL sites are the band-preview-clear claims (no Swift predicate observes the voice page's band preview) and the Alt fine-snap revision/history depth (the predicate asserts the committed clock-lattice tick only).
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -27,13 +27,13 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including the drawerpresentation voice predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
 
 Execution ownership
-The legacy AutomationEditingTest voice suite tested voice change event interaction inside the automation drawer. In the converted Swift suite, drawerVoiceInteraction in src/checks/drawerpresentation/voice_interaction.swift exercises voice change event editing, dragging, and collision semantics.
+The legacy AutomationEditingTest voice suite tested voice change event interaction inside the automation drawer. In the converted Swift suite, drawerVoiceMarkerDragTransactions, drawerVoiceCancellationPaths, drawerVoiceAltFineClockLattice and drawerVoiceCollisionDragOutcome in src/checks/drawerpresentation/voice_interaction.swift exercise voice change dragging, cancellation, Alt fine snapping and collision semantics; drawerVoiceUndoRedoRefresh in voice_lifecycle.swift exercises undo/redo rebuild; drawerVoicePickerValueReplacement in voice_picker.swift exercises the value rewrite and stale-revision rejection; drawerVoiceOccurrenceIdentity and drawerVoiceMarkerProjection in voice_projection.swift exercise occurrence identity and the marker projection. Registered run path: runVoiceChangesPageChecks ← runProjectSessionSuite → projectSession (swiftcore suite 10).
 
 Fixture, sequence and row constraints
 Tests exercise drag preview and commit for program change events, collision avoidance when moving past adjacent voice changes, Alt fine snapping, Escape cancellation, and mouse ungrab recovery. Loops verify voice change ticks and program values before and after undo.
@@ -43,8 +43,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:73
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -123,8 +123,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A002 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:75
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -133,8 +133,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A003 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:78
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       writeVoicePoints(tab().document(), {{24, 5}, {kSourceTick, 6}});
@@ -144,8 +144,8 @@ Original expression:
   QVERIFY(scene);
 
 A004 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:79
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The scene marker probes are replaced by the production presenter's published markers: drawerVoiceMarkerProjection asserts every DOC_CC_VOICE event of the primary track publishes one marker with its position and label. [S001,S002]
 Source context since previous assertion:
 
 
@@ -153,8 +153,8 @@ Original expression:
   QCOMPARE(voicePointCount(tab().document(), 24, 5), 1);
 
 A005 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:80
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The scene marker probes are replaced by the production presenter's published markers: drawerVoiceMarkerProjection asserts every DOC_CC_VOICE event of the primary track publishes one marker with its position and label. [S001,S002]
 Source context since previous assertion:
 
 
@@ -164,8 +164,8 @@ Original expression:
                    1);
 
 A006 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:83
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The scene marker probes are replaced by the production presenter's published markers: drawerVoiceMarkerProjection asserts every DOC_CC_VOICE event of the primary track publishes one marker with its position and label. [S001,S002]
 Source context since previous assertion:
 
 
@@ -175,8 +175,8 @@ Original expression:
                    1);
 
 A007 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The scene marker probes are replaced by the production presenter's published markers: drawerVoiceMarkerProjection asserts every DOC_CC_VOICE event of the primary track publishes one marker with its position and label. [S001,S002]
 Source context since previous assertion:
 
 
@@ -184,8 +184,8 @@ Original expression:
   QCOMPARE(voicePointCount(tab().document(), kSourceTick, 6), 1);
 
 A008 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:91
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the press owns a gesture with its frozen occurrence, that the drag activates past its activation distance, that the preview tick drafts away from the frozen tick, and that the projection draws the preview at the drafted tick. [S164]
 Source context since previous assertion:
 
 
@@ -197,8 +197,8 @@ Original expression:
   QVERIFY(destination != 24);
 
 A009 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:95
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S165]
 Source context since previous assertion:
 
       const auto markersBefore = scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
@@ -209,8 +209,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A010 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:96
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S165]
 Source context since previous assertion:
 
 
@@ -218,8 +218,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A011 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:102
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
@@ -233,8 +233,8 @@ Original expression:
                   markersBefore.revision);
 
 A012 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:104
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S165]
 Source context since previous assertion:
 
 
@@ -242,8 +242,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
 
 A013 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:105
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the press owns a gesture with its frozen occurrence, that the drag activates past its activation distance, that the preview tick drafts away from the frozen tick, and that the projection draws the preview at the drafted tick. [S161]
 Source context since previous assertion:
 
 
@@ -251,8 +251,8 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A014 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:106
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -260,8 +260,8 @@ Original expression:
   QCOMPARE(voiceChangeInput().cursor().shape(), Qt::SizeHorCursor);
 
 A015 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:108
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the press owns a gesture with its frozen occurrence, that the drag activates past its activation distance, that the preview tick drafts away from the frozen tick, and that the projection draws the preview at the drafted tick. [S166]
 Source context since previous assertion:
 
       const auto previewMarkers = scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
@@ -270,8 +270,8 @@ Original expression:
   QCOMPARE(markerCountAt(previewMarkers, voicePoint(destination).x()), 1);
 
 A016 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S169]
 Source context since previous assertion:
 
 
@@ -282,8 +282,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), 1);
 
 A017 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S169]
 Source context since previous assertion:
 
 
@@ -291,8 +291,8 @@ Original expression:
   QCOMPARE(edited.count(), 1);
 
 A018 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S169]
 Source context since previous assertion:
 
 
@@ -300,8 +300,8 @@ Original expression:
   QCOMPARE(tab().document().revision(), frozen.revision + 1);
 
 A019 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move records one history entry with undo availability, exactly one recorded entry (count-free). [S170]
 Source context since previous assertion:
 
 
@@ -309,8 +309,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
 
 A020 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move records one history entry with undo availability, exactly one recorded entry (count-free). [S170]
 Source context since previous assertion:
 
 
@@ -318,8 +318,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
 
 A021 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions / drawerVoiceAltFineClockLattice assert the release commits the drafted tick to the lane points. [S168,S171]
 Source context since previous assertion:
 
 
@@ -327,8 +327,8 @@ Original expression:
   QVERIFY(tab().document().smf().write() != frozen.smf);
 
 A022 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:118
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions / drawerVoiceAltFineClockLattice assert the release commits the drafted tick to the lane points. [S168,S171]
 Source context since previous assertion:
 
 
@@ -336,8 +336,8 @@ Original expression:
   QVERIFY(!hasVoicePoint(tab().document(), 24, 5));
 
 A023 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions / drawerVoiceAltFineClockLattice assert the release commits the drafted tick to the lane points. [S168,S171]
 Source context since previous assertion:
 
 
@@ -345,8 +345,8 @@ Original expression:
   QVERIFY(hasVoicePoint(tab().document(), kSourceTick, 6));
 
 A024 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions / drawerVoiceAltFineClockLattice assert the release commits the drafted tick to the lane points. [S168,S171]
 Source context since previous assertion:
 
 
@@ -354,8 +354,8 @@ Original expression:
   QVERIFY(hasVoicePoint(tab().document(), destination, 5));
 
 A025 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions / drawerVoiceAltFineClockLattice assert the release commits the drafted tick to the lane points. [S168,S171]
 Source context since previous assertion:
 
 
@@ -363,8 +363,8 @@ Original expression:
   QCOMPARE(int(tab().document().lanePoints(0, DOC_CC_VOICE).size()), 2);
 
 A026 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the release ends the gesture and interaction, restoring the projection. [S167]
 Source context since previous assertion:
 
 
@@ -372,8 +372,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A027 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the release ends the gesture and interaction, restoring the projection. [S167]
 Source context since previous assertion:
 
 
@@ -381,8 +381,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A028 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:124
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S167]
 Source context since previous assertion:
 
 
@@ -390,8 +390,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A029 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -399,8 +399,8 @@ Original expression:
   QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
 
 A030 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:127
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts undo restores the moved occurrence's tick and rebuilds the projection. [S173,S174]
 Source context since previous assertion:
 
 
@@ -409,8 +409,8 @@ Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));
 
 A031 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:128
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts undo restores the moved occurrence's tick and rebuilds the projection. [S174]
 Source context since previous assertion:
 
 
@@ -418,8 +418,8 @@ Original expression:
   QCOMPARE(tab().document().smf().write(), frozen.smf);
 
 A032 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:134
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -432,8 +432,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A033 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:136
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -442,8 +442,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A034 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:139
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       writeVoicePoints(tab().document(), {{kSourceTick, 7}});
@@ -453,8 +453,8 @@ Original expression:
   QVERIFY(scene);
 
 A035 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:140
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The scene marker probes are replaced by the production presenter's published markers: drawerVoiceMarkerProjection asserts every DOC_CC_VOICE event of the primary track publishes one marker with its position and label. [S001,S002]
 Source context since previous assertion:
 
 
@@ -464,8 +464,8 @@ Original expression:
                    1);
 
 A036 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S157]
 Source context since previous assertion:
 
       const QPointF source = voicePoint(kSourceTick);
@@ -476,8 +476,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A037 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:147
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S157]
 Source context since previous assertion:
 
 
@@ -485,8 +485,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A038 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S157]
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
@@ -498,8 +498,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
 
 A039 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -511,8 +511,8 @@ Original expression:
   QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
 
 A040 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S157]
 Source context since previous assertion:
 
       mouseRelease(voiceChangeInput(), Qt::LeftButton, vertical);
@@ -521,8 +521,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
 
 A041 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:166
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S157]
 Source context since previous assertion:
 
 
@@ -536,8 +536,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
 
 A042 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:167
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the press owns a gesture with its frozen occurrence, that the drag activates past its activation distance, that the preview tick drafts away from the frozen tick, and that the projection draws the preview at the drafted tick. [S156]
 Source context since previous assertion:
 
 
@@ -545,8 +545,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A043 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:168
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the release ends the gesture and interaction, restoring the projection. [S156]
 Source context since previous assertion:
 
 
@@ -554,8 +554,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A044 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:169
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S156]
 Source context since previous assertion:
 
 
@@ -563,8 +563,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A045 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:175
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -577,8 +577,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A046 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:177
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -587,8 +587,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A047 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       writeVoicePoints(tab().document(), {{kSourceTick, 8}});
@@ -598,8 +598,8 @@ Original expression:
   QVERIFY(scene);
 
 A048 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The scene marker probes are replaced by the production presenter's published markers: drawerVoiceMarkerProjection asserts every DOC_CC_VOICE event of the primary track publishes one marker with its position and label. [S001,S002]
 Source context since previous assertion:
 
 
@@ -609,8 +609,8 @@ Original expression:
                    1);
 
 A049 | std::abs | src/checks/automation/automationvoice.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceAltFineClockLattice asserts the Alt drag's preview and released tick equal the legacy clock lattice snap (fineSnap over the document's clock stride). [S257,S258]
 Source context since previous assertion:
 
       const QPointF source = voicePoint(kSourceTick);
@@ -634,8 +634,8 @@ Original expression:
   QVERIFY(fineTick != normalTick);
 
 A050 | std::abs | src/checks/automation/automationvoice.cpp:203
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S259]
 Source context since previous assertion:
 
       QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
@@ -645,8 +645,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A051 | std::abs | src/checks/automation/automationvoice.cpp:204
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S259]
 Source context since previous assertion:
 
 
@@ -654,8 +654,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A052 | std::abs | src/checks/automation/automationvoice.cpp:211
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S259]
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
@@ -669,8 +669,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), frozen.documentChanges + 1);
 
 A053 | std::abs | src/checks/automation/automationvoice.cpp:212
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S259]
 Source context since previous assertion:
 
 
@@ -678,8 +678,8 @@ Original expression:
   QCOMPARE(edited.count(), frozen.edits + 1);
 
 A054 | std::abs | src/checks/automation/automationvoice.cpp:213
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerVoiceAltFineClockLattice asserts the previewed and committed clock-lattice tick; it does not assert the commit's revision advance or its single history entry. Unproved: the Alt drag's revision/history depth. [S259]
 Source context since previous assertion:
 
 
@@ -687,8 +687,8 @@ Original expression:
   QCOMPARE(tab().document().revision(), frozen.revision + 1);
 
 A055 | std::abs | src/checks/automation/automationvoice.cpp:214
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerVoiceAltFineClockLattice asserts the previewed and committed clock-lattice tick; it does not assert the commit's revision advance or its single history entry. Unproved: the Alt drag's revision/history depth. [S259]
 Source context since previous assertion:
 
 
@@ -696,8 +696,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
 
 A056 | std::abs | src/checks/automation/automationvoice.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerVoiceAltFineClockLattice asserts the previewed and committed clock-lattice tick; it does not assert the commit's revision advance or its single history entry. Unproved: the Alt drag's revision/history depth. [S259]
 Source context since previous assertion:
 
 
@@ -705,8 +705,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
 
 A057 | std::abs | src/checks/automation/automationvoice.cpp:216
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions / drawerVoiceAltFineClockLattice assert the release commits the drafted tick to the lane points. [S259]
 Source context since previous assertion:
 
 
@@ -714,8 +714,8 @@ Original expression:
   QVERIFY(hasVoicePoint(tab().document(), fineTick, 8));
 
 A058 | std::abs | src/checks/automation/automationvoice.cpp:217
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions / drawerVoiceAltFineClockLattice assert the release commits the drafted tick to the lane points. [S259]
 Source context since previous assertion:
 
 
@@ -723,8 +723,8 @@ Original expression:
   QVERIFY(!hasVoicePoint(tab().document(), normalTick, 8));
 
 A059 | std::abs | src/checks/automation/automationvoice.cpp:218
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the release ends the gesture and interaction, restoring the projection. [S259]
 Source context since previous assertion:
 
 
@@ -732,8 +732,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A060 | std::abs | src/checks/automation/automationvoice.cpp:219
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the release ends the gesture and interaction, restoring the projection. [S259]
 Source context since previous assertion:
 
 
@@ -741,8 +741,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A061 | std::abs | src/checks/automation/automationvoice.cpp:220
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S259]
 Source context since previous assertion:
 
 
@@ -750,8 +750,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A062 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:226
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -764,8 +764,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A063 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:228
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -774,8 +774,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A064 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:235
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       const QPointF source = voicePoint(kSourceTick);
@@ -789,8 +789,8 @@ Original expression:
   QVERIFY(scene);
 
 A065 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:236
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The scene marker probes are replaced by the production presenter's published markers: drawerVoiceMarkerProjection asserts every DOC_CC_VOICE event of the primary track publishes one marker with its position and label. [S001,S002]
 Source context since previous assertion:
 
 
@@ -800,8 +800,8 @@ Original expression:
                    1);
 
 A066 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:239
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The scene marker probes are replaced by the production presenter's published markers: drawerVoiceMarkerProjection asserts every DOC_CC_VOICE event of the primary track publishes one marker with its position and label. [S001,S002]
 Source context since previous assertion:
 
 
@@ -811,8 +811,8 @@ Original expression:
                    1);
 
 A067 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:244
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S264]
 Source context since previous assertion:
 
       QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
@@ -822,8 +822,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A068 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:245
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S264]
 Source context since previous assertion:
 
 
@@ -831,8 +831,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A069 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:251
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S264]
 Source context since previous assertion:
 
       const FrozenDocumentState collisionFrozen =
@@ -845,8 +845,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), collisionFrozen.documentChanges + 1);
 
 A070 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:252
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S264]
 Source context since previous assertion:
 
 
@@ -854,8 +854,8 @@ Original expression:
   QCOMPARE(edited.count(), collisionFrozen.edits + 1);
 
 A071 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:253
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S264]
 Source context since previous assertion:
 
 
@@ -863,8 +863,8 @@ Original expression:
   QCOMPARE(tab().document().revision(), collisionFrozen.revision + 1);
 
 A072 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:254
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move records one history entry with undo availability, exactly one recorded entry (count-free). [S265]
 Source context since previous assertion:
 
 
@@ -872,8 +872,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->count(), collisionFrozen.undoCount + 1);
 
 A073 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:255
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move records one history entry with undo availability, exactly one recorded entry (count-free). [S265]
 Source context since previous assertion:
 
 
@@ -881,8 +881,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->index(), collisionFrozen.undoIndex + 1);
 
 A074 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:256
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceCollisionDragOutcome asserts the preview lands on the occupied tick, the moved occurrence wins the destination, the displaced one is gone, and one undo restores both. [S261,S262,S263]
 Source context since previous assertion:
 
 
@@ -890,8 +890,8 @@ Original expression:
   QCOMPARE(int(tab().document().lanePoints(0, DOC_CC_VOICE).size()), 1);
 
 A075 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceCollisionDragOutcome asserts the preview lands on the occupied tick, the moved occurrence wins the destination, the displaced one is gone, and one undo restores both. [S261,S262,S263]
 Source context since previous assertion:
 
 
@@ -899,8 +899,8 @@ Original expression:
   QVERIFY(hasVoicePoint(tab().document(), destination, 9));
 
 A076 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:258
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -908,8 +908,8 @@ Original expression:
   QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
 
 A077 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:259
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the release ends the gesture and interaction, restoring the projection. [S167]
 Source context since previous assertion:
 
 
@@ -917,8 +917,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A078 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:260
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the release ends the gesture and interaction, restoring the projection. [S167]
 Source context since previous assertion:
 
 
@@ -926,8 +926,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A079 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:261
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S167]
 Source context since previous assertion:
 
 
@@ -935,8 +935,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A080 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:264
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The scene marker probes are replaced by the production presenter's published markers: drawerVoiceMarkerProjection asserts every DOC_CC_VOICE event of the primary track publishes one marker with its position and label. [S001,S002]
 Source context since previous assertion:
 
 
@@ -948,8 +948,8 @@ Original expression:
                    1);
 
 A081 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:274
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoicePickerValueReplacement asserts a rewrite that moved the revision invalidates the captured picker target, that the stale acceptance is rejected, and that the competing rewrite itself stands. [S149]
 Source context since previous assertion:
 
       const FrozenDocumentState staleFrozen =
@@ -964,8 +964,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), staleFrozen.documentChanges + 1);
 
 A082 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:275
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoicePickerValueReplacement asserts a rewrite that moved the revision invalidates the captured picker target, that the stale acceptance is rejected, and that the competing rewrite itself stands. [S149]
 Source context since previous assertion:
 
 
@@ -973,8 +973,8 @@ Original expression:
   QCOMPARE(edited.count(), staleFrozen.edits + 1);
 
 A083 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:277
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoicePickerValueReplacement asserts a rewrite that moved the revision invalidates the captured picker target, that the stale acceptance is rejected, and that the competing rewrite itself stands. [S149]
 Source context since previous assertion:
 
       mouseRelease(voiceChangeInput(), Qt::LeftButton, target);
@@ -983,8 +983,8 @@ Original expression:
   QCOMPARE(tab().document().smf().write(), externalSmf);
 
 A084 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:278
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoicePickerValueReplacement asserts a rewrite that moved the revision invalidates the captured picker target, that the stale acceptance is rejected, and that the competing rewrite itself stands. [S146,S149]
 Source context since previous assertion:
 
 
@@ -992,8 +992,8 @@ Original expression:
   QCOMPARE(tab().document().revision(), externalRevision);
 
 A085 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:279
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoicePickerValueReplacement asserts a rewrite that moved the revision invalidates the captured picker target, that the stale acceptance is rejected, and that the competing rewrite itself stands. [S149]
 Source context since previous assertion:
 
 
@@ -1001,8 +1001,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), staleFrozen.documentChanges + 1);
 
 A086 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:280
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoicePickerValueReplacement asserts a rewrite that moved the revision invalidates the captured picker target, that the stale acceptance is rejected, and that the competing rewrite itself stands. [S149]
 Source context since previous assertion:
 
 
@@ -1010,8 +1010,8 @@ Original expression:
   QCOMPARE(edited.count(), staleFrozen.edits + 1);
 
 A087 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:281
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoicePickerValueReplacement asserts a rewrite that moved the revision invalidates the captured picker target, that the stale acceptance is rejected, and that the competing rewrite itself stands. [S151]
 Source context since previous assertion:
 
 
@@ -1019,8 +1019,8 @@ Original expression:
   QVERIFY(hasVoicePoint(tab().document(), kSourceTick, 11));
 
 A088 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:282
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceCancellationPaths asserts the cancelled gesture releases its interaction, restores the projection, and writes nothing. [S201,S203]
 Source context since previous assertion:
 
 
@@ -1028,8 +1028,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A089 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:283
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceCancellationPaths asserts the cancelled gesture releases its interaction, restores the projection, and writes nothing. [S201,S203]
 Source context since previous assertion:
 
 
@@ -1037,8 +1037,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A090 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:284
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceCancellationPaths asserts the cancelled gesture releases its interaction, restores the projection, and writes nothing. [S201,S203]
 Source context since previous assertion:
 
 
@@ -1046,8 +1046,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A091 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:290
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -1060,8 +1060,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A092 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:292
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -1070,8 +1070,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A093 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:298
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S199,S203]
 Source context since previous assertion:
 
       writeVoicePoints(tab().document(), {{kSourceTick, 12}});
@@ -1084,8 +1084,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A094 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:299
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S199,S203]
 Source context since previous assertion:
 
 
@@ -1093,8 +1093,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A095 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:302
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
 
@@ -1104,8 +1104,8 @@ Original expression:
   QVERIFY(scene);
 
 A096 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:303
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The scene marker probes are replaced by the production presenter's published markers: drawerVoiceMarkerProjection asserts every DOC_CC_VOICE event of the primary track publishes one marker with its position and label. [S202]
 Source context since previous assertion:
 
 
@@ -1115,8 +1115,8 @@ Original expression:
                    1);
 
 A097 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:312
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S203]
 Source context since previous assertion:
 
       const FrozenDocumentState escapeFrozen =
@@ -1130,8 +1130,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == escapeFrozen);
 
 A098 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:313
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceCancellationPaths asserts the cancelled gesture releases its interaction, restores the projection, and writes nothing. [S201]
 Source context since previous assertion:
 
 
@@ -1139,8 +1139,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A099 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:314
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceCancellationPaths asserts the cancelled gesture releases its interaction, restores the projection, and writes nothing. [S201]
 Source context since previous assertion:
 
 
@@ -1148,8 +1148,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A100 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:315
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S201]
 Source context since previous assertion:
 
 
@@ -1157,8 +1157,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A101 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:316
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -1166,8 +1166,8 @@ Original expression:
   QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
 
 A102 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:322
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -1180,8 +1180,8 @@ Original expression:
   QTRY_VERIFY(quickWindow().mouseGrabberItem() == &voiceChangeInput());
 
 A103 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:324
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       voiceChangeInput().ungrabMouse();
@@ -1190,8 +1190,8 @@ Original expression:
   QTRY_VERIFY(!quickWindow().mouseGrabberItem());
 
 A104 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:326
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the preview writes nothing (document snapshot unchanged) before the release. [S199]
 Source context since previous assertion:
 
       mouseRelease(voiceChangeInput(), Qt::LeftButton, target);
@@ -1200,8 +1200,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == ungrabFrozen);
 
 A105 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:327
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceCancellationPaths asserts the cancelled gesture releases its interaction, restores the projection, and writes nothing. [S201]
 Source context since previous assertion:
 
 
@@ -1209,8 +1209,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A106 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:328
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceCancellationPaths asserts the cancelled gesture releases its interaction, restores the projection, and writes nothing. [S201]
 Source context since previous assertion:
 
 
@@ -1218,8 +1218,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A107 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:329
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S201]
 Source context since previous assertion:
 
 
@@ -1227,8 +1227,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A108 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:330
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -1236,8 +1236,8 @@ Original expression:
   QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
 
 A109 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:336
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -1250,8 +1250,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A110 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:338
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -1260,8 +1260,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A111 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       writeVoicePoints(tab().document(), {{kSourceTick, 13}, {kSourceTick, 13}});
@@ -1271,8 +1271,8 @@ Original expression:
   QVERIFY(scene);
 
 A112 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:347
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The scene marker probes are replaced by the production presenter's published markers: drawerVoiceMarkerProjection asserts every DOC_CC_VOICE event of the primary track publishes one marker with its position and label. [S074,S075]
 Source context since previous assertion:
 
       const QPointF source = voicePoint(kSourceTick);
@@ -1287,8 +1287,8 @@ Original expression:
                    2);
 
 A113 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:350
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S169]
 Source context since previous assertion:
 
 
@@ -1296,8 +1296,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A114 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:351
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S169]
 Source context since previous assertion:
 
 
@@ -1305,8 +1305,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A115 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:358
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
@@ -1321,8 +1321,8 @@ Original expression:
                   markersBefore.revision);
 
 A116 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:360
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOccurrenceIdentity asserts the published marker identities are the lane occurrences' texts, that duplicate-tick occurrences resolve distinctly, that a camera scroll preserves identity, and that an inserted occurrence keeps the earlier identities. [S076,S077,S078]
 Source context since previous assertion:
 
 
@@ -1330,8 +1330,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
 
 A117 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOccurrenceIdentity asserts the published marker identities are the lane occurrences' texts, that duplicate-tick occurrences resolve distinctly, that a camera scroll preserves identity, and that an inserted occurrence keeps the earlier identities. [S076,S077,S078]
 Source context since previous assertion:
 
       const auto previewMarkers = scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
@@ -1340,8 +1340,8 @@ Original expression:
   QCOMPARE(markerCountAt(markersBefore, source.x()), 2);
 
 A118 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:363
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOccurrenceIdentity asserts the published marker identities are the lane occurrences' texts, that duplicate-tick occurrences resolve distinctly, that a camera scroll preserves identity, and that an inserted occurrence keeps the earlier identities. [S076,S077,S078]
 Source context since previous assertion:
 
 
@@ -1349,8 +1349,8 @@ Original expression:
   QCOMPARE(markerCountAt(previewMarkers, source.x()), 1);
 
 A119 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:364
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOccurrenceIdentity asserts the published marker identities are the lane occurrences' texts, that duplicate-tick occurrences resolve distinctly, that a camera scroll preserves identity, and that an inserted occurrence keeps the earlier identities. [S088]
 Source context since previous assertion:
 
 
@@ -1358,8 +1358,8 @@ Original expression:
   QCOMPARE(markerCountAt(markersBefore, voicePoint(destination).x()), 0);
 
 A120 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:365
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOccurrenceIdentity asserts the published marker identities are the lane occurrences' texts, that duplicate-tick occurrences resolve distinctly, that a camera scroll preserves identity, and that an inserted occurrence keeps the earlier identities. [S088]
 Source context since previous assertion:
 
 
@@ -1367,8 +1367,8 @@ Original expression:
   QCOMPARE(markerCountAt(previewMarkers, voicePoint(destination).x()), 1);
 
 A121 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:366
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOccurrenceIdentity asserts the published marker identities are the lane occurrences' texts, that duplicate-tick occurrences resolve distinctly, that a camera scroll preserves identity, and that an inserted occurrence keeps the earlier identities. [S082]
 Source context since previous assertion:
 
 
@@ -1376,8 +1376,8 @@ Original expression:
   QCOMPARE(previewMarkers.rects.size(), markersBefore.rects.size());
 
 A122 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:369
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S169]
 Source context since previous assertion:
 
 
@@ -1387,8 +1387,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), frozen.documentChanges + 1);
 
 A123 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:370
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S169]
 Source context since previous assertion:
 
 
@@ -1396,8 +1396,8 @@ Original expression:
   QCOMPARE(edited.count(), frozen.edits + 1);
 
 A124 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:371
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move publishes exactly one revision, the observable of the original's single document-change/edit count. [S169]
 Source context since previous assertion:
 
 
@@ -1405,8 +1405,8 @@ Original expression:
   QCOMPARE(tab().document().revision(), frozen.revision + 1);
 
 A125 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:372
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move records one history entry with undo availability, exactly one recorded entry (count-free). [S265]
 Source context since previous assertion:
 
 
@@ -1414,8 +1414,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
 
 A126 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:373
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the move records one history entry with undo availability, exactly one recorded entry (count-free). [S265]
 Source context since previous assertion:
 
 
@@ -1423,8 +1423,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
 
 A127 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:374
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceCollisionDragOutcome asserts the preview lands on the occupied tick, the moved occurrence wins the destination, the displaced one is gone, and one undo restores both. [S261,S262]
 Source context since previous assertion:
 
 
@@ -1432,8 +1432,8 @@ Original expression:
   QCOMPARE(voicePointCount(tab().document(), kSourceTick, 13), 1);
 
 A128 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:375
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceCollisionDragOutcome asserts the preview lands on the occupied tick, the moved occurrence wins the destination, the displaced one is gone, and one undo restores both. [S261,S262]
 Source context since previous assertion:
 
 
@@ -1441,8 +1441,8 @@ Original expression:
   QCOMPARE(voicePointCount(tab().document(), destination, 13), 1);
 
 A129 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:376
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceCollisionDragOutcome asserts the preview lands on the occupied tick, the moved occurrence wins the destination, the displaced one is gone, and one undo restores both. [S261,S262]
 Source context since previous assertion:
 
 
@@ -1450,8 +1450,8 @@ Original expression:
   QCOMPARE(int(tab().document().lanePoints(0, DOC_CC_VOICE).size()), 2);
 
 A130 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:377
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the release ends the gesture and interaction, restoring the projection. [S084]
 Source context since previous assertion:
 
 
@@ -1459,8 +1459,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A131 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:378
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVoiceMarkerDragTransactions asserts the release ends the gesture and interaction, restoring the projection. [S084]
 Source context since previous assertion:
 
 
@@ -1468,8 +1468,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A132 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:379
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No drawerpresentation predicate observes the voice page's band preview. Unproved: the band preview is clear after the slot's pointer sequence. [S084]
 Source context since previous assertion:
 
 
@@ -1477,8 +1477,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A133 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:380
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts undo restores the moved occurrence's tick and rebuilds the projection. [S266,S267]
 Source context since previous assertion:
 
 
@@ -1486,8 +1486,8 @@ Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));
 
 A134 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:381
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts undo restores the moved occurrence's tick and rebuilds the projection. [S267]
 Source context since previous assertion:
 
 
@@ -2709,6 +2709,6 @@ S291 | hold | src/checks/drawerpresentation/voice_lifecycle.swift:210
                          what: "picker replacement and teardown write no musical state")
 
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
-src/checks/automation/AutomationPageChecks.swift:381
+SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
+src/checks/automation/AutomationPageChecks.swift:402
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

@@ -5,13 +5,13 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationstroke.cpp
 Original SHA-256: 8b8caef7912b56d633bdf21e766e8e8beb414e2d64e5b7a8cb19d911b26a46f6
 Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: ed769eeedca873b5a9d77d5b20399840f5f4357643468157e10c7520bd6c2f31
+Swift SHA-256: 5b86e9ccff282f49293daeda21809428125bd86085e2aa4e57a69fc3dfa60278
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-All 75 sites in this file are GAP: pencilSubCellHorizontalJitterDoesNotAlterStroke, pencilZigzagStrokePreservesDirectionalExtrema, pencilVerticalMotionInSingleCellRetainsFinalValue, pencilDiagonalStrokeEventDensityInvariance, pencilBacktrackingStrokeRetainsExtremaAndLatestRevisit, pencilShiftModifierLocksValueDimension, pencilControlModifierDrawsUnsnappedClockQuantizedPoints, pencilMixedModifierComposesFreehandAndSnappedSegments, and pencilAltModifierIsIgnoredDuringStroke exercise detailed stroke filtering, modifier locks, jitter tolerance, and event density invariance.
+Of the 75 sites in this file, 68 are MATCHED and 7 are PARTIAL. The nine original stroke behaviors (pencilSubCellHorizontalJitterDoesNotAlterStroke, pencilZigzagStrokePreservesDirectionalExtrema, pencilVerticalMotionInSingleCellRetainsFinalValue, pencilDiagonalStrokeEventDensityInvariance, pencilBacktrackingStrokeRetainsExtremaAndLatestRevisit, pencilShiftModifierLocksValueDimension, pencilControlModifierDrawsUnsnappedClockQuantizedPoints, pencilMixedModifierComposesFreehandAndSnappedSegments, pencilAltModifierIsIgnoredDuringStroke) are executed by drawerAutomationPencilStrokeFilters and drawerAutomationPencilStrokeModifiers in src/checks/automation/domain/gestures.swift, under the original cppIDs. Each PARTIAL line names the exact unproved condition; no site is relabeled without an executing predicate.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -21,13 +21,13 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including drawerAutomationPencilStrokeFilters and drawerAutomationPencilStrokeModifiers). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
 
 Execution ownership
-The legacy AutomationEditingTest stroke suite tested stroke simplification, directional extrema preservation, modifier locks, and sub-cell jitter filtering. In the converted Swift suite, drawerAutomationPointRangeAndPencilReplacements in src/checks/automation/domain/gestures.swift exercises pure stroke replacement logic.
+The legacy AutomationEditingTest stroke suite tested stroke simplification, directional extrema preservation, modifier locks, and sub-cell jitter filtering. In the converted Swift suite, drawerAutomationPencilStrokeFilters executes the sub-cell jitter, zigzag extrema, single-cell final value, density invariance and backtracking behaviors, and drawerAutomationPencilStrokeModifiers executes the Shift value lock, Control freehand quantization, mixed-segment composition and Alt-ignored behaviors, all in src/checks/automation/domain/gestures.swift. Registered run path: src/checks/automation/AutomationPageChecks.swift:371-372 :: runAutomationPageChecks → projectSession (swiftcore suite 10); the counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
 
 Fixture, sequence and row constraints
 Data rows expand pencilDiagonalStrokeEventDensityInvariance across 4 sample density rates. Loops verify stroke points across cells, checking that zigzag extrema are preserved, sub-cell horizontal jitter is discarded, and modifiers (Shift for axis lock, Ctrl for quantization, Alt ignored) behave deterministically.
@@ -37,8 +37,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::pencilSubCellHorizontalJitterDoesNotAlterStroke | src/checks/automation/automationstroke.cpp:144
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated (drawerAutomationAutomationFixture + lane facts) and the transaction guard reports failure when the stroke cannot start, so the original lane activation is the same executing step. [S152]
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -188,8 +188,8 @@ Original expression:
   QVERIFY(activateParameter(panRow()));
 
 A002 | AutomationEditingTest::pencilSubCellHorizontalJitterDoesNotAlterStroke | src/checks/automation/automationstroke.cpp:145
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated (drawerAutomationAutomationFixture + lane facts) and the transaction guard reports failure when the stroke cannot start, so the original lane activation is the same executing step. [S152]
 Source context since previous assertion:
 
 
@@ -197,8 +197,8 @@ Original expression:
   QTRY_VERIFY(findRow(panRow()).valid());
 
 A003 | AutomationEditingTest::pencilSubCellHorizontalJitterDoesNotAlterStroke | src/checks/automation/automationstroke.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated (drawerAutomationAutomationFixture + lane facts) and the transaction guard reports failure when the stroke cannot start, so the original lane activation is the same executing step. [S152]
 Source context since previous assertion:
 
 
@@ -206,8 +206,8 @@ Original expression:
   QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
 
 A004 | AutomationEditingTest::pencilSubCellHorizontalJitterDoesNotAlterStroke | src/checks/automation/automationstroke.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationPencilStrokeFilters samples with the page's production nodeDragActivationDistance as the vertical slop; that predicate is the related evidence and no Swift predicate asserts the distance is positive. Unproved: the positivity precondition itself. [S152]
 Source context since previous assertion:
 
       const LaneHandle handle = findRow(panRow());
@@ -227,8 +227,8 @@ Original expression:
   QVERIFY(slop > 0);
 
 A005 | AutomationEditingTest::pencilSubCellHorizontalJitterDoesNotAlterStroke | src/checks/automation/automationstroke.cpp:160
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The transaction-level predicates drive the production AutomationPencilTransaction without asserting the page's pencil-mode flag (only drawerAutomationPencilStrokeModifiers' Alt case sets page.isPencilMode). Unproved: canvas pencil mode for this method. [S152]
 Source context since previous assertion:
 
 
@@ -236,8 +236,8 @@ Original expression:
   QVERIFY(canvas.pencilMode());
 
 A006 | AutomationEditingTest::pencilSubCellHorizontalJitterDoesNotAlterStroke | src/checks/automation/automationstroke.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts one point per crossed cell holding the jittered value; the original's per-cell held value is that same point stream. [S155]
 Source context since previous assertion:
 
 
@@ -255,8 +255,8 @@ Original expression:
   QVERIFY(heldValue(points, start.mapping.cell.tickBegin, &firstValue));
 
 A007 | AutomationEditingTest::pencilSubCellHorizontalJitterDoesNotAlterStroke | src/checks/automation/automationstroke.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts one point per crossed cell holding the jittered value; the original's per-cell held value is that same point stream. [S155]
 Source context since previous assertion:
 
 
@@ -264,8 +264,8 @@ Original expression:
   QVERIFY(heldValue(points, second.mapping.cell.tickBegin, &secondValue));
 
 A008 | AutomationEditingTest::pencilSubCellHorizontalJitterDoesNotAlterStroke | src/checks/automation/automationstroke.cpp:173
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts one point per crossed cell holding the jittered value; the original's per-cell held value is that same point stream. [S155]
 Source context since previous assertion:
 
 
@@ -273,8 +273,8 @@ Original expression:
   QVERIFY(heldValue(points, third.mapping.cell.tickBegin, &thirdValue));
 
 A009 | AutomationEditingTest::pencilSubCellHorizontalJitterDoesNotAlterStroke | src/checks/automation/automationstroke.cpp:174
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts pure horizontal sub-cell jitter keeps the stroke's continuous value (48), the original's start.mapping.point.value. [S153,S155]
 Source context since previous assertion:
 
 
@@ -282,8 +282,8 @@ Original expression:
   QCOMPARE(firstValue, start.mapping.point.value);
 
 A010 | AutomationEditingTest::pencilSubCellHorizontalJitterDoesNotAlterStroke | src/checks/automation/automationstroke.cpp:175
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts pure horizontal sub-cell jitter keeps the stroke's continuous value (48), the original's start.mapping.point.value. [S153,S155]
 Source context since previous assertion:
 
 
@@ -291,8 +291,8 @@ Original expression:
   QCOMPARE(secondValue, start.mapping.point.value);
 
 A011 | AutomationEditingTest::pencilSubCellHorizontalJitterDoesNotAlterStroke | src/checks/automation/automationstroke.cpp:176
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts pure horizontal sub-cell jitter keeps the stroke's continuous value (48), the original's start.mapping.point.value. [S153,S155]
 Source context since previous assertion:
 
 
@@ -300,8 +300,8 @@ Original expression:
   QCOMPARE(thirdValue, start.mapping.point.value);
 
 A012 | AutomationEditingTest::pencilZigzagStrokePreservesDirectionalExtrema | src/checks/automation/automationstroke.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated and the zigzag transaction guard reports failure when the stroke cannot start; the original lane activation is that same step. [S156]
 Source context since previous assertion:
 
   }
@@ -316,8 +316,8 @@ Original expression:
   QVERIFY(activateParameter(panRow()));
 
 A013 | AutomationEditingTest::pencilZigzagStrokePreservesDirectionalExtrema | src/checks/automation/automationstroke.cpp:185
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated and the zigzag transaction guard reports failure when the stroke cannot start; the original lane activation is that same step. [S156]
 Source context since previous assertion:
 
 
@@ -325,8 +325,8 @@ Original expression:
   QTRY_VERIFY(findRow(panRow()).valid());
 
 A014 | AutomationEditingTest::pencilZigzagStrokePreservesDirectionalExtrema | src/checks/automation/automationstroke.cpp:186
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated and the zigzag transaction guard reports failure when the stroke cannot start; the original lane activation is that same step. [S156]
 Source context since previous assertion:
 
 
@@ -334,8 +334,8 @@ Original expression:
   QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
 
 A015 | AutomationEditingTest::pencilZigzagStrokePreservesDirectionalExtrema | src/checks/automation/automationstroke.cpp:208
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts the zigzag's ordered ticks and per-cell values, covering every loop iteration's held value. [S157,S158]
 Source context since previous assertion:
 
       const LaneHandle handle = findRow(panRow());
@@ -364,8 +364,8 @@ Original expression:
   QVERIFY(heldValue(points, stroke[index].mapping.cell.tickBegin, &actual[index]));
 
 A016 | AutomationEditingTest::pencilZigzagStrokePreservesDirectionalExtrema | src/checks/automation/automationstroke.cpp:209
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts the zigzag's ordered ticks and per-cell values, covering every loop iteration's held value. [S157,S158]
 Source context since previous assertion:
 
 
@@ -373,8 +373,8 @@ Original expression:
   QVERIFY(std::abs(actual[index] - stroke[index].mapping.point.value) <= 1);
 
 A017 | AutomationEditingTest::pencilZigzagStrokePreservesDirectionalExtrema | src/checks/automation/automationstroke.cpp:211
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts every directional extremum of the zigzag value sequence. [S159]
 Source context since previous assertion:
 
       }
@@ -383,8 +383,8 @@ Original expression:
   QVERIFY(actual[0] < actual[1]);
 
 A018 | AutomationEditingTest::pencilZigzagStrokePreservesDirectionalExtrema | src/checks/automation/automationstroke.cpp:212
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts every directional extremum of the zigzag value sequence. [S159]
 Source context since previous assertion:
 
 
@@ -392,8 +392,8 @@ Original expression:
   QVERIFY(actual[1] > actual[2]);
 
 A019 | AutomationEditingTest::pencilZigzagStrokePreservesDirectionalExtrema | src/checks/automation/automationstroke.cpp:213
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts every directional extremum of the zigzag value sequence. [S159]
 Source context since previous assertion:
 
 
@@ -401,8 +401,8 @@ Original expression:
   QVERIFY(actual[2] < actual[3]);
 
 A020 | AutomationEditingTest::pencilZigzagStrokePreservesDirectionalExtrema | src/checks/automation/automationstroke.cpp:214
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts every directional extremum of the zigzag value sequence. [S159]
 Source context since previous assertion:
 
 
@@ -410,8 +410,8 @@ Original expression:
   QVERIFY(actual[3] > actual[4]);
 
 A021 | AutomationEditingTest::pencilZigzagStrokePreservesDirectionalExtrema | src/checks/automation/automationstroke.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts every directional extremum of the zigzag value sequence. [S159]
 Source context since previous assertion:
 
 
@@ -419,8 +419,8 @@ Original expression:
   QVERIFY(actual[4] < actual[5]);
 
 A022 | AutomationEditingTest::pencilVerticalMotionInSingleCellRetainsFinalValue | src/checks/automation/automationstroke.cpp:223
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated and the vertical-stroke guard reports failure when the stroke cannot start. [S160]
 Source context since previous assertion:
 
   }
@@ -435,8 +435,8 @@ Original expression:
   QVERIFY(activateParameter(panRow()));
 
 A023 | AutomationEditingTest::pencilVerticalMotionInSingleCellRetainsFinalValue | src/checks/automation/automationstroke.cpp:224
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated and the vertical-stroke guard reports failure when the stroke cannot start. [S160]
 Source context since previous assertion:
 
 
@@ -444,8 +444,8 @@ Original expression:
   QTRY_VERIFY(findRow(panRow()).valid());
 
 A024 | AutomationEditingTest::pencilVerticalMotionInSingleCellRetainsFinalValue | src/checks/automation/automationstroke.cpp:225
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated and the vertical-stroke guard reports failure when the stroke cannot start. [S160]
 Source context since previous assertion:
 
 
@@ -453,8 +453,8 @@ Original expression:
   QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
 
 A025 | AutomationEditingTest::pencilVerticalMotionInSingleCellRetainsFinalValue | src/checks/automation/automationstroke.cpp:234
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts vertical motion inside one cell keeps only the final value at that cell's tick, the original single-cell end value. [S161]
 Source context since previous assertion:
 
       const LaneHandle handle = findRow(panRow());
@@ -470,8 +470,8 @@ Original expression:
   QCOMPARE(start.mapping.cell.tickBegin, end.mapping.cell.tickBegin);
 
 A026 | AutomationEditingTest::pencilVerticalMotionInSingleCellRetainsFinalValue | src/checks/automation/automationstroke.cpp:241
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts vertical motion inside one cell keeps only the final value at that cell's tick, the original single-cell end value. [S161]
 Source context since previous assertion:
 
 
@@ -485,8 +485,8 @@ Original expression:
   QVERIFY(pointValue(lanePoints(document), start.mapping.cell.tickBegin, &value));
 
 A027 | AutomationEditingTest::pencilVerticalMotionInSingleCellRetainsFinalValue | src/checks/automation/automationstroke.cpp:242
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts vertical motion inside one cell keeps only the final value at that cell's tick, the original single-cell end value. [S161]
 Source context since previous assertion:
 
 
@@ -494,8 +494,8 @@ Original expression:
   QVERIFY(std::abs(value - end.mapping.point.value) <= 1);
 
 A028 | AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance | src/checks/automation/automationstroke.cpp:262
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated and the density-stroke guard reports failure when the strokes cannot start. [S162]
 Source context since previous assertion:
 
   }
@@ -522,8 +522,8 @@ Original expression:
   QVERIFY(activateParameter(panRow()));
 
 A029 | AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance | src/checks/automation/automationstroke.cpp:263
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated and the density-stroke guard reports failure when the strokes cannot start. [S162]
 Source context since previous assertion:
 
 
@@ -531,8 +531,8 @@ Original expression:
   QTRY_VERIFY(findRow(panRow()).valid());
 
 A030 | AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance | src/checks/automation/automationstroke.cpp:264
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated and the density-stroke guard reports failure when the strokes cannot start. [S162]
 Source context since previous assertion:
 
 
@@ -540,8 +540,8 @@ Original expression:
   QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
 
 A031 | AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance | src/checks/automation/automationstroke.cpp:326
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts the sparse diagonal stroke writes points. [S163]
 Source context since previous assertion:
 
       const auto capture = [this, &document, canonical, zoom](bool dense) {
@@ -610,8 +610,8 @@ Original expression:
   QVERIFY(!sparse.empty());
 
 A032 | AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance | src/checks/automation/automationstroke.cpp:327
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts the sparse diagonal stroke writes points. [S163]
 Source context since previous assertion:
 
 
@@ -619,8 +619,8 @@ Original expression:
   QVERIFY(!dense.empty());
 
 A033 | AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance | src/checks/automation/automationstroke.cpp:331
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts the 10-sample and 50-sample diagonal strokes produce identical completion points; exact equality is stronger than the original ±1 tolerance. [S164]
 Source context since previous assertion:
 
       for (const StrokePoint &sample : expected) {
@@ -631,8 +631,8 @@ Original expression:
   QVERIFY(heldValue(sparse, sample.mapping.cell.tickBegin, &sparseValue));
 
 A034 | AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance | src/checks/automation/automationstroke.cpp:332
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts the 10-sample and 50-sample diagonal strokes produce identical completion points; exact equality is stronger than the original ±1 tolerance. [S164]
 Source context since previous assertion:
 
 
@@ -640,8 +640,8 @@ Original expression:
   QVERIFY(heldValue(dense, sample.mapping.cell.tickBegin, &denseValue));
 
 A035 | AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance | src/checks/automation/automationstroke.cpp:333
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts the 10-sample and 50-sample diagonal strokes produce identical completion points; exact equality is stronger than the original ±1 tolerance. [S164]
 Source context since previous assertion:
 
 
@@ -649,8 +649,8 @@ Original expression:
   QVERIFY(std::abs(sparseValue - denseValue) <= 1);
 
 A036 | AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance | src/checks/automation/automationstroke.cpp:334
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts sparse-equals-dense completion points; it does not compare the held value against the requested sample value. Unproved: the per-sample ±1 tolerance. [S164]
 Source context since previous assertion:
 
 
@@ -658,8 +658,8 @@ Original expression:
   QVERIFY(std::abs(sparseValue - sample.mapping.point.value) <= 1);
 
 A037 | AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance | src/checks/automation/automationstroke.cpp:335
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts sparse-equals-dense completion points; it does not compare the held value against the requested sample value. Unproved: the per-sample ±1 tolerance. [S164]
 Source context since previous assertion:
 
 
@@ -667,8 +667,8 @@ Original expression:
   QVERIFY(std::abs(denseValue - sample.mapping.point.value) <= 1);
 
 A038 | AutomationEditingTest::pencilBacktrackingStrokeRetainsExtremaAndLatestRevisit | src/checks/automation/automationstroke.cpp:344
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated and the backtracking-stroke guard reports failure when the stroke cannot start. [S165]
 Source context since previous assertion:
 
       }
@@ -684,8 +684,8 @@ Original expression:
   QVERIFY(activateParameter(panRow()));
 
 A039 | AutomationEditingTest::pencilBacktrackingStrokeRetainsExtremaAndLatestRevisit | src/checks/automation/automationstroke.cpp:345
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated and the backtracking-stroke guard reports failure when the stroke cannot start. [S165]
 Source context since previous assertion:
 
 
@@ -693,8 +693,8 @@ Original expression:
   QTRY_VERIFY(findRow(panRow()).valid());
 
 A040 | AutomationEditingTest::pencilBacktrackingStrokeRetainsExtremaAndLatestRevisit | src/checks/automation/automationstroke.cpp:346
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters builds the production page with the Pan lane activated and the backtracking-stroke guard reports failure when the stroke cannot start. [S165]
 Source context since previous assertion:
 
 
@@ -702,8 +702,8 @@ Original expression:
   QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
 
 A041 | AutomationEditingTest::pencilBacktrackingStrokeRetainsExtremaAndLatestRevisit | src/checks/automation/automationstroke.cpp:368
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts the revisited cells' leftward values and the standing far extremum, covering the original start/far held-value comparisons. [S166]
 Source context since previous assertion:
 
       const LaneHandle handle = findRow(panRow());
@@ -732,8 +732,8 @@ Original expression:
   QVERIFY(heldValue(points, start.mapping.cell.tickBegin, &startValue));
 
 A042 | AutomationEditingTest::pencilBacktrackingStrokeRetainsExtremaAndLatestRevisit | src/checks/automation/automationstroke.cpp:369
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts the revisited cells' leftward values and the standing far extremum, covering the original start/far held-value comparisons. [S166]
 Source context since previous assertion:
 
 
@@ -741,8 +741,8 @@ Original expression:
   QVERIFY(heldValue(points, far.mapping.cell.tickBegin, &farValue));
 
 A043 | AutomationEditingTest::pencilBacktrackingStrokeRetainsExtremaAndLatestRevisit | src/checks/automation/automationstroke.cpp:370
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts the revisited cells' leftward values and the standing far extremum, covering the original start/far held-value comparisons. [S166]
 Source context since previous assertion:
 
 
@@ -750,8 +750,8 @@ Original expression:
   QVERIFY(std::abs(startValue - finish.mapping.point.value) <= 1);
 
 A044 | AutomationEditingTest::pencilBacktrackingStrokeRetainsExtremaAndLatestRevisit | src/checks/automation/automationstroke.cpp:371
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts the revisited cells' leftward values and the standing far extremum, covering the original start/far held-value comparisons. [S166]
 Source context since previous assertion:
 
 
@@ -759,8 +759,8 @@ Original expression:
   QVERIFY(std::abs(farValue - far.mapping.point.value) <= 1);
 
 A045 | AutomationEditingTest::pencilBacktrackingStrokeRetainsExtremaAndLatestRevisit | src/checks/automation/automationstroke.cpp:372
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeFilters asserts the backtracking stroke stays sorted by tick. [S167]
 Source context since previous assertion:
 
 
@@ -768,8 +768,8 @@ Original expression:
   QVERIFY(std::is_sorted(points.cbegin(), points.cend()));
 
 A046 | AutomationEditingTest::pencilShiftModifierLocksValueDimension | src/checks/automation/automationstroke.cpp:380
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers builds the production page with the Pan lane activated and the locked/unlocked stroke guards report failure when a stroke cannot start. [S168]
 Source context since previous assertion:
 
   }
@@ -784,8 +784,8 @@ Original expression:
   QVERIFY(activateParameter(panRow()));
 
 A047 | AutomationEditingTest::pencilShiftModifierLocksValueDimension | src/checks/automation/automationstroke.cpp:381
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers builds the production page with the Pan lane activated and the locked/unlocked stroke guards report failure when a stroke cannot start. [S168]
 Source context since previous assertion:
 
 
@@ -793,8 +793,8 @@ Original expression:
   QTRY_VERIFY(findRow(panRow()).valid());
 
 A048 | AutomationEditingTest::pencilShiftModifierLocksValueDimension | src/checks/automation/automationstroke.cpp:382
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers builds the production page with the Pan lane activated and the locked/unlocked stroke guards report failure when a stroke cannot start. [S168]
 Source context since previous assertion:
 
 
@@ -802,8 +802,8 @@ Original expression:
   QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
 
 A049 | AutomationEditingTest::pencilShiftModifierLocksValueDimension | src/checks/automation/automationstroke.cpp:413
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the same travel unlocked moves the value, the original plainEnd != plainMiddle observation. [S173]
 Source context since previous assertion:
 
       const auto capture = [this, &document](bool held) {
@@ -841,8 +841,8 @@ Original expression:
   QVERIFY(heldValue(plain.points, plain.middle.mapping.cell.tickBegin, &plainMiddle));
 
 A050 | AutomationEditingTest::pencilShiftModifierLocksValueDimension | src/checks/automation/automationstroke.cpp:414
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the same travel unlocked moves the value, the original plainEnd != plainMiddle observation. [S173]
 Source context since previous assertion:
 
 
@@ -850,8 +850,8 @@ Original expression:
   QVERIFY(heldValue(plain.points, plain.end.mapping.cell.tickBegin, &plainEnd));
 
 A051 | AutomationEditingTest::pencilShiftModifierLocksValueDimension | src/checks/automation/automationstroke.cpp:415
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts a locked run keeps the initial value through later vertical travel. [S169]
 Source context since previous assertion:
 
 
@@ -859,8 +859,8 @@ Original expression:
   QVERIFY(heldValue(locked.points, locked.middle.mapping.cell.tickBegin, &lockedMiddle));
 
 A052 | AutomationEditingTest::pencilShiftModifierLocksValueDimension | src/checks/automation/automationstroke.cpp:416
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts a locked run ignores later vertical travel, the original lockedEnd == lockedMiddle value. [S170]
 Source context since previous assertion:
 
 
@@ -868,8 +868,8 @@ Original expression:
   QVERIFY(heldValue(locked.points, locked.end.mapping.cell.tickBegin, &lockedEnd));
 
 A053 | AutomationEditingTest::pencilShiftModifierLocksValueDimension | src/checks/automation/automationstroke.cpp:417
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the same travel unlocked moves the value, the original plainEnd != plainMiddle observation. [S173]
 Source context since previous assertion:
 
 
@@ -877,8 +877,8 @@ Original expression:
   QVERIFY(std::abs(plainMiddle - plain.middle.mapping.point.value) <= 1);
 
 A054 | AutomationEditingTest::pencilShiftModifierLocksValueDimension | src/checks/automation/automationstroke.cpp:418
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the same travel unlocked moves the value, the original plainEnd != plainMiddle observation. [S173]
 Source context since previous assertion:
 
 
@@ -886,8 +886,8 @@ Original expression:
   QVERIFY(std::abs(plainEnd - plain.end.mapping.point.value) <= 1);
 
 A055 | AutomationEditingTest::pencilShiftModifierLocksValueDimension | src/checks/automation/automationstroke.cpp:419
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the same travel unlocked moves the value, the original plainEnd != plainMiddle observation. [S173]
 Source context since previous assertion:
 
 
@@ -895,8 +895,8 @@ Original expression:
   QVERIFY(plainEnd != plainMiddle);
 
 A056 | AutomationEditingTest::pencilShiftModifierLocksValueDimension | src/checks/automation/automationstroke.cpp:420
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the locked stroke writes its constant initial value at every crossed cell. [S171]
 Source context since previous assertion:
 
 
@@ -904,8 +904,8 @@ Original expression:
   QVERIFY(std::abs(lockedMiddle - locked.middle.mapping.point.value) <= 1);
 
 A057 | AutomationEditingTest::pencilShiftModifierLocksValueDimension | src/checks/automation/automationstroke.cpp:421
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the locked stroke writes its constant initial value at every crossed cell. [S171]
 Source context since previous assertion:
 
 
@@ -913,8 +913,8 @@ Original expression:
   QCOMPARE(lockedEnd, lockedMiddle);
 
 A058 | AutomationEditingTest::pencilControlModifierDrawsUnsnappedClockQuantizedPoints | src/checks/automation/automationstroke.cpp:429
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers builds the production page and the freehand-stroke guard reports failure when the stroke cannot start. [S174]
 Source context since previous assertion:
 
   }
@@ -929,8 +929,8 @@ Original expression:
   QVERIFY(activateParameter(panRow()));
 
 A059 | AutomationEditingTest::pencilControlModifierDrawsUnsnappedClockQuantizedPoints | src/checks/automation/automationstroke.cpp:430
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers builds the production page and the freehand-stroke guard reports failure when the stroke cannot start. [S174]
 Source context since previous assertion:
 
 
@@ -938,8 +938,8 @@ Original expression:
   QTRY_VERIFY(findRow(panRow()).valid());
 
 A060 | AutomationEditingTest::pencilControlModifierDrawsUnsnappedClockQuantizedPoints | src/checks/automation/automationstroke.cpp:431
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers builds the production page and the freehand-stroke guard reports failure when the stroke cannot start. [S174]
 Source context since previous assertion:
 
 
@@ -947,8 +947,8 @@ Original expression:
   QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
 
 A061 | std::abs | src/checks/automation/automationstroke.cpp:495
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the freehand run's clock-quantized lattice ticks and its escape from the snapped cell lattice; it does not compare sparse and dense freehand strokes. Unproved: freehand density invariance. [S175,S176]
 Source context since previous assertion:
 
       const auto capture = [this, &document](bool reverse, bool dense) {
@@ -1019,8 +1019,8 @@ Original expression:
   QVERIFY(matches(forwardSparse, forwardDense));
 
 A062 | std::abs | src/checks/automation/automationstroke.cpp:496
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the freehand run's clock-quantized lattice ticks and its escape from the snapped cell lattice; it does not compare sparse and dense freehand strokes. Unproved: freehand density invariance. [S175,S176]
 Source context since previous assertion:
 
 
@@ -1028,8 +1028,8 @@ Original expression:
   QVERIFY(matches(reverseSparse, reverseDense));
 
 A063 | std::abs | src/checks/automation/automationstroke.cpp:497
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the freehand run lands on clock ticks off the snapped grid, the original clockTick != cell tickBegin observation. [S177]
 Source context since previous assertion:
 
 
@@ -1037,8 +1037,8 @@ Original expression:
   QVERIFY(clockTick(forwardSparse.turn) != forwardSparse.turn.mapping.cell.tickBegin);
 
 A064 | AutomationEditingTest::pencilMixedModifierComposesFreehandAndSnappedSegments | src/checks/automation/automationstroke.cpp:505
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers builds the production page and the mixed-stroke guard reports failure when the stroke cannot start. [S178]
 Source context since previous assertion:
 
   }
@@ -1053,8 +1053,8 @@ Original expression:
   QVERIFY(activateParameter(panRow()));
 
 A065 | AutomationEditingTest::pencilMixedModifierComposesFreehandAndSnappedSegments | src/checks/automation/automationstroke.cpp:506
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers builds the production page and the mixed-stroke guard reports failure when the stroke cannot start. [S178]
 Source context since previous assertion:
 
 
@@ -1062,8 +1062,8 @@ Original expression:
   QTRY_VERIFY(findRow(panRow()).valid());
 
 A066 | AutomationEditingTest::pencilMixedModifierComposesFreehandAndSnappedSegments | src/checks/automation/automationstroke.cpp:507
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers builds the production page and the mixed-stroke guard reports failure when the stroke cannot start. [S178]
 Source context since previous assertion:
 
 
@@ -1071,8 +1071,8 @@ Original expression:
   QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
 
 A067 | AutomationEditingTest::pencilMixedModifierComposesFreehandAndSnappedSegments | src/checks/automation/automationstroke.cpp:531
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the mixed stroke's ordered tick set, which includes the freehand interior point between the snapped head's cell and the next cell. [S179]
 Source context since previous assertion:
 
       const LaneHandle handle = findRow(panRow());
@@ -1104,8 +1104,8 @@ Original expression:
           containsInteriorPoint(points, start.mapping.cell.tickBegin, middle.mapping.cell.tickBegin));
 
 A068 | AutomationEditingTest::pencilMixedModifierComposesFreehandAndSnappedSegments | src/checks/automation/automationstroke.cpp:534
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the mixed stroke's ordered tick set, including the point at the freehand end cell and no extra interior point filling the end cell. [S179]
 Source context since previous assertion:
 
       int endValue = -1;
@@ -1114,8 +1114,8 @@ Original expression:
   QVERIFY(pointValue(points, end.mapping.cell.tickBegin, &endValue));
 
 A069 | AutomationEditingTest::pencilMixedModifierComposesFreehandAndSnappedSegments | src/checks/automation/automationstroke.cpp:535
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the mixed stroke's first (snapped head) value; it does not compare the freehand end value against the requested sample. Unproved: the end-value tolerance. [S180]
 Source context since previous assertion:
 
 
@@ -1123,8 +1123,8 @@ Original expression:
   QVERIFY(std::abs(endValue - end.mapping.point.value) <= 1);
 
 A070 | AutomationEditingTest::pencilMixedModifierComposesFreehandAndSnappedSegments | src/checks/automation/automationstroke.cpp:536
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the exact ordered tick set, so the end cell gains no interior point. [S179]
 Source context since previous assertion:
 
 
@@ -1132,8 +1132,8 @@ Original expression:
   QVERIFY(!containsInteriorPoint(points, end.mapping.cell.tickBegin, end.mapping.cell.tickEnd));
 
 A071 | AutomationEditingTest::pencilAltModifierIsIgnoredDuringStroke | src/checks/automation/automationstroke.cpp:544
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers drives the production page pointer route with page.isPencilMode set and reports failure when either stroke cannot start or commit; the original lane activation is that same pointer sequence. [S182]
 Source context since previous assertion:
 
   }
@@ -1148,8 +1148,8 @@ Original expression:
   QVERIFY(activateParameter(panRow()));
 
 A072 | AutomationEditingTest::pencilAltModifierIsIgnoredDuringStroke | src/checks/automation/automationstroke.cpp:545
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers drives the production page pointer route with page.isPencilMode set and reports failure when either stroke cannot start or commit; the original lane activation is that same pointer sequence. [S182]
 Source context since previous assertion:
 
 
@@ -1157,8 +1157,8 @@ Original expression:
   QTRY_VERIFY(findRow(panRow()).valid());
 
 A073 | AutomationEditingTest::pencilAltModifierIsIgnoredDuringStroke | src/checks/automation/automationstroke.cpp:546
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers drives the production page pointer route with page.isPencilMode set and reports failure when either stroke cannot start or commit; the original lane activation is that same pointer sequence. [S182]
 Source context since previous assertion:
 
 
@@ -1166,8 +1166,8 @@ Original expression:
   QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
 
 A074 | AutomationEditingTest::pencilAltModifierIsIgnoredDuringStroke | src/checks/automation/automationstroke.cpp:565
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the plain stroke writes the empty lane and the fine (Alt) modifier leaves the committed stroke unchanged. [S186,S187]
 Source context since previous assertion:
 
       const auto capture = [this, &document](Qt::KeyboardModifiers modifiers) {
@@ -1193,8 +1193,8 @@ Original expression:
   QVERIFY(!plain.empty());
 
 A075 | AutomationEditingTest::pencilAltModifierIsIgnoredDuringStroke | src/checks/automation/automationstroke.cpp:566
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilStrokeModifiers asserts the plain stroke writes the empty lane and the fine (Alt) modifier leaves the committed stroke unchanged. [S186,S187]
 Source context since previous assertion:
 
 
@@ -1863,7 +1863,151 @@ S151 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.s
   report.expectEqual(firstWrite, fx.document.state, cppID: id,
                          what: "only a second undo removes the preceding Pan sweep")
 
+S152 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:795
+Swift expression:
+  report.fail(jitterID, "the jitter stroke did not start")
+
+S153 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:801
+Swift expression:
+  report.expectEqual(48.0, jittered, cppID: jitterID, what: "pure horizontal jitter keeps the stroke's continuous value")
+
+S154 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:804
+Swift expression:
+  report.expectEqual(1, jitter.strokePoints.count, cppID: jitterID, what: "a same-cell revisit keeps one point for the cell")
+
+S155 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:808
+Swift expression:
+  report.expectEqual(["24:48", "48:48", "72:48"], jitterLane.laneValues(jitter.strokePoints), cppID: jitterID, what: "one point per crossed cell holds the jittered value")
+
+S156 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:818
+Swift expression:
+  report.fail(zigzagID, "the zigzag stroke did not start")
+
+S157 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:826
+Swift expression:
+  report.expectEqual((0..<6).map { Tick(24 + $0 * 24) }, zigzag.strokePoints.map(\.tick), cppID: zigzagID, what: "the zigzag keeps one point per crossed cell")
+
+S158 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:828
+Swift expression:
+  report.expectEqual(zigzagValues, zigzag.strokePoints.map(\.value), cppID: zigzagID, what: "each zigzag cell holds its own extremum")
+
+S159 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:831
+Swift expression:
+  report.expect(extrema[0] < extrema[1] && extrema[1] > extrema[2] && extrema[2] < extrema[3] && extrema[3] > extrema[4] && extrema[4] < extrema[5], cppID: zigzagID, message: "the zigzag preserves every directional extremum")
+
+S160 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:841
+Swift expression:
+  report.fail(verticalID, "the vertical stroke did not start")
+
+S161 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:845
+Swift expression:
+  report.expectEqual([AutomationLanePoint(tick: 24, value: 96)], vertical.strokePoints, cppID: verticalID, what: "vertical motion in one cell keeps only the final value")
+
+S162 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:866
+Swift expression:
+  report.fail(densityID, "the density strokes did not start")
+
+S163 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:869
+Swift expression:
+  report.expect(!sparse.isEmpty, cppID: densityID, message: "the sparse diagonal stroke writes points")
+
+S164 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:871
+Swift expression:
+  report.expectEqual(sparse, dense, cppID: densityID, what: "10 vs 50 intermediate samples give identical completion points")
+
+S165 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:880
+Swift expression:
+  report.fail(backtrackID, "the backtracking stroke did not start")
+
+S166 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:885
+Swift expression:
+  report.expectEqual(["24:68", "48:84", "72:100"], backtrackLane.laneValues(backtrack.strokePoints), cppID: backtrackID, what: "revisited cells hold the leftward values while the far extremum stands")
+
+S167 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:889
+Swift expression:
+  report.expectEqual([Tick(24), Tick(48), Tick(72)], backtrack.strokePoints.map(\.tick), cppID: backtrackID, what: "the backtracking stroke stays sorted by tick")
+
+S168 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:912
+Swift expression:
+  report.fail(shiftID, "the locked stroke did not start")
+
+S169 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:921
+Swift expression:
+  report.expectEqual(64.0, firstLocked, cppID: shiftID, what: "a locked run keeps the initial value")
+
+S170 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:923
+Swift expression:
+  report.expectEqual(64.0, secondLocked, cppID: shiftID, what: "a locked run ignores later vertical travel")
+
+S171 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:927
+Swift expression:
+  report.expectEqual(["24:64", "48:64", "72:64"], lockedLane.laneValues(locked.strokePoints), cppID: shiftID, what: "the locked stroke writes its constant initial value")
+
+S172 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:933
+Swift expression:
+  report.fail(shiftID, "the unlocked stroke did not start")
+
+S173 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:939
+Swift expression:
+  report.expect(unlockedValue != 64, cppID: shiftID, message: "the same travel unlocked moves the value")
+
+S174 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:946
+Swift expression:
+  report.fail(controlID, "the freehand stroke did not start")
+
+S175 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:950
+Swift expression:
+  report.expectEqual([Tick(24), Tick(30)], freehand.strokePoints.map(\.tick), cppID: controlID, what: "a freehand run lands on clock ticks off the snapped grid")
+
+S176 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:952
+Swift expression:
+  report.expect(freehand.strokePoints.allSatisfy { $0.tick % 6 == 0 }, cppID: controlID, message: "every freehand point is clock-quantized")
+
+S177 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:954
+Swift expression:
+  report.expect(freehand.strokePoints.contains { $0.tick % 24 != 0 }, cppID: controlID, message: "the freehand run escapes the snapped cell lattice")
+
+S178 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:961
+Swift expression:
+  report.fail(mixedID, "the mixed stroke did not start")
+
+S179 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:966
+Swift expression:
+  report.expectEqual([Tick(24), Tick(48), Tick(60), Tick(66)], mixed.strokePoints.map(\.tick), cppID: mixedID, what: "snapped then freehand segments compose contiguously")
+
+S180 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:969
+Swift expression:
+  report.expectEqual(36, mixed.strokePoints.first?.value ?? -1, cppID: mixedID, what: "the snapped head keeps its cell value")
+
+S181 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:971
+Swift expression:
+  report.expectEqual(Tick(24), mixed.tickBegin, cppID: mixedID, what: "the mixed stroke spans from its first cell")
+
+S182 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:980
+Swift expression:
+  report.fail(altID, "the plain stroke did not start")
+
+S183 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:987
+Swift expression:
+  report.fail(altID, "the plain stroke did not commit")
+
+S184 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:996
+Swift expression:
+  report.fail(altID, "the fine stroke did not start")
+
+S185 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1003
+Swift expression:
+  report.fail(altID, "the fine stroke did not commit")
+
+S186 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1007
+Swift expression:
+  report.expect(!plain.isEmpty, cppID: altID, message: "the plain stroke writes the empty lane")
+
+S187 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1008
+Swift expression:
+  report.expectEqual(plain, altLane.values(altLane.panLane), cppID: altID, what: "the fine modifier leaves the stroke unchanged")
+
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
-src/checks/automation/AutomationPageChecks.swift:381
+SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
+src/checks/automation/AutomationPageChecks.swift:402
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

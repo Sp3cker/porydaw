@@ -123,3 +123,54 @@ func drawerAutomationRangeEditAndClipboard(_ report: CheckReport, suite: Documen
                                                     points: []).unchanged,
                   cppID: drawerAutomationRangeID, message: "clearing an empty lane is unchanged")
 }
+
+@MainActor
+func drawerAutomationCrossLanePasteClamps(_ report: CheckReport, suite: DocumentSession,
+                                          service: ProjectService) {
+    let id = "automation/AutomationEditingTest::clipboardCrossLanePasteClamps"
+    let lfo = AutomationParameter.controlChange(track: 0, controller: 21)
+    let fixture = drawerAutomationAutomationFixture(
+        suite: suite, service: service,
+        tempo: [(96, TimeDefaults.microsecondsPerQuarterNote(forBPM: 300))])
+    fixture.document.writeLane(track: 0, lane: .controller(21), from: 0,
+                               through: TimeDefaults.maxTick,
+                               points: [LaneWrite(tick: 96, value: 96)])
+    let page = fixture.page
+    fixture.activate(.tempo)
+    report.expect(page.openParameterMenu(index: page.catalogIndex(of: .tempo), x: 0, y: 0),
+                  cppID: id, message: "the tempo label opens its lane menu")
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.copyLane.rawValue),
+                  cppID: id, message: "the tempo Copy row is consumed")
+    report.expect(!page.menuOpen, cppID: id, message: "the Copy tempo pick closes the menu")
+    fixture.activate(lfo)
+    report.expect(page.openParameterMenu(index: page.catalogIndex(of: lfo), x: 0, y: 0),
+                  cppID: id, message: "the CC label opens its lane menu")
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.pasteLane.rawValue),
+                  cppID: id, message: "the Paste CC row is consumed")
+    report.expect(!page.menuOpen, cppID: id, message: "the Paste CC pick closes the menu")
+    report.expectEqual(["96:127"], fixture.values(lfo), cppID: id,
+                       what: "the pasted tempo point clamps into the CC domain at its tick")
+    fixture.document.writeLane(track: 0, lane: .controller(21), from: 0,
+                               through: TimeDefaults.maxTick,
+                               points: [LaneWrite(tick: 144, value: 0)])
+    fixture.activate(lfo)
+    report.expect(page.openParameterMenu(index: page.catalogIndex(of: lfo), x: 0, y: 0),
+                  cppID: id, message: "the CC label reopens its lane menu")
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.copyLane.rawValue),
+                  cppID: id, message: "the Copy CC row is consumed")
+    report.expect(!page.menuOpen, cppID: id, message: "the Copy CC pick closes the menu")
+    fixture.activate(.tempo)
+    report.expect(page.openParameterMenu(index: page.catalogIndex(of: .tempo), x: 0, y: 0),
+                  cppID: id, message: "the tempo label reopens its lane menu")
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.pasteLane.rawValue),
+                  cppID: id, message: "the Paste tempo row is consumed")
+    report.expect(!page.menuOpen, cppID: id, message: "the Paste tempo pick closes the menu")
+    let pasted = fixture.document.state.tempo
+    report.expectEqual(1, pasted.count, cppID: id,
+                       what: "the pasted CC point replaces the tempo stream")
+    report.expectEqual(Tick(144), pasted.first?.tick ?? Tick.max, cppID: id,
+                       what: "the pasted tempo point keeps the CC tick")
+    report.expectEqual(TimeDefaults.microsecondsPerQuarterNote(forBPM: TimeDefaults.minimumTempoBPM),
+                       pasted.first?.microsecondsPerQuarterNote ?? 0, cppID: id,
+                       what: "the pasted tempo point clamps to the slowest tempo")
+}

@@ -588,8 +588,6 @@ public final class AutomationPage: EditorDrawerPage {
         return dispatchPointerRelease(x: x, y: y, button: button, modifiers: modifiers)
     }
 
-    /// Double-click inserts nothing, exactly as the production band: it ends any
-    /// in-flight gesture and swallows the event so it never reaches an item below.
     @discardableResult
     public func pointerDoubleClick(x: Double, y: Double) -> Bool {
         return dispatchPointerDoubleClick(x: x, y: y)
@@ -601,9 +599,6 @@ public final class AutomationPage: EditorDrawerPage {
         dispatchPointerLeave()
     }
 
-    /// The page's local Escape: an open prompt or menu, a frozen gesture, a range
-    /// band, a pan, a tap-tempo session or a hover claims it; everything else
-    /// passes on to the window.
     public func handleEscape() -> Bool {
         return dispatchEscape()
     }

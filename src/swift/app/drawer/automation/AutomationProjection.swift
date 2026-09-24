@@ -176,6 +176,12 @@ public struct AutomationProjection {
         snapPolicy.snap(rawTick(atX: x), fine: fine, camera: camera)
     }
 
+    public func insertionTick(atX x: Double, pencil: Bool) -> Tick {
+        let rawTick = rawTick(atX: x)
+        return pencil ? cell(atRawTick: rawTick).tickBegin
+            : snapPolicy.snap(rawTick, fine: true, camera: camera)
+    }
+
     public func nextGridTick(after tick: Tick, fine: Bool) -> Tick {
         snapPolicy.next(after: tick, fine: fine, limit: songEndTick, camera: camera)
     }

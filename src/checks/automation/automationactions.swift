@@ -68,3 +68,103 @@ func drawerAutomationQtModifierMapping(_ report: CheckReport, suite: DocumentSes
     report.expectEqual(["24:64"], snapped.values(snapped.panLane), cppID: drawerAutomationModifierMappingID,
                        what: "the Qt control bit a QML event carries lands the drag on the neutral")
 }
+
+@MainActor
+func drawerAutomationProjectionValueBounds(_ report: CheckReport, suite: DocumentSession,
+                                                         service: ProjectService) {
+    let id = "automation/AutomationEditingTest::projectionValueBounds"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    let metadata = AutomationParameterMetadata(parameter: fixture.panLane)
+    let projection = AutomationProjection(
+        camera: fixture.session.camera,
+        bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
+        geometry: fixture.page.geometry,
+        snapPolicy: AutomationSnapPolicy(document: fixture.document,
+                                         timeline: fixture.session.timeline,
+                                         baseFontPx: 13, devicePixelRatio: 1),
+        songEndTick: fixture.songEndTick)
+    let yMin = projection.y(0, metadata: metadata)
+    let yMax = projection.y(127, metadata: metadata)
+    report.expectEqual(0, projection.value(atY: yMin, metadata: metadata), cppID: id,
+                       what: "the value axis minimum maps back to zero")
+    report.expectEqual(127, projection.value(atY: yMax, metadata: metadata), cppID: id,
+                       what: "the value axis maximum maps back to full scale")
+    report.expect(abs(projection.y(64, metadata: metadata) - 60) < 1.0, cppID: id,
+                  message: "the neutral value maps within a pixel of the lane midpoint")
+    drawerAutomationProjectionInsertionAndPencilClick(report, suite: suite, service: service)
+}
+
+@MainActor
+func drawerAutomationProjectionInsertionAndPencilClick(_ report: CheckReport, suite: DocumentSession,
+                                                        service: ProjectService) {
+    let timingID = "automation/AutomationEditingTest::projectionInsertionTiming"
+    let clickID = "automation/AutomationEditingTest::pencilClickHalfOpenQuantization"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [])
+    fixture.activate(fixture.panLane)
+    let projection = AutomationProjection(
+        camera: fixture.session.camera,
+        bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
+        geometry: fixture.page.geometry,
+        snapPolicy: AutomationSnapPolicy(document: fixture.document,
+                                         timeline: fixture.session.timeline,
+                                         baseFontPx: fixture.page.baseFontPx, devicePixelRatio: 1),
+        songEndTick: fixture.songEndTick)
+    let cell = projection.cell(atRawTick: 24.0)
+    let intermediateTick = Double(cell.tickBegin) + 0.4 * Double(projection.snapPolicy.clockTicks)
+    let x = fixture.session.camera.contentX(tick: intermediateTick)
+    let rawTick = projection.rawTick(atX: x)
+    let mappedCell = projection.cell(atRawTick: rawTick)
+    let caretTick = projection.tick(atX: x, fine: true)
+    report.expect(rawTick != Double(mappedCell.tickBegin) && rawTick != Double(caretTick),
+                  cppID: timingID, message: "the intermediate position is neither the cell begin nor caret")
+    report.expectEqual(mappedCell.tickBegin, projection.insertionTick(atX: x, pencil: true),
+                       cppID: timingID, what: "pencil insertion floors to the half-open cell begin")
+    report.expectEqual(caretTick, projection.insertionTick(atX: x, pencil: false),
+                       cppID: timingID, what: "non-pencil insertion uses the fine-grid caret")
+
+    fixture.page.isPencilMode = true
+    let y = fixture.y(fixture.panLane, 72)
+    report.expect(fixture.page.pointerPress(x: x, y: y, surface: AutomationInputSurface.plot.rawValue,
+                                            button: AutomationQtButton.left),
+                  cppID: clickID, message: "the page starts the pencil click at an intermediate tick")
+    report.expect(fixture.page.pointerRelease(x: x, y: y, button: AutomationQtButton.left),
+                  cppID: clickID, message: "the page commits the pencil click")
+    report.expectEqual([72], fixture.lanePoints(fixture.panLane)
+        .filter { $0.tick == mappedCell.tickBegin }.map(\.value),
+        cppID: clickID, what: "the first half-open cell holds the clicked value")
+
+    let following = projection.cell(atRawTick: Double(mappedCell.tickEnd))
+    report.expect(following.tickBegin < following.tickEnd, cppID: clickID,
+                  message: "the following cell is a nonempty half-open interval")
+    let nextX = fixture.x(following.tickBegin)
+    let nextY = fixture.y(fixture.panLane, 96)
+    report.expect(fixture.page.pointerPress(x: nextX, y: nextY,
+                                            surface: AutomationInputSurface.plot.rawValue,
+                                            button: AutomationQtButton.left),
+                  cppID: clickID, message: "the page starts the following cell click")
+    report.expect(fixture.page.pointerRelease(x: nextX, y: nextY, button: AutomationQtButton.left),
+                  cppID: clickID, message: "the page commits the following cell click")
+    report.expectEqual([72], fixture.lanePoints(fixture.panLane)
+        .filter { $0.tick == mappedCell.tickBegin }.map(\.value),
+        cppID: clickID, what: "the first cell survives the following click")
+    report.expectEqual([96], fixture.lanePoints(fixture.panLane)
+        .filter { $0.tick == following.tickBegin }.map(\.value),
+        cppID: clickID, what: "the following half-open cell holds the second clicked value")
+    let biased = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [])
+    biased.activate(biased.panLane)
+    biased.page.isPencilMode = true
+    let biasedRawTick = Double(cell.tickBegin) + 0.75 * Double(cell.tickEnd - cell.tickBegin)
+    let biasedX = biased.session.camera.contentX(tick: biasedRawTick)
+    report.expect(projection.tick(atX: biasedX, fine: false) != cell.tickBegin,
+                  cppID: clickID, message: "a late-cell click differs from the nearest grid tick")
+    report.expect(biased.page.pointerPress(x: biasedX, y: biased.y(biased.panLane, 72),
+                                           surface: AutomationInputSurface.plot.rawValue,
+                                           button: AutomationQtButton.left),
+                  cppID: clickID, message: "the page starts a late-cell pencil click")
+    report.expect(biased.page.pointerRelease(x: biasedX, y: biased.y(biased.panLane, 72),
+                                             button: AutomationQtButton.left),
+                  cppID: clickID, message: "the page commits the late-cell click")
+    report.expectEqual([72], biased.lanePoints(biased.panLane)
+        .filter { $0.tick == cell.tickBegin }.map(\.value),
+        cppID: clickID, what: "a late-cell click still writes at the half-open cell begin")
+}

@@ -5,13 +5,19 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationownership.cpp
 Original SHA-256: 986eb97c6899cb8d0af1564890076508b4ee2b4b075444c4c7ff2498c29bb870
 Swift counterpart: src/checks/automation/automationselection.swift
-Swift SHA-256: 8e64128082de42746ae5e7b3be47ee3304c9f4eadd341261939bef030ee367c4
+Swift SHA-256: 036a26f8ce0c6a13f476f164780b2fb8960c989f36c5a5ca500f8675c7bc55a4
+Additional Swift counterpart: src/checks/automation/presentation/painting.swift
+Swift SHA-256: 591fb9b3c5dc1551c3f2a2ec4caa3b32529389f161b8b09a83841c4625d69aaa
+Additional Swift counterpart: src/checks/automation/domain/gestures.swift
+Swift SHA-256: 5b86e9ccff282f49293daeda21809428125bd86085e2aa4e57a69fc3dfa60278
+Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
+Swift SHA-256: d1ee3a04c544ea09c93f71fcbd5baaccae2a223664e580d4a594f833d691a6a4
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-All 127 sites in this file are GAP: tracksSelectionRings, tracksSelectionGroupDragUndo, pencilModeChangeRetainsPencilGesture, pencilModeChangeRetainsNodeGesture, pencilStrokeOutsideSelectionClearsSelection, detailThresholdHiddenVisibleNodePrecedence, and parameterSwitchCancelsNodeDrag exercise selection ring visibility, group drag undo, gesture retention across mode toggles, and detail-threshold node precedence. While related selection contracts exist in automationselection.swift, exact assertion equivalence is an open obligation.
+Of the 127 sites in this file, 76 are MATCHED, 21 PARTIAL, 2 GAP, 13 NATIVE, 9 NATIVE-SETUP, and 6 RETIRED-REPRESENTATION. The group drag, outside-selection clear, detail-threshold precedence and parameter-switch cancellation are executed under the original cppIDs by drawerAutomationRestoredInteractionContracts, drawerAutomationBandIsolatesTempoAndCc, drawerAutomationMultiCcDragExcludesOthers, drawerAutomationPencilOwnershipAndShift and drawerAutomationDetailThresholdPrecedence in src/checks/automation/automationselection.swift plus drawerAutomationInflightDragInvalidation in src/checks/automation/automationcanvasediting.swift. NATIVE sites are the Quick scene-graph ring/transient probes and native pointer-grab/cursor feedback; NATIVE-SETUP sites are the retired AutomationCanvas lane-row geometry; RETIRED-REPRESENTATION sites are the QAction/QShortcut pencil-mode representation (the Swift page exposes isPencilMode alone); the shortcut key identity and its delivery stay GAP, owned by the keybindings lane (docs/plans/swift-keybindings), because no predicate in this counterpart observes that key. Each PARTIAL line names the exact unproved condition.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -21,13 +27,14 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including drawerAutomationPencilOwnershipAndShift, drawerAutomationDetailThresholdPrecedence and drawerAutomationInflightDragInvalidation). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
+Delta snapshot: the counterpart hashes and the drawerAutomationDetailThresholdPrecedence anchors were re-pinned because the double-click block moved that function in automationselection.swift, and A045/A055 became GAP for the keybindings-lane shortcut delivery. No execution result for that delta was supplied to this ledger task, so none is claimed.
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
 
 Execution ownership
-The legacy AutomationEditingTest ownership suite verified interaction ownership between selection rings, pencil modes, and node drag gestures. In the converted Swift suite, drawerAutomationRestoredInteractionContracts in src/checks/automation/automationselection.swift exercises restored interaction contracts against a DocumentSession.
+The legacy AutomationEditingTest ownership suite verified interaction ownership between selection rings, pencil modes, and node drag gestures. In the converted Swift suite, drawerAutomationRestoredInteractionContracts, drawerAutomationBandIsolatesTempoAndCc and drawerAutomationMultiCcDragExcludesOthers in src/checks/automation/automationselection.swift exercise the restored selection/drag contracts, drawerAutomationPencilOwnershipAndShift exercises the outside-selection clear and Shift axis locks, drawerAutomationDetailThresholdPrecedence exercises the detail-threshold node precedence, and drawerAutomationInflightDragInvalidation in src/checks/automation/automationcanvasediting.swift exercises the parameter-switch cancellation and recovery. The pencil-mode toggle's QAction shortcut rows (A045, A055) stay GAP: the keybindings lane (docs/plans/swift-keybindings) owns that key delivery and no predicate in this counterpart observes it. Registered run path: src/checks/automation/AutomationPageChecks.swift:363,379-384 :: runAutomationPageChecks → projectSession (swiftcore suite 10).
 
 Fixture, sequence and row constraints
 Tests verify selection ring rendering, multi-node group drag undo, gesture retention across tool mode switches, and zoom/detail threshold node filtering. Loops verify selection ring states across multiple track rows and nodes.
@@ -37,8 +44,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:64
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -108,8 +115,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A002 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:69
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       tab().document().writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick,
@@ -121,8 +128,8 @@ Original expression:
   QVERIFY(scene);
 
 A003 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:78
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       const quint64 revisionBefore =
@@ -139,8 +146,8 @@ Original expression:
                   revisionBefore);
 
 A004 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:91
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       const AutomationGeometry geometry = AutomationGeometry::resolve();
@@ -159,8 +166,8 @@ Original expression:
   QVERIFY(ringPaintedAt(inputPoint(pan, 48, 32)));
 
 A005 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:92
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -168,8 +175,8 @@ Original expression:
   QVERIFY(ringPaintedAt(inputPoint(pan, 96, 64)));
 
 A006 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:93
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -177,8 +184,8 @@ Original expression:
   QVERIFY(ringPaintedAt(inputPoint(pan, 144, 96)));
 
 A007 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:94
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -186,8 +193,8 @@ Original expression:
   QVERIFY(!ringPaintedAt(inputPoint(pan, 192, 80)));
 
 A008 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:101
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -201,8 +208,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A009 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:128
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002]
 Source context since previous assertion:
 
       tab().document().writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick,
@@ -236,8 +243,8 @@ Original expression:
   QCOMPARE(effectiveTargetMapping.point.tick, uint64_t{120});
 
 A010 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:129
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002]
 Source context since previous assertion:
 
 
@@ -245,8 +252,8 @@ Original expression:
   QCOMPARE(effectiveTargetMapping.point.value, 64);
 
 A011 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:136
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the heterogeneous selected drag is exactly one revision, the observable the original's single revision advance records. [S004]
 Source context since previous assertion:
 
 
@@ -260,8 +267,8 @@ Original expression:
   QTRY_COMPARE(tab().document().revision(), revisionBefore + 1);
 
 A012 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:137
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores all selected lanes and that no further undo is available, which is exactly one recorded history entry (count-free; no C++ undo index correspondence is claimed). [S008]
 Source context since previous assertion:
 
 
@@ -269,8 +276,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->count(), undoCountBefore + 1);
 
 A013 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:138
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores all selected lanes and that no further undo is available, which is exactly one recorded history entry (count-free; no C++ undo index correspondence is claimed). [S008]
 Source context since previous assertion:
 
 
@@ -278,8 +285,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->index(), undoIndexBefore + 1);
 
 A014 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:143
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002]
 Source context since previous assertion:
 
       const std::optional<DocLanePoint> moved72 = pointAt(tab().document(), 72);
@@ -291,8 +298,8 @@ Original expression:
   QVERIFY(moved72.has_value());
 
 A015 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:144
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002]
 Source context since previous assertion:
 
 
@@ -300,8 +307,8 @@ Original expression:
   QVERIFY(moved120.has_value());
 
 A016 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:145
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002]
 Source context since previous assertion:
 
 
@@ -309,8 +316,8 @@ Original expression:
   QVERIFY(moved168.has_value());
 
 A017 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S002]
 Source context since previous assertion:
 
 
@@ -318,8 +325,8 @@ Original expression:
   QVERIFY(untouched192.has_value());
 
 A018 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:147
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002,S003]
 Source context since previous assertion:
 
 
@@ -327,8 +334,8 @@ Original expression:
   QCOMPARE(moved72->value, 32);
 
 A019 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002,S003]
 Source context since previous assertion:
 
 
@@ -336,8 +343,8 @@ Original expression:
   QCOMPARE(moved120->value, 64);
 
 A020 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002,S003]
 Source context since previous assertion:
 
 
@@ -345,8 +352,8 @@ Original expression:
   QCOMPARE(moved168->value, 96);
 
 A021 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:150
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001,S002,S003]
 Source context since previous assertion:
 
 
@@ -354,8 +361,8 @@ Original expression:
   QCOMPARE(untouched192->value, 80);
 
 A022 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001]
 Source context since previous assertion:
 
 
@@ -363,8 +370,8 @@ Original expression:
   QVERIFY(!pointAt(tab().document(), 48).has_value());
 
 A023 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001]
 Source context since previous assertion:
 
 
@@ -372,8 +379,8 @@ Original expression:
   QVERIFY(!pointAt(tab().document(), 96).has_value());
 
 A024 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRestoredInteractionContracts drives a real selected drag through the production pointer route and asserts the moved lane points, the disjoint CC snapshot and the Tempo snapshot. [S001]
 Source context since previous assertion:
 
 
@@ -381,8 +388,8 @@ Original expression:
   QVERIFY(!pointAt(tab().document(), 144).has_value());
 
 A025 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift selection contracts assert band ranges produced by banding and by range commands; no predicate asserts the time-selection range produced by dragging an existing track-scoped selection. Unproved: the drag-shifted selection startTick/endTick. [S012]
 Source context since previous assertion:
 
       const auto &movedSelection = tab().view().selectionModel().timeSelection();
@@ -391,8 +398,8 @@ Original expression:
   QCOMPARE(movedSelection.startTick, uint64_t(48));
 
 A026 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:156
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift selection contracts assert band ranges produced by banding and by range commands; no predicate asserts the time-selection range produced by dragging an existing track-scoped selection. Unproved: the drag-shifted selection startTick/endTick. [S012]
 Source context since previous assertion:
 
 
@@ -400,8 +407,8 @@ Original expression:
   QCOMPARE(movedSelection.endTick, uint64_t(216));
 
 A027 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift asserts the production AutomationTimeSelection track scope: a track-scoped selection covers the selected track's lanes and Tempo only when the whole used set is selected. [S066,S067]
 Source context since previous assertion:
 
 
@@ -409,8 +416,8 @@ Original expression:
   QCOMPARE(movedSelection.scope, songview::EditorSelectionModel::TimeSelection::Tracks);
 
 A028 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:158
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift asserts the production AutomationTimeSelection track scope: a track-scoped selection covers the selected track's lanes and Tempo only when the whole used set is selected. [S066]
 Source context since previous assertion:
 
 
@@ -418,8 +425,8 @@ Original expression:
   QVERIFY(movedSelection.lanes.empty());
 
 A029 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift asserts the production AutomationTimeSelection track scope: a track-scoped selection covers the selected track's lanes and Tempo only when the whole used set is selected. [S067]
 Source context since previous assertion:
 
 
@@ -427,8 +434,8 @@ Original expression:
   QVERIFY(!movedSelection.tempo);
 
 A030 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S005]
 Source context since previous assertion:
 
 
@@ -437,8 +444,8 @@ Original expression:
   QVERIFY(tab().history().canUndo());
 
 A031 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:162
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S005]
 Source context since previous assertion:
 
 
@@ -446,8 +453,8 @@ Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));
 
 A032 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:163
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006,S007]
 Source context since previous assertion:
 
 
@@ -455,8 +462,8 @@ Original expression:
   QVERIFY(pointAt(tab().document(), 48).has_value());
 
 A033 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:164
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006,S007]
 Source context since previous assertion:
 
 
@@ -464,8 +471,8 @@ Original expression:
   QVERIFY(pointAt(tab().document(), 96).has_value());
 
 A034 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:165
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006,S007]
 Source context since previous assertion:
 
 
@@ -473,8 +480,8 @@ Original expression:
   QVERIFY(pointAt(tab().document(), 144).has_value());
 
 A035 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:166
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006,S007]
 Source context since previous assertion:
 
 
@@ -482,8 +489,8 @@ Original expression:
   QVERIFY(pointAt(tab().document(), 192).has_value());
 
 A036 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:167
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006]
 Source context since previous assertion:
 
 
@@ -491,8 +498,8 @@ Original expression:
   QVERIFY(!pointAt(tab().document(), 72).has_value());
 
 A037 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:168
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006]
 Source context since previous assertion:
 
 
@@ -500,8 +507,8 @@ Original expression:
   QVERIFY(!pointAt(tab().document(), 120).has_value());
 
 A038 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:169
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores every selected lane (grabbed, secondary CC and Tempo). [S006]
 Source context since previous assertion:
 
 
@@ -509,8 +516,8 @@ Original expression:
   QVERIFY(!pointAt(tab().document(), 168).has_value());
 
 A039 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: coreAutomationPanUndoRegression asserts awaited undo and redo return and that redo restores the moved state. [S068,S069]
 Source context since previous assertion:
 
 
@@ -519,8 +526,8 @@ Original expression:
   QVERIFY(tab().history().canRedo());
 
 A040 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: coreAutomationPanUndoRegression asserts awaited undo and redo return and that redo restores the moved state. [S068,S069]
 Source context since previous assertion:
 
 
@@ -528,8 +535,8 @@ Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestRedo()));
 
 A041 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:173
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: coreAutomationPanUndoRegression asserts awaited undo and redo return and that redo restores the moved state. [S068,S069]
 Source context since previous assertion:
 
 
@@ -537,8 +544,8 @@ Original expression:
   QVERIFY(pointAt(tab().document(), 120).has_value());
 
 A042 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -552,8 +559,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A043 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:183
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The QAction/QShortcut pencil-mode toggle was a QWidget menu representation; the Swift page exposes a plain isPencilMode flag with no QAction or shortcut object, so no object-identity or checked-state assertion can be restated. The mode's consumer-visible effect is asserted elsewhere in this file (pencil-mode strokes and hover deletion). [S053]
 Source context since previous assertion:
 
       setPencilMode(true);
@@ -563,8 +570,8 @@ Original expression:
   QVERIFY(action);
 
 A044 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The QAction/QShortcut pencil-mode toggle was a QWidget menu representation; the Swift page exposes a plain isPencilMode flag with no QAction or shortcut object, so no object-identity or checked-state assertion can be restated. The mode's consumer-visible effect is asserted elsewhere in this file (pencil-mode strokes and hover deletion). [S053]
 Source context since previous assertion:
 
 
@@ -573,7 +580,7 @@ Original expression:
 
 A045 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:186
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native key delivery: the original decodes the pencil-mode shortcut key from the deleted QAction; the Swift page exposes only a plain isPencilMode flag, no predicate observes that key or its delivery, and the pencil-mode toggle shortcut is owned by the keybindings lane (docs/plans/swift-keybindings). No replacement assertion exists in this counterpart.
 Source context since previous assertion:
 
       const QKeyCombination shortcut = action->shortcut()[0];
@@ -582,8 +589,8 @@ Original expression:
   QVERIFY(shortcut.key() != Qt::Key_unknown);
 
 A046 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:195
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The QAction/QShortcut pencil-mode toggle was a QWidget menu representation; the Swift page exposes a plain isPencilMode flag with no QAction or shortcut object, so no object-identity or checked-state assertion can be restated. The mode's consumer-visible effect is asserted elsewhere in this file (pencil-mode strokes and hover deletion). [S053]
 Source context since previous assertion:
 
       const QPointF start = inputPoint(pan, 24, 36);
@@ -599,8 +606,8 @@ Original expression:
   QVERIFY(!action->isChecked());
 
 A047 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition. [S053]
 Source context since previous assertion:
 
       mouseMove(automation_test::windowFromContent(page(), automationInput(), end));
@@ -612,8 +619,8 @@ Original expression:
   QTRY_VERIFY(pointAt(tab().document(), endCell.tickBegin).has_value());
 
 A048 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:202
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition. [S053]
 Source context since previous assertion:
 
       const std::optional<DocLanePoint> endPoint = pointAt(tab().document(), endCell.tickBegin);
@@ -622,8 +629,8 @@ Original expression:
   QVERIFY(endPoint.has_value());
 
 A049 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:203
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition. [S053]
 Source context since previous assertion:
 
 
@@ -631,8 +638,8 @@ Original expression:
   QCOMPARE(endPoint->value, 92);
 
 A050 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -646,8 +653,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A051 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:235
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition.
 Source context since previous assertion:
 
       setPencilMode(false);
@@ -679,8 +686,8 @@ Original expression:
   QCOMPARE(effectiveTargetMapping.point.tick, uint64_t{168});
 
 A052 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:236
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition.
 Source context since previous assertion:
 
 
@@ -688,8 +695,8 @@ Original expression:
   QCOMPARE(effectiveTargetMapping.point.value, 96);
 
 A053 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:239
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The QAction/QShortcut pencil-mode toggle was a QWidget menu representation; the Swift page exposes a plain isPencilMode flag with no QAction or shortcut object, so no object-identity or checked-state assertion can be restated. The mode's consumer-visible effect is asserted elsewhere in this file (pencil-mode strokes and hover deletion). [S053]
 Source context since previous assertion:
 
 
@@ -699,8 +706,8 @@ Original expression:
   QVERIFY(action);
 
 A054 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:240
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The QAction/QShortcut pencil-mode toggle was a QWidget menu representation; the Swift page exposes a plain isPencilMode flag with no QAction or shortcut object, so no object-identity or checked-state assertion can be restated. The mode's consumer-visible effect is asserted elsewhere in this file (pencil-mode strokes and hover deletion). [S053]
 Source context since previous assertion:
 
 
@@ -709,7 +716,7 @@ Original expression:
 
 A055 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:242
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Native key delivery: the original decodes the pencil-mode shortcut key from the deleted QAction; the Swift page exposes only a plain isPencilMode flag, no predicate observes that key or its delivery, and the pencil-mode toggle shortcut is owned by the keybindings lane (docs/plans/swift-keybindings). No replacement assertion exists in this counterpart.
 Source context since previous assertion:
 
       const QKeyCombination shortcut = action->shortcut()[0];
@@ -718,8 +725,8 @@ Original expression:
   QVERIFY(shortcut.key() != Qt::Key_unknown);
 
 A056 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:246
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The QAction/QShortcut pencil-mode toggle was a QWidget menu representation; the Swift page exposes a plain isPencilMode flag with no QAction or shortcut object, so no object-identity or checked-state assertion can be restated. The mode's consumer-visible effect is asserted elsewhere in this file (pencil-mode strokes and hover deletion). [S053]
 Source context since previous assertion:
 
 
@@ -730,8 +737,8 @@ Original expression:
   QVERIFY(action->isChecked());
 
 A057 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:251
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition.
 Source context since previous assertion:
 
       mouseMove(activationWindow);
@@ -743,8 +750,8 @@ Original expression:
   QTRY_VERIFY(pointAt(tab().document(), 168).has_value());
 
 A058 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:253
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition.
 Source context since previous assertion:
 
       const std::optional<DocLanePoint> movedPoint = pointAt(tab().document(), 168);
@@ -753,8 +760,8 @@ Original expression:
   QVERIFY(movedPoint.has_value());
 
 A059 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:254
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition.
 Source context since previous assertion:
 
 
@@ -762,8 +769,8 @@ Original expression:
   QCOMPARE(movedPoint->value, 96);
 
 A060 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:255
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: drawerAutomationDetailThresholdPrecedence drives a real pencil-mode stroke through the page pointer route and asserts the inserted point; drawerAutomationPencilStrokeFilters asserts stroke points. No predicate re-executes a stroke or node drag across a QAction-driven pencil-mode change. Unproved: gesture retention across the mode transition.
 Source context since previous assertion:
 
 
@@ -771,8 +778,8 @@ Original expression:
   QVERIFY(!pointAt(tab().document(), 72).has_value());
 
 A061 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift selection contracts assert band ranges produced by banding and by range commands; no predicate asserts the time-selection range produced by dragging an existing track-scoped selection. Unproved: the drag-shifted selection startTick/endTick. [S012]
 Source context since previous assertion:
 
       const auto &movedSelection = tab().view().selectionModel().timeSelection();
@@ -781,8 +788,8 @@ Original expression:
   QCOMPARE(movedSelection.startTick, uint64_t(168));
 
 A062 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:258
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift selection contracts assert band ranges produced by banding and by range commands; no predicate asserts the time-selection range produced by dragging an existing track-scoped selection. Unproved: the drag-shifted selection startTick/endTick. [S012]
 Source context since previous assertion:
 
 
@@ -790,8 +797,8 @@ Original expression:
   QCOMPARE(movedSelection.endTick, uint64_t(192));
 
 A063 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:259
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift asserts the production AutomationTimeSelection track scope: a track-scoped selection covers the selected track's lanes and Tempo only when the whole used set is selected. [S066,S067]
 Source context since previous assertion:
 
 
@@ -799,8 +806,8 @@ Original expression:
   QCOMPARE(movedSelection.scope, songview::EditorSelectionModel::TimeSelection::Lanes);
 
 A064 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:261
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators in src/checks/automation/presentation/painting.swift asserts the production AutomationTimeSelection track scope: a track-scoped selection covers the selected track's lanes and Tempo only when the whole used set is selected. [S066]
 Source context since previous assertion:
 
       const std::vector<std::pair<int, uint8_t>> expectedLanes{{0, kPanController}};
@@ -809,8 +816,8 @@ Original expression:
   QCOMPARE(movedSelection.lanes, expectedLanes);
 
 A065 | AutomationEditingTest::pencilStrokeOutsideSelectionClearsSelection | src/checks/automation/automationownership.cpp:268
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -824,8 +831,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A066 | AutomationEditingTest::pencilStrokeOutsideSelectionClearsSelection | src/checks/automation/automationownership.cpp:285
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilOwnershipAndShift presses outside the existing selection with pencil mode on and asserts the page clears its selection. [S046]
 Source context since previous assertion:
 
       setPencilMode(true);
@@ -849,8 +856,8 @@ Original expression:
   QTRY_VERIFY(!tab().view().selectionModel().timeSelection().active());
 
 A067 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:292
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -864,8 +871,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A068 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:294
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts the projection's markers are visible at default zoom and hidden below the detail threshold, which is the threshold's consumer-visible existence. [S049,S050]
 Source context since previous assertion:
 
       const AutomationGeometry geometry = AutomationGeometry::resolve();
@@ -874,8 +881,8 @@ Original expression:
   QVERIFY(geometry.pointDetailThreshold > 1);
 
 A069 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:317
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts markers hide below the detail threshold. [S050]
 Source context since previous assertion:
 
       using DeliveredPoint = std::pair<QPoint, AutomationProjection::PointerMapping>;
@@ -905,8 +912,8 @@ Original expression:
   QTRY_VERIFY(!AutomationProjection(geometry, &page()).nodeMarkersVisible());
 
 A070 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:321
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S050,S053]
 Source context since previous assertion:
 
       setPencilMode(true);
@@ -917,8 +924,8 @@ Original expression:
   QCOMPARE(hiddenSourceCell.tickBegin, uint64_t{72});
 
 A071 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:323
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S050,S053]
 Source context since previous assertion:
 
       const DeliveredPoint hiddenSource = deliveredPoint(72.0, 40, hiddenSourceCell.tickBegin);
@@ -927,8 +934,8 @@ Original expression:
   QCOMPARE(hiddenSource.second.point.tick, uint64_t{72});
 
 A072 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:329
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S050,S053]
 Source context since previous assertion:
 
       tab().document().writeLanePoints(
@@ -941,8 +948,8 @@ Original expression:
   QCOMPARE(hiddenEnd.second.point.tick, hiddenEndCell.tickBegin);
 
 A073 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:335
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts the stroke through hidden markers inserts a new point instead of grabbing the node, and that markers return above the threshold. [S053]
 Source context since previous assertion:
 
 
@@ -955,8 +962,8 @@ Original expression:
   QTRY_VERIFY(pointAt(tab().document(), 72).has_value());
 
 A074 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:337
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts the stroke through hidden markers inserts a new point instead of grabbing the node, and that markers return above the threshold. [S053]
 Source context since previous assertion:
 
       const std::optional<DocLanePoint> hiddenPoint = pointAt(tab().document(), 72);
@@ -965,8 +972,8 @@ Original expression:
   QVERIFY(hiddenPoint.has_value());
 
 A075 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:338
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts the stroke through hidden markers inserts a new point instead of grabbing the node, and that markers return above the threshold. [S053]
 Source context since previous assertion:
 
 
@@ -974,8 +981,8 @@ Original expression:
   QCOMPARE(hiddenPoint->value, hiddenSource.second.point.value);
 
 A076 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:340
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts the inserted point's tick and value, the observable of the original held-value comparison. [S053]
 Source context since previous assertion:
 
       int hiddenValue = -1;
@@ -987,8 +994,8 @@ Original expression:
                           &hiddenValue));
 
 A077 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:344
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts the inserted point's tick and value, the observable of the original held-value comparison. [S053]
 Source context since previous assertion:
 
 
@@ -996,8 +1003,8 @@ Original expression:
   QVERIFY(std::abs(hiddenValue - hiddenEnd.second.point.value) <= 1);
 
 A078 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:347
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts markers hide below the detail threshold. [S054]
 Source context since previous assertion:
 
 
@@ -1007,8 +1014,8 @@ Original expression:
   QTRY_VERIFY(AutomationProjection(geometry, &page()).nodeMarkersVisible());
 
 A079 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:351
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S054,S056]
 Source context since previous assertion:
 
       setPencilMode(true);
@@ -1019,8 +1026,8 @@ Original expression:
   QCOMPARE(visibleSourceCell.tickBegin, uint64_t{72});
 
 A080 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:353
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S054,S056]
 Source context since previous assertion:
 
       const DeliveredPoint visibleSource = deliveredPoint(72.0, 40, visibleSourceCell.tickBegin);
@@ -1029,8 +1036,8 @@ Original expression:
   QCOMPARE(visibleSource.second.point.tick, uint64_t{72});
 
 A081 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:359
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S054,S056]
 Source context since previous assertion:
 
       tab().document().writeLanePoints(
@@ -1043,8 +1050,8 @@ Original expression:
   QCOMPARE(visibleTarget.second.point.tick, visibleTargetCell.tickBegin);
 
 A082 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:367
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S054,S056]
 Source context since previous assertion:
 
       const int activationDistance = geometry.nodeDragActivationDistance + 2;
@@ -1059,8 +1066,8 @@ Original expression:
   QCOMPARE(effectiveTargetMapping.point.tick, visibleTarget.second.point.tick);
 
 A083 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:368
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The original asserts the harness probe cell/point arithmetic that places the press inside the hidden or visible cell. The Swift predicate asserts the same scenario's markersVisible state and inserted point, but no predicate asserts the probe's cell membership. Unproved: the probe-cell arithmetic. [S054,S056]
 Source context since previous assertion:
 
 
@@ -1068,8 +1075,8 @@ Original expression:
   QCOMPARE(effectiveTargetMapping.point.value, visibleTarget.second.point.value);
 
 A084 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:375
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts a pencil press on a visible node grabs it and a stationary release deletes exactly that node. [S056]
 Source context since previous assertion:
 
 
@@ -1083,8 +1090,8 @@ Original expression:
   QTRY_VERIFY(pointAt(tab().document(), visibleTargetCell.tickBegin).has_value());
 
 A085 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:378
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts a pencil press on a visible node grabs it and a stationary release deletes exactly that node. [S056]
 Source context since previous assertion:
 
       const std::optional<DocLanePoint> visiblePoint =
@@ -1094,8 +1101,8 @@ Original expression:
   QVERIFY(visiblePoint.has_value());
 
 A086 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:379
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts a pencil press on a visible node grabs it and a stationary release deletes exactly that node. [S056]
 Source context since previous assertion:
 
 
@@ -1103,8 +1110,8 @@ Original expression:
   QCOMPARE(visiblePoint->value, visibleTarget.second.point.value);
 
 A087 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:380
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts a pencil press on a visible node grabs it and a stationary release deletes exactly that node. [S056]
 Source context since previous assertion:
 
 
@@ -1112,8 +1119,8 @@ Original expression:
   QVERIFY(!pointAt(tab().document(), 72).has_value());
 
 A088 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:384
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationDetailThresholdPrecedence asserts a pencil press on a visible node grabs it and a stationary release deletes exactly that node. [S056]
 Source context since previous assertion:
 
 
@@ -1124,8 +1131,8 @@ Original expression:
   QTRY_VERIFY(!pointAt(tab().document(), visibleTargetCell.tickBegin).has_value());
 
 A089 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:394
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
   }
@@ -1142,8 +1149,8 @@ Original expression:
   QVERIFY(scene);
 
 A090 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:397
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the cancelled/recovered gesture's snapshot and revision behaviour, asserted by the same-scenario predicate. [S058]
 Source context since previous assertion:
 
       QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
@@ -1153,8 +1160,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A091 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:398
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the cancelled/recovered gesture's snapshot and revision behaviour, asserted by the same-scenario predicate. [S058]
 Source context since previous assertion:
 
 
@@ -1162,8 +1169,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A092 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:402
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the press owns a live gesture past the activation distance. [S061]
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
@@ -1174,8 +1181,8 @@ Original expression:
   QVERIFY(arm.has_value());
 
 A093 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:406
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
 
@@ -1187,8 +1194,8 @@ Original expression:
                   arm->transientRevisionBefore);
 
 A094 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:408
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationInflightDragInvalidation drives a real press/move on the Pan lane, switches parameters, and asserts the live drag is cancelled, that no publication occurred, and that releasing commits nothing. [S058]
 Source context since previous assertion:
 
 
@@ -1196,8 +1203,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
 
 A095 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:409
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the press owns a live gesture past the activation distance. [S061]
 Source context since previous assertion:
 
 
@@ -1205,8 +1212,8 @@ Original expression:
   QTRY_VERIFY(tab().view().userGestureActive());
 
 A096 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:410
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -1214,8 +1221,8 @@ Original expression:
   QTRY_VERIFY(quickWindow().mouseGrabberItem() == &automationInput());
 
 A097 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:418
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators asserts the page publishes the active parameter independently of the selected lanes, and drawerAutomationInflightDragInvalidation activates the switched parameter on the production page. [S063]
 Source context since previous assertion:
 
 
@@ -1230,8 +1237,8 @@ Original expression:
   QVERIFY(tempoIndex >= 0);
 
 A098 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:420
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators asserts the page publishes the active parameter independently of the selected lanes, and drawerAutomationInflightDragInvalidation activates the switched parameter on the production page. [S063]
 Source context since previous assertion:
 
       page().canvas()->activateParameter(tempoIndex);
@@ -1240,8 +1247,8 @@ Original expression:
   QCOMPARE(page().canvas()->activeParameter(), tempoIndex);
 
 A099 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:421
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -1249,8 +1256,8 @@ Original expression:
   QTRY_VERIFY(!quickWindow().mouseGrabberItem());
 
 A100 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:422
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationInflightDragInvalidation drives a real press/move on the Pan lane, switches parameters, and asserts the live drag is cancelled, that no publication occurred, and that releasing commits nothing. [S057,S058]
 Source context since previous assertion:
 
 
@@ -1258,8 +1265,8 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A101 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:423
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationInflightDragInvalidation drives a real press/move on the Pan lane, switches parameters, and asserts the live drag is cancelled, that no publication occurred, and that releasing commits nothing. [S057,S058]
 Source context since previous assertion:
 
 
@@ -1267,8 +1274,8 @@ Original expression:
   QVERIFY(!page().canvas()->gestureActive());
 
 A102 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:424
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationInflightDragInvalidation drives a real press/move on the Pan lane, switches parameters, and asserts the live drag is cancelled, that no publication occurred, and that releasing commits nothing. [S057,S058]
 Source context since previous assertion:
 
 
@@ -1276,8 +1283,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A103 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:425
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
 
@@ -1285,8 +1292,8 @@ Original expression:
   QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty());
 
 A104 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:426
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
 
@@ -1294,8 +1301,8 @@ Original expression:
   QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty());
 
 A105 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:427
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationInflightDragInvalidation drives a real press/move on the Pan lane, switches parameters, and asserts the live drag is cancelled, that no publication occurred, and that releasing commits nothing. [S058]
 Source context since previous assertion:
 
 
@@ -1303,8 +1310,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
 
 A106 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:432
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the cancelled drag produced no document change, the observable of the original's zero publication count. [S058]
 Source context since previous assertion:
 
 
@@ -1316,8 +1323,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), 0);
 
 A107 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:433
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the cancelled drag produced no document change, the observable of the original's zero publication count. [S058]
 Source context since previous assertion:
 
 
@@ -1325,8 +1332,8 @@ Original expression:
   QCOMPARE(edited.count(), 0);
 
 A108 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:434
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationInflightDragInvalidation drives a real press/move on the Pan lane, switches parameters, and asserts the live drag is cancelled, that no publication occurred, and that releasing commits nothing. [S058]
 Source context since previous assertion:
 
 
@@ -1334,8 +1341,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
 
 A109 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:436
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
 Source context since previous assertion:
 
       const std::optional<DocLanePoint> heldNode = pointAt(tab().document(), kPilotNodeTick);
@@ -1344,8 +1351,8 @@ Original expression:
   QVERIFY(heldNode.has_value());
 
 A110 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:437
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
 Source context since previous assertion:
 
 
@@ -1353,8 +1360,8 @@ Original expression:
   QCOMPARE(heldNode->value, kPilotNodeValue);
 
 A111 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:439
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
 Source context since previous assertion:
 
       const std::optional<DocLanePoint> sibling = pointAt(tab().document(), kPilotSiblingTick);
@@ -1363,8 +1370,8 @@ Original expression:
   QVERIFY(sibling.has_value());
 
 A112 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:440
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
 Source context since previous assertion:
 
 
@@ -1372,8 +1379,8 @@ Original expression:
   QCOMPARE(sibling->value, kPilotSiblingValue);
 
 A113 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:445
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
 Source context since previous assertion:
 
 
@@ -1385,8 +1392,8 @@ Original expression:
   QVERIFY(activateParameter(pilotRow));
 
 A114 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:446
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerAutomationRowStackAndSelectionIndicators asserts the page publishes the active parameter independently of the selected lanes, and drawerAutomationInflightDragInvalidation activates the switched parameter on the production page. [S063]
 Source context since previous assertion:
 
 
@@ -1394,8 +1401,8 @@ Original expression:
   QCOMPARE(page().canvas()->activeParameter(), pilotIndex);
 
 A115 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:448
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
 Source context since previous assertion:
 
       const LaneHandle pilot = findRow(pilotRow);
@@ -1404,8 +1411,8 @@ Original expression:
   QVERIFY(pilot.valid());
 
 A116 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:449
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
 Source context since previous assertion:
 
 
@@ -1413,8 +1420,8 @@ Original expression:
   QTRY_VERIFY(!laneBody(pilot).isEmpty());
 
 A117 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:451
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts a fresh press after the switch grabs the node and the recovery drag commits its destination normally. [S062]
 Source context since previous assertion:
 
       const std::optional<ArmedCcDrag> rearmed = armCcDrag(scene);
@@ -1423,8 +1430,8 @@ Original expression:
   QVERIFY(rearmed.has_value());
 
 A118 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:452
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
 
@@ -1433,8 +1440,8 @@ Original expression:
                   rearmed->transientRevisionBefore);
 
 A119 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:456
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the recovery drag commits one revision with its written points, the observable of the original's one publication and one revision. [S060]
 Source context since previous assertion:
 
       mouseRelease(Qt::LeftButton, rearmed->dragEndWindow, Qt::NoModifier);
@@ -1444,8 +1451,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), 1);
 
 A120 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:457
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the recovery drag commits one revision with its written points, the observable of the original's one publication and one revision. [S060]
 Source context since previous assertion:
 
 
@@ -1453,8 +1460,8 @@ Original expression:
   QCOMPARE(edited.count(), 1);
 
 A121 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:458
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the recovery drag commits one revision with its written points, the observable of the original's one publication and one revision. [S060]
 Source context since previous assertion:
 
 
@@ -1462,8 +1469,8 @@ Original expression:
   QCOMPARE(tab().document().revision(), frozen.revision + 1);
 
 A122 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:459
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores all selected lanes and that no further undo is available, which is exactly one recorded history entry (count-free; no C++ undo index correspondence is claimed). [S060]
 Source context since previous assertion:
 
 
@@ -1471,8 +1478,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
 
 A123 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:460
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts one undo restores all selected lanes and that no further undo is available, which is exactly one recorded history entry (count-free; no C++ undo index correspondence is claimed). [S060]
 Source context since previous assertion:
 
 
@@ -1480,8 +1487,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
 
 A124 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:462
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
 Source context since previous assertion:
 
       const std::optional<DocLanePoint> committed = pointAt(tab().document(), kPilotNodeTick);
@@ -1490,8 +1497,8 @@ Original expression:
   QVERIFY(committed.has_value());
 
 A125 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:463
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
 Source context since previous assertion:
 
 
@@ -1499,8 +1506,8 @@ Original expression:
   QCOMPARE(committed->value, kPilotCommittedValue);
 
 A126 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:466
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
 Source context since previous assertion:
 
       const std::optional<DocLanePoint> survivingSibling =
@@ -1510,8 +1517,8 @@ Original expression:
   QVERIFY(survivingSibling.has_value());
 
 A127 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:467
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: asserts the recovered drag's committed lane points, the observable of the original pilot/sibling point values. [S060]
 Source context since previous assertion:
 
 
@@ -1708,7 +1715,103 @@ S045 | drawerAutomationRestoredInteractionContracts | src/checks/automation/auto
   report.expectEqual(["24:30"], duplicate.values(duplicate.panLane), cppID: id,
                          what: "undo restores the original range contents")
 
+S046 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:286
+Swift expression:
+  report.expect(fixture.page.selection == nil, cppID: id, message: "starting a pencil stroke outside clears the selection")
+
+S047 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:305
+Swift expression:
+  report.expect(moved.count == 2 && moved[0].value == 64 && moved[0].tick > 24, cppID: lockID, message: "a horizontal Shift drag locks the value and moves the tick")
+
+S048 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:319
+Swift expression:
+  report.expect(shifted.count == 2 && shifted[0].tick == 24 && shifted[0].value != 64, cppID: lockID, message: "a vertical Shift drag locks the tick and moves the value")
+
+S049 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:374
+Swift expression:
+  report.expect(markersVisible(), cppID: id, message: "markers are visible at default zoom")
+
+S050 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:379
+Swift expression:
+  report.expect(!markersVisible(), cppID: id, message: "markers hide below the detail threshold")
+
+S051 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:381
+Swift expression:
+  report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 70), surface: 1, button: 1), cppID: id, message: "the pencil press through hidden markers starts a stroke")
+
+S052 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:384
+Swift expression:
+  report.expect(fixture.page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 70), button: 1), cppID: id, message: "the stroke through hidden markers commits")
+
+S053 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:388
+Swift expression:
+  report.expect(hidden.count == 3 && hidden.contains(where: { $0.tick == 24 && $0.value == 70 }), cppID: id, message: "the hidden-marker stroke inserts instead of grabbing the node")
+
+S054 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:395
+Swift expression:
+  report.expect(markersVisible(), cppID: id, message: "markers return above the threshold")
+
+S055 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:401
+Swift expression:
+  report.expect(shownFixture.page.pointerPress(x: shownFixture.x(24), y: shownFixture.y(shownFixture.panLane, 64), surface: 1, button: 1), cppID: id, message: "the pencil press on a visible node grabs it")
+
+S056 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:407
+Swift expression:
+  report.expectEqual(["120:40"], shownFixture.values(shownFixture.panLane), cppID: id, what: "a stationary release on the grabbed node deletes exactly it")
+
+S057 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:277
+Swift expression:
+  report.expect(!switched.page.hasGesture, cppID: switchID, message: "switching parameters cancels the drag")
+
+S058 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:279
+Swift expression:
+  report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID, what: "the cancelled drag writes nothing")
+
+S059 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:283
+Swift expression:
+  report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID, what: "releasing after the switch commits nothing")
+
+S060 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:295
+Swift expression:
+  report.expectEqual(["24:90", "120:40"], switched.values(switched.panLane), cppID: switchID, what: "the recovery drag commits normally")
+
+S061 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:275
+Swift expression:
+  report.expect(switched.page.hasGesture, cppID: switchID, message: "the drag is live")
+
+S062 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:286
+Swift expression:
+  report.expect(switched.page.pointerPress(x: switched.x(24), y: switched.y(switched.panLane, 64), surface: 1, button: 1), cppID: switchID, message: "a fresh press grabs the node after the switch")
+
+S063 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:128
+Swift expression:
+  report.expectEqual(fixture.volumeLane, fixture.page.activeParameter, cppID: drawerAutomationRowsID, what: "the active parameter is not the selected one")
+
+S064 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:126
+Swift expression:
+  report.expectEqual([fixture.panLane, .tempo], fixture.page.selectedParameters, cppID: drawerAutomationRowsID, what: "the page publishes the selected inactive parameters")
+
+S065 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:90
+Swift expression:
+  report.expectEqual([fixture.panLane, .tempo], stack.selectedParameters(track: 0), cppID: drawerAutomationRowsID, what: "the selected parameters are the covered lanes with events")
+
+S066 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:108
+Swift expression:
+  report.expect(trackScoped.covers(fixture.panLane, usedTracks: [0]), cppID: drawerAutomationRowsID, message: "a track-scoped selection covers the selected track's lanes")
+
+S067 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:116
+Swift expression:
+  report.expect(!trackScoped.coversTempo(usedTracks: [0, 1]), cppID: drawerAutomationRowsID, message: "Tempo is uncovered when part of the used set is selected")
+
+S068 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:764
+Swift expression:
+  report.expect(undone, cppID: id, message: "awaited undo completes")
+
+S069 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:769
+Swift expression:
+  report.expectEqual(moved, fx.document.state, cppID: id, what: "redo restores the node value move")
+
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
-src/checks/automation/AutomationPageChecks.swift:381
+SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
+src/checks/automation/AutomationPageChecks.swift:402
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

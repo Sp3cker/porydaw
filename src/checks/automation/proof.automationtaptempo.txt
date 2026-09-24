@@ -4,7 +4,9 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationtaptempo.cpp
 Original SHA-256: 0b180392f9c46d3eb011e0ba238a1fddeb96d0f2833b3fd84aff06f5fb52077d
 Swift counterpart: src/checks/automation/automationtaptempo.swift
-Swift SHA-256: 512d6293615f45a287da31dc09451e952e1e18900d34efb26cfd8ef80c1fe336
+Swift SHA-256: 3070b25046c18aa31e0c40c91abc318fea9fabf2eb8bc21ff4e9a287eff16912
+QML lane counterpart: src/checks/editorqml/tst_EditorDrawer.qml :: test_productionAutomationTapTempoThroughInput
+QML SHA-256: 081c61933828125649cdcc40ba91d7a3d70a5cd917cea918235f0669ab0553c7
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,7 +25,10 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Verification: deno task verify --filter swiftcore --verbose — PASS on this worktree (1/14 harnesses selected, 13 skipped; swiftcore green, including every new function cited below). Recorded by the lane controller from the settled run at this source snapshot; this proof-only reconciliation did not re-run the build or the suite.
+Reference revision pin: the recovered original at the recorded revision hashes to the recorded Original SHA-256; the counterpart hashes above are the final checked-in sources.
+Registered run path: src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks -> src/checks/workspace/SessionChecks.swift :: runProjectSessionSuite -> projectSession (swiftcore suite 10); the counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
+Execution boundary: MATCHED identifies equivalent executing predicates at the cited S entries. Native rendering and pointer delivery, deferred keyboard/focus routing, retired representation and the residual unproved conditions stay recorded per site; parser success is not semantic parity.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -40,984 +45,988 @@ src/checks/automation/automationtaptempo.cpp:447 | QTest::mouseClick(
 Original assertion inventory
 
 A001 | AutomationEditingTest::activateTempoRow | src/checks/automation/automationtaptempo.cpp:48
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift fixture activates the Tempo row through the presenter catalogue index without asserting the activation result; the staged row behaviour is asserted instead.
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
 
 A002 | AutomationEditingTest::expectDraftBpmWithin | src/checks/automation/automationtaptempo.cpp:95
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the exact drafted BPM of its staged cadences ([S005] 120, [S008] 109); exact equality lies strictly inside the original plus/minus 15 percent band, so the band helper itself is unexercised while its observation is covered.
 Original expression:
   QVERIFY2(
           draft >= nominalBpm - slack && draft <= nominalBpm + slack,
           qPrintable(QStringLiteral("draft %1 outside %2±%3").arg(draft).arg(nominalBpm).arg(slack)))
 
 A003 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:106
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
 Original expression:
   QVERIFY(canvas)
 
 A004 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:107
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: parametersEnabled has no ingress in the converted Swift page: the production AutomationPage always enables parameters for a plotted page, so no Swift predicate can observe the original guard while the lane scenarios staged behind it stay covered.
 Original expression:
   QVERIFY(canvas->parametersEnabled())
 
 A005 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:111
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the equivalent no-commit and one-commit observations execute through the page session and document predicates.
 Original expression:
   QVERIFY(draftChanged.isValid())
 
 A006 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the equivalent no-commit and one-commit observations execute through the page session and document predicates.
 Original expression:
   QVERIFY(committed.isValid())
 
 A007 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift keeps the session unready and uncommitted after the first tap ([S003]) and the page no-op window publishes no revision and no history entry ([S019], [S020]); the C++ commit spy states the same no-commit observation.
 Original expression:
   QCOMPARE(committed.count(), 0)
 
 A008 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:118
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires exactly one tap in the session after the first tap ([S003]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 1)
 
 A009 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the first tap to name no tempo ([S003]).
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A010 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the document frozen across the accumulating taps: the no-op window leaves the stream alone and publishes no revision or history entry ([S017], [S018], [S019], [S020]).
 Original expression:
   QVERIFY(frozenDocumentState() == beforeTap)
 
 A011 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:124
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The second tap stays in the session without a commit ([S003], [S017]) and the page scenario publishes no revision or history entry for a draft that changes nothing ([S019], [S020]).
 Original expression:
   QCOMPARE(committed.count(), 0)
 
 A012 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires two taps standing in the session ([S060]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 2)
 
 A013 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:130
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The third tap stays in the session without a commit ([S017]); the page scenario publishes no revision and no history entry ([S019], [S020]).
 Original expression:
   QCOMPARE(committed.count(), 0)
 
 A014 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane publishes the live tap count and asserts the session holds its third tap ([S072]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 3)
 
 A015 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML lane proves the live readout updates at least once ([S074]); the original counted two or more draft-changed emissions and no Swift or QML predicate counts draft emissions.
 Original expression:
   QVERIFY(draftChanged.count() >= 2)
 
 A016 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:134
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the document frozen across the accumulating taps ([S017], [S018], [S019], [S020]).
 Original expression:
   QVERIFY(frozenDocumentState() == beforeTap)
 
 A017 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:135
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the no-op window to publish no revision ([S019]).
 Original expression:
   QCOMPARE(tab().document().revision(), beforeTap.revision)
 
 A018 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:136
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the no-op window to record no history entry ([S020]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->count(), beforeTap.undoCount)
 
 A019 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:137
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: With no history entry recorded the undo depth and index are unchanged ([S020], [S029]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->index(), beforeTap.undoIndex)
 
 A020 | AutomationEditingTest::tapTempoSingleStrayTapAfterIdleGapCommitsNothing | src/checks/automation/automationtaptempo.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
 Original expression:
   QVERIFY(canvas)
 
 A021 | AutomationEditingTest::tapTempoSingleStrayTapAfterIdleGapCommitsNothing | src/checks/automation/automationtaptempo.cpp:147
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: parametersEnabled has no ingress in the converted Swift page: the production AutomationPage always enables parameters for a plotted page, so no Swift predicate can observe the original guard while the lane scenarios staged behind it stay covered.
 Original expression:
   QVERIFY(canvas->parametersEnabled())
 
 A022 | AutomationEditingTest::tapTempoSingleStrayTapAfterIdleGapCommitsNothing | src/checks/automation/automationtaptempo.cpp:150
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the equivalent no-commit and one-commit observations execute through the page session and document predicates.
 Original expression:
   QVERIFY(committed.isValid())
 
 A023 | AutomationEditingTest::tapTempoSingleStrayTapAfterIdleGapCommitsNothing | src/checks/automation/automationtaptempo.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires a single stray tap to commit nothing ([S049]); the stray fixture also leaves document and history untouched ([S051]).
 Original expression:
   QCOMPARE(committed.count(), 0)
 
 A024 | AutomationEditingTest::tapTempoSingleStrayTapAfterIdleGapCommitsNothing | src/checks/automation/automationtaptempo.cpp:158
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the stray idle window to close the session, leaving no tap ([S050]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 0)
 
 A025 | AutomationEditingTest::tapTempoSingleStrayTapAfterIdleGapCommitsNothing | src/checks/automation/automationtaptempo.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the closed session to name no tempo ([S050], [S003]).
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A026 | AutomationEditingTest::tapTempoSingleStrayTapAfterIdleGapCommitsNothing | src/checks/automation/automationtaptempo.cpp:160
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the stray tap to leave document and history untouched through full snapshot equality ([S051]).
 Original expression:
   QVERIFY(frozenDocumentState() == beforeTap)
 
 A027 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
 Original expression:
   QVERIFY(canvas)
 
 A028 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: parametersEnabled has no ingress in the converted Swift page: the production AutomationPage always enables parameters for a plotted page, so no Swift predicate can observe the original guard while the lane scenarios staged behind it stay covered.
 Original expression:
   QVERIFY(canvas->parametersEnabled())
 
 A029 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:175
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the equivalent no-commit and one-commit observations execute through the page session and document predicates.
 Original expression:
   QVERIFY(committed.isValid())
 
 A030 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:177
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift stages an empty tempo stream in the first-point scenario and asserts the undo restores it empty ([S056], [S059]), proving the empty precondition.
 Original expression:
   QVERIFY(tab().document().tempoPoints().empty())
 
 A031 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the taps to stay in the session without a commit until the page idle window ([S017], [S019], [S020]).
 Original expression:
   QCOMPARE(committed.count(), 0)
 
 A032 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: No Swift predicate stages the original 300 ms cadence; Swift asserts exact drafts for its own 500, 600, 400 and 150 ms cadences and the clamp bounds ([S005], [S008], [S022], [S047]), so the four-tap 300 ms draft band stays unproved.
 Original expression:
   QVERIFY2(draft >= 170 && draft <= 235,
                qPrintable(QStringLiteral("four-tap draft %1").arg(draft)))
 
 A033 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:187
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the page idle window to commit the ready draft once, publishing one revision and one history entry ([S023], [S026]).
 Original expression:
   QCOMPARE(committed.count(), 1)
 
 A034 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:188
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the drafted BPM ([S022]) and the committed tick-zero value ([S024]), the commit writing the draft it reported.
 Original expression:
   QCOMPARE(committed.at(0).at(0).toInt(), draft)
 
 A035 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:189
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One tempo edit is one revision and one history entry ([S026]); one undo consumes that single entry ([S029]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->count(), beforeCommit.undoCount + 1)
 
 A036 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:190
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One tempo edit advances the stack by one, and one undo returns to the previous entry and leaves nothing to undo ([S026], [S029]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->index(), beforeCommit.undoIndex + 1)
 
 A037 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:191
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the committed stream to hold exactly the tick-zero point ([S024], [S013]).
 Original expression:
   QCOMPARE(int(tab().document().tempoPoints().size()), 1)
 
 A038 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:192
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the committed point at tick zero ([S024], [S013]).
 Original expression:
   QCOMPARE(tab().document().tempoPoints().front().tick, Tick{0})
 
 A039 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:193
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the committed tick-zero tempo names the drafted BPM, which is the same stored microseconds value ([S022], [S024]).
 Original expression:
   QCOMPARE(tab().document().tempoPoints().front().microsecondsPerQuarterNote,
                CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(draft))
 
 A040 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:195
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the idle window to close the session, leaving no taps ([S021]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 0)
 
 A041 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:196
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the closed session to name no tempo ([S021], [S003]).
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A042 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:199
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires one undo to consume the tempo edit ([S027]).
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()))
 
 A043 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One undo returns to the pre-commit history state and leaves nothing to undo ([S028], [S029]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->index(), beforeCommit.undoIndex)
 
 A044 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:201
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The Swift first-point scenario undoes its insertion and asserts the empty tempo stream ([S056], [S059]).
 Original expression:
   QCOMPARE(tab().document().tempoPoints().size(), std::size_t{0})
 
 A045 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:206
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: A cadence past the shared gap distance starts a fresh session ([S010], [S011]) that the stray idle window aborts without a commit ([S049], [S050]).
 Original expression:
   QCOMPARE(committed.count(), 1)
 
 A046 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:208
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stray session stays silent through its idle window ([S049], [S050]).
 Original expression:
   QCOMPARE(committed.count(), 1)
 
 A047 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:209
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stray session writes nothing, so the second edit never lands and the history count stays at one ([S049], [S051]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->count(), beforeCommit.undoCount + 1)
 
 A048 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:222
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
 Original expression:
   QVERIFY(canvas)
 
 A049 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:223
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: parametersEnabled has no ingress in the converted Swift page: the production AutomationPage always enables parameters for a plotted page, so no Swift predicate can observe the original guard while the lane scenarios staged behind it stay covered.
 Original expression:
   QVERIFY(canvas->parametersEnabled())
 
 A050 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:226
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift silent path stages its own tick-zero tempo (120 BPM) and asserts it ([S013], [S014]); the original 255 BPM seed value and its readback are not staged.
 Original expression:
   QCOMPARE(seedBpm, 255)
 
 A051 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:230
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the equivalent no-commit and one-commit observations execute through the page session and document predicates.
 Original expression:
   QVERIFY(draftChanged.isValid())
 
 A052 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:231
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the equivalent no-commit and one-commit observations execute through the page session and document predicates.
 Original expression:
   QVERIFY(committed.isValid())
 
 A053 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:238
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires a draft naming the tempo already in place to commit nothing ([S017], [S019], [S020]).
 Original expression:
   QCOMPARE(committed.count(), 0)
 
 A054 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:239
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the tapped cadence named the staged tick-zero tempo ([S014]).
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 255)
 
 A055 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:242
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the idle window to commit nothing when the draft changes nothing ([S017]).
 Original expression:
   QCOMPARE(committed.count(), 0)
 
 A056 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:243
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the no-op window to leave the stream alone, publish no revision and record no history entry ([S018], [S019], [S020]).
 Original expression:
   QVERIFY(frozenDocumentState() == beforeTap)
 
 A057 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:244
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the no-op window to publish no revision ([S019]).
 Original expression:
   QCOMPARE(tab().document().revision(), beforeTap.revision)
 
 A058 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:245
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the no-op window to record no history entry ([S020]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->count(), beforeTap.undoCount)
 
 A059 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:246
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: With no history entry recorded the undo depth and index are unchanged ([S020], [S029]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->index(), beforeTap.undoIndex)
 
 A060 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:247
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML lane proves the live readout updates ([S074]); the original counted draft-changed emissions and no Swift or QML predicate counts them.
 Original expression:
   QVERIFY(draftChanged.count() >= 1)
 
 A061 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:248
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the staged stream to keep its single tick-zero point ([S013], [S018]).
 Original expression:
   QCOMPARE(int(tab().document().tempoPoints().size()), 1)
 
 A062 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:249
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the no-op window to leave the stream alone, so the staged BPM still reads back ([S018], [S013]).
 Original expression:
   QCOMPARE(tempoBpmAt(Tick{0}), 255)
 
 A063 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:261
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift stages its own multi-point tempo stream and asserts both points through the exact list ([S053]); the staged point count differs (two in Swift, three in the original) while the readback mechanism executes.
 Original expression:
   QCOMPARE(int(tab().document().tempoPoints().size()), 3)
 
 A064 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:265
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
 Original expression:
   QVERIFY(canvas)
 
 A065 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:266
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: parametersEnabled has no ingress in the converted Swift page: the production AutomationPage always enables parameters for a plotted page, so no Swift predicate can observe the original guard while the lane scenarios staged behind it stay covered.
 Original expression:
   QVERIFY(canvas->parametersEnabled())
 
 A066 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:269
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the equivalent no-commit and one-commit observations execute through the page session and document predicates.
 Original expression:
   QVERIFY(committed.isValid())
 
 A067 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:278
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the page idle window to commit the ready draft ([S052]).
 Original expression:
   QCOMPARE(committed.count(), 1)
 
 A068 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:279
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the drafted BPM ([S022], [S039]) and the committed tick-zero value ([S053]), the commit writing the draft.
 Original expression:
   QCOMPARE(committed.at(0).at(0).toInt(), draft)
 
 A069 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:280
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The commit publishes a revision and its undo restores the previous value ([S052], [S055]).
 Original expression:
   QVERIFY(tab().document().revision() > beforeCommit.revision)
 
 A070 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:281
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The replacement is one undoable edit and one history entry ([S052], [S054], [S055]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->count(), beforeCommit.undoCount + 1)
 
 A071 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:282
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One undo consumes the replacement and returns to the previous history state ([S054]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->index(), beforeCommit.undoIndex + 1)
 
 A072 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:283
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the committed tick-zero value equals the drafted BPM ([S022], [S053]).
 Original expression:
   QCOMPARE(tempoBpmAt(Tick{0}), draft)
 
 A073 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:284
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the commit preserves the non-target later point with its own BPM ([S053]).
 Original expression:
   QCOMPARE(tempoBpmAt(kLaterTick), kLaterBpm)
 
 A074 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:285
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift replacement scenario stages one non-target point (384:140) and asserts it survives ([S053]); the original second far point is not staged.
 Original expression:
   QCOMPARE(tempoBpmAt(kFarTick), kFarBpm)
 
 A075 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:286
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The exact resulting list proves the replacement leaves the point count unchanged ([S053]); the Swift fixture stages two points rather than three.
 Original expression:
   QCOMPARE(int(tab().document().tempoPoints().size()), 3)
 
 A076 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:287
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the idle window to close the session, leaving no taps ([S021]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 0)
 
 A077 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:288
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the closed session to name no tempo ([S021], [S003]).
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A078 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:290
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the replacement to undo ([S054]).
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()))
 
 A079 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:291
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: After the undo Swift asserts the full stream again, so the count is unchanged ([S055]).
 Original expression:
   QCOMPARE(int(tab().document().tempoPoints().size()), 3)
 
 A080 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:292
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The undo restores the previous tick-zero tempo value ([S055]); the Swift fixture stages 120 BPM instead of the original 100 BPM seed.
 Original expression:
   QCOMPARE(tempoBpmAt(Tick{0}), 100)
 
 A081 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:300
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift stages an empty tempo stream in its first-point scenario and asserts the resulting single inserted point ([S057], [S059]).
 Original expression:
   QCOMPARE(int(tab().document().tempoPoints().size()), 1)
 
 A082 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:304
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
 Original expression:
   QVERIFY(canvas)
 
 A083 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:305
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: parametersEnabled has no ingress in the converted Swift page: the production AutomationPage always enables parameters for a plotted page, so no Swift predicate can observe the original guard while the lane scenarios staged behind it stay covered.
 Original expression:
   QVERIFY(canvas->parametersEnabled())
 
 A084 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:308
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the equivalent no-commit and one-commit observations execute through the page session and document predicates.
 Original expression:
   QVERIFY(committed.isValid())
 
 A085 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:317
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the page idle window to commit the first tempo point ([S056]).
 Original expression:
   QCOMPARE(committed.count(), 1)
 
 A086 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:318
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the drafted BPM and the inserted tick-zero value, the commit writing the draft ([S022], [S057]).
 Original expression:
   QCOMPARE(committed.at(0).at(0).toInt(), draft)
 
 A087 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:319
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The first-point insertion is one undoable edit and one history entry ([S057], [S058]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->count(), beforeCommit.undoCount + 1)
 
 A088 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:320
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: One undo consumes the insertion ([S058]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->index(), beforeCommit.undoIndex + 1)
 
 A089 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:321
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the inserted tick-zero value equals the drafted BPM ([S022], [S057]).
 Original expression:
   QCOMPARE(tempoBpmAt(Tick{0}), draft)
 
 A090 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:322
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts a tempo commit preserves non-target points with their own BPMs in the replacement scenario ([S053]), the same preservation the insertion must show.
 Original expression:
   QCOMPARE(tempoBpmAt(kLaterTick), 120)
 
 A091 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:323
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Inserting adds exactly one point and preserves the other ([S053], [S057]).
 Original expression:
   QCOMPARE(int(tab().document().tempoPoints().size()), 2)
 
 A092 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:324
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the idle window to close the session, leaving no taps ([S021]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 0)
 
 A093 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:325
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the closed session to name no tempo ([S021], [S003]).
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A094 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:327
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the insertion to undo ([S058]).
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()))
 
 A095 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:328
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The undo returns the stream to its pre-commit state, asserted through the exact stream ([S058], [S059]).
 Original expression:
   QCOMPARE(int(tab().document().tempoPoints().size()), 1)
 
 A096 | AutomationEditingTest::tapTempoConcurrentTempoEditAbortsDraftSynchronously | src/checks/automation/automationtaptempo.cpp:338
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
 Original expression:
   QVERIFY(canvas)
 
 A097 | AutomationEditingTest::tapTempoConcurrentTempoEditAbortsDraftSynchronously | src/checks/automation/automationtaptempo.cpp:339
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: parametersEnabled has no ingress in the converted Swift page: the production AutomationPage always enables parameters for a plotted page, so no Swift predicate can observe the original guard while the lane scenarios staged behind it stay covered.
 Original expression:
   QVERIFY(canvas->parametersEnabled())
 
 A098 | AutomationEditingTest::tapTempoConcurrentTempoEditAbortsDraftSynchronously | src/checks/automation/automationtaptempo.cpp:342
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift stages a live session that drafts a tempo the stream does not hold ([S032]) and the document seam scenario asserts two taps standing in the session ([S060]).
 Original expression:
   QVERIFY(canvas->tapTempoDraftBpm() > 0)
 
 A099 | AutomationEditingTest::tapTempoConcurrentTempoEditAbortsDraftSynchronously | src/checks/automation/automationtaptempo.cpp:352
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the intervening write to commit through its own prompt ([S033], [S034]).
 Original expression:
   QVERIFY(tab().document().revision() > revisionBeforeEdit)
 
 A100 | AutomationEditingTest::tapTempoConcurrentTempoEditAbortsDraftSynchronously | src/checks/automation/automationtaptempo.cpp:353
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the document seam to clear the session synchronously, leaving no taps ([S061]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 0)
 
 A101 | AutomationEditingTest::tapTempoConcurrentTempoEditAbortsDraftSynchronously | src/checks/automation/automationtaptempo.cpp:354
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The synchronous seam clear leaves no draft ([S061], [S003]).
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A102 | AutomationEditingTest::tapTempoConcurrentTempoEditAbortsDraftSynchronously | src/checks/automation/automationtaptempo.cpp:355
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale draft never reaches the tempo stream, so the intervenor stream stands ([S037]).
 Original expression:
   QCOMPARE(int(document.tempoPoints().size()), 1)
 
 A103 | AutomationEditingTest::tapTempoConcurrentTempoEditAbortsDraftSynchronously | src/checks/automation/automationtaptempo.cpp:360
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale idle window closes the session and the seam clear leaves no taps ([S038], [S061]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 0)
 
 A104 | AutomationEditingTest::tapTempoConcurrentTempoEditAbortsDraftSynchronously | src/checks/automation/automationtaptempo.cpp:361
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale idle window leaves no draft ([S038], [S003]).
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A105 | AutomationEditingTest::tapTempoConcurrentTempoEditAbortsDraftSynchronously | src/checks/automation/automationtaptempo.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stale draft never reaches the tempo stream and the stream keeps its single point ([S037]).
 Original expression:
   QCOMPARE(int(document.tempoPoints().size()), 1)
 
 A106 | AutomationEditingTest::tapTempoDocumentChangedSeamClearsSession | src/checks/automation/automationtaptempo.cpp:372
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
 Original expression:
   QVERIFY(canvas)
 
 A107 | AutomationEditingTest::tapTempoDocumentChangedSeamClearsSession | src/checks/automation/automationtaptempo.cpp:373
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: parametersEnabled has no ingress in the converted Swift page: the production AutomationPage always enables parameters for a plotted page, so no Swift predicate can observe the original guard while the lane scenarios staged behind it stay covered.
 Original expression:
   QVERIFY(canvas->parametersEnabled())
 
 A108 | AutomationEditingTest::tapTempoDocumentChangedSeamClearsSession | src/checks/automation/automationtaptempo.cpp:376
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift stages a live session ([S032]) with two taps standing in it ([S060]) before the document seam clears it.
 Original expression:
   QVERIFY(canvas->tapTempoDraftBpm() > 0)
 
 A109 | AutomationEditingTest::tapTempoDocumentChangedSeamClearsSession | src/checks/automation/automationtaptempo.cpp:382
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the document seam to clear the session synchronously, leaving no taps ([S061]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 0)
 
 A110 | AutomationEditingTest::tapTempoDocumentChangedSeamClearsSession | src/checks/automation/automationtaptempo.cpp:383
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The synchronous seam clear leaves no draft ([S061], [S003]).
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A111 | AutomationEditingTest::tapTempoDocumentChangedSeamClearsSession | src/checks/automation/automationtaptempo.cpp:384
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the seam clear to leave document and history untouched ([S051]) and the tempo stream unchanged ([S037]).
 Original expression:
   QVERIFY(frozenDocumentState() == beforeClear)
 
 A112 | AutomationEditingTest::tapTempoDocumentChangedSeamClearsSession | src/checks/automation/automationtaptempo.cpp:385
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires a stale capture to publish no revision and the seam clear to leave the stream alone ([S036], [S037]).
 Original expression:
   QCOMPARE(tab().document().revision(), beforeClear.revision)
 
 A113 | AutomationEditingTest::tapTempoDocumentChangedSeamClearsSession | src/checks/automation/automationtaptempo.cpp:386
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the cleared session to record no history entry ([S051], [S020]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->count(), beforeClear.undoCount)
 
 A114 | AutomationEditingTest::tapTempoDocumentChangedSeamClearsSession | src/checks/automation/automationtaptempo.cpp:387
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: With no history entry recorded the undo depth and index are unchanged ([S051], [S020]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->index(), beforeClear.undoIndex)
 
 A115 | AutomationEditingTest::tapTempoDisabledCanvasAndEmptyDocumentAreNoOps | src/checks/automation/automationtaptempo.cpp:397
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
 Original expression:
   QVERIFY(canvas)
 
 A116 | AutomationEditingTest::tapTempoDisabledCanvasAndEmptyDocumentAreNoOps | src/checks/automation/automationtaptempo.cpp:398
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: parametersEnabled has no ingress in the converted Swift page: the production AutomationPage always enables parameters for a plotted page, so no Swift predicate can observe the original guard while the lane scenarios staged behind it stay covered.
 Original expression:
   QVERIFY(canvas->parametersEnabled())
 
 A117 | AutomationEditingTest::tapTempoDisabledCanvasAndEmptyDocumentAreNoOps | src/checks/automation/automationtaptempo.cpp:404
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The original method operates a disabled canvas whose tap and reset path has no Swift ingress. The Swift reset route executes: the session reset returns the seed state ([S012]) and the QML cancel lane asserts the session clears with no write ([S069], [S070], [S071]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 0)
 
 A118 | AutomationEditingTest::tapTempoDisabledCanvasAndEmptyDocumentAreNoOps | src/checks/automation/automationtaptempo.cpp:405
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift reset route asserts the cleared session names no tempo ([S012]); the disabled-canvas premise of the original stays unproved.
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A119 | AutomationEditingTest::tapTempoDisabledCanvasAndEmptyDocumentAreNoOps | src/checks/automation/automationtaptempo.cpp:409
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML cancel lane asserts the reset writes no tempo, publishes no revision and records no history entry ([S069], [S070], [S071]); the repeated reset of a disabled canvas is not staged.
 Original expression:
   QVERIFY(frozenDocumentState() == beforeReset)
 
 A120 | AutomationEditingTest::tapTempoDisabledCanvasAndEmptyDocumentAreNoOps | src/checks/automation/automationtaptempo.cpp:410
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift reset route leaves no taps in the session ([S012]); the disabled-canvas premise stays unproved.
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 0)
 
 A121 | AutomationEditingTest::tapTempoDisabledCanvasAndEmptyDocumentAreNoOps | src/checks/automation/automationtaptempo.cpp:411
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift reset route leaves no draft ([S012]); the disabled-canvas premise stays unproved.
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A122 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:421
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
 Original expression:
   QVERIFY(canvas)
 
 A123 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:422
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: parametersEnabled has no ingress in the converted Swift page: the production AutomationPage always enables parameters for a plotted page, so no Swift predicate can observe the original guard while the lane scenarios staged behind it stay covered.
 Original expression:
   QVERIFY(canvas->parametersEnabled())
 
 A124 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:426
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane requires the Tempo row to be drawn in the selector before it locates the Tap control ([S062]).
 Original expression:
   QVERIFY(tempoIndex >= 0)
 
 A125 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:428
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane mounts the production automation page and resolves the row and control inside it ([S062]); the original quick-view root precondition executes as that mount.
 Original expression:
   QVERIFY(root)
 
 A126 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:431
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane requires the Tempo row to compose its Tap control and locates it by object name ([S063]).
 Original expression:
   QVERIFY(tapButton)
 
 A127 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:432
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane delivers a real pointer press at the control centre ([S065]), which requires the control to be visible and enabled.
 Original expression:
   QVERIFY(tapButton->isVisible())
 
 A128 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:433
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane delivers a real pointer press at the control centre and publishes its accessible name ([S064], [S065]), which requires the control to be enabled.
 Original expression:
   QVERIFY(tapButton->isEnabled())
 
 A129 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:437
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane collects the inline draft readout and asserts it becomes visible with the tapped text ([S073], [S074]).
 Original expression:
   QVERIFY(draftText)
 
 A130 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:438
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The QML lane asserts the readout becomes visible during a live session ([S073]) but never compares its hidden state before the first tap.
 Original expression:
   QCOMPARE(draftText->isVisible(), false)
 
 A131 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:442
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The canvas commit spy has no Swift or QML ingress; the lane proves the absence of a write through revision and history ([S067], [S068]) but no predicate observes the signal itself.
 Original expression:
   QVERIFY(committed.isValid())
 
 A132 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:446
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane clicks the control own centre ([S065]), which requires the layout to have assigned positive width and height.
 Original expression:
   QTRY_VERIFY(tapButton->width() > 0 && tapButton->height() > 0)
 
 A133 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:453
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane requires a real pointer tap to register a tap in the session ([S065]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 1)
 
 A134 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:454
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the single tap to name no tempo ([S003]).
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A135 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:455
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane asserts the inline draft readout becomes visible during the live session ([S073]).
 Original expression:
   QCOMPARE(draftText->isVisible(), true)
 
 A136 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:456
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane resolves the Tap control inside the Tempo row and asserts a live session is the page interaction fact ([S062], [S066]).
 Original expression:
   QCOMPARE(canvas->activeParameter(), tempoIndex)
 
 A137 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:457
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The canvas commit spy has no Swift or QML ingress; the lane proves the absence of a write through revision and history ([S067], [S068]) but no predicate observes the signal itself.
 Original expression:
   QCOMPARE(committed.count(), 0)
 
 A138 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:458
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane asserts the tapped control writes nothing: revision and undo availability are compared across the press ([S067], [S068]).
 Original expression:
   QVERIFY(frozenDocumentState() == beforeTap)
 
 A139 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:459
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane compares the document revision across the pointer tap ([S067]).
 Original expression:
   QCOMPARE(tab().document().revision(), beforeTap.revision)
 
 A140 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:460
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The QML lane compares undo availability across the pointer tap ([S068]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->count(), beforeTap.undoCount)
 
 A141 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:461
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: With no history entry recorded the undo depth and index are unchanged ([S068]).
 Original expression:
   QCOMPARE(tab().document().undoStack()->index(), beforeTap.undoIndex)
 
 A142 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:472
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
 Original expression:
   QVERIFY(canvas)
 
 A143 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:473
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: parametersEnabled has no ingress in the converted Swift page: the production AutomationPage always enables parameters for a plotted page, so no Swift predicate can observe the original guard while the lane scenarios staged behind it stay covered.
 Original expression:
   QVERIFY(canvas->parametersEnabled())
 
 A144 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:476
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QSignalSpy construction is retired C++ harness representation with no Swift ingress; the equivalent no-commit and one-commit observations execute through the page session and document predicates.
 Original expression:
   QVERIFY(committed.isValid())
 
 A145 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:482
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the steady cadence draft and the single idle commit that follows it ([S005], [S023]).
 Original expression:
   QCOMPARE(committed.count(), 1)
 
 A146 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:485
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the session reset to return the seed state, leaving no taps ([S012]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 0)
 
 A147 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:491
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires each ready cadence to commit once at its own idle window with one history entry ([S023], [S026]); the 750 ms cadence instance itself is not staged.
 Original expression:
   QCOMPARE(committed.count(), 2)
 
 A148 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:499
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The burst phase starts with its own single commit standing and no new commit before its idle window ([S023], [S017]).
 Original expression:
   QCOMPARE(committed.count(), 2)
 
 A149 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:501
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The idle window commits the burst draft once, as the mechanism requires ([S023], [S026]).
 Original expression:
   QCOMPARE(committed.count(), 3)
 
 A150 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:502
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the committed stream to hold exactly the tick-zero point ([S024]).
 Original expression:
   QCOMPARE(int(tab().document().tempoPoints().size()), 1)
 
 A151 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:503
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the committed tick-zero value equals the drafted BPM of its own burst ([S022], [S024]).
 Original expression:
   QCOMPARE(tempoBpmAt(Tick{0}), burstDraft)
 
 A152 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:504
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift requires the idle window to close the session, leaving no taps ([S021]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 0)
 
 A153 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:510
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the 150 ms cadence clamps to the published maximum in the session and in the page session ([S042], [S044]).
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), CoreTimeDefaults::kMaxTempoBpm)
 
 A154 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:512
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The page idle window commits the clamped draft ([S045]).
 Original expression:
   QCOMPARE(committed.count(), 4)
 
 A155 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:513
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Swift asserts the clamped commit lands the maximum tempo at tick zero ([S046]).
 Original expression:
   QCOMPARE(tempoBpmAt(Tick{0}), CoreTimeDefaults::kMaxTempoBpm)
 
 A156 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:520
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: A cadence past the shared gap distance starts a fresh session holding one tap ([S010]).
 Original expression:
   QCOMPARE(canvas->tapTempoTapCount(), 1)
 
 A157 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:521
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The fresh session names no tempo ([S010], [S003]).
 Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A158 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:523
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The fresh session stays silent through its idle window ([S010], [S050]).
 Original expression:
   QCOMPARE(committed.count(), 4)
 
 A159 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:524
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The clamped commit stands and no further commit lands at tick zero ([S046]).
 Original expression:
   QCOMPARE(tempoBpmAt(Tick{0}), CoreTimeDefaults::kMaxTempoBpm)
 
 A160 | AutomationEditingTest::tapTempoHintCatalogTextIsPresentAndDistinct | src/checks/automation/automationtaptempo.cpp:534
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: feature-not-yet-ported:hint-catalog. No Swift hint catalogue exists: no TapTempo or GhostParameter catalogue text is published under src/swift or QML, so no predicate can render it.
 Original expression:
   QVERIFY2(!tapText.isEmpty(), "the TapTempo catalog text rendered empty")
 
 A161 | AutomationEditingTest::tapTempoHintCatalogTextIsPresentAndDistinct | src/checks/automation/automationtaptempo.cpp:535
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: feature-not-yet-ported:hint-catalog. The GhostParameter catalogue text has no Swift or QML counterpart.
 Original expression:
   QVERIFY(!ghostText.isEmpty())
 
 A162 | AutomationEditingTest::tapTempoHintCatalogTextIsPresentAndDistinct | src/checks/automation/automationtaptempo.cpp:536
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: feature-not-yet-ported:hint-catalog. Without a Swift TapTempo catalogue text the distinctness predicate cannot execute.
 Original expression:
   QVERIFY(tapText != ghostText)
 
 Swift executable assertion index
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S001-S061 index src/checks/automation/automationtaptempo.swift; S062-S076 index the QML
+drawer lane predicates of src/checks/editorqml/tst_EditorDrawer.qml ::
+test_productionAutomationTapTempoThroughInput, which cover the rendered Tap control, its
+real pointer tap and its keyboard tap delivery.
 
 S001 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:13
 Swift expression:
@@ -1081,146 +1090,318 @@ Swift expression:
   report.expectEqual(AutomationTapTempoSession(), cadence, cppID: drawerAutomationTapTempoID,
                          what: "reset returns the session to its seed state")
 
-S013 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:56
+S013 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:63
 Swift expression:
   report.expectEqual(["0:120"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "the staged document names 120 BPM at tick zero")
 
-S014 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:62
+S014 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:69
 Swift expression:
   report.expectEqual(120, fixture.page.tapTempoSession.draftBpm, cppID: drawerAutomationTapTempoID,
                          what: "the tapped cadence named the tempo already in place")
 
-S015 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:64
+S015 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:71
 Swift expression:
   report.expectEqual(4, fixture.page.tapTempoSession.tapCount, cppID: drawerAutomationTapTempoID,
                          what: "the taps stand in the page's own session")
 
-S016 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:66
+S016 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:73
 Swift expression:
   report.expect(fixture.page.tapTempoActive, cppID: drawerAutomationTapTempoID,
                     message: "a live session is the page's interaction fact")
 
-S017 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:68
+S017 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:75
 Swift expression:
   report.expect(!fixture.page.tapTempoIdleElapsed(), cppID: drawerAutomationTapTempoID,
                     message: "a draft that changes nothing commits nothing")
 
-S018 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:70
+S018 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:77
 Swift expression:
   report.expectEqual(["0:120"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "the no-op idle window left the stream alone")
 
-S019 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:72
+S019 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:79
 Swift expression:
   report.expectEqual(before.revision, fixture.document.revision, cppID: drawerAutomationTapTempoID,
                          what: "the no-op idle window published no revision")
 
-S020 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:74
+S020 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:81
 Swift expression:
   report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationTapTempoID,
                     message: "the no-op idle window recorded no history entry")
 
-S021 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:76
+S021 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:83
 Swift expression:
   report.expect(fixture.page.tapTempoSession.tapCount == 0 && !fixture.page.tapTempoActive,
                     cppID: drawerAutomationTapTempoID,
                     message: "the idle window closed the session either way")
 
-S022 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:82
+S022 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:89
 Swift expression:
   report.expectEqual(150, fixture.page.tapTempoSession.draftBpm, cppID: drawerAutomationTapTempoID,
                          what: "a 400 ms cadence drafts 150 BPM")
 
-S023 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:84
+S023 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:91
 Swift expression:
   report.expect(fixture.page.tapTempoIdleElapsed(), cppID: drawerAutomationTapTempoID,
                     message: "the idle window commits the ready draft")
 
-S024 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:86
+S024 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:93
 Swift expression:
   report.expectEqual(["0:150"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "the commit replaced the tick-zero tempo point")
 
-S025 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:88
+S025 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:95
 Swift expression:
   report.expectEqual(before.revision + 1, fixture.document.revision, cppID: drawerAutomationTapTempoID,
                          what: "the tempo edit published one revision")
 
-S026 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:90
+S026 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:97
 Swift expression:
   report.expect(fixture.document.history.canUndo, cppID: drawerAutomationTapTempoID,
                     message: "the tempo edit recorded one history entry")
 
-S027 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:92
+S027 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:99
 Swift expression:
   report.expect(fixture.undo(), cppID: drawerAutomationTapTempoID, message: "the tempo edit undoes")
 
-S028 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:93
+S028 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:100
 Swift expression:
   report.expectEqual(["0:120"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "undo restored the previous tick-zero tempo")
 
-S029 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:95
+S029 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:102
 Swift expression:
   report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationTapTempoID,
                     message: "one tempo edit is exactly one history entry")
 
-S030 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:100
+S030 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:107
 Swift expression:
   report.fail(drawerAutomationTapTempoID, "redo failed: \(error)")
 
-S031 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:103
+S031 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:110
 Swift expression:
   report.expectEqual(["0:150"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "redo put the committed tempo back on the stream")
 
-S032 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:108
+S032 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:115
 Swift expression:
   report.expectEqual(120, fixture.page.tapTempoSession.draftBpm, cppID: drawerAutomationTapTempoID,
                          what: "the stale session drafts a tempo the stream does not hold")
 
-S033 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:110
+S033 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:117
 Swift expression:
   report.expect(fixture.page.openPrompt(tick: 48, value: 64), cppID: drawerAutomationTapTempoID,
                     message: "the intervening write opened its own prompt")
 
-S034 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:112
+S034 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:119
 Swift expression:
   report.expect(fixture.page.acceptPrompt(displayedValue: 96), cppID: drawerAutomationTapTempoID,
                     message: "the intervening write committed")
 
-S035 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:115
+S035 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:122
 Swift expression:
   report.expect(!fixture.page.tapTempoIdleElapsed(), cppID: drawerAutomationTapTempoID,
                     message: "a capture whose document moved on commits nothing")
 
-S036 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:117
+S036 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:124
 Swift expression:
   report.expectEqual(stale, fixture.document.revision, cppID: drawerAutomationTapTempoID,
                          what: "the stale idle window published no revision")
 
-S037 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:119
+S037 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:126
 Swift expression:
   report.expectEqual(["0:150"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "the stale draft never reached the tempo stream")
 
-S038 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:121
+S038 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:128
 Swift expression:
   report.expect(fixture.page.tapTempoSession.tapCount == 0, cppID: drawerAutomationTapTempoID,
                     message: "the stale idle window closed the session")
 
-S039 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:126
+S039 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:133
 Swift expression:
   report.expect(fixture.page.tapTempoSession.tapCount > 0, cppID: drawerAutomationTapTempoID,
                     message: "the session started on the lane the taps named")
 
-S040 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:129
+S040 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:136
 Swift expression:
   report.expect(!fixture.page.tapTempoIdleElapsed(), cppID: drawerAutomationTapTempoID,
                     message: "a session whose parameter moved on commits nothing")
 
-S041 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:131
+S041 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:138
 Swift expression:
   report.expectEqual(["0:150"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "the switched parameter left the tempo stream alone")
+
+S042 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:55
+Swift expression:
+    report.expectEqual(TimeDefaults.maximumTempoBPM, burst.draftBpm, cppID: drawerAutomationTapTempoID,
+                       what: "a 150 ms cadence clamps to the published maximum tempo")
+
+S043 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:57
+Swift expression:
+    report.expect(burst.idleCommitMs == AutomationTapTempoSession.commitMinimumMs,
+                  cppID: drawerAutomationTapTempoID,
+
+S044 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:142
+Swift expression:
+    report.expectEqual(TimeDefaults.maximumTempoBPM, fixture.page.tapTempoSession.draftBpm,
+                       cppID: drawerAutomationTapTempoID,
+                       what: "the page session clamps the 150 ms burst to the maximum tempo")
+
+S045 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:145
+Swift expression:
+    report.expect(fixture.page.tapTempoIdleElapsed(), cppID: drawerAutomationTapTempoID,
+                  message: "the idle window commits the clamped draft")
+
+S046 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:147
+Swift expression:
+    report.expectEqual(["0:\(TimeDefaults.maximumTempoBPM)"], fixture.tempoValues,
+                       cppID: drawerAutomationTapTempoID,
+                       what: "the clamped commit lands the maximum tempo at tick zero")
+
+S047 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:156
+Swift expression:
+    report.expectEqual(TimeDefaults.maximumTempoBPM,
+                       AutomationTapTempoSession.bpm(forMeanIntervalMs: 150), cppID: id,
+                       what: "a 150 ms mean clamps to the published maximum tempo")
+
+S048 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:159
+Swift expression:
+    report.expectEqual(TimeDefaults.minimumTempoBPM,
+                       AutomationTapTempoSession.bpm(forMeanIntervalMs: 3000), cppID: id,
+                       what: "a 3000 ms mean clamps to the published minimum tempo")
+
+S049 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:167
+Swift expression:
+    report.expect(!stray.page.tapTempoIdleElapsed(), cppID: id,
+                  message: "a single stray tap commits nothing")
+
+S050 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:169
+Swift expression:
+    report.expect(stray.page.tapTempoSession.tapCount == 0, cppID: id,
+                  message: "the stray idle window closes the session")
+
+S051 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:171
+Swift expression:
+    report.expectEqual(strayBefore, stray.snapshot, cppID: id,
+                       what: "the stray tap leaves document and history untouched")
+
+S052 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:178
+Swift expression:
+    report.expect(later.page.tapTempoIdleElapsed(), cppID: id,
+                  message: "the idle window commits the ready draft")
+
+S053 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:180
+Swift expression:
+    report.expectEqual(["0:150", "384:140"], later.tempoValues, cppID: id,
+                       what: "the commit replaces tick zero and preserves the later point")
+
+S054 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:182
+Swift expression:
+    report.expect(later.undo(), cppID: id, message: "the replacement undoes")
+
+S055 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:183
+Swift expression:
+    report.expectEqual(["0:120", "384:140"], later.tempoValues, cppID: id,
+                       what: "undo restores tick zero and preserves the later point")
+
+S056 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:190
+Swift expression:
+    report.expect(empty.page.tapTempoIdleElapsed(), cppID: id,
+                  message: "the idle window commits the first tempo point")
+
+S057 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:192
+Swift expression:
+    report.expectEqual(["0:150"], empty.tempoValues, cppID: id,
+                       what: "the commit inserts tick zero on the empty stream")
+
+S058 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:194
+Swift expression:
+    report.expect(empty.undo(), cppID: id, message: "the insertion undoes")
+
+S059 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:195
+Swift expression:
+    report.expect(empty.tempoValues.isEmpty, cppID: id,
+                  message: "undo restores the empty tempo stream")
+
+S060 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:201
+Swift expression:
+    report.expect(seam.page.tapTempoSession.tapCount == 2, cppID: id,
+                  message: "two taps stand in the session")
+
+S061 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:205
+Swift expression:
+    report.expect(seam.page.tapTempoSession.tapCount == 0 && !seam.page.tapTempoActive, cppID: id,
+                  message: "the document seam clears the session synchronously")
+
+S062 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4679
+Swift expression:
+        verify(tempoTab, "the Tempo row is drawn in the selector")
+
+S063 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4681
+Swift expression:
+        verify(tapControl, "the Tempo row composed its Tap control")
+
+S064 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4686
+Swift expression:
+        compare(String(tapControl.Accessible.name).length > 0, true,
+                "the Tap control publishes its accessible name ('" + tapControl.Accessible.name + "')")
+
+S065 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4692
+Swift expression:
+        tryVerify(function() { return bootstrap.automationTapCount() >= 1 }, 2000,
+                  "the pointer tap registered a tap")
+
+S066 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4694
+Swift expression:
+        compare(bootstrap.automationInteractionActive(), true,
+                "a live tap session is the page's interaction fact")
+
+S067 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4696
+Swift expression:
+        compare(bootstrap.automationDocumentRevision(), revisionBefore,
+                "tapping writes nothing to the document")
+
+S068 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4698
+Swift expression:
+        compare(session.canUndo, undoBefore, "tapping records no history entry")
+
+S069 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4712
+Swift expression:
+        compare(bootstrap.automationTapCount(), 0, "the cancel cleared the tap session")
+
+S070 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4713
+Swift expression:
+        compare(bootstrap.automationTempoBpm(), tempoBefore,
+                "a cancelled session wrote no tempo")
+
+S071 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4715
+Swift expression:
+        compare(bootstrap.automationDocumentRevision(), revisionBefore,
+                "a cancelled session published no revision")
+
+S072 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4757
+Swift expression:
+        compare(model.tapTempoTapCount, 3, "the panel publishes the live tap count")
+
+S073 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4760
+Swift expression:
+        tryVerify(function() { return inlineDraft && inlineDraft.visible }, 1000,
+                  "the live cadence is drawn inside the Tempo tab")
+
+S074 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4762
+Swift expression:
+        tryCompare(inlineDraft, "text", "120 BPM", 1000,
+                   "the original inline readout shows the tapped tempo")
+
+S075 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4769
+Swift expression:
+        verify(!bootstrap.automationTapIdleElapsed(),
+               "a lone tap's idle window commits nothing")
+
+S076 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4704
+Swift expression:
+        compare(bootstrap.automationTapCount() >= 1, true,
+                "Return on the focused Tap control registered a tap")
