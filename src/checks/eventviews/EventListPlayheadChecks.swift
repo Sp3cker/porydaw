@@ -8,6 +8,8 @@ private let focusedSiblingWinsID = "eventviews/EventViewsPlayheadTest::focusedSi
 private let samplePathAndProgrammaticRestoreID =
     "eventviews/EventViewsPlayheadTest::samplePathAndProgrammaticRestore"
 private let followScrollID = "eventviews/EventViewsPlayheadTest::followScroll"
+private let rowsAndEditContractID = "swiftcore/EventList::eventListRowsAndEditContract"
+private let remapAnchorAndProjectionID = "swiftcore/EventList::eventListRemapAnchorAndProjection"
 
 private enum EventListPlayheadShape {
     case basic
@@ -128,6 +130,8 @@ internal func runEventListPlayheadChecks(_ report: CheckReport, session suite: D
     focusedSiblingWins(report, suite: suite, service: service)
     samplePathAndProgrammaticRestore(report, suite: suite, service: service)
     followScroll(report, suite: suite, service: service)
+    eventListRowsAndEditContract(report)
+    eventListRemapAnchorAndProjection(report, suite: suite, service: service)
 }
 
 @MainActor
@@ -407,4 +411,162 @@ private func followScroll(_ report: CheckReport, suite: DocumentSession,
         && hasExactTintContract(fixture.presenter, expected: eot),
         cppID: followScrollID, message: "A044 follow-off state retains EOT tint")
     fixture.presenter.setFollowPlayhead(enabled: true)
+}
+
+@MainActor
+private func eventListRowsAndEditContract(_ report: CheckReport) {
+    let empty = MidiChunk(events: [], endTick: 24)
+    let coincident = MidiChunk(events: [
+        .channel(tick: 48, status: 0x90, data0: 60, data1: 100),
+    ], endTick: 48)
+    let multiple = MidiChunk(events: [
+        .channel(status: 0xC0, data0: 1),
+        .channel(tick: 12, status: 0x90, data0: 60, data1: 100),
+        .meta(tick: 24, type: 0x06, data: [0x61]),
+        .systemExclusive(tick: 36, status: 0xF0, data: [0x7D]),
+        .systemExclusive(tick: 40, status: 0xF7, data: [0x7E]),
+    ], endTick: 60)
+    let file = MidiFile(division: 24, chunks: [empty, coincident, multiple])
+    let expectedTypes: [[Int]] = [
+        [],
+        [EventListEventType.noteOn.rawValue],
+        [
+            EventListEventType.program.rawValue, EventListEventType.noteOn.rawValue,
+            EventListEventType.meta.rawValue, EventListEventType.sysEx0.rawValue,
+            EventListEventType.sysEx7.rawValue,
+        ],
+    ]
+    var model = EventListModel()
+    report.expectEqual(0, model.rowCount, cppID: rowsAndEditContractID,
+                       what: "detached model has no EOT row")
+    for (index, chunk) in file.chunks.enumerated() {
+        model.setSource(chunk)
+        report.expectEqual(chunk.events.count + 1, model.rowCount,
+                           cppID: rowsAndEditContractID,
+                           what: "shape \(index) has one EOT row after its events")
+        report.expectEqual(chunk.endTick, model.rowTick(row: chunk.events.count),
+                           cppID: rowsAndEditContractID,
+                           what: "shape \(index) EOT tick mirrors the chunk end")
+        report.expectEqual(expectedTypes[index] + [EventListEventType.endOfTrack.rawValue],
+                           model.rows.map(\.typeKind), cppID: rowsAndEditContractID,
+                           what: "shape \(index) projects each event type and EOT")
+        report.expect(model.rows.last?.isEndOfTrack == true
+            && model.rows.dropLast().allSatisfy { !$0.isEndOfTrack },
+            cppID: rowsAndEditContractID,
+            message: "shape \(index) has exactly one EOT sentinel")
+    }
+
+    let eot = model.rowCount - 1
+    report.expect(model.isCellEditable(row: eot, column: 0)
+        && !(1..<EventListModel.columnCount).contains { model.isCellEditable(row: eot, column: $0) }
+        && !model.isCellEditable(row: -1, column: 0),
+        cppID: rowsAndEditContractID, message: "only the EOT tick cell is editable")
+    report.expect(model.isCellEditable(row: 1, column: 2)
+        && !model.isCellEditable(row: 2, column: 2)
+        && !model.isCellEditable(row: 3, column: 2)
+        && model.isCellEditable(row: 2, column: 5)
+        && model.isCellEditable(row: 3, column: 5)
+        && model.isCellEditable(row: 4, column: 5)
+        && !model.isCellEditable(row: 1, column: 5),
+        cppID: rowsAndEditContractID, message: "channel and blob cells follow event kind")
+    report.expect(model.validatesEdit(row: eot, column: 0, text: String(TimeDefaults.maxTick))
+        && !model.validatesEdit(row: eot, column: 0, text: String(TimeDefaults.maxTick + 1))
+        && !model.validatesEdit(row: eot, column: 0, text: "-1"),
+        cppID: rowsAndEditContractID, message: "tick editing honors maxTick")
+    report.expect(model.validatesEdit(row: 1, column: 1, text: "10")
+        && !model.validatesEdit(row: 1, column: 1, text: "9")
+        && model.validatesEdit(row: 1, column: 2, text: "1")
+        && model.validatesEdit(row: 1, column: 2, text: "16")
+        && !model.validatesEdit(row: 1, column: 2, text: "0")
+        && !model.validatesEdit(row: 1, column: 2, text: "17"),
+        cppID: rowsAndEditContractID, message: "type IDs and channel bounds are validated")
+    report.expect(model.validatesEdit(row: 1, column: 3, text: "0")
+        && model.validatesEdit(row: 1, column: 4, text: "127")
+        && !model.validatesEdit(row: 1, column: 3, text: "-1")
+        && !model.validatesEdit(row: 1, column: 4, text: "128")
+        && model.validatesEdit(row: 2, column: 5, text: "AA")
+        && model.validatesEdit(row: 3, column: 5, text: "7D")
+        && !model.validatesEdit(row: 2, column: 5, text: "  ")
+        && !model.validatesEdit(row: 3, column: 5, text: ""),
+        cppID: rowsAndEditContractID, message: "data bytes and blob contents are validated")
+    model.setPlayheadTick(36)
+    report.expectEqual(3, model.playRow, cppID: rowsAndEditContractID,
+                       what: "transport chooses the SysEx row")
+    report.expect(model.rows.filter { model.rowTint(row: $0.index) != nil }.map(\.index) == [model.playRow]
+        && model.rowTint(row: model.playRow) == EventListModel.playheadTint,
+        cppID: rowsAndEditContractID, message: "exactly the playing row is tinted")
+    model.detach()
+    report.expectEqual(0, model.rowCount, cppID: rowsAndEditContractID,
+                       what: "detaching clears all rows")
+}
+
+@MainActor
+private func eventListRemapAnchorAndProjection(_ report: CheckReport, suite: DocumentSession,
+                                               service: ProjectService) {
+    let fixture = EventListPlayheadFixture(suite: suite, service: service, shape: .basic)
+    let session = fixture.session
+    let presenter = fixture.presenter
+    var remaps: [TrackRemap] = []
+    session.onChange = { [weak presenter] change in
+        if let remap = change.trackRemap { remaps.append(remap) }
+        presenter?.documentDidChange(change)
+    }
+    presenter.setChunk(index: 2)
+    presenter.focusRow(row: 2)
+    let initialCount = presenter.rowCount
+    report.expectEqual(2, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+                       what: "initial chunk holds the focused event row")
+
+    let moved = session.document.moveTrack(1, to: 0)
+    report.expect(moved && remaps.last?.chunkMap[2] == 0,
+                  cppID: remapAnchorAndProjectionID,
+                  message: "moving the second track publishes its chunk remap")
+    report.expectEqual(0, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
+                       what: "chunk anchor follows the move")
+    report.expectEqual(session.document.rawChunks[0].events.count + 1, presenter.rowCount,
+                       cppID: remapAnchorAndProjectionID,
+                       what: "moved chunk projects its current event count and EOT")
+    report.expectEqual(2, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+                       what: "document remap preserves in-range row focus")
+
+    _ = session.document.history.undoDocument()
+    report.expectEqual(2, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
+                       what: "undo restores the chunk anchor")
+    report.expectEqual(initialCount, presenter.rowCount, cppID: remapAnchorAndProjectionID,
+                       what: "undo restores the initial projection")
+    report.expectEqual(2, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+                       what: "undo retains in-range row focus")
+    _ = session.document.history.redoDocument()
+    report.expectEqual(0, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
+                       what: "redo follows the moved chunk again")
+    report.expectEqual(session.document.rawChunks[0].events.count + 1, presenter.rowCount,
+                       cppID: remapAnchorAndProjectionID,
+                       what: "redo rebuilds the moved chunk projection")
+    report.expectEqual(2, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+                       what: "redo retains in-range row focus")
+
+    presenter.setChunk(index: 1)
+    report.expectEqual(-1, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+                       what: "explicit chunk switch resets row focus")
+    presenter.focusRow(row: 2)
+    session.document.deleteTrack(1)
+    report.expect(remaps.last?.chunkMap[1] == .some(nil),
+                  cppID: remapAnchorAndProjectionID,
+                  message: "deletion publishes an unmapped original chunk")
+    report.expectEqual(-1, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
+                       what: "deleting the selected chunk clears its anchor")
+    report.expectEqual(0, presenter.rowCount, cppID: remapAnchorAndProjectionID,
+                       what: "deleted chunk has no projected rows")
+    report.expectEqual(-1, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+                       what: "deleting the selected chunk clears row focus")
+    _ = session.document.history.undoDocument()
+    report.expect(presenter.chunkIndex == -1 && presenter.rowCount == 0
+        && presenter.currentRow == -1,
+        cppID: remapAnchorAndProjectionID,
+        message: "undoing deletion leaves the unselected anchor empty")
+    _ = session.document.history.redoDocument()
+    report.expect(presenter.chunkIndex == -1 && presenter.rowCount == 0
+        && presenter.currentRow == -1,
+        cppID: remapAnchorAndProjectionID,
+        message: "redoing deletion leaves the unselected anchor empty")
 }

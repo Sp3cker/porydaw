@@ -359,7 +359,7 @@ Original expression:
 
 A025 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:180
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       release();
   }
@@ -376,7 +376,7 @@ Original expression:
 
 A026 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:182
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       songView.setVScroll(initialSpan / 2.0);
 Original expression:
@@ -384,7 +384,7 @@ Original expression:
 
 A027 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:185
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       songView.setScaleFold(true);
 Original expression:
@@ -392,7 +392,7 @@ Original expression:
 
 A028 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:186
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -400,7 +400,7 @@ Original expression:
 
 A029 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:187
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -408,7 +408,7 @@ Original expression:
 
 A030 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:188
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -416,7 +416,7 @@ Original expression:
 
 A031 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:192
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       const QPointF foldedDrag = beginDrag(Qt::Vertical);
       move(foldedDrag - offset(Qt::Vertical, 2.0 * track.height()));
@@ -425,7 +425,7 @@ Original expression:
 
 A032 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:193
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -433,7 +433,7 @@ Original expression:
 
 A033 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:194
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -441,7 +441,7 @@ Original expression:
 
 A034 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:198
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       release();
 
@@ -451,7 +451,7 @@ Original expression:
 
 A035 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:199
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -459,7 +459,7 @@ Original expression:
 
 A036 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:200
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -467,7 +467,7 @@ Original expression:
 
 A037 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:204
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       const qreal restoredSpan = songView.camera().maxRollScroll();
       songView.setVScroll(restoredSpan / 2.0);
@@ -476,7 +476,7 @@ Original expression:
 
 A038 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:208
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       const QPointF restoredDrag = beginDrag(Qt::Vertical);
       const qreal restoredValue = songView.camera().scrollY();
@@ -486,7 +486,7 @@ Original expression:
 
 A039 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:210
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       const qreal expected = restoredValue + kDragDistance * restoredSpan / restoredTravel;
 Original expression:
@@ -494,7 +494,7 @@ Original expression:
 
 A040 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:213
 Disposition: GAP
-Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate horizontal chrome.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       move(restoredDrag + offset(Qt::Vertical, kDragDistance));
 Original expression:

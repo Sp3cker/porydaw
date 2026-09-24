@@ -7,16 +7,18 @@ Swift counterpart: src/checks/editcheck/EventChecks.swift
 Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
 Additional Swift counterpart: src/checks/editcheck/tst_songdocument_songraw.swift
 Additional Swift SHA-256: 7c5dc3cac4f4652f22a1bdc91eedd7000788a27fdbc5d8875e0acd05d19b3c16
+Additional Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swift
+Additional Swift SHA-256: 8844e59119c3710fa155d7050f9bbfaac73f8f5838f2acd6994b833fe4c91dba
 
 Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including fixture guards. PARTIAL identifies document-operation effects with related Swift document-level predicates and an explicit unproved condition (the controller chunk anchor or mirrored row count). Assertions whose stimulus is a direct document call and whose observable is portable are MATCHED when a registered Swift predicate exercises the same contract (A049, A050, A052, A053: the channel-ownership promotion path, proved by S042–S046 in tst_songdocument_songraw.swift). GAP identifies Qt signal-ordering observations, operation-return guards, fixture/conversion/computation guards, and event-table model observations (chunk selection, tempo-row projection, row lookup) with no Swift equivalent; unsure between PARTIAL and GAP resolves to GAP. The Swift counterpart search covered src/checks/swiftcore (EventChecks trackEditing observes trackRemap publications for add, move, duplicate, rename, and delete) and src/checks/editcheck (coreRawEventDocumentSeams observes engineTracks promotion), and confirmed no Swift event-list controller exists. None of these labels authorizes deletion or claims whole-case equivalence.
+This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including fixture guards. PARTIAL identifies document-operation effects with related Swift document-level predicates and an explicit unproved condition (the controller chunk anchor or mirrored row count). A036-A038 and A041-A043 are instead MATCHED by the presenter anchor/row-count contract in eventListRemapAnchorAndProjection (S047-S052); Qt signal-order halves stay PARTIAL and tempo/metadata projection halves stay GAP/PARTIAL with renderer-absence reasons. Assertions whose stimulus is a direct document call and whose observable is portable are MATCHED when a registered Swift predicate exercises the same contract (A049, A050, A052, A053: the channel-ownership promotion path, proved by S042–S046 in tst_songdocument_songraw.swift; A036-A038 and A041-A043: the presenter anchor/row-count contract, proved by S047–S052 in EventListPlayheadChecks.swift). GAP identifies Qt signal-ordering observations, operation-return guards, fixture/conversion/computation guards, and event-table model observations (chunk selection, tempo-row projection, row lookup) with no Swift equivalent; unsure between PARTIAL and GAP resolves to GAP. The Swift counterpart search covered src/checks/swiftcore (EventChecks trackEditing observes trackRemap publications for add, move, duplicate, rename, and delete) and src/checks/editcheck (coreRawEventDocumentSeams observes engineTracks promotion), and confirmed no Swift event-list controller exists. None of these labels authorizes deletion or claims whole-case equivalence.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: PASS (1/6 ok, 5 skipped, 10.51s) with `deno task proof check` PASS (suite-level); source hashes pin the tree inspected here.
 
 Execution and ownership
-Paired document-level checks execute in runEventEditsSuite (src/checks/editcheck/EventChecks.swift) via trackEditing, which publishes and observes trackRemap entries for add, move, duplicate, rename, and delete with undo/redo republication. runRawEventOriginalChecks (src/checks/editcheck/tst_songdocument_songraw.swift) calls coreRawEventDocumentSeams, which proves the metadataChunkTransition promotion contract: inserting a channel event on a free channel into a metadata-only chunk raises engineTracks.usedTrackCount, an engine track owns the chunk, and undo/redo demote and repromote it. The controller-anchor observations (chunk(), mirrored rowCount, tempoRowForExactTick, rowForTickAndType) have no Swift owner. Native ownership of the full cases: runEventViewsRemapCheck in this file drives EventViewsRemapTest (notifyOrder, anchorFollowsMove, deletedChunkUnselects, metadataChunkTransition, tempoProjectionRows); fixtures live in src/checks/eventviews/eventview_fixture.h and src/checks/eventviews/eventview_fixture.cpp (openTabFixture shape Tempo).
+Paired document-level checks execute in runEventEditsSuite (src/checks/editcheck/EventChecks.swift) via trackEditing, which publishes and observes trackRemap entries for add, move, duplicate, rename, and delete with undo/redo republication. runRawEventOriginalChecks (src/checks/editcheck/tst_songdocument_songraw.swift) calls coreRawEventDocumentSeams, which proves the metadataChunkTransition promotion contract: inserting a channel event on a free channel into a metadata-only chunk raises engineTracks.usedTrackCount, an engine track owns the chunk, and undo/redo demote and repromote it. The presenter anchor observations (chunk(), mirrored rowCount, row focus, unselection) are proved by eventListRemapAnchorAndProjection (S047-S052); the rendered tempoRowForExactTick/rowForTickAndType projections and Qt signal order have no Swift owner. Native ownership of the full cases: runEventViewsRemapCheck in this file drives EventViewsRemapTest (notifyOrder, anchorFollowsMove, deletedChunkUnselects, metadataChunkTransition, tempoProjectionRows); fixtures live in src/checks/eventviews/eventview_fixture.h and src/checks/eventviews/eventview_fixture.cpp (openTabFixture shape Tempo).
 
 Fixture, sequence and row constraints
 No _data rows exist in this file; sequencing is phasal instead. notifyOrder expands its signal-order and anchor sites over six operation phases (move, undo, redo, rename with undo/redo, add with undo/redo, duplicate with undo/redo), each phase clearing and re-recording the notification list. anchorFollowsMove sequences move/undo/redo chunk comparisons; deletedChunkUnselects sequences delete/undo/redo anchor checks against the empty (-1) anchor; metadataChunkTransition loops the 16 channel candidates to find a free channel before the program-event promotion; tempoProjectionRows compares the tempo projection before and after a programmatic track selection.
@@ -395,16 +397,18 @@ Original expression:
 QVERIFY(document.moveTrack(1, 0))
 
 A036 | EventViewsRemapTest::anchorFollowsMove | src/checks/eventviews/remap.cpp:126
-Disposition: PARTIAL
-Mapping/reason: Related Swift track-remap publication predicates S001, S002, S003, S004, S005, S006, S007, S009, S011, S012, S013, S016, S017 in src/checks/editcheck/EventChecks.swift; unproved: the controller chunk anchor and mirrored row count that anchorMatches observes.
+Disposition: MATCHED
+Swift: S047 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRemapAnchorAndProjection
+Mapping/reason: Chunk-anchor contract after move: Swift S047 asserts the same observable — the presenter chunk anchor follows the move (chunkIndex 0 after moving the second track to front) — under cppID swiftcore/EventList::eventListRemapAnchorAndProjection. Only the pure presenter contract is ported; the rendered EventListPage stays unmounted.
 Source context since previous assertion:
 
 Original expression:
 QTRY_COMPARE(widgets.controller->chunk(), checks::eventviews::chunkForTrack(document, 0))
 
 A037 | EventViewsRemapTest::anchorFollowsMove | src/checks/eventviews/remap.cpp:128
-Disposition: PARTIAL
-Mapping/reason: Related Swift track-remap publication predicates S001, S002, S003, S004, S005, S006, S007, S009, S011, S012, S013, S016, S017 in src/checks/editcheck/EventChecks.swift; unproved: the controller chunk anchor and mirrored row count that anchorMatches observes.
+Disposition: MATCHED
+Swift: S048 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRemapAnchorAndProjection
+Mapping/reason: Chunk-anchor contract after undo: Swift S048 asserts the same observable — undo restores the presenter chunk anchor (chunkIndex 2) — under cppID swiftcore/EventList::eventListRemapAnchorAndProjection. Only the pure presenter contract is ported; the rendered EventListPage stays unmounted.
 Source context since previous assertion:
 view.findChild<QMenu *>(),
 
@@ -412,8 +416,9 @@ Original expression:
 QTRY_COMPARE(widgets.controller->chunk(), checks::eventviews::chunkForTrack(document, 1))
 
 A038 | EventViewsRemapTest::anchorFollowsMove | src/checks/eventviews/remap.cpp:130
-Disposition: PARTIAL
-Mapping/reason: Related Swift track-remap publication predicates S001, S002, S003, S004, S005, S006, S007, S009, S011, S012, S013, S016, S017 in src/checks/editcheck/EventChecks.swift; unproved: the controller chunk anchor and mirrored row count that anchorMatches observes.
+Disposition: MATCHED
+Swift: S049 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRemapAnchorAndProjection
+Mapping/reason: Chunk-anchor contract after redo: Swift S049 asserts the same observable — redo follows the moved chunk again (chunkIndex 0) — under cppID swiftcore/EventList::eventListRemapAnchorAndProjection. Only the pure presenter contract is ported; the rendered EventListPage stays unmounted.
 Source context since previous assertion:
 d::array<int, 6> divisionIds{-1, 4, 8, 1
 Original expression:
@@ -440,8 +445,9 @@ Original expression:
 QVERIFY(widgets)
 
 A041 | EventViewsRemapTest::deletedChunkUnselects | src/checks/eventviews/remap.cpp:144
-Disposition: PARTIAL
-Mapping/reason: Related Swift track-remap publication predicates S001, S002, S003, S004, S005, S006, S007, S009, S011, S012, S013, S016, S017 in src/checks/editcheck/EventChecks.swift; unproved: the controller chunk anchor and mirrored row count that anchorMatches observes.
+Disposition: MATCHED
+Swift: S050 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRemapAnchorAndProjection
+Mapping/reason: Unselection contract after delete: Swift S050 asserts the same observables — chunkIndex -1, rowCount 0, and currentRow -1 after deleting the selected chunk, matching anchorMatches(..., -1) — under cppID swiftcore/EventList::eventListRemapAnchorAndProjection. Only the pure presenter contract is ported; the rendered EventListPage stays unmounted.
 Source context since previous assertion:
 t(row)]);
             QVERIFY(item->enabled);
@@ -453,8 +459,9 @@ Original expression:
 QTRY_VERIFY(anchorMatches(widgets, document, -1))
 
 A042 | EventViewsRemapTest::deletedChunkUnselects | src/checks/eventviews/remap.cpp:146
-Disposition: PARTIAL
-Mapping/reason: Related Swift track-remap publication predicates S001, S002, S003, S004, S005, S006, S007, S009, S011, S012, S013, S016, S017 in src/checks/editcheck/EventChecks.swift; unproved: the controller chunk anchor and mirrored row count that anchorMatches observes.
+Disposition: MATCHED
+Swift: S051 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRemapAnchorAndProjection
+Mapping/reason: Unselection contract after undo: Swift S051 asserts the same observables — the unselected anchor stays empty (chunkIndex -1, rowCount 0, currentRow -1) after undoing the deletion — under cppID swiftcore/EventList::eventListRemapAnchorAndProjection. Only the pure presenter contract is ported; the rendered EventListPage stays unmounted.
 Source context since previous assertion:
 
             divisionMenu.model->rowForI
@@ -462,8 +469,9 @@ Original expression:
 QTRY_VERIFY(anchorMatches(widgets, document, -1))
 
 A043 | EventViewsRemapTest::deletedChunkUnselects | src/checks/eventviews/remap.cpp:148
-Disposition: PARTIAL
-Mapping/reason: Related Swift track-remap publication predicates S001, S002, S003, S004, S005, S006, S007, S009, S011, S012, S013, S016, S017 in src/checks/editcheck/EventChecks.swift; unproved: the controller chunk anchor and mirrored row count that anchorMatches observes.
+Disposition: MATCHED
+Swift: S052 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRemapAnchorAndProjection
+Mapping/reason: Unselection contract after redo: Swift S052 asserts the same observables — the unselected anchor stays empty (chunkIndex -1, rowCount 0, currentRow -1) after redoing the deletion — under cppID swiftcore/EventList::eventListRemapAnchorAndProjection. Only the pure presenter contract is ported; the rendered EventListPage stays unmounted.
 Source context since previous assertion:
 IFY2(currentDivisionRow >= 0, "the divis
 Original expression:
@@ -489,7 +497,7 @@ QVERIFY(widgets)
 
 A046 | EventViewsRemapTest::metadataChunkTransition | src/checks/eventviews/remap.cpp:159
 Disposition: GAP
-Mapping/reason: Event-table model observation (chunk selection, tempo-row projection, or row lookup) with no Swift predicate; Swift has no event-table model.
+Mapping/reason: Event-table model observation (controller chunk selection into the rendered list) with no Swift owner; feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed). The presenter anchor half is proved by S047-S052; the rendered selection path is not.
 Source context since previous assertion:
 g());
         const int targetDivision = checks::support::alternateGridMenuId(initial.gridSelection)
@@ -498,7 +506,7 @@ QVERIFY(checks::eventviews::selectChunk(*widgets.controller, metadataChunk))
 
 A047 | EventViewsRemapTest::metadataChunkTransition | src/checks/eventviews/remap.cpp:160
 Disposition: GAP
-Mapping/reason: Event-table model observation (chunk selection, tempo-row projection, or row lookup) with no Swift predicate; Swift has no event-table model.
+Mapping/reason: Event-table model observation (rendered model chunk echo) with no Swift owner; feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed). The presenter anchor half is proved by S047-S052; the rendered model echo is not.
 Source context since previous assertion:
 ivisio
 Original expression:
@@ -542,7 +550,7 @@ QVERIFY(owner >= 0)
 
 A051 | EventViewsRemapTest::metadataChunkTransition | src/checks/eventviews/remap.cpp:182
 Disposition: GAP
-Mapping/reason: Event-table model observation (chunk selection, tempo-row projection, or row lookup) with no Swift predicate; Swift has no event-table model.
+Mapping/reason: Event-table model observation (rendered row lookup for the promoted program event) with no Swift owner; feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed). The promotion itself is MATCHED (A049-A050); the rendered row projection is not.
 Source context since previous assertion:
 ->prop
 Original expression:
@@ -587,7 +595,7 @@ QVERIFY(widgets)
 
 A056 | EventViewsRemapTest::tempoProjectionRows | src/checks/eventviews/remap.cpp:196
 Disposition: GAP
-Mapping/reason: Event-table model observation (chunk selection, tempo-row projection, or row lookup) with no Swift predicate; Swift has no event-table model.
+Mapping/reason: Event-table model observation (rendered tempo-row projection at tick zero) with no Swift owner; feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed).
 Source context since previous assertion:
 ssion-
 Original expression:
@@ -595,7 +603,7 @@ QCOMPARE(widgets.model->tempoRowForExactTick(0), 0)
 
 A057 | EventViewsRemapTest::tempoProjectionRows | src/checks/eventviews/remap.cpp:198
 Disposition: GAP
-Mapping/reason: Event-table model observation (chunk selection, tempo-row projection, or row lookup) with no Swift predicate; Swift has no event-table model.
+Mapping/reason: Event-table model observation (rendered tempo-row projection after track switch) with no Swift owner; feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed).
 Source context since previous assertion:
 );
         QVERIFY(!divisionReopened.session->isO
@@ -1336,3 +1344,35 @@ S045 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw
 S046 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift:280
   report.expectEqual(3, promoted.engineTracks.usedTrackCount, cppID: remapID,
                        what: "redo repromotes the metadata chunk")
+
+S047 | eventListRemapAnchorAndProjection | src/checks/eventviews/EventListPlayheadChecks.swift:524
+    report.expectEqual(0, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
+                       what: "chunk anchor follows the move")
+
+S048 | eventListRemapAnchorAndProjection | src/checks/eventviews/EventListPlayheadChecks.swift:533
+    report.expectEqual(2, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
+                       what: "undo restores the chunk anchor")
+
+S049 | eventListRemapAnchorAndProjection | src/checks/eventviews/EventListPlayheadChecks.swift:540
+    report.expectEqual(0, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
+                       what: "redo follows the moved chunk again")
+
+S050 | eventListRemapAnchorAndProjection | src/checks/eventviews/EventListPlayheadChecks.swift:556
+    report.expectEqual(-1, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
+                       what: "deleting the selected chunk clears its anchor")
+    report.expectEqual(0, presenter.rowCount, cppID: remapAnchorAndProjectionID,
+                       what: "deleted chunk has no projected rows")
+    report.expectEqual(-1, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+                       what: "deleting the selected chunk clears row focus")
+
+S051 | eventListRemapAnchorAndProjection | src/checks/eventviews/EventListPlayheadChecks.swift:563
+    report.expect(presenter.chunkIndex == -1 && presenter.rowCount == 0
+        && presenter.currentRow == -1,
+        cppID: remapAnchorAndProjectionID,
+        message: "undoing deletion leaves the unselected anchor empty")
+
+S052 | eventListRemapAnchorAndProjection | src/checks/eventviews/EventListPlayheadChecks.swift:568
+    report.expect(presenter.chunkIndex == -1 && presenter.rowCount == 0
+        && presenter.currentRow == -1,
+        cppID: remapAnchorAndProjectionID,
+        message: "redoing deletion leaves the unselected anchor empty")

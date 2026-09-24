@@ -24,12 +24,19 @@ Item {
     readonly property int noteCount: gridModel.renderedNoteCount
     readonly property var timeSigHost: applicationSession.timeSigHost
     property point timeSigMenuPosition: Qt.point(0, 0)
+    property point headerMenuPosition: Qt.point(0, 0)
     readonly property var rulerMenuRows: [
         { actionId: 9, text: qsTr("Edit Time Signature"), enabled: true }
     ]
 
     function hoverRow(panel, row) { panel.highlightedRow = row }
     function activateRow(panel, row) {
+        if (panel.rowObjectNamePrefix === "headerMenuRow_") {
+            const item = panel.rowItem(row)
+            if (item && item.active)
+                headersModel.activateHeaderMenuAction(item.itemData.actionId)
+            return
+        }
         if (row !== 0)
             return
         timeSigHost.closeTimeSigMenu()
@@ -75,6 +82,13 @@ Item {
                 const position = rollInput.mapToItem(null, x, y)
                 root.contextMenuAt(position.x, position.y)
             }
+        }
+    }
+
+    Connections {
+        target: root.headersModel
+        function onContextMenuRequested(x, y) {
+            root.headerMenuPosition = trackHeaders.mapToItem(root, x, y)
         }
     }
 
@@ -342,6 +356,51 @@ Item {
                 width: parent.width
                 height: Math.max(parent.height - y, 0)
                 z: 3
+            }
+        }
+    }
+
+    Loader {
+        id: headerMenuLoader
+        anchors.fill: parent
+        z: 10
+        active: root.headersModel.menuOpen
+        sourceComponent: Component {
+            Item {
+                focus: true
+                Keys.onEscapePressed: (event) => {
+                    root.headersModel.dismissHeaderMenu()
+                    event.accepted = true
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    onPressed: root.headersModel.dismissHeaderMenu()
+                }
+                Original.QuickMenuPanel {
+                    anchors.fill: parent
+                    host: root
+                    menuModel: root.headersModel.menuItems
+                    rootLevel: true
+                    rowObjectNamePrefix: "headerMenuRow_"
+                    appearance: ({
+                        background: root.gridModel.palette.chromeBackground,
+                        outline: root.gridModel.palette.separator,
+                        text: root.gridModel.palette.primaryText,
+                        hoverBackground: root.gridModel.palette.hoverChipFill,
+                        hoverText: root.gridModel.palette.primaryText,
+                        disabledText: root.gridModel.palette.secondaryText,
+                        font: Application.font
+                    })
+                    rowHeight: Math.round(root.gridModel.baseFontPx * 1.8)
+                    textX: Math.round(root.gridModel.baseFontPx * 0.9)
+                    textRight: menuWidth - textX
+                    menuWidth: Math.min(parent.width, Math.round(root.gridModel.baseFontPx * 18))
+                    menuHeight: Math.min(parent.height, rowCount * rowHeight + 2)
+                    menuOrigin: Qt.point(
+                        Math.max(0, Math.min(root.headerMenuPosition.x, width - menuWidth)),
+                        Math.max(0, Math.min(root.headerMenuPosition.y, height - menuHeight)))
+                }
+                Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)
             }
         }
     }

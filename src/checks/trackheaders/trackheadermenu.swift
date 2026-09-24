@@ -42,6 +42,43 @@ func headerMenuOpensWithTypedRowsAndDismissesWithoutWrite(
 }
 
 @MainActor
+func headerMenuTargetRowResolvesByTrack(
+    _ report: CheckReport, suite: DocumentSession, service: ProjectService
+) {
+    let id = "swiftcore/TrackHeaders::headerMenuTargetRowResolvesByTrack"
+    let fx = TrackHeadersFixture(suite: suite, service: service)
+    let h = fx.headers
+    let target = 1
+    let baseline = HeaderDocumentBaseline(fx.document)
+    guard let row = fx.rowForTrack(target) else {
+        report.fail(id, "target track has no header row")
+        return
+    }
+    report.expect(row != 0 && h.rows[row].track == target, cppID: id,
+                  message: "non-leading header row resolves from track identity")
+    guard let p = fx.visibleTitlePoint(forTrack: target) else {
+        report.fail(id, "target track has no visible title point")
+        return
+    }
+    var revealed: [Int] = []
+    h.onRevealTrackVoiceRequested = { revealed.append($0) }
+    report.expect(h.beginPointer(x: p.x, y: p.y, button: 2, modifiers: 0),
+                  cppID: id, message: "identity-resolved row accepts right press")
+    report.expect(h.menuOpen, cppID: id, message: "identity-resolved header opens menu")
+    report.expectEqual(target, fx.session.selectedTrack, cppID: id,
+                       what: "right press selects identity-resolved target")
+    h.activateHeaderMenuAction(actionId: 2)
+    report.expectEqual([target], revealed, cppID: id,
+                       what: "menu target resolves to identity-resolved track")
+    report.expect(!h.menuOpen, cppID: id, message: "menu action closes first menu")
+    report.expect(h.beginPointer(x: p.x, y: p.y, button: 2, modifiers: 0),
+                  cppID: id, message: "same target reopens for dismissal")
+    h.dismissHeaderMenu()
+    report.expect(!h.menuOpen, cppID: id, message: "dismiss closes target menu")
+    baseline.expectUnchanged(report, fx.document, cppID: id, phase: "identity menu open and dismiss")
+}
+
+@MainActor
 func headerMenuChangeVoiceOpensPickerAfterMenuCloses(
     _ report: CheckReport, suite: DocumentSession, service: ProjectService
 ) {

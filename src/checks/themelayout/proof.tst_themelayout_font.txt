@@ -25,7 +25,7 @@ TypographyLayoutChecks.swift; the resolved Next family, shell font, title
 centering and organization identity execute in tst_Typography.qml. All faces
 render and measure unhinted (S036-S040). Faces with no Swift/QML surface
 (tableMono, italic, bold-caption) and native rasterization metrics stay
-non-MATCHED with reasons naming the missing behavior.
+non-MATCHED with "feature not yet ported" reasons naming the missing surface.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
@@ -149,8 +149,8 @@ Original expression:
 
 A005 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:50
 Disposition: GAP
-Mapping/reason: Swift layout is a pure value with no initialize call; the
-call-success mechanism has no Swift counterpart. Stable re-resolution is
+Mapping/reason: feature not yet ported: process-scoped layout::initialize; Swift
+layout is a pure value with no initialize call, and stable re-resolution is
 covered for A009 by S001/S002.
 Source context since previous assertion:
   ;
@@ -170,9 +170,9 @@ Original expression:
 
 A007 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:52
 Disposition: GAP
-Mapping/reason: Swift has no process-global base to conflict with; each
-surface carries its own base. The native conflict-rejection mechanism has no
-Swift counterpart.
+Mapping/reason: feature not yet ported: process-scoped layout::initialize
+second-call conflict rejection; Swift has no process-global base to conflict
+with because each surface carries its own base.
 Source context since previous assertion:
   ;
 Original expression:
@@ -285,8 +285,9 @@ Original expression:
 
 A018 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:75
 Disposition: GAP
-Mapping/reason: No Swift/QML surface renders Mono at the body size; ruler mono
-is ruler-sized by GridTypography design (S008). Not current product behavior.
+Mapping/reason: feature not yet ported: body-sized mono face (Mono at the body
+size); no Swift/QML surface renders it because ruler mono is ruler-sized by
+GridTypography design (S008).
 Source context since previous assertion:
   ;
 Original expression:
@@ -311,8 +312,9 @@ Original expression:
 
 A021 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:80
 Disposition: GAP
-Mapping/reason: No Swift/QML surface renders this face; not current product
-behavior. Mono at rendered sizes is covered by S008 and S009.
+Mapping/reason: feature not yet ported: tableMono face (typography::tableMono
+family); no Swift/QML surface renders it. Mono at rendered sizes is covered by
+S008 and S009.
 Source context since previous assertion:
   ;
 
@@ -322,8 +324,8 @@ Original expression:
 
 A022 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:81
 Disposition: GAP
-Mapping/reason: No Swift/QML surface renders this face; not current product
-behavior.
+Mapping/reason: feature not yet ported: tableMono face (absolute letter
+spacing); no Swift/QML surface renders it.
 Source context since previous assertion:
   ;
 Original expression:
@@ -331,8 +333,8 @@ Original expression:
 
 A023 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:82
 Disposition: GAP
-Mapping/reason: No Swift/QML surface renders this face; not current product
-behavior.
+Mapping/reason: feature not yet ported: tableMono face (letter spacing -0.5);
+no Swift/QML surface renders it.
 Source context since previous assertion:
   ;
 Original expression:
@@ -415,8 +417,9 @@ Original expression:
 
 A032 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:97
 Disposition: GAP
-Mapping/reason: No Swift/QML surface renders this face; not current product
-behavior. Caption faces are constructed upright with no style-mutation API.
+Mapping/reason: feature not yet ported: italic caption face (typography::italic
+family); no Swift/QML surface renders it, and caption faces are constructed
+upright with no style-mutation API.
 Source context since previous assertion:
   ;
       const QFontInfo italicCaptionInfo(typography::italic(caption));
@@ -425,8 +428,9 @@ Original expression:
 
 A033 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:98
 Disposition: GAP
-Mapping/reason: No Swift/QML surface renders this face; not current product
-behavior. Caption faces are constructed upright with no style-mutation API.
+Mapping/reason: feature not yet ported: italic caption face (pixel size); no
+Swift/QML surface renders it, and caption faces are constructed upright with no
+style-mutation API.
 Source context since previous assertion:
   ;
 Original expression:
@@ -434,8 +438,9 @@ Original expression:
 
 A034 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:99
 Disposition: GAP
-Mapping/reason: No Swift/QML surface renders this face; not current product
-behavior. Caption faces are constructed upright with no style-mutation API.
+Mapping/reason: feature not yet ported: italic caption face (StyleItalic); no
+Swift/QML surface renders it, and caption faces are constructed upright with no
+style-mutation API.
 Source context since previous assertion:
   ;
 Original expression:
@@ -462,8 +467,9 @@ Original expression:
 
 A037 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:104
 Disposition: GAP
-Mapping/reason: No Swift/QML surface renders this face; not current product
-behavior. DemiBold at body size is covered by S006 and S010.
+Mapping/reason: feature not yet ported: bold caption face (bold(caption)
+pixel size); no Swift/QML surface renders it, and DemiBold at body size is
+covered by S006 and S010.
 Source context since previous assertion:
   ;
       const QFontInfo captionBoldInfo(typography::bold(caption));
@@ -472,8 +478,9 @@ Original expression:
 
 A038 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:105
 Disposition: GAP
-Mapping/reason: No Swift/QML surface renders this face; not current product
-behavior. The DemiBold policy at rendered sizes is covered by S010.
+Mapping/reason: feature not yet ported: bold caption face (DemiBold weight);
+no Swift/QML surface renders it, and the DemiBold policy at rendered sizes is
+covered by S010.
 Source context since previous assertion:
   ;
 Original expression:
@@ -512,9 +519,11 @@ Original expression:
 
 A041 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:122
 Disposition: PARTIAL
-Mapping/reason: Bounds and maximality execute in Swift across the mirrored
-height loop. Unproved: the per-height ascent-plus-descent fit itself, which
-SGFontExtents exposes only as over-approximating line height. S021, S022.
+Mapping/reason: S021/S022 prove bounds and maximality only: the Swift fit keeps
+1 <= fitted <= face size with one pixel larger overflowing the height across
+the mirrored loop (TypographyLayoutChecks.swift:250-263). Unproved: the
+per-height ascent-plus-descent fit itself -- SGFontExtents exposes no descent
+for the per-height expression.
 Source context since previous assertion:
   ;
 Original expression:
@@ -535,9 +544,9 @@ Original expression:
 
 A043 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:130
 Disposition: GAP
-Mapping/reason: Swift has no missing-face branch: the canvas fit floors at 1
-below every fittable height (S023). The native failure mechanism has no Swift
-counterpart.
+Mapping/reason: feature not yet ported: missing-face branch of
+typography::fitted (std::nullopt at height 0); Swift has an owned-but-different
+floor at the minimum size instead (S023, TypographyLayoutChecks.swift:265-267).
 Source context since previous assertion:
   ;
           }
@@ -665,9 +674,10 @@ Original expression:
 
 A054 | ThemeLayoutFontTest::themeApplyRestoresExternallyResetFont | src/checks/themelayout/tst_themelayout_font.cpp:171
 Disposition: PARTIAL
-Mapping/reason: The restored-Next end-state executes in QML: the root font
-holds Next through the bundled-loader binding. Unproved: no external family
-reset is sabotaged; there is no imperative apply in the shell. S024, S031.
+Mapping/reason: S024/S031 prove the restored-Next end-state only: the root font
+holds Next through the bundled-loader binding. Unproved: the imperative
+external-reset sequence -- the declarative shell has no apply step, so the
+restore-after-reset transition has no counterpart.
 Source context since previous assertion:
   ;
       auto reset = QApplication::font();
@@ -680,9 +690,10 @@ Original expression:
 
 A055 | ThemeLayoutFontTest::themeApplyRestoresExternallyResetFont | src/checks/themelayout/tst_themelayout_font.cpp:173
 Disposition: PARTIAL
-Mapping/reason: The probe end-state executes in QML: body text shows Next
-through the root-font binding. Unproved: no external-reset sabotage is
-performed; the declarative shell has no apply step. S031.
+Mapping/reason: S031 proves the probe end-state only: body text shows Next
+through the root-font binding. Unproved: the imperative external-reset
+sequence -- no reset is sabotaged and the declarative shell has no apply step,
+so the restore-after-reset transition has no counterpart.
 Source context since previous assertion:
   ;
 Original expression:

@@ -55,6 +55,24 @@ struct TrackHeadersFixture {
         }
     }
 
+    func rowForTrack(_ track: Int) -> Int? {
+        (0..<headers.rows.count).first {
+            !headers.rows[$0].isAddTrack && headers.rows[$0].track == track
+        }
+    }
+
+    func visibleTitlePoint(forTrack track: Int) -> (x: Double, y: Double)? {
+        guard let row = rowForTrack(track), headers.rowHeight > 0 else { return nil }
+        headers.scrollY = min(Double(row * headers.rowHeight), headers.maximumScrollY)
+        let rect = headers.rows[row].titleRect
+        guard let width = rect["width"] as? Double, width > 0,
+              let height = rect["height"] as? Double, height > 0 else { return nil }
+        let title = point(.title, row: row)
+        guard title.x >= 0, title.x < headers.trackHeaderWidth,
+              title.y >= 0, title.y < headers.viewportHeight else { return nil }
+        return title
+    }
+
     func drag(_ report: CheckReport, from: Int, target: Int, fraction: Double,
               label: String) {
         let x = headers.trackHeaderWidth / 2
