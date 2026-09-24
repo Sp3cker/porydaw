@@ -5,6 +5,7 @@ public actor ProjectStore {
     let projectRoot: String
     var openedSnapshot: ProjectSnapshot?
     var projectContext: ProjectContext?
+    var voicegroupStore: VoicegroupStore?
 
     /// Creates a store rooted at a lexically normalized project path.
     /// - Parameter projectRoot: The project directory URL.

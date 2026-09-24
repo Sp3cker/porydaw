@@ -174,6 +174,14 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         runProjectStoreOpenSuite(report)
     case 27:
         runProjectStoreReadSuite(report)
+    case 28:
+        runProjectStoreLoadBankSuite(report)
+    case 29:
+        runProjectStoreEditSuite(report)
+    case 30:
+        runProjectStoreSaveSuite(report)
+    case 31:
+        runBankLeasesSuite(report)
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

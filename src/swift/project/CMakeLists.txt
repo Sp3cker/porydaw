@@ -16,6 +16,10 @@ add_library(PorydawProject STATIC
     ProjectStore.swift
     ProjectStore+Open.swift
     ProjectStore+Reads.swift
+    MintedSynths.swift
+    ProjectStore+Bank.swift
+    ProjectStore+Edit.swift
+    ProjectStore+Save.swift
 )
 
 configure_file(

@@ -56,6 +56,9 @@ final class ProjectContext {
 /// ARC may destroy the handle on any thread after the final borrow completes.
 public final class BankHandle: @unchecked Sendable {
     let raw: UnsafeMutablePointer<LoadedVoiceGroup>
+    // Grafted minted-synth waves borrow these bytes; ivars release after the
+    // deinit body runs, so voicegroup_free never outlives them.
+    var mintedStorage: MintedSynthStorage?
 
     fileprivate init(raw: UnsafeMutablePointer<LoadedVoiceGroup>) {
         self.raw = raw

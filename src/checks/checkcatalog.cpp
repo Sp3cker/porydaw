@@ -310,6 +310,54 @@ const std::vector<CheckDefinition> &catalog()
                  project + editor +
                  strings({"include/constants/songs.h", "sound/music_player_table.inc"}) +
                  fixtures::decompMidiFiles()});
+        result.push_back(
+            {.name = "projectstore-loadbank",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreLoadBank"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles =
+                 project + editor +
+                 strings({"include/constants/songs.h", "sound/music_player_table.inc"}) +
+                 fixtures::decompMidiFiles()});
+        result.push_back(
+            {.name = "projectstore-edit",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreEdit"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles =
+                 project + editor +
+                 strings({"include/constants/songs.h", "sound/music_player_table.inc"}) +
+                 fixtures::decompMidiFiles()});
+        result.push_back(
+            {.name = "projectstore-savebank",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreSave"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles =
+                 project + editor +
+                 strings({"include/constants/songs.h", "sound/music_player_table.inc"}) +
+                 fixtures::decompMidiFiles()});
+        result.push_back({.name = "bankleases",
+                          .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "bankLeases"}),
+                          .handler = swiftCore,
+                          .scratchKind = ScratchKind::ExistingDirectory,
+                          .fixtureRootKind = FixtureRootKind::DecompProject,
+                          .fixtureFiles = project + editor +
+                                          strings({"include/constants/songs.h",
+                                                   "sound/music_player_table.inc"}) +
+                                          fixtures::decompMidiFiles()});
+        result.push_back({.name = "projectstore-parity",
+                          .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "bankLeases"}),
+                          .handler = swiftCore,
+                          .scratchKind = ScratchKind::ExistingDirectory,
+                          .fixtureRootKind = FixtureRootKind::DecompProject,
+                          .fixtureFiles = project + editor +
+                                          strings({"include/constants/songs.h",
+                                                   "sound/music_player_table.inc"}) +
+                                          fixtures::decompMidiFiles()});
         // Swift grid input/raster and cross-surface routing. swiftrollgated also
         // covers standalone Quick drawer hover/drag pixels and Tab/arrow ownership.
         for (const char *name : {"swiftrollgated", "swiftbandkeys", "swiftqtml", "selectionkey"}) {

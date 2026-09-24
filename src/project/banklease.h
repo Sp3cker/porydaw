@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 // C-ABI surface — parsed by the Swift Clang importer in C mode. Nothing
 // C++-only may appear outside the __cplusplus guards.
 #include "voicegroup_loader.h"
@@ -20,12 +22,32 @@ typedef struct PdFileIoHandler {
 extern "C" {
 #endif
 
+// Swift-adopted bank handoff. The caller retains ownership of `retained`
+// until adoption succeeds; on success the lease owns it through
+// `releaseRetained`, on failure the caller still owns it. The bank itself is
+// only borrowed: Swift's BankHandle stays the sole voicegroup_free owner.
+typedef struct PdAdoptedBank {
+    LoadedVoiceGroup *bank;
+    void *retained;
+    void (*releaseRetained)(void *);
+    const char *sourceRelativePath;
+    const char *sectionLabel;
+    const char *loadName;
+} PdAdoptedBank;
+
 // The single C trampoline pair for VoicegroupFileIo callbacks. Install as
 // VoicegroupFileIo{user: handler, readBatch: pd_fileio_read_batch,
 // releaseBatch: pd_fileio_release_batch}.
 bool pd_fileio_read_batch(void *user, const char *const *paths, size_t count,
                           VoicegroupFileBlob *out, char *error, size_t errorCapacity);
 void pd_fileio_release_batch(void *user, VoicegroupFileBlob *blobs, size_t count);
+
+// Previously declared in swift_project_service.h; re-declared here so the
+// Swift project module (which imports only this header) can publish leases.
+void pd_bank_lease_release(PdBankLease *lease);
+uintptr_t pd_bank_lease_bank_token(const PdBankLease *lease);
+// Adopts one Swift-loaded bank into C++ shared ownership; see above.
+PdBankLease *pd_bank_lease_adopt(const PdAdoptedBank *adopted);
 
 #ifdef __cplusplus
 } // extern "C"
@@ -50,6 +72,8 @@ VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw, std::shared_ptr<void>
 void discardVoicegroup(LoadedVoiceGroup *raw);
 // Borrows a bank porydaw does not own (check fixtures): never frees.
 VoicegroupLease borrowVoicegroupLease(LoadedVoiceGroup *raw);
+// Borrows a Swift-owned bank while sharing ownership of its retained storage.
+VoicegroupLease wrapVoicegroupBorrow(LoadedVoiceGroup *raw, std::shared_ptr<void> retained);
 
 // A loaded bank owned through plain value semantics. poryaaaa hands out a
 // mutable LoadedVoiceGroup* and frees it with voicegroup_free, but porydaw
@@ -73,6 +97,8 @@ class VoicegroupLease
                                                std::shared_ptr<void> retained);
     friend void discardVoicegroup(LoadedVoiceGroup *raw);
     friend VoicegroupLease borrowVoicegroupLease(LoadedVoiceGroup *raw);
+    friend VoicegroupLease wrapVoicegroupBorrow(LoadedVoiceGroup *raw,
+                                                std::shared_ptr<void> retained);
 
     // Legacy mutable borrow required by unchanged poryaaaa; porydaw never
     // writes through it.
@@ -112,6 +138,17 @@ inline VoicegroupLease borrowVoicegroupLease(LoadedVoiceGroup *raw)
     VoicegroupLease lease;
     if (raw)
         lease.m_bank = std::shared_ptr<LoadedVoiceGroup>(std::shared_ptr<LoadedVoiceGroup>(), raw);
+    return lease;
+}
+
+// Borrows a Swift-owned bank while sharing ownership of its retained storage.
+// Never frees the bank: Swift's handle owner calls voicegroup_free exactly
+// once when the last shared owner (Swift or adopted lease) is released.
+inline VoicegroupLease wrapVoicegroupBorrow(LoadedVoiceGroup *raw, std::shared_ptr<void> retained)
+{
+    VoicegroupLease lease;
+    if (raw)
+        lease.m_bank = std::shared_ptr<LoadedVoiceGroup>(std::move(retained), raw);
     return lease;
 }
 

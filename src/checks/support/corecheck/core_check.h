@@ -34,6 +34,10 @@ enum PdcSuite {
     PDC_SUITE_PROJECTSTORE_ACTOR = 25,
     PDC_SUITE_PROJECTSTORE_OPEN = 26,
     PDC_SUITE_PROJECTSTORE_READS = 27,
+    PDC_SUITE_PROJECTSTORE_LOADBANK = 28,
+    PDC_SUITE_PROJECTSTORE_EDIT = 29,
+    PDC_SUITE_PROJECTSTORE_SAVE = 30,
+    PDC_SUITE_BANK_LEASES = 31,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);

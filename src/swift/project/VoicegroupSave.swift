@@ -36,6 +36,14 @@ extension VoicegroupSource {
         let directory = "\(root)/.porydaw/vgpreview"
         let path = "\(directory)/\(previewShadowName).inc"
         do {
+            // A non-directory squatting on the staging path fails the preview
+            // instead of deleting a file porydaw did not create (C++ parity:
+            // QDir::removeRecursively on a file path fails the staged load).
+            var isDirectory: ObjCBool = false
+            if FileManager.default.fileExists(atPath: directory, isDirectory: &isDirectory),
+               !isDirectory.boolValue {
+                return nil
+            }
             try ProjectFileStore.remove(directory)
             try ProjectFileStore.mkpath(directory)
         } catch {
@@ -47,6 +55,10 @@ extension VoicegroupSource {
         } catch {
             return nil
         }
-        return context.load(target: .init(filePath: path, sectionLabel: sectionLabel))
+        guard let handle = context.load(target: .init(filePath: path, sectionLabel: sectionLabel)) else {
+            return nil
+        }
+        handle.graftMintedSynths(source: self)
+        return handle
     }
 }

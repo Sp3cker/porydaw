@@ -13,6 +13,27 @@ PdBankLease *pd_bank_lease_box(const VoicegroupId &id, VoicegroupLease lease,
 {
     return new PdBankLease{id, std::move(lease), loadName};
 }
+PdBankLease *pd_bank_lease_adopt(const PdAdoptedBank *adopted)
+{
+    if (!adopted || !adopted->bank || (adopted->retained && !adopted->releaseRetained))
+        return nullptr;
+    const auto id = VoicegroupId::create(
+        QString::fromUtf8(adopted->sourceRelativePath ? adopted->sourceRelativePath : ""),
+        QString::fromUtf8(adopted->sectionLabel ? adopted->sectionLabel : ""));
+    if (!id)
+        return nullptr;
+
+    // Swift's BankHandle owns the loader bank and its minted storage. The
+    // retained handle lives until the last adopted box drops its alias; only
+    // the handle's deinit calls voicegroup_free, never a C++ lease deleter.
+    VoicegroupLease lease =
+        adopted->retained
+            ? wrapVoicegroupBorrow(
+                  adopted->bank, std::shared_ptr<void>(adopted->retained, adopted->releaseRetained))
+            : borrowVoicegroupLease(adopted->bank);
+    return pd_bank_lease_box(*id, std::move(lease),
+                             QString::fromUtf8(adopted->loadName ? adopted->loadName : ""));
+}
 
 void pd_bank_lease_release(PdBankLease *lease)
 {

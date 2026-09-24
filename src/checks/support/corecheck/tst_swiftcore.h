@@ -40,6 +40,10 @@ class SwiftCoreTest final : public QObject
     void projectStoreActor();
     void projectStoreOpen();
     void projectStoreReads();
+    void projectStoreLoadBank();
+    void projectStoreEdit();
+    void projectStoreSave();
+    void bankLeases();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

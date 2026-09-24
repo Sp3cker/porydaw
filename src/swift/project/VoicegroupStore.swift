@@ -73,6 +73,14 @@ public final class VoicegroupStore {
         self.projectRoot = URL(filePath: projectRoot).standardizedFileURL.path
         self.context = context
     }
+    /// Shares the store-owned loader instead of opening a second native project.
+    /// - Parameters:
+    ///   - projectRoot: Root containing the project's sound files.
+    ///   - context: The store's already-opened loader context.
+    init(projectRoot: String, context: ProjectContext) {
+        self.projectRoot = URL(filePath: projectRoot).standardizedFileURL.path
+        self.context = context
+    }
 
     /// Resolves a song's voicegroup argument, reusing an unchanged canonical bank.
     /// - Parameter voicegroupArg: The song's `-G` argument; empty selects `_dummy`.
@@ -109,6 +117,7 @@ public final class VoicegroupStore {
         guard let bank = context.load(target: .init(filePath: path, sectionLabel: source.sectionLabel)) else {
             throw VoicegroupStoreError.operationFailed("Could not load voicegroup source \(path).")
         }
+        bank.graftMintedSynths(source: source)
         let view = Self.publish(id: id, source: source, bank: bank)
         tokens.expire(id: id)
         records[id] = BankRecord(id: id, source: source, current: bank,
@@ -189,11 +198,14 @@ public final class VoicegroupStore {
         } catch {
             throw VoicegroupStoreError.operationFailed("Cannot write \(record.source.filePath)")
         }
+        // Nil is reserved for the supersede race (another edit landed between the
+        // save snapshot and didSave); write failures throw above instead.
         guard saved else { return nil }
         guard let bank = context.load(target: .init(filePath: record.source.filePath,
                                                     sectionLabel: record.source.sectionLabel)) else {
             throw VoicegroupStoreError.operationFailed("Saved voicegroup failed to reload.")
         }
+        bank.graftMintedSynths(source: record.source)
         guard let time = modificationTime(record.source.filePath) else {
             throw VoicegroupStoreError.operationFailed("Cannot read \(record.source.filePath)")
         }
@@ -212,6 +224,13 @@ public final class VoicegroupStore {
     /// - Returns: A self-contained preview bank, or nil when loading fails.
     public func preview(id: VoicegroupId) -> BankHandle? {
         records[id]?.source.loadPreviewedSource(using: context)
+    }
+
+    /// Returns the record's current detached publication without loading.
+    /// - Parameter id: Identity of a loaded bank.
+    /// - Returns: The published view, or nil when the bank is not loaded.
+    func currentPublication(id: VoicegroupId) -> LoadedBankView? {
+        records[id]?.published
     }
 
     private func refreshIfStale(id: VoicegroupId) throws -> Bool {

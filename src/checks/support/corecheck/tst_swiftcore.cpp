@@ -158,6 +158,26 @@ void SwiftCoreTest::projectStoreReads()
     pdc_suite_run(PDC_SUITE_PROJECTSTORE_READS, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::projectStoreLoadBank()
+{
+    pdc_suite_run(PDC_SUITE_PROJECTSTORE_LOADBANK, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::projectStoreEdit()
+{
+    pdc_suite_run(PDC_SUITE_PROJECTSTORE_EDIT, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::projectStoreSave()
+{
+    pdc_suite_run(PDC_SUITE_PROJECTSTORE_SAVE, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::bankLeases()
+{
+    pdc_suite_run(PDC_SUITE_BANK_LEASES, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);
