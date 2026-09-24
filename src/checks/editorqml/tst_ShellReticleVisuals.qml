@@ -2,7 +2,7 @@ import QtQuick
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
-import "../../ui/shell"
+import Porydaw.Ui
 import "GatedVisualsHelpers.js" as Helpers
 
 TestCase {

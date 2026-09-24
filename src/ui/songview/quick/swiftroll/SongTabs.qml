@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import Porydaw.Ui
 
 Item {
     id: root
@@ -121,7 +122,7 @@ Item {
         padding: 0
         contentItem: Item {
             Image {
-                source: "tabart/tab-arrow-" + (control.pointsLeft ? "left" : "right") + (control.enabled ? "-enabled.png" : "-disabled.png")
+                source: "qrc:/porydaw/swiftroll/tabart/tab-arrow-" + (control.pointsLeft ? "left" : "right") + (control.enabled ? "-enabled.png" : "-disabled.png")
                 sourceSize.width: 4
                 x: Math.floor((parent.width - width) / 2)
                 y: Math.floor((parent.height - height) / 2)
@@ -228,7 +229,7 @@ Item {
                             padding: 2
                             focusPolicy: Qt.NoFocus
                             display: AbstractButton.IconOnly
-                            icon.source: "tabart/window-close.svg"
+                            icon.source: "qrc:/porydaw/swiftroll/tabart/window-close.svg"
                             icon.width: root.scrollExtent
                             icon.height: root.scrollExtent
                             icon.color: root.controller.palette.windowText

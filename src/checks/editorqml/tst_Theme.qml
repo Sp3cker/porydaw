@@ -3,7 +3,7 @@ import QtQuick
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
-import "../../ui/shell"
+import Porydaw.Ui
 
 // Theme persistence and applied-chrome observations through the production
 // shell. Ports ThemeLayoutTest::themePersistence

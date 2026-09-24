@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 // QML host delivers hover and activation; each level paints only its frame.
 // The drawer-wide modal layer owns outside presses and keyboard navigation.
 import QtQuick
+import Porydaw.Ui
 
 Item {
     id: panel

@@ -1,4 +1,5 @@
 import QtQuick
+import Porydaw.Ui
 // Shared scrollbar for timeline Quick surfaces, in either orientation. The
 // owning model stays authoritative: the control reports requested values and
 // renders thumb geometry from its inputs, never touching model state itself.

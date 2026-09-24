@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtCore
 import QtQuick.Controls.Basic as Basic
-import "qrc:/porydaw" as Shared
+import Porydaw.Ui as Shared
 
 Rectangle {
     id: bar
@@ -279,7 +279,8 @@ Rectangle {
             Layout.preferredHeight: implicitHeight
             onValueCommitted: percent => {
                 bar.presenter.setOutputVolume(percent)
-                volumeSettingsLoader.item.outputVolume = percent
+                if (volumeSettingsLoader.status === Loader.Ready)
+                    volumeSettingsLoader.item.outputVolume = percent
             }
         }
         // QToolBar still reserves its clipped output controls at large fonts.

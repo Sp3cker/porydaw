@@ -1,7 +1,7 @@
 // Captured command policy stays in Swift; original shared rows render the menu.
 import QtQuick
 import QtQuick.Controls
-import ".." as Shared
+import Porydaw.Ui
 
 pragma ComponentBehavior: Bound
 
@@ -50,7 +50,7 @@ FocusScope {
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         onPressed: menuRoot.model.dismissVoiceMenu()
     }
-    Shared.QuickMenuPanel {
+    QuickMenuPanel {
         id: panel
         objectName: "voiceMenuPanel"
         rowObjectNamePrefix: "voiceMenuRow_"

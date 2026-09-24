@@ -206,36 +206,19 @@ qt_add_library(porydaw_app STATIC
     src/project/projectidentity.h
 )
 
-qt_add_resources(porydaw_app "swift_roll_qml"
-    PREFIX "/porydaw/swiftroll"
-    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftroll"
-    FILES
-        src/ui/songview/quick/swiftroll/EditorSurface.qml
-        src/ui/songview/quick/swiftroll/SongTabs.qml
-        src/ui/songview/quick/swiftroll/SongTab.qml
-        src/ui/songview/quick/swiftroll/TrackHeaderBand.qml
-        src/ui/songview/quick/swiftroll/SharedPlayhead.qml
-        src/ui/songview/quick/swiftroll/SwiftRollOverlay.qml
-        src/ui/songview/quick/swiftroll/TimelineQuickItem.qml
-        src/ui/songview/quick/swiftroll/MouseHintStatus.qml
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-disabled.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-disabled@2x.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-enabled.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-enabled@2x.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-disabled.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-disabled@2x.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-enabled.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-enabled@2x.png
-        src/ui/songview/quick/swiftroll/tabart/window-close.svg
-)
-
-# Shared original controls retain relative imports from the drawer resources.
-qt_add_resources(porydaw_app "drawer_shared_qml"
-    PREFIX "/porydaw"
-    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick"
-    FILES
+# All production QML lives in one compiled module: the shared controls,
+# swiftroll, drawer and docks reference each other across directories, so
+# separate modules would be circular. qt_add_qml_module runs qmlcachegen at
+# build time; the legacy TimelineCanvas surface and the superseded
+# quick/TrackHeaderBand.qml stay out of the module.
+qt_add_qml_module(porydaw_app
+    URI Porydaw.Ui
+    VERSION 1.0
+    RESOURCE_PREFIX /qt/qml
+    OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Porydaw/Ui"
+    NO_PLUGIN
+    QML_FILES
         src/ui/songview/quick/PianoRollCanvas.qml
-        src/ui/songview/quick/TrackHeaderBand.qml
         src/ui/songview/quick/PromptCard.qml
         src/ui/songview/quick/PromptButton.qml
         src/ui/songview/quick/VelocityPrompt.qml
@@ -249,23 +232,19 @@ qt_add_resources(porydaw_app "drawer_shared_qml"
         src/ui/songview/quick/HintProfiles.qml
         src/ui/songview/quick/QuickMenuPanel.qml
         src/ui/songview/quick/AutomationTabs.qml
-)
-
-qt_add_resources(porydaw_app "songs_dock_qml"
-    PREFIX "/porydaw/docks"
-    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/docks"
-    FILES
+        src/ui/songview/quick/swiftroll/EditorSurface.qml
+        src/ui/songview/quick/swiftroll/SongTabs.qml
+        src/ui/songview/quick/swiftroll/SongTab.qml
+        src/ui/songview/quick/swiftroll/TrackHeaderBand.qml
+        src/ui/songview/quick/swiftroll/SharedPlayhead.qml
+        src/ui/songview/quick/swiftroll/SwiftRollOverlay.qml
+        src/ui/songview/quick/swiftroll/TimelineQuickItem.qml
+        src/ui/songview/quick/swiftroll/MouseHintStatus.qml
         src/ui/songview/quick/docks/SongsPanel.qml
         src/ui/songview/quick/docks/SongsDockColumn.qml
         src/ui/songview/quick/docks/SongConfirmDialog.qml
-)
-
-# The drawer keeps the swiftroll prefix layout, so EditorSurface's relative
-# `import "../drawer"` resolves in both the resource engine and the source tree.
-qt_add_resources(porydaw_app "drawer_qml"
-    PREFIX "/porydaw/drawer"
-    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/drawer"
-    FILES
+        src/ui/songview/quick/docks/VoicegroupPanel.qml
+        src/ui/songview/quick/docks/VoiceEditor.qml
         src/ui/songview/quick/drawer/EditorDrawer.qml
         src/ui/songview/quick/drawer/VelocityPage.qml
         src/ui/songview/quick/drawer/VoiceChangesPage.qml
@@ -273,14 +252,28 @@ qt_add_resources(porydaw_app "drawer_qml"
         src/ui/songview/quick/drawer/AutomationPage.qml
         src/ui/songview/quick/drawer/AutomationPrompt.qml
         src/ui/songview/quick/drawer/AutomationMenu.qml
+        src/ui/songview/quick/drawer/VoicePicker.qml
+        src/ui/shell/ShellWindow.qml
+        src/ui/shell/TransportBar.qml
+        src/ui/shell/TransportButton.qml
+        src/ui/shell/TransportOutputDial.qml
+        src/ui/shell/PolyphonyPanel.qml
+        src/ui/shell/PolyphonyChannelGroup.qml
 )
 
-qt_add_resources(porydaw_app "voicegroup_dock_qml"
-    PREFIX "/porydaw/docks"
-    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/docks"
+qt_add_resources(porydaw_app "swift_roll_tabart"
+    PREFIX "/porydaw/swiftroll"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftroll"
     FILES
-        src/ui/songview/quick/docks/VoicegroupPanel.qml
-        src/ui/songview/quick/docks/VoiceEditor.qml
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-disabled.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-disabled@2x.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-enabled.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-enabled@2x.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-disabled.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-disabled@2x.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-enabled.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-enabled@2x.png
+        src/ui/songview/quick/swiftroll/tabart/window-close.svg
 )
 
 qt_add_resources(porydaw_app "voicegroup_type_icons"
@@ -381,14 +374,11 @@ set_target_properties(porydaw_shell_entry PROPERTIES
 )
 target_link_libraries(porydaw_shell_entry PRIVATE QtBridge PorydawApp)
 
+# Only the QtBridge entry document ships as a loose bundle file: QApp resolves
+# it by name and loads it by file URL, which cannot be cachegen'd. Everything
+# it instantiates lives in the compiled Porydaw.Shell / Porydaw.Ui modules.
 set(shell_qml
     src/ui/shell/PorydawApplication.qml
-    src/ui/shell/ShellWindow.qml
-    src/ui/shell/TransportBar.qml
-    src/ui/shell/TransportButton.qml
-    src/ui/shell/TransportOutputDial.qml
-    src/ui/shell/PolyphonyPanel.qml
-    src/ui/shell/PolyphonyChannelGroup.qml
 )
 set_source_files_properties(${shell_qml} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 qt_add_executable(porydaw ${shell_qml} resources/fonts.qrc)

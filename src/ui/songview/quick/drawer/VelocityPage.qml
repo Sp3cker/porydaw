@@ -16,9 +16,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import ".." as Shared
-import "../swiftroll"
-import ".." as Shared
+import Porydaw.Ui
 
 FocusScope {
     id: page
@@ -248,14 +246,14 @@ FocusScope {
             onExited: page.pageModel.pointerLeave()
         }
 
-        Shared.HoverHint {
+        HoverHint {
             id: rulerHint
 
             source: ruler
             hintService: page.hintService
             scopeAllowed: page.hintScopeAllowed
             gestureOwning: rulerInput.pressed
-            profile: Shared.HintProfiles.VelocityGutter
+            profile: HintProfiles.VelocityGutter
         }
 
         Accessible.role: Accessible.Column
@@ -428,14 +426,14 @@ FocusScope {
             onExited: page.pageModel.pointerLeave()
         }
 
-        Shared.HoverHint {
+        HoverHint {
             id: plotHint
 
             source: plot
             hintService: page.hintService
             scopeAllowed: page.hintScopeAllowed
             gestureOwning: plotInput.pressed
-            profile: Shared.HintProfiles.VelocityBackground
+            profile: HintProfiles.VelocityBackground
         }
 
         WheelHandler {
@@ -467,7 +465,7 @@ FocusScope {
 
     property var modalHost: null
 
-    Shared.VelocityPrompt {
+    VelocityPrompt {
         id: prompt
         parent: page.modalHost
         anchors.fill: parent

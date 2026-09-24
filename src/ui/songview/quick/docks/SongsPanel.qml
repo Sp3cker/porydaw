@@ -3,7 +3,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
-import ".." as Shared
+import Porydaw.Ui
 
 FocusScope {
     id: root
@@ -229,7 +229,7 @@ FocusScope {
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         background: Item {}
-        contentItem: Shared.QuickMenuPanel {
+        contentItem: QuickMenuPanel {
             id: menuPanel
             host: songMenu
             rootLevel: true

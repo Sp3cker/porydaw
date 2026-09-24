@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtTest
 import ShellQmlCheck 1.0
-import "../../ui/shell"
+import Porydaw.Ui
 
 TestCase {
     id: testCase

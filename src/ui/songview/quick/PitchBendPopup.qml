@@ -3,7 +3,7 @@
 // projection instead of the retired C++ QQuickItem.
 import QtQuick
 import QtQuick.Shapes
-import "swiftroll" as SwiftRoll
+import Porydaw.Ui
 
 Rectangle {
     id: root
@@ -299,7 +299,7 @@ Rectangle {
             color: graphCanvas.lane ? graphCanvas.lane.plotBackground : "transparent"
             clip: true
         }
-        SwiftRoll.TimelineQuickItem {
+        TimelineQuickItem {
             anchors.fill: parent
             rects: graphCanvas.lane ? graphCanvas.lane.gridLines : []
         }

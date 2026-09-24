@@ -5,8 +5,8 @@ import QtQuick.Dialogs
 import QtCore
 import QtQml.Models
 import PorydawApp
-import "qrc:/porydaw/swiftroll" as SwiftRoll
-import "qrc:/porydaw/docks" as Docks
+import Porydaw.Ui as SwiftRoll
+import Porydaw.Ui as Docks
 
 ApplicationWindow {
     id: root

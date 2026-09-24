@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Layouts
+import Porydaw.Ui
 
 Rectangle {
     id: control

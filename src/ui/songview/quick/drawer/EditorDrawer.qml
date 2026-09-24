@@ -28,6 +28,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtCore
+import Porydaw.Ui
 
 FocusScope {
     id: drawerScope

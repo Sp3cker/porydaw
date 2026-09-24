@@ -10,6 +10,7 @@
 // owns application scope; this component owns the physical source lifetime.
 import QtQuick
 import QtQml
+import Porydaw.Ui
 HoverHandler {
     id: hint
     // A token identifies this physical source without retaining its QObject

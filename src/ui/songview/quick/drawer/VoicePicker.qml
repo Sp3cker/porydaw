@@ -1,6 +1,6 @@
 // Original VoicePickerPrompt structure, bound to the Swift-owned picker.
 import QtQuick
-import ".." as Shared
+import Porydaw.Ui
 
 pragma ComponentBehavior: Bound
 
@@ -81,7 +81,7 @@ FocusScope {
         onPressed: pickerRoot.model.cancelPicker()
     }
 
-    Shared.PromptCard {
+    PromptCard {
         id: card
         objectName: "voicePickerCard"
         anchors.centerIn: parent
@@ -158,10 +158,10 @@ FocusScope {
                         list.forceActiveFocus(Qt.TabFocusReason)
                     event.accepted = true
                 }
-                Shared.HoverHint {
+                HoverHint {
                     source: search
                     cursorShape: Qt.IBeamCursor
-                    profile: Shared.HintProfiles.TextSelection
+                    profile: HintProfiles.TextSelection
                     hintService: pickerRoot.hintService
                     scopeAllowed: pickerRoot.showing
                 }
@@ -246,7 +246,7 @@ FocusScope {
         }
         Row {
             spacing: card.appearance.spacing
-            Shared.PromptButton {
+            PromptButton {
                 id: acceptButton
                 objectName: "voicePickerAccept"
                 claimsShortcuts: false
@@ -258,7 +258,7 @@ FocusScope {
                 KeyNavigation.backtab: list
                 onActivated: pickerRoot.model.acceptPicker()
             }
-            Shared.PromptButton {
+            PromptButton {
                 id: cancelButton
                 objectName: "voicePickerCancel"
                 claimsShortcuts: false

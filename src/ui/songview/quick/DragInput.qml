@@ -1,6 +1,7 @@
 // Controlled integer input: the owner applies valueCommitted to its model.
 // Appearance is injected; no popup session or document is required.
 import QtQuick
+import Porydaw.Ui
 
 Item {
     id: control

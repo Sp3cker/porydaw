@@ -4,6 +4,7 @@
 // activated handler — and pass their label plus an optional width floor so
 // paired buttons stay visually aligned with an input or each other.
 import QtQuick
+import Porydaw.Ui
 
 Rectangle {
     id: button

@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import Porydaw.Ui
 
 Item {
     id: root
