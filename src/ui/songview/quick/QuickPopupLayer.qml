@@ -1,5 +1,4 @@
 import QtQuick
-import Porydaw.Ui
 
 // The canvas owns one of these per active popup session. It provides the
 // outside-press underlay for menus and modal forms, while the form

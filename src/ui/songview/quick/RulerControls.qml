@@ -1,5 +1,4 @@
 import QtQuick
-import Porydaw.Ui
 
 Item {
     id: controls

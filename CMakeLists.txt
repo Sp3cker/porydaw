@@ -208,11 +208,6 @@ qt_add_library(porydaw_app STATIC
     src/project/projectidentity.h
 )
 
-# All production QML lives in one compiled module: the shared controls,
-# swiftroll, drawer and docks reference each other across directories, so
-# separate modules would be circular. qt_add_qml_module runs qmlcachegen at
-# build time; the legacy TimelineCanvas surface and the superseded
-# quick/TrackHeaderBand.qml stay out of the module.
 qt_add_qml_module(porydaw_app
     URI Porydaw.Ui
     VERSION 1.0
@@ -376,9 +371,6 @@ set_target_properties(porydaw_shell_entry PROPERTIES
 )
 target_link_libraries(porydaw_shell_entry PRIVATE QtBridge PorydawApp)
 
-# Only the QtBridge entry document ships as a loose bundle file: QApp resolves
-# it by name and loads it by file URL, which cannot be cachegen'd. Everything
-# it instantiates lives in the compiled Porydaw.Shell / Porydaw.Ui modules.
 set(shell_qml
     src/ui/shell/PorydawApplication.qml
 )

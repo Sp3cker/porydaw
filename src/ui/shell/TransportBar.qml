@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtCore
 import QtQuick.Controls.Basic as Basic
-import Porydaw.Ui as Shared
+import Porydaw.Ui
 
 Rectangle {
     id: bar
@@ -54,7 +54,8 @@ Rectangle {
     }
     function restoreOutputVolume() {
         volumeSettingsLoader.active = true
-        presenter.setOutputVolume(volumeSettingsLoader.item.outputVolume)
+        if (volumeSettingsLoader.status === Loader.Ready)
+            presenter.setOutputVolume(volumeSettingsLoader.item.outputVolume)
     }
 
     Timer {
@@ -235,7 +236,7 @@ Rectangle {
             color: bar.presenter.state === 0 ? bar.colors.disabledText : bar.colors.windowText
             text: qsTr("Volume")
         }
-        Shared.DragInput {
+        DragInput {
             objectName: "transportMasterVolume"
             inputObjectName: "transportMasterVolumeInput"
             accessibleName: qsTr("Master volume")

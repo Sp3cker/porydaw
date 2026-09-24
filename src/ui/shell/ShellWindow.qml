@@ -5,8 +5,7 @@ import QtQuick.Dialogs
 import QtCore
 import QtQml.Models
 import PorydawApp
-import Porydaw.Ui as SwiftRoll
-import Porydaw.Ui as Docks
+import Porydaw.Ui
 
 ApplicationWindow {
     id: root
@@ -376,7 +375,7 @@ ApplicationWindow {
         anchors.right: polyDock.visible ? polyDock.left : parent.right
         orientation: Qt.Horizontal
 
-        Docks.SongsDockColumn {
+        SongsDockColumn {
             id: dockColumn
             SplitView.minimumWidth: 200
             SplitView.maximumWidth: 480
@@ -408,7 +407,7 @@ ApplicationWindow {
                 if (item && !activeFocus)
                     shell.session.cancelGridInput(0)
             }
-            sourceComponent: SwiftRoll.SongTabs {
+            sourceComponent: SongTabs {
                 objectName: "shellSongTabs"
                 controller: shell.session.songTabs
                 applicationFont: root.font
@@ -493,7 +492,7 @@ ApplicationWindow {
         id: songConfirmation
         objectName: "songConfirmationLoader"
         active: shell.session.songDockController().confirmation.length > 0
-        sourceComponent: Docks.SongConfirmDialog {
+        sourceComponent: SongConfirmDialog {
             controller: shell.session.songDockController()
             applicationFont: root.font
             baseFontPx: root.bodyFontPx
