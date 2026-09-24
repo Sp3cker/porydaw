@@ -251,8 +251,8 @@ extension VelocityPage {
                                      track: session.selectedTrack ?? -1,
                                      noteIDs: ids, beforeValues: before, initialValue: initial,
                                      draft: String(initial))
-        setPublished(&promptOpen, true)
-        setPublished(&promptDraft, String(initial))
+        promptOpen = true
+        promptDraft = String(initial)
         setPublished(&promptError, "")
         setPublished(&promptInitialValue, initial)
         refreshInteractionPublished()
@@ -265,7 +265,7 @@ extension VelocityPage {
         live.draft = String(text.prefix(4))
         live.error = VelocityPromptPolicy.error(draft: live.draft)
         prompt = live
-        setPublished(&promptDraft, live.draft)
+        if promptDraft != live.draft { promptDraft = live.draft }
         setPublished(&promptError, live.error)
     }
 
@@ -277,8 +277,8 @@ extension VelocityPage {
             return false
         }
         prompt = nil
-        setPublished(&promptOpen, false)
-        setPublished(&promptDraft, "")
+        promptOpen = false
+        promptDraft = ""
         setPublished(&promptError, "")
         refreshInteractionPublished()
         defer { publishHandles(projectHandles()) }
@@ -300,8 +300,8 @@ extension VelocityPage {
     func dispatchCancelPrompt() {
         guard prompt != nil else { return }
         prompt = nil
-        setPublished(&promptOpen, false)
-        setPublished(&promptDraft, "")
+        promptOpen = false
+        promptDraft = ""
         setPublished(&promptError, "")
         refreshInteractionPublished()
         publishHandles(projectHandles())

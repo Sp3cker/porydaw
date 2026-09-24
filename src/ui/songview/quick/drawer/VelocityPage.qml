@@ -156,7 +156,10 @@ FocusScope {
     // to the window, so the shared routing keeps owning Escape.
     Keys.onEscapePressed: (event) => event.accepted = page.pageModel.handleEscape()
     onActiveFocusChanged: {
-        if (!activeFocus)
+        // The prompt is hosted above the drawer, outside this FocusScope.
+        // Moving focus into its field must not cancel the very prompt that
+        // requested focus; section hide/detach still cancels at its owner.
+        if (!activeFocus && !page.pageModel.promptOpen)
             page.pageModel.cancelSectionInteraction()
     }
 

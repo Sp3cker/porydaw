@@ -2752,6 +2752,8 @@ TestCase {
         var accepted = testCase.noteVelocity(noteId)
         testCase.surface.applicationSession.performGridCommand(bootstrap.setVelocityCommand())
         tryVerify(function() { return model.promptOpen }, 1000, "the prompt reopened")
+        tryCompare(field, "activeFocus", true, 1000,
+                   "Escape targets the mounted prompt field")
         keyClick(Qt.Key_Escape)
         tryVerify(function() { return !model.promptOpen }, 1000, "Escape closed the prompt")
         compare(testCase.noteVelocity(noteId), accepted, "Escape wrote nothing")
@@ -2761,15 +2763,206 @@ TestCase {
         // paint rather than hidden by the ruler's click-to-set.
         testCase.surface.applicationSession.performGridCommand(bootstrap.setVelocityCommand())
         tryVerify(function() { return model.promptOpen }, 1000, "the prompt reopened")
+        tryCompare(field, "activeFocus", true, 1000,
+                   "the outside press targets the mounted prompt")
         var underlay = findChild(testCase.velocityPageItem(), "velocityPromptUnderlay")
         verify(underlay, "the prompt composed its dismissing underlay")
         var empty = underlay.mapFromItem(testCase.velocityPlot(),
                                          testCase.velocityPlot().width - 4,
                                          testCase.velocityPlot().height - 4)
-        mouseClick(underlay, empty.x, empty.y, Qt.LeftButton)
+        var selectionBeforeOutside = bootstrap.velocitySelectedNoteIds()
+        var revisionBeforeOutside = bootstrap.automationDocumentRevision()
+        mousePress(underlay, empty.x, empty.y, Qt.LeftButton)
         tryVerify(function() { return !model.promptOpen }, 1000,
-                  "an outside press dismissed the prompt")
+                  "the outside press dismissed the prompt before release")
+        mouseRelease(underlay, empty.x, empty.y, Qt.LeftButton)
         compare(testCase.noteVelocity(noteId), accepted, "the outside dismissal wrote nothing")
+        compare(bootstrap.velocitySelectedNoteIds(), selectionBeforeOutside,
+                "the paired outside release does not retarget the selection")
+        compare(bootstrap.automationDocumentRevision(), revisionBeforeOutside,
+                "the paired outside release commits no document edit")
+        tryCompare(testCase.velocityPlot(), "activeFocus", true,
+                   1000, "outside cancellation returns focus to the velocity plot")
+    }
+
+    function test_productionVelocityPromptButtonsAndFocus() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionVelocity(bootstrap.preferencesUrl("velocity-prompt-buttons"))
+        testCase.clickNode(testCase.velocityNodes()[0])
+        var noteId = testCase.selectedNoteId()
+        var before = testCase.noteVelocity(noteId)
+        var initialRevision = bootstrap.automationDocumentRevision()
+        var model = testCase.velocityModel()
+        session.performGridCommand(bootstrap.setVelocityCommand())
+        tryCompare(model, "promptOpen", true)
+        var field = findChild(testCase.surface, "noteVelocityInput")
+        var accept = findChild(testCase.surface, "noteVelocityAccept")
+        var cancel = findChild(testCase.surface, "noteVelocityCancel")
+        verify(field && accept && cancel, "the mounted prompt draws the field and both buttons")
+        tryCompare(field, "activeFocus", true)
+        compare(field.text, String(before))
+        compare(field.selectedText, String(before), "the initial value is selected for replacement")
+        keyClick(Qt.Key_9)
+        keyClick(Qt.Key_5)
+        compare(field.text, "95")
+        compare(testCase.noteVelocity(noteId), before, "editing the displayed draft writes nothing")
+        keyClick(Qt.Key_Tab)
+        compare(accept.activeFocus, true)
+        keyClick(Qt.Key_Tab)
+        compare(cancel.activeFocus, true)
+        keyClick(Qt.Key_Tab)
+        compare(field.activeFocus, true, "Tab wraps back to the numeric field")
+        keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
+        compare(cancel.activeFocus, true)
+        keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
+        compare(accept.activeFocus, true)
+        keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
+        compare(field.activeFocus, true, "reverse traversal wraps to the field")
+        compare(field.text, "95", "traversing focus preserves the typed draft")
+        compare(model.promptOpen, true)
+        compare(bootstrap.automationDocumentRevision(), initialRevision,
+                "focus traversal has not committed the numeric draft")
+        mouseClick(accept, accept.width / 2, accept.height / 2, Qt.LeftButton)
+        tryCompare(model, "promptOpen", false)
+        tryCompare(testCase.velocityPlot(), "activeFocus", true,
+                   1000, "the roll regains focus after the OK button")
+        tryVerify(function() { return testCase.noteVelocity(noteId) === 95 }, 1000,
+                  "the button commits the captured note")
+        var acceptedRevision = bootstrap.automationDocumentRevision()
+
+        session.performGridCommand(bootstrap.setVelocityCommand())
+        tryCompare(model, "promptOpen", true)
+        tryCompare(field, "activeFocus", true)
+        compare(field.text, "95", "reopening selects the committed value")
+        compare(field.selectedText, "95")
+        keyClick(Qt.Key_2)
+        keyClick(Qt.Key_0)
+        compare(field.text, "20")
+        mouseClick(cancel, cancel.width / 2, cancel.height / 2, Qt.LeftButton)
+        tryCompare(model, "promptOpen", false)
+        tryCompare(testCase.velocityPlot(), "activeFocus", true,
+                   1000, "the roll regains focus after Cancel")
+        compare(testCase.noteVelocity(noteId), 95, "Cancel discards the draft")
+        compare(bootstrap.automationDocumentRevision(), acceptedRevision,
+                "Cancel does not add a document edit")
+    }
+
+    function test_productionVelocityPromptValidationAndDismissal() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionVelocity(bootstrap.preferencesUrl("velocity-prompt-validation"))
+        testCase.clickNode(testCase.velocityNodes()[0])
+        var noteId = testCase.selectedNoteId()
+        var before = testCase.noteVelocity(noteId)
+        var revision = bootstrap.automationDocumentRevision()
+        var model = testCase.velocityModel()
+        session.performGridCommand(bootstrap.setVelocityCommand())
+        tryCompare(model, "promptOpen", true)
+        var field = findChild(testCase.surface, "noteVelocityInput")
+        var accept = findChild(testCase.surface, "noteVelocityAccept")
+        tryCompare(field, "activeFocus", true)
+        keyClick(Qt.Key_9)
+        keyClick(Qt.Key_9)
+        keyClick(Qt.Key_9)
+        compare(field.text, "999", "intermediate out-of-range digits remain editable")
+        keyClick(Qt.Key_Return)
+        compare(model.promptOpen, true, "invalid Return does not accept")
+        compare(field.text, String(before), "invalid Return corrects to the captured value")
+        compare(testCase.noteVelocity(noteId), before)
+        compare(bootstrap.automationDocumentRevision(), revision, "invalid Return writes nothing")
+        field.selectAll()
+        keyClick(Qt.Key_9)
+        keyClick(Qt.Key_9)
+        keyClick(Qt.Key_9)
+        mouseClick(accept, accept.width / 2, accept.height / 2, Qt.LeftButton)
+        compare(model.promptOpen, true, "invalid OK does not close the form")
+        compare(field.text, String(before), "invalid OK corrects the displayed value")
+        compare(bootstrap.automationDocumentRevision(), revision, "invalid OK adds no edit")
+        field.forceActiveFocus(Qt.OtherFocusReason)
+        field.selectAll()
+        keyClick(Qt.Key_2)
+        keyClick(Qt.Key_0)
+        compare(field.text, "20", "Escape discards a valid uncommitted draft")
+        keyClick(Qt.Key_Escape)
+        tryCompare(model, "promptOpen", false)
+        tryCompare(testCase.velocityPlot(), "activeFocus", true,
+                   1000, "Escape returns focus to the roll")
+        compare(bootstrap.automationDocumentRevision(), revision)
+
+        session.performGridCommand(bootstrap.setVelocityCommand())
+        tryCompare(model, "promptOpen", true)
+        tryCompare(field, "activeFocus", true,
+                   1000, "the reopened prompt has mounted before an outside press")
+        var selectionBefore = bootstrap.velocitySelectedNoteIds()
+        var underlay = findChild(testCase.surface, "velocityPromptUnderlay")
+        verify(underlay)
+        var plot = testCase.velocityPlot()
+        var outside = underlay.mapFromItem(plot, plot.width - 4, plot.height - 4)
+        var card = findChild(testCase.surface, "velocityPromptCard")
+        verify(card && outside.x >= 0 && outside.x < underlay.width
+               && outside.y >= 0 && outside.y < underlay.height,
+               "the outside point lands inside the mounted underlay")
+        verify(outside.x < card.x || outside.x >= card.x + card.width
+               || outside.y < card.y || outside.y >= card.y + card.height,
+               "the outside point misses the visible prompt card")
+        mousePress(underlay, outside.x, outside.y, Qt.RightButton)
+        tryCompare(model, "promptOpen", false)
+        compare(bootstrap.velocitySelectedNoteIds(), selectionBefore,
+                "the outside right press does not retarget the selection")
+        var outsideRoot = findChild(testCase.surface, "velocityPrompt")
+        mouseRelease(underlay, outside.x, outside.y, Qt.RightButton)
+        tryCompare(plot, "activeFocus", true,
+                   1000, "outside right click dismisses and restores focus")
+        compare(testCase.noteVelocity(noteId), before)
+        compare(bootstrap.velocitySelectedNoteIds(), selectionBefore,
+                "the outside right release does not retarget the selection")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "outside right click writes nothing")
+        tryCompare(outsideRoot, "visible", false,
+                   1000, "the underlay retires after swallowing the paired right release")
+    }
+
+    function test_productionVelocityPromptBoundedKeys() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionVelocity(bootstrap.preferencesUrl("velocity-prompt-bounds"))
+        testCase.clickNode(testCase.velocityNodes()[0])
+        var noteId = testCase.selectedNoteId()
+        var model = testCase.velocityModel()
+        session.performGridCommand(bootstrap.setVelocityCommand())
+        tryCompare(model, "promptOpen", true)
+        var field = findChild(testCase.surface, "noteVelocityInput")
+        tryCompare(field, "activeFocus", true)
+        for (var down = 0; down < 13; ++down)
+            keyClick(Qt.Key_PageDown)
+        compare(field.text, "1", "PageDown clamps the displayed value at one")
+        keyClick(Qt.Key_Return)
+        tryCompare(model, "promptOpen", false)
+        tryVerify(function() { return testCase.noteVelocity(noteId) === 1 }, 1000)
+        tryCompare(testCase.velocityPlot(), "activeFocus", true,
+                   1000, "lower-bound acceptance restores roll focus before reopening")
+
+        session.performGridCommand(bootstrap.setVelocityCommand())
+        tryCompare(model, "promptOpen", true)
+        tryCompare(field, "activeFocus", true)
+        for (var up = 0; up < 13; ++up)
+            keyClick(Qt.Key_PageUp)
+        compare(field.text, "127", "PageUp clamps the displayed value at 127")
+        keyClick(Qt.Key_Return)
+        tryCompare(model, "promptOpen", false)
+        tryVerify(function() { return testCase.noteVelocity(noteId) === 127 }, 1000)
+        tryCompare(testCase.velocityPlot(), "activeFocus", true,
+                   1000, "upper-bound acceptance restores roll focus before reopening")
+
+        session.performGridCommand(bootstrap.setVelocityCommand())
+        tryCompare(model, "promptOpen", true)
+        tryCompare(field, "activeFocus", true)
+        var revision = bootstrap.automationDocumentRevision()
+        keyClick(Qt.Key_Up)
+        keyClick(Qt.Key_Up, Qt.ControlModifier)
+        compare(field.text, "127", "both step sizes clamp at the upper bound")
+        compare(model.promptOpen, true)
+        compare(bootstrap.automationDocumentRevision(), revision, "clamped keys write nothing")
+        keyClick(Qt.Key_Escape)
+        tryCompare(model, "promptOpen", false)
     }
 
     function test_productionVelocityNumericInput() {

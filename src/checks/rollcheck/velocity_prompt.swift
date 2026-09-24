@@ -30,8 +30,12 @@ func drawerVelocityPromptTransaction(_ report: CheckReport, session: DocumentSes
                   message: "values outside the domain are refused")
     report.expect(VelocityPromptPolicy.value(draft: "") == nil
                       && VelocityPromptPolicy.value(draft: "12x") == nil
-                      && VelocityPromptPolicy.value(draft: "-5") == nil, cppID: drawerVelocityPromptID,
-                  message: "empty, non-decimal and signed drafts are refused")
+                      && VelocityPromptPolicy.value(draft: "-5") == nil
+                      && VelocityPromptPolicy.value(draft: " 95") == nil
+                      && VelocityPromptPolicy.value(draft: "95 ") == nil
+                      && VelocityPromptPolicy.value(draft: "²") == nil,
+                  cppID: drawerVelocityPromptID,
+                  message: "empty, non-ASCII, spaced and signed drafts are refused")
     report.expect(VelocityPromptPolicy.error(draft: "64").isEmpty, cppID: drawerVelocityPromptID,
                   message: "a valid draft publishes no error")
 
@@ -191,30 +195,41 @@ private func checkVelocityPromptAcceptUndoLatch(_ report: CheckReport, session: 
     let before = coreTimeBytes(fixture.document)
     let revision = fixture.document.revision
     let identity = fixture.document.history.currentIdentity
+    let undoIndex = fixture.document.history.undoIndex
+    let undoCount = fixture.document.history.undoCount
     report.expect(fixture.page.openSelectedVelocityPrompt() &&
                   fixture.page.promptInitialValue == 73 && fixture.page.promptDraft == "73",
                   cppID: id, message: "A004: the selected note seeds the prompt with velocity 73")
     fixture.page.updatePromptDraft(draft: "95")
     report.expect(coreTimeBytes(fixture.document) == before &&
                   fixture.document.revision == revision &&
-                  fixture.document.history.currentIdentity == identity,
+                  fixture.document.history.currentIdentity == identity &&
+                  fixture.document.history.undoIndex == undoIndex &&
+                  fixture.document.history.undoCount == undoCount,
                   cppID: id, message: "A007: drafting 95 does not write song bytes or history")
     report.expect(fixture.page.acceptPrompt() &&
                   fixture.document.note(noteID)?.velocity == 95 &&
                   fixture.document.revision == revision + 1 &&
-                  fixture.document.history.currentIdentity != identity,
+                  fixture.document.history.currentIdentity != identity &&
+                  fixture.document.history.undoIndex == undoIndex + 1 &&
+                  fixture.document.history.undoCount == undoCount + 1,
                   cppID: id, message: "A010: accepting 95 changes the captured note in one edit")
     report.expect(acceptedValues == [95], cppID: id,
                   message: "accepting 95 latches the velocity for subsequent drawing")
     let undone = (try? drawerVelocityRunBlocking { try await fixture.session.undo() }) == true
     report.expect(undone &&
                   fixture.document.note(noteID)?.velocity == 73 &&
-                  coreTimeBytes(fixture.document) == before,
+                  coreTimeBytes(fixture.document) == before &&
+                  fixture.document.history.undoIndex == undoIndex &&
+                  fixture.document.history.undoCount == undoCount + 1,
                   cppID: id, message: "A012: one undo restores the original 73-velocity song bytes")
     fixture.page.refreshFromDocument()
     let afterUndo = drawerVelocityDocumentSnapshot(fixture.document)
     report.expect(fixture.page.openSelectedVelocityPrompt() && fixture.page.acceptPrompt() &&
                   drawerVelocityDocumentSnapshot(fixture.document) == afterUndo &&
+                  coreTimeBytes(fixture.document) == before &&
+                  fixture.document.history.undoIndex == undoIndex &&
+                  fixture.document.history.undoCount == undoCount + 1 &&
                   acceptedValues == [95, 73],
                   cppID: id, message: "A018: accepting unchanged 73 relatches without a document edit")
 }
@@ -232,8 +247,14 @@ private func checkVelocityPromptCancelStale(_ report: CheckReport, session: Docu
     fixture.session.clearSelectedNotes()
     fixture.page.refreshFromDocument()
     let before = drawerVelocityDocumentSnapshot(fixture.document)
+    let bytes = coreTimeBytes(fixture.document)
+    let undoIndex = fixture.document.history.undoIndex
+    let undoCount = fixture.document.history.undoCount
     report.expect(!fixture.page.openSelectedVelocityPrompt() &&
-                  drawerVelocityDocumentSnapshot(fixture.document) == before,
+                  drawerVelocityDocumentSnapshot(fixture.document) == before &&
+                  coreTimeBytes(fixture.document) == bytes &&
+                  fixture.document.history.undoIndex == undoIndex &&
+                  fixture.document.history.undoCount == undoCount,
                   cppID: id, message: "A024: opening without a selected note writes nothing")
     fixture.session.setSelectedNotes([noteID])
     fixture.page.refreshFromDocument()
@@ -241,7 +262,10 @@ private func checkVelocityPromptCancelStale(_ report: CheckReport, session: Docu
     fixture.page.updatePromptDraft(draft: "20")
     fixture.page.cancelPrompt()
     report.expect(!fixture.page.promptOpen &&
-                  drawerVelocityDocumentSnapshot(fixture.document) == before,
+                  drawerVelocityDocumentSnapshot(fixture.document) == before &&
+                  coreTimeBytes(fixture.document) == bytes &&
+                  fixture.document.history.undoIndex == undoIndex &&
+                  fixture.document.history.undoCount == undoCount,
                   cppID: id, message: "A029: cancelling a 20 draft leaves history and notes untouched")
     _ = fixture.page.openSelectedVelocityPrompt()
     fixture.page.updatePromptDraft(draft: "30")
@@ -249,9 +273,14 @@ private func checkVelocityPromptCancelStale(_ report: CheckReport, session: Docu
     _ = fixture.document.setVelocities([NoteVelocity(noteID: noteID, velocity: 40)],
                                        expectedRevision: revision)
     let afterForeignWrite = drawerVelocityDocumentSnapshot(fixture.document)
+    let afterForeignBytes = coreTimeBytes(fixture.document)
     report.expect(!fixture.page.acceptPrompt() && !fixture.page.promptOpen &&
                   fixture.document.note(noteID)?.velocity == 40 &&
-                  drawerVelocityDocumentSnapshot(fixture.document) == afterForeignWrite,
+                  fixture.document.revision == revision + 1 &&
+                  drawerVelocityDocumentSnapshot(fixture.document) == afterForeignWrite &&
+                  coreTimeBytes(fixture.document) == afterForeignBytes &&
+                  fixture.document.history.undoIndex == undoIndex + 1 &&
+                  fixture.document.history.undoCount == undoCount + 1,
                   cppID: id, message: "A039: a stale 30 draft never overwrites the foreign 40 edit")
 }
 
@@ -268,16 +297,26 @@ private func checkVelocityPromptBounds(_ report: CheckReport, session: DocumentS
     fixture.session.setSelectedNotes([noteID])
     fixture.page.refreshFromDocument()
     let before = drawerVelocityDocumentSnapshot(fixture.document)
+    let beforeBytes = coreTimeBytes(fixture.document)
+    let undoIndex = fixture.document.history.undoIndex
+    let undoCount = fixture.document.history.undoCount
     _ = fixture.page.openSelectedVelocityPrompt()
     fixture.page.updatePromptDraft(draft: "999")
     report.expect(!fixture.page.acceptPrompt() && fixture.page.promptOpen &&
-                  drawerVelocityDocumentSnapshot(fixture.document) == before,
+                  drawerVelocityDocumentSnapshot(fixture.document) == before &&
+                  coreTimeBytes(fixture.document) == beforeBytes &&
+                  fixture.document.history.undoIndex == undoIndex &&
+                  fixture.document.history.undoCount == undoCount,
                   cppID: id, message: "invalid 999 leaves the prompt open and the song unchanged")
     fixture.page.updatePromptDraft(draft: "1")
-    report.expect(fixture.page.acceptPrompt() && fixture.document.note(noteID)?.velocity == 1,
+    report.expect(fixture.page.acceptPrompt() && fixture.document.note(noteID)?.velocity == 1 &&
+                  fixture.document.history.undoIndex == undoIndex + 1 &&
+                  fixture.document.history.undoCount == undoCount + 1,
                   cppID: id, message: "valid lower-bound velocity 1 commits")
     _ = fixture.page.openSelectedVelocityPrompt()
     fixture.page.updatePromptDraft(draft: "127")
-    report.expect(fixture.page.acceptPrompt() && fixture.document.note(noteID)?.velocity == 127,
+    report.expect(fixture.page.acceptPrompt() && fixture.document.note(noteID)?.velocity == 127 &&
+                  fixture.document.history.undoIndex == undoIndex + 2 &&
+                  fixture.document.history.undoCount == undoCount + 2,
                   cppID: id, message: "valid upper-bound velocity 127 commits")
 }
