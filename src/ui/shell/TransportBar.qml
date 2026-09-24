@@ -110,7 +110,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.loop"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Loop"); symbol: "⟲"
+            label: qsTr("Loop"); symbol: "⟲"; iconSource: "qrc:/icons/transport-loop.svg"
             checked: bar.presenter.loopEnabled
             actionable: bar.presenter.state !== 0
             Layout.preferredWidth: bar.toolExtent
@@ -120,7 +120,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.follow-playhead"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Follow Playhead"); symbol: "▶▶"
+            label: qsTr("Follow Playhead"); symbol: "▶▶"; iconSource: "qrc:/icons/transport-follow.svg"
             checked: bar.presenter.followPlayhead
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
