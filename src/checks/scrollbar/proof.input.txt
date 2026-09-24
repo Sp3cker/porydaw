@@ -51,7 +51,7 @@ Original assertion inventory and source sequence
 
 A001 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:69
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
 Source context since previous assertion:
   #include "checks/scrollbar/tst_scrollbar.h"
 
@@ -125,7 +125,7 @@ Original expression:
 
 A002 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:70
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
 Source context since previous assertion:
   ;
 Original expression:
@@ -133,7 +133,7 @@ Original expression:
 
 A003 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:71
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
 Source context since previous assertion:
   ;
 Original expression:
@@ -141,7 +141,7 @@ Original expression:
 
 A004 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:73
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
 Source context since previous assertion:
   ;
 Original expression:
@@ -149,7 +149,7 @@ Original expression:
 
 A005 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:83
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
 Source context since previous assertion:
       const double pageStart = minimum + (span - page) / 2.0;
       const double initial = forward ? pageStart : pageStart + page;
@@ -165,7 +165,7 @@ Original expression:
 
 A006 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:85
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
 Source context since previous assertion:
       else
 Original expression:
@@ -173,7 +173,7 @@ Original expression:
 
 A007 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:86
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
 Source context since previous assertion:
   ;
 Original expression:
@@ -181,7 +181,7 @@ Original expression:
 
 A008 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:101
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
 Source context since previous assertion:
       QQuickItem &scrollThumb = thumb(orientation);
       const QPointF target =
@@ -201,7 +201,7 @@ Original expression:
 
 A009 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:108
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
 Source context since previous assertion:
       press(scrollbar.mapToScene(target));
       release();
@@ -213,7 +213,7 @@ Original expression:
 
 A010 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:109
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
 Source context since previous assertion:
   ;
 Original expression:
@@ -221,7 +221,7 @@ Original expression:
 
 A011 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:111
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
 Source context since previous assertion:
       } else {
 Original expression:
@@ -229,7 +229,7 @@ Original expression:
 
 A012 | ScrollbarTest::trackPaging | src/checks/scrollbar/input.cpp:112
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar track-paging needs the unmounted EditorSurface.qml scrollbar track press target.
 Source context since previous assertion:
   ;
 Original expression:
@@ -237,7 +237,7 @@ Original expression:
 
 A013 | ScrollbarTest::wheelScrolling | src/checks/scrollbar/input.cpp:166
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar-targeted wheel routing needs the unmounted EditorSurface.qml scrollbar item under the cursor.
 Source context since previous assertion:
   }
 
@@ -295,7 +295,7 @@ Original expression:
 
 A014 | ScrollbarTest::wheelScrolling | src/checks/scrollbar/input.cpp:167
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar-targeted wheel routing needs the unmounted EditorSurface.qml scrollbar item under the cursor.
 Source context since previous assertion:
   ;
 Original expression:
@@ -303,7 +303,7 @@ Original expression:
 
 A015 | ScrollbarTest::wheelScrolling | src/checks/scrollbar/input.cpp:174
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar-targeted wheel routing needs the unmounted EditorSurface.qml scrollbar item under the cursor.
 Source context since previous assertion:
       if (orientation == Qt::Horizontal)
           view().setHScroll(midpoint);
@@ -316,7 +316,7 @@ Original expression:
 
 A016 | ScrollbarTest::wheelScrolling | src/checks/scrollbar/input.cpp:176
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar-targeted wheel routing needs the unmounted EditorSurface.qml scrollbar item under the cursor.
 Source context since previous assertion:
       else
 Original expression:
@@ -324,7 +324,7 @@ Original expression:
 
 A017 | ScrollbarTest::wheelScrolling | src/checks/scrollbar/input.cpp:226
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar-targeted wheel routing needs the unmounted EditorSurface.qml scrollbar item under the cursor.
 Source context since previous assertion:
       double expected = midpoint;
       switch (behavior) {
@@ -379,7 +379,7 @@ Original expression:
 
 A018 | ScrollbarTest::wheelScrolling | src/checks/scrollbar/input.cpp:227
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar-targeted wheel routing needs the unmounted EditorSurface.qml scrollbar item under the cursor.
 Source context since previous assertion:
   ;
 Original expression:
@@ -387,7 +387,7 @@ Original expression:
 
 A019 | ScrollbarTest::wheelScrolling | src/checks/scrollbar/input.cpp:229
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar-targeted wheel routing needs the unmounted EditorSurface.qml scrollbar item under the cursor.
 Source context since previous assertion:
       } else {
 Original expression:
@@ -395,7 +395,7 @@ Original expression:
 
 A020 | ScrollbarTest::wheelScrolling | src/checks/scrollbar/input.cpp:230
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar-targeted wheel routing needs the unmounted EditorSurface.qml scrollbar item under the cursor.
 Source context since previous assertion:
   ;
 Original expression:
@@ -403,7 +403,7 @@ Original expression:
 
 A021 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:265
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus.
 Source context since previous assertion:
       endWheel(orientation, behavior == WheelBehavior::Touchpad);
   }
@@ -443,7 +443,7 @@ Original expression:
 
 A022 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:266
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus.
 Source context since previous assertion:
   ;
 Original expression:
@@ -451,7 +451,7 @@ Original expression:
 
 A023 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:273
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus.
 Source context since previous assertion:
       if (orientation == Qt::Horizontal)
           view().setHScroll(midpoint);
@@ -464,7 +464,7 @@ Original expression:
 
 A024 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:275
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus.
 Source context since previous assertion:
       else
 Original expression:
@@ -481,7 +481,7 @@ Original expression:
 
 A026 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:300
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus.
 Source context since previous assertion:
       Qt::Key key = Qt::Key_Right;
       double expected = midpoint;
@@ -507,7 +507,7 @@ Original expression:
 
 A027 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:301
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus.
 Source context since previous assertion:
   ;
 Original expression:
@@ -515,7 +515,7 @@ Original expression:
 
 A028 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:303
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus.
 Source context since previous assertion:
       } else {
 Original expression:
@@ -523,7 +523,7 @@ Original expression:
 
 A029 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:304
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus.
 Source context since previous assertion:
   ;
 Original expression:
@@ -531,7 +531,7 @@ Original expression:
 
 A030 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:309
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. Guarded by if (behavior == KeyBehavior::Home); executes only on Home rows.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus. Guarded by if (behavior == KeyBehavior::Home); executes only on Home rows.
 Source context since previous assertion:
       if (behavior == KeyBehavior::Home) {
           if (orientation == Qt::Horizontal)
@@ -540,7 +540,7 @@ Original expression:
 
 A031 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:311
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. Guarded by if (behavior == KeyBehavior::Home); executes only on Home rows.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus. Guarded by if (behavior == KeyBehavior::Home); executes only on Home rows.
 Source context since previous assertion:
           else
 Original expression:
@@ -548,7 +548,7 @@ Original expression:
 
 A032 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:312
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. Guarded by if (behavior == KeyBehavior::Home); executes only on Home rows.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus. Guarded by if (behavior == KeyBehavior::Home); executes only on Home rows.
 Source context since previous assertion:
   ;
 Original expression:
@@ -556,7 +556,7 @@ Original expression:
 
 A033 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:316
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. Guarded by if (behavior == KeyBehavior::End); executes only on End rows.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus. Guarded by if (behavior == KeyBehavior::End); executes only on End rows.
 Source context since previous assertion:
       if (behavior == KeyBehavior::End) {
           if (orientation == Qt::Horizontal) {
@@ -566,7 +566,7 @@ Original expression:
 
 A034 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:319
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. Guarded by if (behavior == KeyBehavior::End); executes only on End rows.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus. Guarded by if (behavior == KeyBehavior::End); executes only on End rows.
 Source context since previous assertion:
           } else {
 Original expression:
@@ -575,7 +575,7 @@ Original expression:
 
 A035 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:322
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. Guarded by if (behavior == KeyBehavior::End); executes only on End rows.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); scrollbar keyboard focus needs the unmounted EditorSurface.qml scrollbar item to take active focus. Guarded by if (behavior == KeyBehavior::End); executes only on End rows.
 Source context since previous assertion:
           }
 Original expression:

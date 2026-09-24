@@ -49,7 +49,7 @@ Original assertion inventory and source sequence
 
 A001 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:49
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   #include "checks/scrollbar/tst_scrollbar.h"
 
@@ -104,7 +104,7 @@ Original expression:
 
 A002 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:50
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -112,7 +112,7 @@ Original expression:
 
 A003 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:54
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
       const QRectF horizontalRect(songView.horizontalScrollbarRect());
       const QRectF verticalRect(songView.verticalScrollbarRect());
@@ -121,7 +121,7 @@ Original expression:
 
 A004 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:55
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -129,7 +129,7 @@ Original expression:
 
 A005 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:56
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -137,7 +137,7 @@ Original expression:
 
 A006 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:57
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -145,7 +145,7 @@ Original expression:
 
 A007 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:58
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -153,7 +153,7 @@ Original expression:
 
 A008 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:59
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -161,7 +161,7 @@ Original expression:
 
 A009 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:61
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -169,7 +169,7 @@ Original expression:
 
 A010 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:62
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -177,7 +177,7 @@ Original expression:
 
 A011 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:63
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -185,7 +185,7 @@ Original expression:
 
 A012 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:64
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -193,7 +193,7 @@ Original expression:
 
 A013 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:65
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -217,7 +217,7 @@ Original expression:
 
 A016 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:70
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
       const auto actualVerticalRect = [&] { return sceneRect(bar(Qt::Vertical)).toAlignedRect(); };
 Original expression:
@@ -225,7 +225,7 @@ Original expression:
 
 A017 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:71
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -233,7 +233,7 @@ Original expression:
 
 A018 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:72
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -241,7 +241,7 @@ Original expression:
 
 A019 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:73
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -249,7 +249,7 @@ Original expression:
 
 A020 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:74
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -257,7 +257,7 @@ Original expression:
 
 A021 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:75
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the canonical band rects and scrollbar rect accessors asserted here are published only by the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -265,7 +265,7 @@ Original expression:
 
 A022 | ScrollbarTest::scrollbarHostContainsBothTracks | src/checks/scrollbar/geometry.cpp:84
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the host item that contains both scrollbar tracks is the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   }
 
@@ -279,7 +279,7 @@ Original expression:
 
 A023 | ScrollbarTest::scrollbarHostContainsBothTracks | src/checks/scrollbar/geometry.cpp:85
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the host item that contains both scrollbar tracks is the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -287,7 +287,7 @@ Original expression:
 
 A024 | ScrollbarTest::scrollbarHostContainsBothTracks | src/checks/scrollbar/geometry.cpp:87
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the host item that contains both scrollbar tracks is the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
       const QRectF host = windowRect(quickWindow);
 Original expression:
@@ -295,7 +295,7 @@ Original expression:
 
 A025 | ScrollbarTest::scrollbarHostContainsBothTracks | src/checks/scrollbar/geometry.cpp:88
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the host item that contains both scrollbar tracks is the unmounted EditorSurface.qml scrollbar surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -303,7 +303,7 @@ Original expression:
 
 A026 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:99
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the drawer-tracked roll scrollbar geometry asserted here belongs to the unmounted EditorSurface.qml roll scrollbar.
 Source context since previous assertion:
   }
 
@@ -319,7 +319,7 @@ Original expression:
 
 A027 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:102
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the drawer-tracked roll scrollbar geometry asserted here belongs to the unmounted EditorSurface.qml roll scrollbar.
 Source context since previous assertion:
       const std::optional<songview::TimelineBandGeometry> &roll =
           songView.timelineBandLayout().geometry(songview::TimelineBand::Roll);
@@ -328,7 +328,7 @@ Original expression:
 
 A028 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:104
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the drawer-tracked roll scrollbar geometry asserted here belongs to the unmounted EditorSurface.qml roll scrollbar.
 Source context since previous assertion:
       const QRectF verticalRect(songView.verticalScrollbarRect());
 Original expression:
@@ -336,7 +336,7 @@ Original expression:
 
 A029 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:105
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the drawer-tracked roll scrollbar geometry asserted here belongs to the unmounted EditorSurface.qml roll scrollbar.
 Source context since previous assertion:
   ;
 Original expression:
@@ -344,7 +344,7 @@ Original expression:
 
 A030 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:106
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the drawer-tracked roll scrollbar geometry asserted here belongs to the unmounted EditorSurface.qml roll scrollbar.
 Source context since previous assertion:
   ;
 Original expression:
@@ -352,7 +352,7 @@ Original expression:
 
 A031 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:107
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the drawer-tracked roll scrollbar geometry asserted here belongs to the unmounted EditorSurface.qml roll scrollbar.
 Source context since previous assertion:
   ;
 Original expression:
@@ -360,7 +360,7 @@ Original expression:
 
 A032 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:108
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the drawer-tracked roll scrollbar geometry asserted here belongs to the unmounted EditorSurface.qml roll scrollbar.
 Source context since previous assertion:
   ;
 Original expression:
@@ -368,7 +368,7 @@ Original expression:
 
 A033 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:116
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the embedded event-list toggle that hides only the roll scrollbar is not mounted in the shell.
 Source context since previous assertion:
   }
 
@@ -389,7 +389,7 @@ Original expression:
 
 A035 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:118
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the embedded event-list toggle that hides only the roll scrollbar is not mounted in the shell.
 Source context since previous assertion:
   ;
 Original expression:
@@ -405,7 +405,7 @@ Original expression:
 
 A037 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:125
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the embedded event-list toggle that hides only the roll scrollbar is not mounted in the shell.
 Source context since previous assertion:
       const songview::TimeCamera &camera = songView.camera();
       const qreal horizontalTarget =
@@ -416,7 +416,7 @@ Original expression:
 
 A038 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:126
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the embedded event-list toggle that hides only the roll scrollbar is not mounted in the shell.
 Source context since previous assertion:
   ;
 Original expression:
@@ -424,7 +424,7 @@ Original expression:
 
 A039 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:129
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the embedded event-list toggle that hides only the roll scrollbar is not mounted in the shell.
 Source context since previous assertion:
       songView.setEventListVisible(false);
 Original expression:
@@ -440,7 +440,7 @@ Original expression:
 
 A041 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:131
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); the embedded event-list toggle that hides only the roll scrollbar is not mounted in the shell.
 Source context since previous assertion:
   ;
 Original expression:
