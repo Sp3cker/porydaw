@@ -10,10 +10,12 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Status and evidence
 The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. No Swift counterpart was identified for this deleted host suite. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Nothing here is marked MATCHED or PARTIAL; unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove any Swift replacement.
 
+Dispositions and no-ingress evidence
+NATIVE is no longer used: every site that observed a native-window, embedding, delivery, framebuffer, settings, popup, or harness obligation is RETIRED-REPRESENTATION, because the mechanism that carried it is gone (this C++ file was deleted at 31ea635f, appears in no CMake target, and checkcatalog.cpp registers no host entry; re-verified 2026-09-24). GAP sites are behavior assertions whose Swift owners exist but whose original predicates have no executed Swift equivalent; each mapping names the owner verified under src/swift/app. The Reference revision and Original SHA-256 below were re-verified against each other (git show <revision>:<path> | shasum -a 256) before any retirement claim.
+
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
+Command: deno task proof check
+Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity. No integrated verification result was provided for this snapshot, and no lane executes this deleted harness, so execution evidence is unknown.
 
 Execution ownership
 No Swift entry point executes the deleted host checks; no Swift fixture is paired.
@@ -22,11 +24,13 @@ Fixture, sequence and row constraints
 A two-note track fixture anchors the velocity-gesture cases: begin, update, preview, commit, and undo stages expand one site per gesture phase, with framebuffer captures (baseline, committed, undone, deselected, zoomed) guarding each rendering stage. Focus-band and pan-delivery cases iterate timeline bands, expanding mouse-grabber and isPanning sites per band.
 Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
+Tally: MATCHED 0, PARTIAL 0, GAP 86, NATIVE 0, RETIRED-REPRESENTATION 99.
+
 Original assertion inventory and source sequence
 
 A001 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:145
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
 Source context since previous assertion:
   #include "checks/fwd.hpp"
 
@@ -177,8 +181,8 @@ Original expression:
   QVERIFY(session.has_value())
 
 A002 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:146
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old session tab pointer identity (first != active); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -187,7 +191,7 @@ Original expression:
 
 A003 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:147
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/SongDocument owns the fixture track discovery in the loaded document; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -196,7 +200,7 @@ Original expression:
 
 A004 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:148
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession note selection owns the note selection size after the two-note seed; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -204,8 +208,8 @@ Original expression:
   QCOMPARE(session->active->view().selectionModel().noteSelection().size(), size_t{2})
 
 A005 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:154
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -218,8 +222,8 @@ Original expression:
   QVERIFY(session.has_value())
 
 A006 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:157
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old editorDrawer()->velocityArea() QWidget handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = session->active->view();
@@ -230,7 +234,7 @@ Original expression:
 
 A007 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:178
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/VoiceChangesProjection owns the required route101 steady voice-context discovery; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           uint64_t first = 0;
@@ -258,8 +262,8 @@ Original expression:
   QVERIFY2(found, "required route101 fixture has no steady 120-tick voice context")
 
 A008 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:184
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation band layout geometry handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
 Source context since previous assertion:
   ;
           view.setFollowPlayhead(false);
@@ -272,8 +276,8 @@ Original expression:
   QVERIFY(automationGeometry.has_value())
 
 A009 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:188
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation baseline raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           QString captureError;
@@ -285,7 +289,7 @@ Original expression:
 
 A010 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:193
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/SharedPlayheadPresenter owns the playhead tick following the played sample; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const auto before = velocity->diagnostics();
@@ -297,8 +301,8 @@ Original expression:
   QCOMPARE(uint64_t(view.playheadTick() + 0.5), first + 120)
 
 A011 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:194
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity-area diagnostics playhead-presentation counter; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage/SharedPlayheadPresenter owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -307,8 +311,8 @@ Original expression:
                    before.playheadPresentationCount + 120)
 
 A012 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:196
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity-area diagnostics content-build counter; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage presentation counters owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -316,8 +320,8 @@ Original expression:
   QCOMPARE(velocity->diagnostics().contentBuildCount, before.contentBuildCount)
 
 A013 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:199
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation post-playback raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           const QImage automationAfter =
@@ -327,8 +331,8 @@ Original expression:
   QVERIFY2(!automationAfter.isNull(), qPrintable(captureError))
 
 A014 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:200
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation raster equality across the playback run; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -336,8 +340,8 @@ Original expression:
   QCOMPARE(automationAfter, automationBefore)
 
 A015 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:206
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -351,7 +355,7 @@ Original expression:
 
 A016 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:210
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/SongDocument owns the two-note track discovery; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           SongView &view = session->active->view();
@@ -362,8 +366,8 @@ Original expression:
   QVERIFY(track >= 0)
 
 A017 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:215
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old editorDrawer()->velocityArea() QWidget handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           const std::vector<DocNote> notes = document.notesForTrack(track);
@@ -375,8 +379,8 @@ Original expression:
   QVERIFY(velocity)
 
 A018 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:224
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old baseline band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           QString captureError;
@@ -392,8 +396,8 @@ Original expression:
   QVERIFY2(!baselineFrame.isNull(), qPrintable(captureError))
 
 A019 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:229
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old beginVelocityGesture acceptance on the host view; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           const auto before = velocity->diagnostics();
@@ -405,8 +409,8 @@ Original expression:
   QVERIFY(view.beginVelocityGesture(notes))
 
 A020 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:230
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old updateVelocityGesture acceptance on the host view; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -415,7 +419,7 @@ Original expression:
 
 A021 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:231
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage owns the velocity preview value after updateVelocityGesture; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -424,7 +428,7 @@ Original expression:
 
 A022 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:232
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the document revision unchanged during the pending preview; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -433,7 +437,7 @@ Original expression:
 
 A023 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:233
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history (coreEditHistoryCountAtTip) owns the history cursor unchanged during the pending preview; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -441,8 +445,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undo)
 
 A024 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:234
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old commitVelocityGesture result on the host view; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -451,7 +455,7 @@ Original expression:
 
 A025 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:235
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the revision advanced by the committed gesture; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -460,7 +464,7 @@ Original expression:
 
 A026 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:236
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history (coreEditHistoryCountAtTip) owns the history cursor advanced by the committed gesture; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -469,7 +473,7 @@ Original expression:
 
 A027 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:238
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument note lookup owns the committed note velocity found through findNote; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           DocNote landed;
@@ -479,7 +483,7 @@ Original expression:
 
 A028 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:239
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage/SongDocument owns the landed velocity equal to the gesture target; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -488,7 +492,7 @@ Original expression:
 
 A029 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:240
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage owns the preview cleared after the commit; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -496,8 +500,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(notes[0].noteId))
 
 A030 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:242
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old committed band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           const QImage committedFrame = renderVelocity();
@@ -506,8 +510,8 @@ Original expression:
   QVERIFY2(!committedFrame.isNull(), qPrintable(captureError))
 
 A031 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:243
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old content-build counter increased after the commit; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage presentation counters owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -515,8 +519,8 @@ Original expression:
   QVERIFY(velocity->diagnostics().contentBuildCount > before.contentBuildCount)
 
 A032 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:246
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old undone band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           document.undoStack()->undo();
@@ -526,8 +530,8 @@ Original expression:
   QVERIFY2(!undoneFrame.isNull(), qPrintable(captureError))
 
 A033 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:250
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old deselected band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           const auto selectionBefore = velocity->diagnostics();
@@ -538,8 +542,8 @@ Original expression:
   QVERIFY2(!deselectedFrame.isNull(), qPrintable(captureError))
 
 A034 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:251
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old content-build counter increased after deselection; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage presentation counters owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -547,8 +551,8 @@ Original expression:
   QVERIFY(velocity->diagnostics().contentBuildCount > selectionBefore.contentBuildCount)
 
 A035 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:254
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view and window handles for the zoom capture; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           const auto zoomBefore = velocity->diagnostics();
@@ -558,8 +562,8 @@ Original expression:
   QVERIFY(quick && quick->quickWindow())
 
 A036 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:257
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old zoomed band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           view.zoomAroundContentX(1.1, qreal(quick->quickWindow()->width()) / 2.0);
@@ -569,8 +573,8 @@ Original expression:
   QVERIFY2(!zoomedFrame.isNull(), qPrintable(captureError))
 
 A037 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:258
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old content-build counter increased after the zoom; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage presentation counters owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -578,8 +582,8 @@ Original expression:
   QVERIFY(velocity->diagnostics().contentBuildCount > zoomBefore.contentBuildCount)
 
 A038 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:263
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -592,7 +596,7 @@ Original expression:
 
 A039 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:267
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/SongDocument owns the two-note track discovery; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           SongView &view = session->active->view();
@@ -604,7 +608,7 @@ Original expression:
 
 A040 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:269
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/SongDocument owns the fixture track exposing at least two notes; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           std::vector<DocNote> notes = document.notesForTrack(track);
@@ -613,8 +617,8 @@ Original expression:
   QVERIFY(notes.size() >= 2)
 
 A041 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:275
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old beginVelocityGesture acceptance; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           view.selectTrack(track);
@@ -627,8 +631,8 @@ Original expression:
   QVERIFY(view.beginVelocityGesture(notes))
 
 A042 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:276
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old updateVelocityGesture reporting no change for same-value targets; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -637,8 +641,8 @@ Original expression:
               {{notes[0].noteId, notes[0].velocity}, {notes[1].noteId, notes[1].velocity}}))
 
 A043 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:278
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old commitVelocityGesture returning Unchanged; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -647,7 +651,7 @@ Original expression:
 
 A044 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:279
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the revision unchanged by the no-op commit; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -656,7 +660,7 @@ Original expression:
 
 A045 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:280
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the history cursor unchanged by the no-op commit; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -664,8 +668,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undo)
 
 A046 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:290
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old velocity input, velocity area and timeline host handles; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage/ApplicationSession shell owns the behavior).
 Source context since previous assertion:
   ;
           const uint8_t first =
@@ -683,7 +687,7 @@ Original expression:
 
 A047 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:296
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the revision unchanged by the click press; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const QPointF node = velocityNodePosition(view, *velocity, *timeline, notes[0]);
@@ -697,7 +701,7 @@ Original expression:
 
 A048 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:297
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the history cursor unchanged by the click press; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -706,7 +710,7 @@ Original expression:
 
 A049 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:298
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage/note selection owns the click selection size; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -715,7 +719,7 @@ Original expression:
 
 A050 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:299
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift note selection owns the clicked note inside the pre-drag selection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -724,8 +728,8 @@ Original expression:
                             view.selectionModel().noteSelection().front()) != selected.cend())
 
 A051 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:304
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old beginVelocityGesture acceptance on the drag path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           view.selectionModel().setNoteSelection(selected);
@@ -736,8 +740,8 @@ Original expression:
   QVERIFY(view.beginVelocityGesture(notes))
 
 A052 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:305
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old updateVelocityGesture acceptance on the drag path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -746,7 +750,7 @@ Original expression:
 
 A053 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:306
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage owns the first preview value during the drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -755,7 +759,7 @@ Original expression:
 
 A054 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:307
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage owns the second preview value during the drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -764,7 +768,7 @@ Original expression:
 
 A055 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:309
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument note lookup owns the held note velocity found during the drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           DocNote held;
@@ -774,7 +778,7 @@ Original expression:
 
 A056 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:310
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument/VelocityPage owns the document velocity held while the preview is pending; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -783,7 +787,7 @@ Original expression:
 
 A057 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:311
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the revision unchanged while the drag preview is pending; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -792,7 +796,7 @@ Original expression:
 
 A058 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:312
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the history cursor unchanged while the drag preview is pending; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -800,8 +804,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undo)
 
 A059 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:313
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old commitVelocityGesture returning Committed; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -810,7 +814,7 @@ Original expression:
 
 A060 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:314
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the revision advanced by the drag commit; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -819,7 +823,7 @@ Original expression:
 
 A061 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:315
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the history cursor advanced by the drag commit; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -828,7 +832,7 @@ Original expression:
 
 A062 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:316
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument note lookup owns the committed note found after the drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -837,7 +841,7 @@ Original expression:
 
 A063 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:317
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage/SongDocument owns the committed velocity equal to the drag target; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -846,7 +850,7 @@ Original expression:
 
 A064 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:318
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage owns the preview cleared after the drag commit; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -855,7 +859,7 @@ Original expression:
 
 A065 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:319
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift note selection owns the selection preserved across the committed drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -864,7 +868,7 @@ Original expression:
 
 A066 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:321
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift note selection owns the selection preserved across undo; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           document.undoStack()->undo();
@@ -873,8 +877,8 @@ Original expression:
   QCOMPARE(view.selectionModel().noteSelection(), selected)
 
 A067 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:328
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old beginVelocityGesture acceptance on the stale-target path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           document.undoStack()->redo();
@@ -888,8 +892,8 @@ Original expression:
   QVERIFY(view.beginVelocityGesture(notes))
 
 A068 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:330
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old updateVelocityGesture acceptance of the stale target; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -898,8 +902,8 @@ Original expression:
   QVERIFY(view.updateVelocityGesture({{notes[0].noteId, staleTarget}}))
 
 A069 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:335
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old commitVelocityGesture returning Rejected; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           const uint64_t staleRevision = document.revision();
@@ -912,7 +916,7 @@ Original expression:
 
 A070 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:336
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the revision advanced by the external mutation; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -921,7 +925,7 @@ Original expression:
 
 A071 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:337
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the history cursor advanced by the external mutation; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -930,7 +934,7 @@ Original expression:
 
 A072 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:340
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument note lookup owns the stale note velocity found after the rejection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           DocNote staleFirst;
@@ -941,7 +945,7 @@ Original expression:
 
 A073 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:341
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument note lookup owns the externally edited note velocity found after the rejection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -950,7 +954,7 @@ Original expression:
 
 A074 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:342
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage commit policy owns the stale target leaving the stale note unchanged; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -959,7 +963,7 @@ Original expression:
 
 A075 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:343
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage/SongDocument owns the external target retained on the second note; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -968,7 +972,7 @@ Original expression:
 
 A076 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:344
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage owns the preview cleared on the stale note after rejection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -977,7 +981,7 @@ Original expression:
 
 A077 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:345
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage owns the preview cleared on the second note after rejection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -986,7 +990,7 @@ Original expression:
 
 A078 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:346
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift note selection owns the selection preserved across the rejected gesture; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -994,8 +998,8 @@ Original expression:
   QCOMPARE(view.selectionModel().noteSelection(), selected)
 
 A079 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:361
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1017,8 +1021,8 @@ Original expression:
   QVERIFY(session.has_value())
 
 A080 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:373
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view, canvas and input host handles; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell/AutomationPage owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = session->active->view();
@@ -1037,8 +1041,8 @@ Original expression:
   QVERIFY(quick && canvas && input)
 
 A081 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:375
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick window handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           QQuickWindow *const quickWindow = quick->quickWindow();
@@ -1047,8 +1051,8 @@ Original expression:
   QVERIFY(quickWindow)
 
 A082 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:376
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old focusTimelineBand acceptance for the automation band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1056,8 +1060,8 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Automation, Qt::OtherFocusReason))
 
 A083 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:377
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old focused timeline band after the focus request; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1065,8 +1069,8 @@ Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Automation)
 
 A084 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:378
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation input item active focus; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1074,8 +1078,8 @@ Original expression:
   QTRY_VERIFY(input->hasActiveFocus())
 
 A085 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:391
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick-window mouse-grabber identity during the pan; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
           const QByteArray midi = document.smf().write();
@@ -1095,8 +1099,8 @@ Original expression:
   QTRY_COMPARE(quickWindow->mouseGrabberItem(), static_cast<QQuickItem *>(input))
 
 A086 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:392
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation canvas isPanning while the pointer is held; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1104,8 +1108,8 @@ Original expression:
   QVERIFY(canvas->isPanning())
 
 A087 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:397
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old mouse grabber cleared after the pan release; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
           if (route == QStringLiteral("page-switch")) {
@@ -1117,8 +1121,8 @@ Original expression:
   QTRY_VERIFY(!quickWindow->mouseGrabberItem())
 
 A088 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:399
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old focusTimelineBand acceptance for the velocity band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           } else if (route == QStringLiteral("quick-focus-loss")) {
@@ -1127,8 +1131,8 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Velocity, Qt::OtherFocusReason))
 
 A089 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:400
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old focused timeline band after the velocity focus request; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1136,8 +1140,8 @@ Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Velocity)
 
 A090 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:401
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation input item losing active focus; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1145,8 +1149,8 @@ Original expression:
   QTRY_VERIFY(!input->hasActiveFocus())
 
 A091 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:407
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old mouse-grabber identity on the second focus path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
           } else {
@@ -1159,8 +1163,8 @@ Original expression:
   QCOMPARE(quickWindow->mouseGrabberItem(), static_cast<QQuickItem *>(input))
 
 A092 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:408
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation canvas isPanning on the second focus path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1168,8 +1172,8 @@ Original expression:
   QVERIFY(canvas->isPanning())
 
 A093 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:410
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation canvas isPanning cleared after the second pan; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
           } else {
@@ -1178,8 +1182,8 @@ Original expression:
   QTRY_VERIFY(!canvas->isPanning())
 
 A094 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:414
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation canvas isPanning cleared at the end of the slot; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
           }
@@ -1191,7 +1195,7 @@ Original expression:
 
 A095 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:415
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument state bytes owns the serialized song bytes unchanged by the pan attempt; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1200,7 +1204,7 @@ Original expression:
 
 A096 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:416
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the revision unchanged by the pan attempt; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1209,7 +1213,7 @@ Original expression:
 
 A097 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:417
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the history depth unchanged by the pan attempt; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1217,8 +1221,8 @@ Original expression:
   QCOMPARE(document.undoStack()->count(), undo)
 
 A098 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:418
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old mouse grabber cleared at the end of the pan slot; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1226,8 +1230,8 @@ Original expression:
   QVERIFY(!quickWindow->mouseGrabberItem())
 
 A099 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:441
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1258,7 +1262,7 @@ Original expression:
 
 A100 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:445
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/SongDocument owns the two-note track discovery; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           SongView &view = session->active->view();
@@ -1270,7 +1274,7 @@ Original expression:
 
 A101 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:447
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/SongDocument owns the fixture notes present for the velocity drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const std::vector<DocNote> notes = document.notesForTrack(track);
@@ -1279,8 +1283,8 @@ Original expression:
   QVERIFY(!notes.empty())
 
 A102 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:457
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick, velocity area, input and timeline host handles; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage/ApplicationSession shell owns the behavior).
 Source context since previous assertion:
   ;
           view.selectTrack(track);
@@ -1297,8 +1301,8 @@ Original expression:
   QVERIFY(quick && velocity && velocityInput && timeline)
 
 A103 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:459
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick window handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           QQuickWindow *const quickWindow = quick->quickWindow();
@@ -1307,8 +1311,8 @@ Original expression:
   QVERIFY(quickWindow)
 
 A104 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:460
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old focusTimelineBand acceptance for the velocity drag; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1316,8 +1320,8 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Velocity, Qt::OtherFocusReason))
 
 A105 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:461
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old focused timeline band after the drag focus request; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1325,8 +1329,8 @@ Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Velocity)
 
 A106 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:465
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old input item bounds containing the press point; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           const QPointF press = velocityNodePosition(view, *velocity, *timeline, notes[0]);
@@ -1337,8 +1341,8 @@ Original expression:
   QVERIFY(velocityInput->bounds().contains(press))
 
 A107 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:466
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old input item bounds containing the drag point; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1346,8 +1350,8 @@ Original expression:
   QVERIFY(velocityInput->bounds().contains(drag))
 
 A108 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:480
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old mouse-grabber identity during the velocity drag; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           const QPoint pressWindow = velocityInput->mapToScene(press).toPoint();
@@ -1369,7 +1373,7 @@ Original expression:
 
 A109 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:483
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage owns the preview staged by the drag move; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           lastWindowPoint = dragWindow;
@@ -1379,8 +1383,8 @@ Original expression:
   QTRY_VERIFY(view.previewVelocity(notes[0].noteId).has_value())
 
 A110 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:484
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old userGestureActive while the drag is in progress; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1388,8 +1392,8 @@ Original expression:
   QVERIFY(view.userGestureActive())
 
 A111 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:505
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old mouse grabber cleared after the drag; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           const bool clearsSelection = route == QStringLiteral("track-replace") ||
@@ -1417,8 +1421,8 @@ Original expression:
   QTRY_VERIFY(!quickWindow->mouseGrabberItem())
 
 A112 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:507
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old focusTimelineBand acceptance for the roll band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift PianoGrid owns the behavior).
 Source context since previous assertion:
   ;
           } else if (route == QStringLiteral("quick-focus-loss")) {
@@ -1427,8 +1431,8 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason))
 
 A113 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:508
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old focused timeline band after the roll focus request; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift PianoGrid owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1436,8 +1440,8 @@ Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Roll)
 
 A114 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:515
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old userGestureActive cleared after the roll gesture; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift PianoGrid owns the behavior).
 Source context since previous assertion:
   ;
           } else if (route == QStringLiteral("quick-deactivate")) {
@@ -1452,7 +1456,7 @@ Original expression:
 
 A115 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:518
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument state bytes owns the serialized song bytes unchanged by the released drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           QTest::mouseRelease(quickWindow, Qt::LeftButton, Qt::NoModifier, dragWindow);
@@ -1463,7 +1467,7 @@ Original expression:
 
 A116 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:519
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the revision unchanged by the released drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1472,7 +1476,7 @@ Original expression:
 
 A117 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:520
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the history depth unchanged by the released drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1481,7 +1485,7 @@ Original expression:
 
 A118 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:521
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage owns the preview cleared after the released drag; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1490,7 +1494,7 @@ Original expression:
 
 A119 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:523
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift note selection owns the selection cleared by the drag when it should clear; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           if (clearsSelection)
@@ -1500,7 +1504,7 @@ Original expression:
 
 A120 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:525
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift note selection owns the selection retained by the drag when it should clear; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           else
@@ -1509,8 +1513,8 @@ Original expression:
   QVERIFY(!view.selectionModel().noteSelection().empty())
 
 A121 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:526
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old mouse grabber cleared before the next stage; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1519,7 +1523,7 @@ Original expression:
 
 A122 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:528
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift MouseHints owns the override cursor not being the closed-hand pan cursor; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const QCursor *cursor = QApplication::overrideCursor();
@@ -1528,8 +1532,8 @@ Original expression:
   QVERIFY(!cursor || cursor->shape() != Qt::ClosedHandCursor)
 
 A123 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:548
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
 Source context since previous assertion:
   ;
           if (route == QStringLiteral("song-replacement"))
@@ -1557,7 +1561,7 @@ Original expression:
 
 A124 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:552
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession/SongDocument owns the two-note track discovery; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           SongView &view = session->active->view();
@@ -1568,8 +1572,8 @@ Original expression:
   QVERIFY(track >= 0)
 
 A125 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:556
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old beginVelocityGesture acceptance on the reload path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
           const std::vector<DocNote> notes = document.notesForTrack(track);
@@ -1580,8 +1584,8 @@ Original expression:
   QVERIFY(view.beginVelocityGesture(notes))
 
 A126 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:557
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old updateVelocityGesture acceptance on the reload path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1590,7 +1594,7 @@ Original expression:
 
 A127 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:564
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the revision advanced by the mutation event; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           uint64_t revision = document.revision();
@@ -1605,7 +1609,7 @@ Original expression:
 
 A128 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:565
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the history cursor advanced by the mutation event; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1614,7 +1618,7 @@ Original expression:
 
 A129 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:566
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the history depth advanced by the mutation event; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1623,7 +1627,7 @@ Original expression:
 
 A130 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:572
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the revision advanced by undo; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           } else if (event == QStringLiteral("undo")) {
@@ -1637,7 +1641,7 @@ Original expression:
 
 A131 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:573
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the history cursor moved back by undo; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1646,7 +1650,7 @@ Original expression:
 
 A132 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:580
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the revision advanced by redo; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           } else if (event == QStringLiteral("redo")) {
@@ -1661,7 +1665,7 @@ Original expression:
 
 A133 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:581
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the history cursor moved forward by redo; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1669,8 +1673,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex + 1)
 
 A134 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:584
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old waitForTabReady workspace readiness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/DocumentWorkspace owns the behavior).
 Source context since previous assertion:
   ;
           } else {
@@ -1681,7 +1685,7 @@ Original expression:
 
 A135 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:585
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the history depth of the fresh tab; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1690,7 +1694,7 @@ Original expression:
 
 A136 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:586
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift note selection owns the note selection empty in the fresh tab; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1699,7 +1703,7 @@ Original expression:
 
 A137 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:588
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift VelocityPage owns the preview cleared in the fresh tab; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           }
@@ -1708,8 +1712,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(notes[0].noteId))
 
 A138 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:594
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1722,8 +1726,8 @@ Original expression:
   QVERIFY(session.has_value())
 
 A139 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:598
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = session->active->view();
@@ -1734,8 +1738,8 @@ Original expression:
   QVERIFY(quick)
 
 A140 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:600
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick root object handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           QQuickItem *root = quick->rootObject();
@@ -1744,8 +1748,8 @@ Original expression:
   QVERIFY(root)
 
 A141 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:603
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation band input item handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           auto *automation = root->findChild<songview::TimelineInputItem *>(
@@ -1755,8 +1759,8 @@ Original expression:
   QVERIFY(automation)
 
 A142 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:606
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation band layout geometry handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
 Source context since previous assertion:
   ;
           const auto geometry =
@@ -1766,8 +1770,8 @@ Original expression:
   QVERIFY(geometry.has_value())
 
 A143 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:608
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation page widget handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage owns the behavior).
 Source context since previous assertion:
   ;
           auto *page = view.editorDrawer()->automationPage();
@@ -1776,8 +1780,8 @@ Original expression:
   QVERIFY(page)
 
 A144 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:612
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation baseline raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           const auto before = page->canvas()->rows();
@@ -1788,8 +1792,8 @@ Original expression:
   QVERIFY2(!baseline.isNull(), qPrintable(error))
 
 A145 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:616
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation post-change raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           automation->notifyHostAppearanceChanged();
@@ -1800,8 +1804,8 @@ Original expression:
   QVERIFY2(!after.isNull(), qPrintable(error))
 
 A146 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:617
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old automation rows equality through the host canvas widget; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationProjection owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -1810,7 +1814,7 @@ Original expression:
 
 A147 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:621
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift AutomationPage/AutomationProjection owns the automation band raster equality across the appearance notification; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           // Raster equality is intentionally a negative control after the
@@ -1821,8 +1825,8 @@ Original expression:
   QCOMPARE(after, baseline)
 
 A148 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:623
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old screenshot artifact write to disk; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           if (!m_screenshotPath.isEmpty())
@@ -1831,8 +1835,8 @@ Original expression:
   QVERIFY2(after.save(m_screenshotPath), qPrintable(m_screenshotPath))
 
 A149 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:629
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1846,7 +1850,7 @@ Original expression:
 
 A150 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:651
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongTabsController/DocumentWorkspace owns the editor view-state publication count; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           SongView &origin = session->first->view();
@@ -1876,7 +1880,7 @@ Original expression:
 
 A151 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:652
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentWorkspace/SongTabsController preference persistence owns the editor view-state persistence count; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1885,7 +1889,7 @@ Original expression:
 
 A152 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:653
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongTabsController/SongTabSession owns the origin tab editor view state; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1894,7 +1898,7 @@ Original expression:
 
 A153 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:654
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongTabsController/SongTabSession owns the peer tab editor view state; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1902,8 +1906,8 @@ Original expression:
   QCOMPARE(peer.editorViewState(), state)
 
 A154 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:656
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the QSettings-backed editor view-state load (SettingsGuard host state); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController preference persistence owns the behavior).
 Source context since previous assertion:
   ;
           QSettings settings;
@@ -1913,7 +1917,7 @@ Original expression:
 
 A155 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:657
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument state bytes owns the origin song bytes untouched; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1922,7 +1926,7 @@ Original expression:
 
 A156 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:658
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument state bytes owns the peer song bytes untouched; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1931,7 +1935,7 @@ Original expression:
 
 A157 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:659
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the origin document revision untouched; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1940,7 +1944,7 @@ Original expression:
 
 A158 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:660
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession.revision owns the peer document revision untouched; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1949,7 +1953,7 @@ Original expression:
 
 A159 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:661
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the origin history depth untouched; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1958,7 +1962,7 @@ Original expression:
 
 A160 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:662
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the peer history depth untouched; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1966,8 +1970,8 @@ Original expression:
   QCOMPARE(session->active->document().undoStack()->count(), undoB)
 
 A161 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:668
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -1981,7 +1985,7 @@ Original expression:
 
 A162 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:670
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift ApplicationSession.openProject owns the staged project fingerprint non-empty; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const QByteArray projectBefore = directoryFingerprint(session->fixture->root());
@@ -1990,8 +1994,8 @@ Original expression:
   QVERIFY(!projectBefore.isEmpty())
 
 A163 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:678
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old waitForProjectReady workspace readiness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject owns the behavior).
 Source context since previous assertion:
   ;
           const QByteArray beforeA = fileBytes(session->first->document().midPath());
@@ -2006,8 +2010,8 @@ Original expression:
   QVERIFY(waitForProjectReady(*session->window->m_workspace))
 
 A164 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:679
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old open tab count after the project switch; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -2015,8 +2019,8 @@ Original expression:
   QCOMPARE(session->window->m_workspace->openTabCount(), qsizetype{0})
 
 A165 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:680
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old project directory fingerprint unchanged across the switch; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -2024,8 +2028,8 @@ Original expression:
   QCOMPARE(directoryFingerprint(session->fixture->root()), projectBefore)
 
 A166 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:682
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old QSettings editor view state after the switch; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController preference persistence owns the behavior).
 Source context since previous assertion:
   ;
           QSettings settings;
@@ -2034,8 +2038,8 @@ Original expression:
   QCOMPARE(loadEditorViewState(settings), state)
 
 A167 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:685
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old waitForTabReady workspace readiness after the reopen; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/DocumentWorkspace owns the behavior).
 Source context since previous assertion:
   ;
           session->window->m_workspace->requestSongOpen(*SongName::create(m_songA));
@@ -2045,8 +2049,8 @@ Original expression:
   QVERIFY(waitForTabReady(*session->window->m_workspace, reopened))
 
 A168 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:686
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old reopened tab editor view state; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -2054,8 +2058,8 @@ Original expression:
   QCOMPARE(reopened->view().editorViewState(), state)
 
 A169 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:687
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old reopened song bytes on disk; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongDocument/ApplicationSession.openProject owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -2063,8 +2067,8 @@ Original expression:
   QCOMPARE(fileBytes(reopened->document().midPath()), beforeA)
 
 A170 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:688
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old reopened tab history depth; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift DocumentSession history owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -2072,8 +2076,8 @@ Original expression:
   QCOMPARE(reopened->document().undoStack()->count(), undoA)
 
 A171 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:691
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old waitForTabReady for the second tab; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/DocumentWorkspace owns the behavior).
 Source context since previous assertion:
   ;
           session->window->m_workspace->requestSongOpen(*SongName::create(m_songB), true);
@@ -2084,7 +2088,7 @@ Original expression:
 
 A172 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:693
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift DocumentSession history owns the reopened tab history depth after close/reopen; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const QString secondPath = second->document().midPath();
@@ -2093,8 +2097,8 @@ Original expression:
   QCOMPARE(second->document().undoStack()->count(), undoB)
 
 A173 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:694
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old open tab count after reopening two tabs; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -2103,7 +2107,7 @@ Original expression:
 
 A174 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:697
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift ApplicationSession/SongTabsController close path owns the close event accepted by the host window; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           QCloseEvent event;
@@ -2113,8 +2117,8 @@ Original expression:
   QVERIFY(event.isAccepted())
 
 A175 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:698
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the host close-accepted flag (MainWindow); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/SongTabsController close path owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -2123,7 +2127,7 @@ Original expression:
 
 A176 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:699
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument state bytes owns the first song bytes preserved across the close; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -2132,7 +2136,7 @@ Original expression:
 
 A177 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:700
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongDocument state bytes owns the second song bytes preserved across the close; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -2140,8 +2144,8 @@ Original expression:
   QCOMPARE(fileBytes(secondPath), beforeB)
 
 A178 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:701
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old project directory fingerprint unchanged after the close; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -2149,8 +2153,8 @@ Original expression:
   QCOMPARE(directoryFingerprint(session->fixture->root()), projectBefore)
 
 A179 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:702
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old QSettings editor view state after the close; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController preference persistence owns the behavior).
 Source context since previous assertion:
   ;
 
@@ -2158,8 +2162,8 @@ Original expression:
   QCOMPARE(loadEditorViewState(settings), state)
 
 A180 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:711
-Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old the openSession() MainWindow/WorkspaceUi host harness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession.openProject/SongTabsController owns the behavior).
 Source context since previous assertion:
   ;
       }
@@ -2175,8 +2179,8 @@ Original expression:
   QVERIFY(session.has_value())
 
 A181 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:714
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old quick view handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
 Source context since previous assertion:
   ;
           SongView &view = session->active->view();
@@ -2186,8 +2190,8 @@ Original expression:
   QVERIFY(quick)
 
 A182 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:716
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old embedded window handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
 Source context since previous assertion:
   ;
           QQuickWindow *const window = quick->quickWindow();
@@ -2197,7 +2201,7 @@ Original expression:
 
 A183 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:730
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongTabsController/SongTabSession teardown owns the quick window destroyed before the document (teardown order); no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           SongDocument *const document = &session->active->document();
@@ -2219,7 +2223,7 @@ Original expression:
 
 A184 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:731
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongTabsController/SongTabSession teardown owns the document destroyed second in the teardown order; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -2228,7 +2232,7 @@ Original expression:
 
 A185 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:732
 Disposition: GAP
-Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift SongTabsController/SongTabSession teardown owns exactly two teardown notifications; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 

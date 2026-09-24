@@ -18,11 +18,12 @@ presenter-level Swift check cannot establish. None of these labels authorizes
 deletion or claims whole-case equivalence. Native passes do not prove any Swift
 replacement.
 
+Dispositions and no-ingress evidence
+NATIVE is no longer used. Sites that observed division/feel menu values through the retired QuickPopupSession, popup, action, or signal machinery are canonical GAPs: no Swift counterpart covers the ruler grid menu (the active src/ui/songview/quick/swiftroll/EditorSurface.qml ruler menu exposes only `Edit Time Signature`; the legacy RulerControls.qml division/feel controls are not mounted by the active surface). Sites that asserted pure popup-session, QML-control, focus, or raster mechanics are RETIRED-REPRESENTATION: this check is uncompiled in all CMake targets and unregistered in checkcatalog (re-verified 2026-09-24), while its source remains on disk and still matches the pinned Original SHA-256 (git show a1244957:src/checks/host/tst_rulergridmenu.cpp | shasum -a 256).
+
 Verification
-Command: deno task verify --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-No dedicated --filter row names this native check and no Swift lane executes
-any of these predicates, so the unfiltered integrated run is the vehicle.
+Command: deno task proof check
+Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity. No integrated verification result was provided for this snapshot and no lane executes this harness, so execution evidence is unknown.
 
 Execution and ownership
 runRulerGridMenuCheck (src/checks/host/tst_rulergridmenu.cpp:679) owns the
@@ -50,11 +51,13 @@ submenu, reset, stay-open). QTRY_VERIFY2 sites wait on real event delivery
 from checks::support::alternateGridMenuId and the live view state, so
 re-execution order is fixed by the suite sequence.
 
+Tally: MATCHED 0, PARTIAL 0, GAP 113, NATIVE 0, RETIRED-REPRESENTATION 53.
+
 Original assertion inventory and source sequence
 
 A001 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:130
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (SyntheticHost construction and prepare() guard); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
 #include "checks/fwd.hpp"
 #include "checks/host/hosttestsupport.h"
@@ -189,8 +192,8 @@ Original expression:
 QVERIFY2(host.prepare(&error), qPrintable(error));
 
 A002 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:133
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the ruler-grid surface discovery over the Quick canvas); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         SongView &view = host.view();
         const RulerGridSurface surface = rulerGridSurface(view);
@@ -198,24 +201,24 @@ Original expression:
 QVERIFY2(surface.valid(), "could not discover the Quick ruler grid controls");
 
 A003 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:134
-Disposition: NATIVE
-Mapping/reason: Original native QML-surface obligation (rendered control property or enabled state). A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the rendered division control's enabled state); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(surface.division->isEnabled());
 
 A004 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:135
-Disposition: NATIVE
-Mapping/reason: Original native QML-surface obligation (rendered control property or enabled state). A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the rendered feel control's enabled state); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(surface.feel->isEnabled());
 
 A005 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:140
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu popup-session handle); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         const quick_popup::PromptGuard guard(view);
 
@@ -225,8 +228,8 @@ Original expression:
 QVERIFY2(divisionMenu.session, qUtf8Printable(divisionMenu.diagnostic));
 
 A006 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:141
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (native-popup-widget absence after opening the division menu); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
@@ -234,8 +237,8 @@ QVERIFY2(!QApplication::activePopupWidget(),
                  "opening the division menu created a native popup widget");
 
 A007 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:143
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (native-modal-widget absence after opening the division menu); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
@@ -243,8 +246,8 @@ QVERIFY2(!QApplication::activeModalWidget(),
                  "opening the division menu created a native modal widget");
 
 A008 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:145
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the QMenu left under SongView after opening the division menu); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
@@ -321,8 +324,8 @@ Original expression:
 QVERIFY(currentDivision && currentDivision->checked);
 
 A017 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:165
-Disposition: NATIVE
-Mapping/reason: Original native QML-surface obligation (rendered control property or enabled state). A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -347,8 +350,8 @@ Original expression:
 QVERIFY(targetDivisionItem);
 
 A020 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:173
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (quick-popup row-click delivery for the division menu); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         const QString targetDivisionText = targetDivisionItem->text;
 Original expression:
@@ -356,16 +359,16 @@ QVERIFY2(quick_popup::clickMenuRow(*divisionMenu.session, targetDivisionRow),
                  "the division row did not receive a real click");
 
 A021 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:176
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu closed after the row pick); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
 QVERIFY2(!divisionMenu.session->isOpen(), "a division pick left the shared menu open");
 
 A022 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:177
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (native-popup-widget absence after the division pick); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
@@ -381,16 +384,16 @@ QCOMPARE(view.viewState().gridSelection,
                  songview::GridSelection::musical(uint32_t(targetDivision)));
 
 A024 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:180
-Disposition: NATIVE
-Mapping/reason: Original native QML-surface obligation (rendered control property or enabled state). A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the rendered division control text after the pick); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(surface.division->property("controlText").toString(), targetDivisionText);
 
 A025 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:183
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the reopened division menu popup-session handle); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         const RulerGridMenu divisionReopened = openRulerGridMenu(view, *surface.division);
 Original expression:
@@ -414,8 +417,8 @@ Original expression:
 QCOMPARE(item->checked, item->id == targetDivision);
 
 A028 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:191
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu closed after the reopen); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         }
         divisionReopened.session->cancel();
@@ -424,8 +427,8 @@ Original expression:
 QVERIFY(!divisionReopened.session->isOpen());
 
 A029 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:195
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the feel menu popup-session handle); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         const SongView::ViewState afterDivision = view.viewState();
         const RulerGridMenu feelMenu = openRulerGridMenu(view, *surface.feel);
@@ -433,8 +436,8 @@ Original expression:
 QVERIFY2(feelMenu.session, qUtf8Printable(feelMenu.diagnostic));
 
 A030 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:196
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (native-popup-widget absence after opening the feel menu); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
@@ -442,8 +445,8 @@ QVERIFY2(!QApplication::activePopupWidget(),
                  "opening the feel menu created a native popup widget");
 
 A031 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:198
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the QMenu left under SongView after opening the feel menu); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
@@ -518,8 +521,8 @@ Original expression:
 QVERIFY(currentFeel && currentFeel->checked);
 
 A040 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:217
-Disposition: NATIVE
-Mapping/reason: Original native QML-surface obligation (rendered control property or enabled state). A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -543,8 +546,8 @@ Original expression:
 QVERIFY(targetFeelItem);
 
 A043 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:225
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         const QString targetFeelText = targetFeelItem->text;
 Original expression:
@@ -552,8 +555,8 @@ QVERIFY2(quick_popup::clickMenuRow(*feelMenu.session, targetFeelRow),
                  "the feel row did not receive a real click");
 
 A044 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:228
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
@@ -576,16 +579,16 @@ Original expression:
 QCOMPARE(surface.ruler->feelText(), targetFeelText);
 
 A047 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:231
-Disposition: NATIVE
-Mapping/reason: Original native QML-surface obligation (rendered control property or enabled state). A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(surface.feel->property("controlText").toString(), targetFeelText);
 
 A048 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:234
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         const RulerGridMenu feelReopened = openRulerGridMenu(view, *surface.feel);
 Original expression:
@@ -609,8 +612,8 @@ Original expression:
 QCOMPARE(item->checked, item->id == targetFeel);
 
 A051 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:246
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (SyntheticHost construction and prepare() guard); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         }
     }
@@ -623,8 +626,8 @@ Original expression:
 QVERIFY2(host.prepare(&error), qPrintable(error));
 
 A052 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:249
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the ruler-grid surface discovery over the Quick canvas); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         SongView &view = host.view();
         const RulerGridSurface surface = rulerGridSurface(view);
@@ -632,8 +635,8 @@ Original expression:
 QVERIFY2(surface.valid(), "could not discover the Quick ruler grid controls");
 
 A053 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:255
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the checked-row division menu popup-session handle); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         const quick_popup::PromptGuard guard(view);
 
@@ -652,8 +655,8 @@ Original expression:
 QVERIFY2(checkedRow >= 0, "the division menu omitted its checked row");
 
 A055 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:258
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (quick-popup row-click delivery for the checked division row); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
@@ -661,8 +664,8 @@ QVERIFY2(quick_popup::clickMenuRow(*opened.session, checkedRow),
                  "the checked division row did not receive a real click");
 
 A056 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:261
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu closed after the checked-row click); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
@@ -685,16 +688,16 @@ Original expression:
 QCOMPARE(view.viewState().gridTriplet, before.gridTriplet);
 
 A059 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:264
-Disposition: NATIVE
-Mapping/reason: Original native QML-surface obligation (rendered control property or enabled state). A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(surface.division->property("controlText").toString(), divisionText);
 
 A060 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:268
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         // Ordinary activation restores the invoking QML control, even when its
         // owner setter correctly early-returns for an already-checked value.
@@ -703,8 +706,8 @@ QTRY_VERIFY2(surface.division->hasActiveFocus(),
                      "the checked division choice did not return focus to its control");
 
 A061 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:273
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         QTest::keyClick(opened.session->window(), Qt::Key_Return);
         const RulerGridMenu keyboardReopened = awaitRulerGridMenu(
@@ -739,24 +742,24 @@ Original expression:
 QVERIFY(reopenedChecked && reopenedChecked->checked);
 
 A065 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:281
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (native-popup-widget absence after the checked-row close); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(!QApplication::activePopupWidget());
 
 A066 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:282
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (QMenu-under-SongView absence after the checked-row close); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(!view.findChild<QMenu *>());
 
 A067 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:289
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (SyntheticHost construction and prepare() guard); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
     }
 
@@ -768,8 +771,8 @@ Original expression:
 QVERIFY2(host.prepare(&error), qPrintable(error));
 
 A068 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:292
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the ruler-grid surface discovery over the Quick canvas); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         SongView &view = host.view();
         const RulerGridSurface surface = rulerGridSurface(view);
@@ -777,8 +780,8 @@ Original expression:
 QVERIFY2(surface.valid(), "could not discover the Quick ruler grid controls");
 
 A069 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:307
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the ruler dismissal-probe cursor span); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         const quick_popup::PromptGuard guard(view);
 
@@ -799,8 +802,8 @@ QVERIFY2(leftTick != rightTick,
                  "the ruler dismissal probe did not span two distinct cursor positions");
 
 A070 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:311
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the edit cursor tick before the dismissal probe); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         QTest::mouseClick(surface.quick->quickWindow(), Qt::LeftButton, Qt::NoModifier, left);
         QCoreApplication::processEvents();
@@ -808,8 +811,8 @@ Original expression:
 QCOMPARE(view.editCursorTick(), leftTick);
 
 A071 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:315
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu popup-session handle in the dismissal probe); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         const SongView::ViewState beforeDismissal = view.viewState();
         const RulerGridMenu divisionMenu = openRulerGridMenu(view, *surface.division);
@@ -817,8 +820,8 @@ Original expression:
 QVERIFY2(divisionMenu.session, qUtf8Printable(divisionMenu.diagnostic));
 
 A072 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:321
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the menu frame handle used to place the outside probe); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         // The drawn frame is the exact menu box: quickMenuFrame lives at
         // menuOrigin with menuWidth/menuHeight, its own MouseArea absorbs
@@ -829,8 +832,8 @@ Original expression:
 QVERIFY(frame);
 
 A073 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:335
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the outside-of-frame ruler probe point discovery); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         const QRectF frameScene = frame->mapRectToScene(frame->boundingRect());
         const QPoint probe = [&] {
@@ -849,8 +852,8 @@ Original expression:
 QVERIFY2(!probe.isNull(), "no ruler point lies outside the division menu frame");
 
 A074 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:339
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu closed by the outside click); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         QTest::mouseClick(surface.quick->quickWindow(), Qt::LeftButton, Qt::NoModifier, probe);
         QCoreApplication::processEvents();
@@ -875,16 +878,16 @@ Original expression:
 QCOMPARE(view.viewState().gridTriplet, beforeDismissal.gridTriplet);
 
 A077 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:343
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(view.editCursorTick(), leftTick);
 
 A078 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:344
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -892,32 +895,32 @@ QVERIFY2(!surface.ruler->gestureActive(),
                  "the dismissed outside press leaked into the ruler as an active gesture");
 
 A079 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:346
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(!QApplication::activePopupWidget());
 
 A080 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:347
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(!view.findChild<QMenu *>());
 
 A081 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:350
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         const RulerGridMenu feelMenu = openRulerGridMenu(view, *surface.feel);
 Original expression:
 QVERIFY2(feelMenu.session, qUtf8Printable(feelMenu.diagnostic));
 
 A082 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:353
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         QTest::keyClick(feelMenu.session->window(), Qt::Key_Escape);
         QCoreApplication::processEvents();
@@ -941,16 +944,16 @@ Original expression:
 QCOMPARE(view.viewState().gridTriplet, beforeDismissal.gridTriplet);
 
 A085 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:356
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the edit cursor tick after the dismissed outside press); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(view.editCursorTick(), leftTick);
 
 A086 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:363
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the dismissal probe point acting on the ruler); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         // Nonvacuity: the probe point itself must act on the ruler — with the
         // menus closed, a click there has to move the edit cursor away from
@@ -962,8 +965,8 @@ QVERIFY2(view.editCursorTick() != leftTick,
                  "the dismissal probe point does not act on the ruler");
 
 A087 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:371
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (SyntheticHost construction and prepare() guard); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
     }
 
@@ -975,8 +978,8 @@ Original expression:
 QVERIFY2(host.prepare(&error), qPrintable(error));
 
 A088 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:374
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the ruler-grid surface discovery over the Quick canvas); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         SongView &view = host.view();
         const RulerGridSurface surface = rulerGridSurface(view);
@@ -984,8 +987,8 @@ Original expression:
 QVERIFY2(surface.valid(), "could not discover the Quick ruler grid controls");
 
 A089 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:378
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu popup-session handle in the survival probe); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         const quick_popup::PromptGuard guard(view);
 
@@ -994,8 +997,8 @@ Original expression:
 QVERIFY2(divisionMenu.session, qUtf8Printable(divisionMenu.diagnostic));
 
 A090 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:389
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu still open after a selection change); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         // Ruler-menu retirement is scoped to the ruler loop menu's root
         // model: a selection change and a committed cursor move must leave
@@ -1011,8 +1014,8 @@ QVERIFY2(divisionMenu.session && divisionMenu.session->isOpen(),
                  "a selection change dismissed the open division menu");
 
 A091 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:394
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu still open after a committed cursor move); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         view.commitEditCursor(view.editCursorTick() + 96);
         QCoreApplication::processEvents();
@@ -1031,8 +1034,8 @@ Original expression:
 QVERIFY2(targetDivisionRow >= 0, "the division menu omitted the chosen denominator");
 
 A093 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:401
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1040,8 +1043,8 @@ QVERIFY2(quick_popup::clickMenuRow(*divisionMenu.session, targetDivisionRow),
                  "the division row did not receive a real click");
 
 A094 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:404
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
@@ -1057,8 +1060,8 @@ QCOMPARE(view.viewState().gridSelection,
                  songview::GridSelection::musical(uint32_t(targetDivision)));
 
 A096 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:414
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (SyntheticHost construction and prepare() guard); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         view.selectionModel().clearTimeSelection();
     }
@@ -1071,8 +1074,8 @@ Original expression:
 QVERIFY2(host.prepare(&error), qPrintable(error));
 
 A097 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:417
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the ruler-grid surface discovery over the Quick canvas); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         SongView &view = host.view();
         const RulerGridSurface surface = rulerGridSurface(view);
@@ -1080,8 +1083,8 @@ Original expression:
 QVERIFY2(surface.valid(), "could not discover the Quick ruler grid controls");
 
 A098 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:422
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu popup-session handle in the ownership probe); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         const quick_popup::PromptGuard guard(view);
 
@@ -1091,8 +1094,8 @@ Original expression:
 QVERIFY2(gridMenu.session, qUtf8Printable(gridMenu.diagnostic));
 
 A099 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:425
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the division menu cancelled by closePopups); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         surface.ruler->closePopups();
         QCoreApplication::processEvents();
@@ -1100,16 +1103,16 @@ Original expression:
 QVERIFY2(!gridMenu.session->isOpen(), "closePopups did not cancel the Quick division menu");
 
 A100 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:426
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (native-popup-widget absence after closePopups); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(!QApplication::activePopupWidget());
 
 A101 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:427
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (QMenu-under-SongView absence after closePopups); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1132,8 +1135,8 @@ Original expression:
 QCOMPARE(view.viewState().gridTriplet, before.gridTriplet);
 
 A104 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:437
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         // A roll-owned shared-session menu is a foreign owner: closePopups()
         // must leave it alone (the owns() guard) instead of stealing another
@@ -1175,8 +1178,8 @@ Original expression:
 QVERIFY2(emptyKey >= 0, "the fixture left no empty roll row for the foreign menu");
 
 A106 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:470
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         const QPointF foreignMenuPoint(qRound(view.camera().displayX(6.0, 0.0, rows.dpr())),
                                        rows.centerY(emptyKey));
@@ -1199,8 +1202,8 @@ QVERIFY2(foreignMenu.model != gridMenu.model,
                  "the roll right-click did not replace the grid menu with a foreign one");
 
 A108 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:476
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the foreign-owned popup session still open after closePopups); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         surface.ruler->closePopups();
         QCoreApplication::processEvents();
@@ -1209,16 +1212,16 @@ QVERIFY2(foreignMenu.session->isOpen(),
                  "closePopups cancelled a foreign-owned popup session");
 
 A109 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:478
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the foreign menu panel handle); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(quick_popup::menuPanel(*foreignMenu.session));
 
 A110 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:482
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the foreign menu dismissed by Escape); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         QTest::keyClick(foreignMenu.session->window(), Qt::Key_Escape);
         QCoreApplication::processEvents();
@@ -1226,8 +1229,8 @@ Original expression:
 QVERIFY2(!foreignMenu.session->isOpen(), "Escape did not dismiss the foreign menu");
 
 A111 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:485
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the reopened grid popup-session handle); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         const RulerGridMenu reopenedGrid = openRulerGridMenu(view, *surface.division);
 Original expression:
@@ -1274,8 +1277,8 @@ Original expression:
 QCOMPARE(view.viewState().gridTriplet, before.gridTriplet);
 
 A117 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:497
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (SyntheticHost construction and prepare() guard); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
     }
     void actionBackedQuickRowsCloseBeforeTriggerAndRetire()
@@ -1286,8 +1289,8 @@ Original expression:
 QVERIFY2(host.prepare(&error), qPrintable(error));
 
 A118 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:500
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the ruler-grid surface discovery over the Quick canvas); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         SongView &view = host.view();
         const RulerGridSurface surface = rulerGridSurface(view);
@@ -1295,8 +1298,8 @@ Original expression:
 QVERIFY2(surface.valid(), "could not discover the Quick ruler grid controls");
 
 A119 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:505
-Disposition: NATIVE
-Mapping/reason: Original native Quick-harness obligation (SyntheticHost preparation, Quick control/session/frame discovery). A direct presenter check cannot establish this harness observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the action-backed slot's popup session/window handle discovery); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
         const quick_popup::PromptGuard guard(view);
         view.selectionModel().clearTimeSelection();
@@ -1405,8 +1408,8 @@ Original expression:
 QVERIFY(actionActivated.isValid());
 
 A130 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:548
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         bool menuClosedBeforeForm = false;
         bool completionFollowedTrigger = false;
@@ -1422,8 +1425,8 @@ Original expression:
 QVERIFY2(openActionMenu(formModel), "the QAction row did not render as a Quick menu");
 
 A131 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:549
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1431,8 +1434,8 @@ QVERIFY2(quick_popup::clickMenuRow(*session, 0),
                  "the rendered QAction row did not receive a real click");
 
 A132 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:551
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1440,8 +1443,8 @@ QTRY_VERIFY2(quick_popup::promptItem(*session, QLatin1String("insertTimePrompt")
                      "triggering the QAction row did not open the Insert Time form");
 
 A133 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:553
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1480,8 +1483,8 @@ Original expression:
 QVERIFY(!formAction.isChecked());
 
 A138 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:560
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         session->cancel();
         QCoreApplication::processEvents();
@@ -1489,8 +1492,8 @@ Original expression:
 QVERIFY2(!session->isOpen(), "cancelling the form left the shared popup session open");
 
 A139 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:574
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         QAction *closeDestroyedAction = new QAction(QStringLiteral("Destroy after close"));
         songview::QuickMenuModel closeDestroyedModel;
@@ -1509,8 +1512,8 @@ QVERIFY2(openActionMenu(closeDestroyedModel),
                  "the post-close destruction row did not render as a Quick menu");
 
 A140 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:576
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1542,8 +1545,8 @@ Original expression:
 QCOMPARE(closeDestroyedActivated.count(), 0);
 
 A144 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:589
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         QObject::disconnect(destroyAfterClose);
 
@@ -1566,8 +1569,8 @@ Original expression:
 QVERIFY(!destroyedGuard);
 
 A146 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:594
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1582,8 +1585,8 @@ Original expression:
 QCOMPARE(destroyedTriggered.count(), 0);
 
 A148 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:602
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         QAction disabledAction(QStringLiteral("Disabled"));
         disabledAction.setEnabled(false);
@@ -1595,8 +1598,8 @@ QVERIFY2(openActionMenu(disabledModel),
                  "the disabled QAction row did not render as a Quick menu");
 
 A149 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:604
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1604,8 +1607,8 @@ QVERIFY2(quick_popup::clickMenuRow(*session, 0),
                  "the disabled QAction row did not receive a real click");
 
 A150 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:607
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
@@ -1620,8 +1623,8 @@ Original expression:
 QCOMPARE(disabledTriggered.count(), 0);
 
 A152 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:619
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         session->cancel();
         QCoreApplication::processEvents();
@@ -1638,8 +1641,8 @@ QVERIFY2(openActionMenu(submenuModel),
                  "the unopened-submenu QAction row did not render its root menu");
 
 A153 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:623
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         submenuAction.setText(QStringLiteral("Changed while unopened"));
         QCoreApplication::processEvents();
@@ -1648,8 +1651,8 @@ QVERIFY2(session->isOpen(),
                  "changing an unopened submenu action retired its unobserved root");
 
 A154 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:626
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1657,8 +1660,8 @@ QVERIFY2(openActionMenu(submenuModel),
                  "the reopened submenu QAction root did not render as a Quick menu");
 
 A155 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:630
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         QTest::keyClick(session->window(), Qt::Key_Down);
         QTest::keyClick(session->window(), Qt::Key_Right);
@@ -1675,8 +1678,8 @@ Original expression:
 QCOMPARE(actionHost.currentModel(), &submenuModel);
 
 A157 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:636
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         submenuAction.setText(QStringLiteral("Changed after submenu pop"));
         QCoreApplication::processEvents();
@@ -1685,8 +1688,8 @@ QVERIFY2(session->isOpen(),
                  "changing a popped submenu action retired its detached level's former root");
 
 A158 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:642
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         QAction resetAction(QStringLiteral("Reset root"));
         songview::QuickMenuModel resetModel;
@@ -1696,8 +1699,8 @@ QVERIFY2(openActionMenu(resetModel),
                  "the action-backed reset root did not render as a Quick menu");
 
 A159 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:646
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         resetModel.setItems({songview::QuickMenuItem::fromAction(resetAction, 106)});
         QCoreApplication::processEvents();
@@ -1706,8 +1709,8 @@ QVERIFY2(session->isOpen(),
                  "resetting an action-backed root rebuilt it in place instead of cancelling");
 
 A160 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:658
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         songview::QuickMenuItem stayOpenItem;
         stayOpenItem.id = 107;
@@ -1723,8 +1726,8 @@ QVERIFY2(openActionMenu(stayOpenModel),
                  "the value-only stay-open row did not render as a Quick menu");
 
 A161 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:662
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
         stayOpenModel.setItems({stayOpenItem});
         QCoreApplication::processEvents();
@@ -1732,8 +1735,8 @@ Original expression:
 QVERIFY2(session->isOpen(), "resetting a value-only root unexpectedly cancelled its menu");
 
 A162 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:663
-Disposition: NATIVE
-Mapping/reason: Original native event-routing obligation: the observation requires driving the real Quick surface with synthetic mouse/keyboard events (or reads cursor/gesture state produced by them). A direct presenter check cannot establish it.
+Disposition: GAP
+Mapping/reason: This native site observed the value through the retired QuickPopupSession and rendered ruler control. No Swift counterpart covers the ruler grid menu; no equivalent Swift assertion is established for this menu-model/view-state value. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1767,8 +1770,8 @@ Original expression:
 QCOMPARE(stayOpenActivated.count(), 1);
 
 A166 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:671
-Disposition: NATIVE
-Mapping/reason: Original native popup-session/window obligation (rendered menu open state, native popup/modal/QMenu absence, focus, prompt rendering, retirement scoping). A direct presenter check cannot establish this rendered-popup observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Retired host representation: old Quick-popup/QML ruler-menu machinery (the value-only stay-open row keeping its menu open); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the active ruler menu surface; the division/feel menu feature itself remains a canonical GAP, never a matched assertion).
 Source context since previous assertion:
   ;
 Original expression:
