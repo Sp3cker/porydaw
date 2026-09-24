@@ -410,7 +410,7 @@ set(shell_settings_qml
     src/ui/shell/settings/SongSettingsPage.qml
 )
 set_source_files_properties(${shell_qml} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-set_source_files_properties(${shell_qml} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+set_source_files_properties(${shell_settings_qml} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/settings)
 qt_add_executable(porydaw ${shell_qml} ${shell_settings_qml} resources/fonts.qrc)
 if(NOT APPLE)
     target_sources(porydaw PRIVATE src/app/qt_main_executor.cpp)
@@ -430,6 +430,11 @@ if(NOT APPLE)
     foreach(qml IN LISTS shell_qml)
         get_filename_component(qml_name "${qml}" NAME)
         file(GENERATE OUTPUT "$<TARGET_FILE_DIR:porydaw>/${qml_name}"
+            INPUT "${CMAKE_CURRENT_SOURCE_DIR}/${qml}")
+    endforeach()
+    foreach(qml IN LISTS shell_settings_qml)
+        get_filename_component(qml_name "${qml}" NAME)
+        file(GENERATE OUTPUT "$<TARGET_FILE_DIR:porydaw>/settings/${qml_name}"
             INPUT "${CMAKE_CURRENT_SOURCE_DIR}/${qml}")
     endforeach()
 endif()
