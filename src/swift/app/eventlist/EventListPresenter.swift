@@ -33,6 +33,27 @@ public final class EventListRowHandle {
 @QtBridgeable
 public final class EventListPresenter {
     public var rows: QListModel<EventListRowHandle> = QListModel()
+    @QtTracked public var tableRevision = 0
+    @QtTracked public var visible = false
+    @QtTracked public var chunk = -1
+    @QtTracked public var chunkLabels: [String] = []
+    @QtTracked public var filterMask = 127
+    @QtTracked public var filterSummary = "All events"
+    @QtTracked public var countText = ""
+    @QtTracked public var headerLabels = ["Tick", "Type", "Ch", "Data 1",
+                                          "Data 2", "Data", "Summary"]
+    @QtIgnored public var columnWidths: [Double] = [70, 120, 36, 56, 56, 140] {
+        didSet { columnWidthsRevision &+= 1 }
+    }
+    @QtTracked public var columnWidthsRevision = 0
+    @QtIgnored public var selectedRows: [Int] = [] {
+        didSet { selectionRevision &+= 1 }
+    }
+    @QtTracked public var selectionRevision = 0
+    public var menuItems: QListModel<EventListMenuItem> = QListModel()
+    @QtTracked public var menuX = 0.0
+    @QtTracked public var menuY = 0.0
+    @QtTracked public var appearance: [String: QVariantSettable] = [:]
 
     @QtTracked public var attached = false
     @QtTracked public var chunkIndex = -1
@@ -54,18 +75,24 @@ public final class EventListPresenter {
     @QtIgnored public private(set) var pointerDown = false
     /// Qt's mouse-button bit mask. Zero is the native `NoButton` state.
     @QtIgnored public private(set) var mouseButtons = 0
-    @QtIgnored public private(set) var model = EventListModel()
+    @QtIgnored public internal(set) var model = EventListModel()
     @QtIgnored public var onScrollToRow: ((Int) -> Void)?
 
-    @QtIgnored private weak var session: DocumentSession?
+    @QtIgnored var selectionAnchor = -1
+    @QtIgnored var menuKind: EventListMenuKind?
+    @QtIgnored var menuRow = -1
+    @QtIgnored weak var session: DocumentSession?
 
-    public init() {}
+    public init() {
+        appearance = EventListAppearance.roles()
+    }
 
     /// Installs one document and rebuilds its configured chunk synchronously.
     @QtIgnored
     public func attach(session: DocumentSession, chunkIndex: Int = 0) {
         if self.session !== session { detach() }
         self.session = session
+        visible = false
         self.chunkIndex = chunkIndex
         attached = true
         rebuildFromDocument(preservingCurrentRow: false)
@@ -86,6 +113,13 @@ public final class EventListPresenter {
         playing = false
         pointerDown = false
         mouseButtons = 0
+        selectedRows = []
+        selectionAnchor = -1
+        chunk = -1
+        chunkLabels = []
+        menuItems.reset(to: [])
+        menuKind = nil
+        visible = false
         clearEditing()
         menuOpen = false
         lastScrollToRow = -1
@@ -106,11 +140,9 @@ public final class EventListPresenter {
         }
 
         var chunkChangedBySelection = false
-        if change.domains.contains(.selection),
+        if change.domains.contains(.selection), visible,
            let selectedChunk = mappedChunk(for: session.selectedTrack, in: session.document),
            selectedChunk != chunkIndex {
-            // The native controller gates this sync on page visibility. Swift
-            // has no page-visible state, so an attached presenter syncs now.
             chunkIndex = selectedChunk
             chunkChangedBySelection = true
         }
@@ -136,6 +168,7 @@ public final class EventListPresenter {
         guard let session, !session.isClosed else { return }
         let target = session.document.rawChunks.indices.contains(index) ? index : -1
         guard target != chunkIndex else { return }
+        chunk = target
 
         chunkIndex = target
         rebuildFromDocument(preservingCurrentRow: false)
@@ -203,11 +236,10 @@ public final class EventListPresenter {
         return true
     }
 
-    /// Commits or cancels the editing session. Document mutation is intentionally
-    /// outside this playhead presenter; valid commits close the session.
+    /// Invalid commits keep the editor open so the user can correct the text.
     public func finishEditing(text: String, commit: Bool) -> Bool {
         guard editing else { return false }
-        if commit && !model.validatesEdit(row: editingRow, column: editingColumn, text: text) {
+        if commit && !commitCellEdit(row: editingRow, column: editingColumn, text: text) {
             return false
         }
         clearEditing()
@@ -234,9 +266,66 @@ public final class EventListPresenter {
         model.rowTint(row: row) != nil
     }
 
+    // QML bridge methods must be declared on the annotated class itself;
+    // the document policy and interaction implementations live in extensions.
+    public func isSelected(row: Int) -> Bool { dispatchIsSelected(row: row) }
+    public func selectRow(row: Int, modifiers: Int) {
+        dispatchSelectRow(row: row, modifiers: modifiers)
+    }
+    public func selectAll() { dispatchSelectAll() }
+    public func setVisible(visible: Bool) { dispatchSetVisible(visible: visible) }
+    public func isCellEditable(row: Int, column: Int) -> Bool {
+        dispatchIsCellEditable(row: row, column: column)
+    }
+    public func cellDisplay(row: Int, column: Int) -> String {
+        dispatchCellDisplay(row: row, column: column)
+    }
+    public func cellEdit(row: Int, column: Int) -> String {
+        dispatchCellEdit(row: row, column: column)
+    }
+    public func tickString(row: Int) -> String { dispatchTickString(row: row) }
+    public func rowKind(row: Int) -> Int { dispatchRowKind(row: row) }
+    public func headerAlignment(column: Int) -> Int {
+        dispatchHeaderAlignment(column: column)
+    }
+    public func savedColumnWidth(column: Int) -> Double {
+        columnWidths.indices.contains(column) ? columnWidths[column] : 0
+    }
+    public func resizeColumn(column: Int, width: Double) {
+        dispatchResizeColumn(column: column, width: width)
+    }
+    public func isLegalDrop(fromRow: Int, gap: Int) -> Bool {
+        dispatchIsLegalDrop(fromRow: fromRow, gap: gap)
+    }
+    public func commitDrop(fromRow: Int, gap: Int) {
+        dispatchCommitDrop(fromRow: fromRow, gap: gap)
+    }
+    public func canStepEditing() -> Bool { dispatchCanStepEditing() }
+    public func steppedEditingText(currentText: String, delta: Int) -> String {
+        dispatchSteppedEditingText(currentText: currentText, delta: delta)
+    }
+    public func addEvent() { dispatchAddEvent() }
+    public func deleteSelected() { dispatchDeleteSelected() }
+    public func openChunkMenu(x: Double, y: Double) {
+        dispatchOpenChunkMenu(x: x, y: y)
+    }
+    public func openFilterMenu(x: Double, y: Double) {
+        dispatchOpenFilterMenu(x: x, y: y)
+    }
+    public func openRowMenu(x: Double, y: Double) {
+        dispatchOpenRowMenu(x: x, y: y)
+    }
+    public func openTypeMenu(x: Double, y: Double) {
+        dispatchOpenTypeMenu(x: x, y: y)
+    }
+    public func dismissMenu() { dispatchDismissMenu() }
+    public func activateMenuAction(actionId: Int) {
+        dispatchActivateMenuAction(actionId: actionId)
+    }
+
     @QtSignal public func scrollToRow(row: Int)
 
-    private func clearEditing() {
+    func clearEditing() {
         editing = false
         editingRow = -1
         editingColumn = -1
@@ -249,7 +338,7 @@ public final class EventListPresenter {
             : -1
     }
 
-    private func mappedChunk(for selectedTrack: Int?, in document: SongDocument) -> Int? {
+    func mappedChunk(for selectedTrack: Int?, in document: SongDocument) -> Int? {
         guard let selectedTrack else { return nil }
         let map = document.engineTracks
         guard (0..<map.usedTrackCount).contains(selectedTrack),
@@ -269,25 +358,41 @@ public final class EventListPresenter {
         return nil
     }
 
-    private func rebuildFromDocument(preservingCurrentRow: Bool) {
-        guard let session, !session.isClosed,
-              session.document.rawChunks.indices.contains(chunkIndex) else {
+    func rebuildFromDocument(preservingCurrentRow: Bool) {
+        guard let session, !session.isClosed else {
             model.setSource(nil)
             publishRows()
             return
         }
-        model.setSource(session.document.rawChunks[chunkIndex],
+        let chunks = session.document.rawChunks
+        chunkLabels = chunks.indices.map { index in
+            index == 0 ? "0: Tempo / metadata" : "\(index): MIDI chunk"
+        }
+        guard chunks.indices.contains(chunkIndex) else {
+            model.setSource(nil)
+            publishRows()
+            return
+        }
+        model.setSource(chunks[chunkIndex],
+                        tempos: chunkIndex == 0 ? session.document.state.tempo : [],
+                        filterMask: filterMask,
                         preservingCurrentRow: preservingCurrentRow)
+        chunk = chunkIndex
+        selectedRows = selectedRows.filter { model.rows.indices.contains($0) }
         publishRows()
     }
 
-    private func publishRows() {
+    func publishRows() {
         rows.reset(to: model.rows.map {
             EventListRowHandle($0, tint: model.rowTint(row: $0.index) ?? "")
         })
         rowCount = model.rowCount
         currentRow = model.currentRow
         playRow = model.playRow
+        let shown = max(0, model.rowCount - (model.rowCount > 0 ? 1 : 0))
+        let total = model.chunk.events.count + (chunkIndex == 0 ? model.tempos.count : 0)
+        countText = shown == total ? "\(total) event(s)" : "\(shown) of \(total) events"
+        tableRevision &+= 1
     }
 
     private func publishPlayheadTransition(from oldPlayRow: Int) {

@@ -24,8 +24,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:62
-Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Native C++ fixture-open guard does not describe consumer-visible event-list behavior.
 Source context since previous assertion:
 #include "checks/eventviews/eventview_fixture.h"
 #include "checks/eventviews/tst_eventviews.h"
@@ -93,8 +93,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A002 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:63
-Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Disposition: MATCHED
+Mapping/reason: tst_ShellEventList.qml compares presenter.visible false before the View-menu MIDI Event List action (shell-event-list, executed).
 Source context since previous assertion:
 ;
 
@@ -102,8 +102,8 @@ Original expression:
 QVERIFY(!opened.fixture->view().eventListVisible())
 
 A003 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:66
-Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Native C++ EventWidgets pointer guard is superseded by the Swift QML page.
 Source context since previous assertion:
 ;
 
@@ -607,8 +607,8 @@ Original expression:
 QVERIFY(widgets)
 
 A043 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:268
-Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Disposition: PARTIAL
+Mapping/reason: tst_ShellEventList.qml toggles the Notes mask through the mounted Swift page (shell-event-list, executed); the remaining six categories of the matrix stay unproved.
 Source context since previous assertion:
 ;
 
@@ -637,8 +637,8 @@ Original expression:
 QCOMPARE(widgets.controller->filterMask(), wantedMask)
 
 A044 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:269
-Disposition: GAP
-Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
+Disposition: PARTIAL
+Mapping/reason: tst_ShellEventList.qml verifies the visible table shrinks when Notes are hidden and retains EOT (shell-event-list, executed); the remaining matrix rows stay unproved.
 Source context since previous assertion:
 ;
 

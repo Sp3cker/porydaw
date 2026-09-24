@@ -27,10 +27,20 @@ Item {
         }
         return true
     }
+    function eventListIsActive() {
+        for (let index = 0; index < pages.count; ++index) {
+            const page = pages.itemAt(index)
+            if (page && page.visible && page.showEvents)
+                return true
+        }
+        return false
+    }
     Keys.onPressed: event => {
-        if (root.shellRouter && !root.focusOwnsLocalKeys())
-            event.accepted = root.shellRouter.routeEditorKey(event.key, event.modifiers,
-                                                              event.isAutoRepeat)
+        if (root.shellRouter && !root.focusOwnsLocalKeys()) {
+            const route = root.eventListIsActive() ? "routeEventListKey" : "routeEditorKey"
+            event.accepted = root.shellRouter[route](event.key, event.modifiers,
+                                                      event.isAutoRepeat)
+        }
     }
     // One physical pixel at any device ratio: the strip separator and every
     // control border draw this same hairline.

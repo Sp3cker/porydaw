@@ -368,6 +368,36 @@ public final class ApplicationSession: QmlInstantiableStatus {
             ?? EditKeyDecision.decline.rawValue
     }
 
+    public func routeEventListCommand(command: Int, autoRepeat: Bool) -> Int {
+        guard let command = EditCommand(rawValue: command), eventList.attached,
+              eventList.visible, !eventList.editing, !eventList.menuOpen,
+              let workspace else {
+            return EditKeyDecision.decline.rawValue
+        }
+        let available: Bool
+        switch command {
+        case .moveEventUp, .moveEventDown:
+            available = eventList.model.row(at: eventList.currentRow)?.eventIndex != nil
+        default:
+            available = commandRouter?.isAvailable(command) ?? false
+        }
+        return EditKeyArbiter.decide(command: command, surface: EditSurfaceState(
+            pointerGestureActive: eventList.pointerDown,
+            timeSelectionActive: workspace.automationPage.selection?.isActive == true,
+            noteSelectionEmpty: workspace.session.selectedNotes.isEmpty,
+            origin: .eventList, autoRepeat: autoRepeat,
+            commandAvailable: available)).rawValue
+    }
+
+    public func performEventListCommand(command: Int) {
+        guard let command = EditCommand(rawValue: command), eventList.attached else { return }
+        switch command {
+        case .moveEventUp: eventList.moveEvent(delta: -1)
+        case .moveEventDown: eventList.moveEvent(delta: 1)
+        default: commandRouter?.perform(command)
+        }
+    }
+
     public func handleGridEscape() -> Bool {
         workspace?.grid.handleEscape() ?? false
     }

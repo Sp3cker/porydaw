@@ -118,6 +118,10 @@ ApplicationWindow {
         function onCloseCancelled() { shell.closeCancelled() }
     }
     Connections {
+        target: shell.session.songTabs
+        function onSelectedTabShowsEventsChanged() { ++root.actionRevision }
+    }
+    Connections {
         target: shell
         function onChooseProjectRequested() { projectPicker.open() }
         function onQuitRequested() { root.close() }
@@ -352,6 +356,7 @@ ApplicationWindow {
             id: viewMenu
             objectName: "shellViewMenu"
             title: qsTr("&View")
+            onAboutToShow: ++root.actionRevision
             Instantiator {
                 model: shell.viewActionIds
                 delegate: MenuItem {
@@ -359,7 +364,11 @@ ApplicationWindow {
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
                     checkable: true
-                    checked: shell.polyphonyVisible
+                    checked: modelData === "view.event_list" ? shell.session.songTabs.selectedTabShowsEvents : shell.polyphonyVisible
+                    enabled: {
+                        root.actionRevision
+                        return shell.actionEnabled(modelData)
+                    }
                     onTriggered: shell.activate(modelData)
                 }
                 onObjectAdded: (index, object) => viewMenu.insertItem(index, object)

@@ -74,6 +74,8 @@ enum ShellQmlLane {
                                   "mus_victory_wild", "se_fanfare_1trk", "se_pc_login",
                                   "se_use_item") + ["sound/voicegroups/fixture_alt.inc",
                                                      "include/constants/songs.h"]),
+        Entry(name: "shell-event-list", inputFileName: "tst_ShellEventList.qml",
+              fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-drawer-parity", inputFileName: "tst_ShellDrawerParity.qml",
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-polyphony", inputFileName: "tst_ShellPolyphony.qml",
