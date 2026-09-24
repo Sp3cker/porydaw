@@ -52,7 +52,7 @@ Original assertion inventory and source sequence
 
 A001 | PianoRollTest::scaleFoldKeyboardNudges | src/checks/rollcheck/scale_editing.cpp:71
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -129,7 +129,7 @@ Original expression:
 
 A002 | PianoRollTest::scaleFoldKeyboardNudges | src/checks/rollcheck/scale_editing.cpp:80
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
       while (doc.undoStack()->index() > undo)
@@ -145,7 +145,7 @@ Original expression:
 
 A003 | PianoRollTest::scaleFoldKeyboardNudges | src/checks/rollcheck/scale_editing.cpp:81
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
 Original expression:
@@ -153,7 +153,7 @@ Original expression:
 
 A004 | PianoRollTest::scaleFoldMultiNoteMapping | src/checks/rollcheck/scale_editing.cpp:118
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
   }
@@ -197,7 +197,7 @@ Original expression:
 
 A005 | PianoRollTest::scaleFoldMultiNoteMapping | src/checks/rollcheck/scale_editing.cpp:128
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > cmd0)
@@ -214,7 +214,7 @@ Original expression:
 
 A006 | PianoRollTest::scaleFoldMultiNoteMapping | src/checks/rollcheck/scale_editing.cpp:129
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
 Original expression:
@@ -222,7 +222,7 @@ Original expression:
 
 A007 | PianoRollTest::scaleFoldRepeatedPitchMapping | src/checks/rollcheck/scale_editing.cpp:167
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
   }
@@ -267,7 +267,7 @@ Original expression:
 
 A008 | PianoRollTest::scaleFoldRepeatedPitchMapping | src/checks/rollcheck/scale_editing.cpp:177
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > cmd0)
@@ -284,7 +284,7 @@ Original expression:
 
 A009 | PianoRollTest::scaleFoldRepeatedPitchMapping | src/checks/rollcheck/scale_editing.cpp:178
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
 Original expression:
@@ -292,7 +292,7 @@ Original expression:
 
 A010 | PianoRollTest::scaleFoldExceptionNudge | src/checks/rollcheck/scale_editing.cpp:213
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
   }
@@ -334,7 +334,7 @@ Original expression:
 
 A011 | PianoRollTest::scaleFoldExceptionNudge | src/checks/rollcheck/scale_editing.cpp:223
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > cmd0)
@@ -351,7 +351,7 @@ Original expression:
 
 A012 | PianoRollTest::scaleFoldExceptionNudge | src/checks/rollcheck/scale_editing.cpp:224
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
 Original expression:
@@ -359,7 +359,7 @@ Original expression:
 
 A013 | PianoRollTest::scaleFoldExceptionDraw | src/checks/rollcheck/scale_editing.cpp:278
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
   }
@@ -420,7 +420,7 @@ Original expression:
 
 A014 | PianoRollTest::scaleFoldExceptionDraw | src/checks/rollcheck/scale_editing.cpp:288
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > cmd0)
@@ -437,7 +437,7 @@ Original expression:
 
 A015 | PianoRollTest::scaleFoldExceptionDraw | src/checks/rollcheck/scale_editing.cpp:289
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
 Original expression:
@@ -514,7 +514,7 @@ Original expression:
 
 A017 | PianoRollTest::scaleFoldExceptionAudition | src/checks/rollcheck/scale_editing.cpp:363
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           checks::events::sendMouse(*rollGutter, QEvent::MouseButtonRelease,
@@ -533,7 +533,7 @@ Original expression:
 
 A018 | PianoRollTest::scaleFoldExceptionAudition | src/checks/rollcheck/scale_editing.cpp:364
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
 Original expression:
@@ -609,7 +609,7 @@ Original expression:
 
 A020 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:437
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           // Occupied-only Fold needs a visible scale row for the pointer
@@ -628,7 +628,7 @@ Original expression:
 
 A021 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:462
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           view.ensureTickVisible(tBase);
@@ -660,7 +660,7 @@ Original expression:
 
 A022 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:464
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           if (proj.visibleRowCount() != rowsWithNote)
@@ -669,7 +669,7 @@ Original expression:
 
 A023 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:467
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           const int rDst = proj.rowForPitch(dst);
@@ -679,7 +679,7 @@ Original expression:
 
 A024 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:472
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           const QPoint target(x, foldCenterY(dst));
@@ -691,7 +691,7 @@ Original expression:
 
 A025 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:479
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, target, Qt::LeftButton,
@@ -705,7 +705,7 @@ Original expression:
 
 A026 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:481
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           if (proj.visibleRowCount() != rowsBeforeSource)
@@ -714,7 +714,7 @@ Original expression:
 
 A027 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:491
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > cmd0)
@@ -731,7 +731,7 @@ Original expression:
 
 A028 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:492
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
 Original expression:
@@ -739,7 +739,7 @@ Original expression:
 
 A029 | PianoRollTest::scaleFoldHorizontalException | src/checks/rollcheck/scale_editing.cpp:523
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
   }
@@ -777,7 +777,7 @@ Original expression:
 
 A030 | PianoRollTest::scaleFoldHorizontalException | src/checks/rollcheck/scale_editing.cpp:534
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           }
@@ -795,7 +795,7 @@ Original expression:
 
 A031 | PianoRollTest::scaleFoldHorizontalException | src/checks/rollcheck/scale_editing.cpp:535
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
 Original expression:
@@ -803,7 +803,7 @@ Original expression:
 
 A032 | PianoRollTest::scaleFoldOutOfRange | src/checks/rollcheck/scale_editing.cpp:569
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
   }
@@ -844,7 +844,7 @@ Original expression:
 
 A033 | PianoRollTest::scaleFoldOutOfRange | src/checks/rollcheck/scale_editing.cpp:572
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           DocNote still;
@@ -854,7 +854,7 @@ Original expression:
 
 A034 | PianoRollTest::scaleFoldOutOfRange | src/checks/rollcheck/scale_editing.cpp:582
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > cmd0)
@@ -871,7 +871,7 @@ Original expression:
 
 A035 | PianoRollTest::scaleFoldOutOfRange | src/checks/rollcheck/scale_editing.cpp:583
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-editing UI (fold keyboard nudges, multi-note mapping, exception nudge/draw/audition, pointer drag, horizontal exception moves, out-of-range nudges)
 Source context since previous assertion:
   ;
 Original expression:

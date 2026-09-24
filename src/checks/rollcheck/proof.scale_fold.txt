@@ -100,7 +100,7 @@ Original expression:
 
 A002 | PianoRollTest::scaleFoldOccupancy | src/checks/rollcheck/scale_fold.cpp:53
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
           } else {
@@ -112,7 +112,7 @@ Original expression:
 
 A003 | PianoRollTest::scaleFoldOccupancy | src/checks/rollcheck/scale_fold.cpp:63
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
               while (doc.undoStack()->index() > cmd0)
@@ -129,7 +129,7 @@ Original expression:
 
 A004 | PianoRollTest::scaleFoldOccupancy | src/checks/rollcheck/scale_fold.cpp:64
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -185,7 +185,7 @@ Original expression:
 
 A006 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:110
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
           } else {
@@ -197,7 +197,7 @@ Original expression:
 
 A007 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:114
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
               doc.undoStack()->undo();
@@ -208,7 +208,7 @@ Original expression:
 
 A008 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:118
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
               if (base + 12 < 128) {
@@ -219,7 +219,7 @@ Original expression:
 
 A009 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:131
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
                   doc.undoStack()->undo();
@@ -239,7 +239,7 @@ Original expression:
 
 A010 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:141
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
           bool incomingOccupancy[128] = {};
@@ -256,7 +256,7 @@ Original expression:
 
 A011 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:144
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
           for (int pitch = 0; pitch < 128; pitch++) {
@@ -266,7 +266,7 @@ Original expression:
 
 A012 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:155
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
                   break;
@@ -284,7 +284,7 @@ Original expression:
 
 A013 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:156
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -292,7 +292,7 @@ Original expression:
 
 A014 | PianoRollTest::scaleFoldUndoLifecycle | src/checks/rollcheck/scale_fold.cpp:195
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
   }
@@ -338,7 +338,7 @@ Original expression:
 
 A015 | PianoRollTest::scaleFoldUndoLifecycle | src/checks/rollcheck/scale_fold.cpp:198
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
               doc.undoStack()->undo(); // delete
@@ -348,7 +348,7 @@ Original expression:
 
 A016 | PianoRollTest::scaleFoldUndoLifecycle | src/checks/rollcheck/scale_fold.cpp:201
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
               doc.undoStack()->redo(); // re-add
@@ -358,7 +358,7 @@ Original expression:
 
 A017 | PianoRollTest::scaleFoldUndoLifecycle | src/checks/rollcheck/scale_fold.cpp:211
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
               while (doc.undoStack()->index() > cmd0)
@@ -375,7 +375,7 @@ Original expression:
 
 A018 | PianoRollTest::scaleFoldUndoLifecycle | src/checks/rollcheck/scale_fold.cpp:212
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -383,7 +383,7 @@ Original expression:
 
 A019 | PianoRollTest::scaleFoldRootInvariant | src/checks/rollcheck/scale_fold.cpp:239
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
   }
@@ -417,7 +417,7 @@ Original expression:
 
 A020 | PianoRollTest::scaleFoldRootInvariant | src/checks/rollcheck/scale_fold.cpp:241
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
           if (std::abs(view.camera().scrollY() - scrollBefore) > 1e-9)
@@ -426,7 +426,7 @@ Original expression:
 
 A021 | PianoRollTest::scaleFoldRootInvariant | src/checks/rollcheck/scale_fold.cpp:244
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
           for (int pitch = 0; pitch < 128; pitch++) {
@@ -436,7 +436,7 @@ Original expression:
 
 A022 | PianoRollTest::scaleFoldRootInvariant | src/checks/rollcheck/scale_fold.cpp:255
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
                   break;
@@ -454,7 +454,7 @@ Original expression:
 
 A023 | PianoRollTest::scaleFoldRootInvariant | src/checks/rollcheck/scale_fold.cpp:256
 Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 Original expression:

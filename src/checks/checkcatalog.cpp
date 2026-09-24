@@ -84,48 +84,15 @@ const std::vector<CheckDefinition> &catalog()
                           .binary = BinaryKind::Application,
                           .startup = StartupKind::HandlerOwned,
                           .framework = Framework::Process});
-        // Native scale tables, pitch membership, neighbors and diatonic destinations.
-        result.push_back({.name = "scalecheck",
-                          .argv = strings({"--scalecheck"}),
-                          .handler = qtOnly<runScaleCheck>});
-        // Independent stereo activity attack/release, pause/resume and settling.
-        result.push_back({.name = "trackactivitycheck",
-                          .argv = strings({"--trackactivitycheck"}),
-                          .handler = qtOnly<runTrackActivityCheck>});
-        // Real callback publication, ownership, tails, gain and suppressor state.
-        result.push_back(
-            {.name = "transportcheck",
-             .argv = strings({"--transportcheck"}),
-             .handler = qtOnly<runTransportCheck>,
-             .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}});
-        // Packed activity byte order and consuming only the reported activity bytes.
-        result.push_back({.name = "audiocheck",
-                          .argv = strings({"--audiocheck"}),
-                          .handler = qtOnly<runAudioCheck>});
+        // The scale, activity, transport, telemetry, click, resonance and MIDI
+        // engine lanes now run under swiftcore; their retired native originals
+        // are recorded in their proof ledgers.
         // Forced-null backend initialization and backend-name reporting.
         result.push_back(
             {.name = "audiocheck-backend",
              .argv = strings({"--audiocheck-backend"}),
              .handler = qtOnly<runAudioBackendCheck>,
              .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}});
-        // Transport cut fades, interruption/retargeting and timed preview replay.
-        result.push_back(
-            {.name = "clickcheck",
-             .argv = strings({"--clickcheck"}),
-             .handler = qtOnly<runClickCheck>,
-             .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}});
-        // Native suppression law, bypass, stereo identity and release behavior.
-        result.push_back({.name = "resonancecheck",
-                          .argv = strings({"--resonancecheck"}),
-                          .handler = qtOnly<runResonanceCheck>});
-        // Native attack/release timing and sustained plateau behavior.
-        result.push_back({.name = "resonancecheck-timing",
-                          .argv = strings({"--resonancecheck-timing"}),
-                          .handler = qtOnly<runResonanceTimingCheck>});
-        // Invalid MIDI programs/keys cannot change a voice or start PCM channels.
-        result.push_back({.name = "midienginecheck",
-                          .argv = strings({"--midienginecheck"}),
-                          .handler = qtOnly<runMidiEngineCheck>});
 #ifdef __APPLE__
         result.push_back({.name = "swiftcore",
                           .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}"}),

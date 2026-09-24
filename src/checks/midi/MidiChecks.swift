@@ -725,6 +725,7 @@ func runMusicalSemanticsSuite(_ report: CheckReport) {
     }
     coreMidiExpectOracleValue(storageEqual ? 1 : 0, .noteIDStorage, 0, row: "note-id-storage",
                       cppID: noteIdentityID, report: report)
+    checkScaleTables(report)
 
 }
 
