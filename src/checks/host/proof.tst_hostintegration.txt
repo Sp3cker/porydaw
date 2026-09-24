@@ -24,7 +24,7 @@ Fixture, sequence and row constraints
 A two-note track fixture anchors the velocity-gesture cases: begin, update, preview, commit, and undo stages expand one site per gesture phase, with framebuffer captures (baseline, committed, undone, deselected, zoomed) guarding each rendering stage. Focus-band and pan-delivery cases iterate timeline bands, expanding mouse-grabber and isPanning sites per band.
 Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Tally: MATCHED 0, PARTIAL 0, GAP 88, NATIVE 0, RETIRED-REPRESENTATION 97.
+Tally: MATCHED 0, PARTIAL 0, GAP 100, NATIVE 0, RETIRED-REPRESENTATION 85.
 
 Original assertion inventory and source sequence
 
@@ -263,7 +263,7 @@ Original expression:
 
 A008 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:184
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the automation band layout geometry presence; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the automation band layout geometry presence; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           view.setFollowPlayhead(false);
@@ -276,8 +276,8 @@ Original expression:
   QVERIFY(automationGeometry.has_value())
 
 A009 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:188
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation baseline raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the automation band geometry rect probed by this raster capture; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           QString captureError;
@@ -1060,8 +1060,8 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Automation, Qt::OtherFocusReason))
 
 A083 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:377
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old focused timeline band after the focus request; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift AutomationPage/AutomationInteraction owns the focused timeline band after the focus request; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -1078,8 +1078,8 @@ Original expression:
   QTRY_VERIFY(input->hasActiveFocus())
 
 A085 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:391
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old quick-window mouse-grabber identity during the pan; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift AutomationPage/AutomationInteraction owns the quick-window mouse-grabber identity during the pan; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           const QByteArray midi = document.smf().write();
@@ -1108,8 +1108,8 @@ Original expression:
   QVERIFY(canvas->isPanning())
 
 A087 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:397
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old mouse grabber cleared after the pan release; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift AutomationPage/AutomationInteraction owns the mouse grabber cleared after the pan release; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           if (route == QStringLiteral("page-switch")) {
@@ -1131,8 +1131,8 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Velocity, Qt::OtherFocusReason))
 
 A089 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:400
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old focused timeline band after the velocity focus request; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift VelocityPage owns the focused timeline band after the velocity focus request; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -1149,8 +1149,8 @@ Original expression:
   QTRY_VERIFY(!input->hasActiveFocus())
 
 A091 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:407
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old mouse-grabber identity on the second focus path; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift AutomationPage/AutomationInteraction owns the mouse-grabber identity on the second focus path; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           } else {
@@ -1221,8 +1221,8 @@ Original expression:
   QCOMPARE(document.undoStack()->count(), undo)
 
 A098 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:418
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old mouse grabber cleared at the end of the pan slot; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationInteraction owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift AutomationPage/AutomationInteraction owns the mouse grabber cleared at the end of the pan slot; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -1320,8 +1320,8 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Velocity, Qt::OtherFocusReason))
 
 A105 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:461
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old focused timeline band after the drag focus request; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift VelocityPage owns the focused timeline band after the drag focus request; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -1350,8 +1350,8 @@ Original expression:
   QVERIFY(velocityInput->bounds().contains(drag))
 
 A108 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:480
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old mouse-grabber identity during the velocity drag; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift VelocityPage owns the mouse-grabber identity during the velocity drag; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           const QPoint pressWindow = velocityInput->mapToScene(press).toPoint();
@@ -1392,8 +1392,8 @@ Original expression:
   QVERIFY(view.userGestureActive())
 
 A111 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:505
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old mouse grabber cleared after the drag; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift VelocityPage owns the mouse grabber cleared after the drag; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           const bool clearsSelection = route == QStringLiteral("track-replace") ||
@@ -1431,8 +1431,8 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason))
 
 A113 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:508
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old focused timeline band after the roll focus request; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift PianoGrid owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift PianoGrid owns the focused timeline band after the roll focus request; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -1513,8 +1513,8 @@ Original expression:
   QVERIFY(!view.selectionModel().noteSelection().empty())
 
 A121 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:526
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old mouse grabber cleared before the next stage; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift VelocityPage owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift VelocityPage owns the mouse grabber cleared before the next stage; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -1760,7 +1760,7 @@ Original expression:
 
 A142 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:606
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the automation band layout geometry presence; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the automation band layout geometry presence; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const auto geometry =

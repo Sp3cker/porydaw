@@ -24,7 +24,7 @@ Fixture, sequence and row constraints
 Every case opens with the host.prepare guard; band-geometry cases expand one QCOMPARE site per published band row (rect, plot, visibility entries). The four physicalInputsMatchCanonical calls expand input-parity obligations across pointer surfaces. Velocity/roll plot assertions expand over the track-headers, keyboard, and drawer-body geometry rows.
 Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Tally: MATCHED 0, PARTIAL 0, GAP 91, NATIVE 0, RETIRED-REPRESENTATION 104.
+Tally: MATCHED 0, PARTIAL 0, GAP 111, NATIVE 0, RETIRED-REPRESENTATION 84.
 
 Original assertion inventory and source sequence
 
@@ -368,7 +368,7 @@ Original expression:
 
 A027 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:136
 Disposition: GAP
-Mapping/reason: Swift GridGeometry/EditorDrawerPresenter owns the band layout geometry presence across the ruler/roll/other-events/velocity rows; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerLayout/EditorDrawerPresenter owns the band layout geometry presence across the ruler/roll/other-events/velocity rows; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           for (songview::TimelineBand band :
@@ -381,7 +381,7 @@ Original expression:
 
 A028 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:137
 Disposition: GAP
-Mapping/reason: Swift GridGeometry/EditorDrawerPresenter owns the band layout rect non-emptiness; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerLayout/EditorDrawerPresenter owns the band layout rect non-emptiness; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -390,7 +390,7 @@ Original expression:
 
 A029 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:138
 Disposition: GAP
-Mapping/reason: Swift GridGeometry/EditorDrawerPresenter owns the band layout plot-rect non-emptiness; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerLayout/EditorDrawerPresenter owns the band layout plot-rect non-emptiness; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -399,7 +399,7 @@ Original expression:
 
 A030 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:139
 Disposition: GAP
-Mapping/reason: Swift GridGeometry/EditorDrawerPresenter owns the band plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerLayout/EditorDrawerPresenter owns the band plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -408,7 +408,7 @@ Original expression:
 
 A031 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:140
 Disposition: GAP
-Mapping/reason: Swift GridGeometry/EditorDrawerPresenter owns the band plot right edge aligned to the band rect; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerLayout/EditorDrawerPresenter owns the band plot right edge aligned to the band rect; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -417,7 +417,7 @@ Original expression:
 
 A032 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:141
 Disposition: GAP
-Mapping/reason: Swift TrackHeadersPresenter/GridGeometry owns the track-headers/band plot non-intersection; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift TrackHeadersPresenter/TrackHeadersGeometry owns the track-headers/band plot non-intersection; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -426,7 +426,7 @@ Original expression:
 
 A033 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:169
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the band rect published to the QML root property per band entry; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerSectionGeometry owns the band rect published to the QML root property per band entry; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           }
@@ -462,7 +462,7 @@ Original expression:
 
 A034 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:170
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the band plot published to the QML root property per band entry; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerSectionGeometry owns the band plot published to the QML root property per band entry; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -471,7 +471,7 @@ Original expression:
 
 A035 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:171
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the band visibility published to the QML root property per band entry; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerSectionGeometry owns the band visibility published to the QML root property per band entry; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -479,8 +479,8 @@ Original expression:
   QCOMPARE(root->property(entry.visible).toBool(), geometry.has_value())
 
 A036 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:173
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old physical quick-input parity for the ruler band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerLayout owns the canonical ruler band input-surface match (visibility, bounds, mapped rects); no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           }
@@ -491,8 +491,8 @@ Original expression:
               QStringLiteral("timelineRulerGutterInput")))
 
 A037 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:176
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old physical quick-input parity for the roll band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerLayout owns the canonical roll band input-surface match (visibility, bounds, mapped rects); no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -502,8 +502,8 @@ Original expression:
               QStringLiteral("timelineRollGutterInput")))
 
 A038 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:179
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old physical quick-input parity for the other-events band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerLayout owns the canonical other-events band input-surface match (visibility, bounds, mapped rects); no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -514,8 +514,8 @@ Original expression:
               QStringLiteral("timelineOtherEventsGutterInput")))
 
 A039 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:183
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old physical quick-input parity for the velocity band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerLayout owns the canonical velocity band input-surface match (visibility, bounds, mapped rects); no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -527,7 +527,7 @@ Original expression:
 
 A040 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:189
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the velocity band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const auto velocity = layout.geometry(songview::TimelineBand::Velocity);
@@ -538,7 +538,7 @@ Original expression:
 
 A041 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:190
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the roll band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the roll band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -547,7 +547,7 @@ Original expression:
 
 A042 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:191
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity band left edge aligned to the track-headers width; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/TrackHeadersGeometry owns the velocity band left edge aligned to the track-headers width; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -556,7 +556,7 @@ Original expression:
 
 A043 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:192
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the velocity plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -565,7 +565,7 @@ Original expression:
 
 A044 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:193
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the roll plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the roll plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -574,7 +574,7 @@ Original expression:
 
 A045 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:194
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity plot offset equal to the piano-keyboard width; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/PianoGrid owns the velocity plot offset equal to the piano-keyboard width; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -583,7 +583,7 @@ Original expression:
 
 A046 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:195
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the roll plot offset equal to the piano-keyboard width; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/PianoGrid owns the roll plot offset equal to the piano-keyboard width; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -817,7 +817,7 @@ Original expression:
 
 A068 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:255
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the other-events band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the other-events band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const auto other = view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
@@ -828,7 +828,7 @@ Original expression:
 
 A069 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:256
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the velocity band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -936,8 +936,8 @@ Original expression:
   QVERIFY(std::abs(toggles.center().x() - pianoCenter) <= layout::singlePixel())
 
 A080 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:288
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old track-headers quick rows/band/scrollbar item discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift TrackHeadersPresenter/TrackHeadersGeometry owns the track-headers quick surfaces (band, input, rows, scrollbar) discovered for the geometry probe; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           const auto *headers = view.findChild<songview::TrackHeaderModel *>(
@@ -967,8 +967,8 @@ Original expression:
   QVERIFY(headersGeometry.has_value())
 
 A082 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:292
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old track-headers input bound to the headers presenter; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift TrackHeadersPresenter/TrackHeadersGeometry owns the track-headers input bound to the headers presenter; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -1013,7 +1013,7 @@ Original expression:
 
 A087 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:297
 Disposition: GAP
-Mapping/reason: Swift GridGeometry/EditorDrawerPresenter owns the quick ruler plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerLayout/EditorDrawerPresenter owns the quick ruler plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1022,8 +1022,8 @@ Original expression:
                   layout::singlePixel())
 
 A088 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:299
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old quick window device pixel ratio; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift AutomationPlotBounds/EditorDrawerLayout owns the quick-window device pixel ratio behind the ruler plot origin alignment; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -1078,7 +1078,7 @@ Original expression:
 
 A093 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:316
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the band layout geometry before the choreography change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the band layout geometry before the choreography change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const DrawerChrome &chrome = drawer->chrome();
@@ -1089,7 +1089,7 @@ Original expression:
 
 A094 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:320
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the band layout geometry after the choreography change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the band layout geometry after the choreography change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1101,7 +1101,7 @@ Original expression:
 
 A095 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:321
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the band geometry rect change re-published to the QML root properties; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerSectionGeometry owns the band geometry rect change re-published to the QML root properties; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1110,7 +1110,7 @@ Original expression:
 
 A096 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:327
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity band rect re-published to the QML root property; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerSectionGeometry owns the velocity band rect re-published to the QML root property; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           // No event-loop pump: the drawer chrome snapshot publishes through
@@ -1132,8 +1132,8 @@ Original expression:
   QCOMPARE(chrome.velocityHandleRect().bottom(), QRectF(after->rect).top())
 
 A098 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:357
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old SyntheticHost fixture construction and prepare() guard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift SongTabsController/SongTabSession owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden-band visibility/rect projections (including the chrome handle rect) staged by this fixture; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
       }
@@ -1219,8 +1219,8 @@ Original expression:
   QVERIFY(root->property(qPrintable(rectProperty)).toRectF().isEmpty())
 
 A104 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:382
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old hidden band plot/gutter quick item discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden band plot/gutter input surfaces discovered for the visibility probe; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           QString inputName;
@@ -1280,8 +1280,8 @@ Original expression:
   QVERIFY(root->property(qPrintable(visibleProperty)).toBool())
 
 A109 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:389
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old restored band physical quick-input parity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerLayout owns the restored band canonical input-surface match (visibility, bounds, mapped rects); no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -1337,8 +1337,8 @@ Original expression:
   QVERIFY(!view.timelineBandLayout().geometry(songview::TimelineBand::Roll).has_value())
 
 A114 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:410
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old roll plot/gutter quick band-input item presence; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EventListPresenter owns the roll plot/gutter input surfaces present under the event-list toggle; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           auto *roll =
@@ -1369,7 +1369,7 @@ Original expression:
 
 A117 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:413
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity band presence while roll is hidden; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the velocity band presence while roll is hidden; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1425,7 +1425,7 @@ Original expression:
 
 A122 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:433
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the other-events band geometry presence (with input discovery); no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the other-events band geometry presence (with input discovery); no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           auto *input = root->findChild<songview::TimelineInputItem *>(
@@ -1437,8 +1437,8 @@ Original expression:
   QVERIFY(input && geometry.has_value())
 
 A123 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:437
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old shared tooltip QQuickItem and OtherStrip widget discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EventListPresenter owns the other-events tooltip surface discovery and its initially hidden state; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           QQuickItem *toolTip =
@@ -1458,8 +1458,8 @@ Original expression:
   QVERIFY(!view.model().strip.empty())
 
 A125 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:444
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old input containment of the tooltip hover point; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EventListPresenter owns the other-events input containment of the tooltip hover point; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           const StripItem &marker = view.model().strip.front();
@@ -1472,8 +1472,8 @@ Original expression:
   QVERIFY(input->contains(inputPoint))
 
 A126 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:454
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old OtherStrip tooltip visibility after a hover enter; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EventListPresenter owns the other-events tooltip visibility after a hover enter; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           const QPointF windowPoint = input->mapToScene(inputPoint);
@@ -1499,8 +1499,8 @@ Original expression:
   QVERIFY(otherStrip->toolTipText().contains(marker.label))
 
 A128 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:456
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old tooltip position matched to the hover point; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EventListPresenter owns the other-events tooltip position matched to the hover point; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -1508,8 +1508,8 @@ Original expression:
   QCOMPARE(otherStrip->toolTipPosition(), inputPoint)
 
 A129 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:457
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old tooltip QQuickItem visibility after the hover; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EventListPresenter owns the other-events tooltip item visibility after the hover; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -1517,8 +1517,8 @@ Original expression:
   QVERIFY(toolTip->isVisible())
 
 A130 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:464
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old rendered tooltip text containing the marker label; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EventListPresenter owns the rendered other-events tooltip text containing the marker label; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           const auto renderedText = [](QQuickItem &item) {
@@ -1554,8 +1554,8 @@ Original expression:
   QCOMPARE(hidden, checks::async_wait::Result::Ready)
 
 A132 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:480
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old OtherStrip tooltip cleared after leave; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EventListPresenter owns the other-events tooltip cleared after leave; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           settle();
@@ -1564,8 +1564,8 @@ Original expression:
   QVERIFY(!otherStrip->toolTipVisible() && otherStrip->toolTipText().isEmpty())
 
 A133 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:481
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old tooltip QQuickItem hidden after leave; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EventListPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EventListPresenter owns the other-events tooltip item hidden after leave; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
 
@@ -1589,7 +1589,7 @@ Original expression:
 
 A135 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:492
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the other-events band geometry presence for the raster probe; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the other-events band geometry presence for the raster probe; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -1600,8 +1600,8 @@ Original expression:
   QVERIFY(geometry.has_value())
 
 A136 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:496
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old baseline other-events band raster capture validity; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession shell window owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the other-events band geometry rect probed by this raster capture; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
 Source context since previous assertion:
   ;
           QString captureError;
@@ -2088,7 +2088,7 @@ Original expression:
 
 A177 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:660
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the automation band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the automation band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           SongView &view = host.view();
@@ -2105,7 +2105,7 @@ Original expression:
 
 A178 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:661
 Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the voice-changes band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the voice-changes band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 

@@ -211,7 +211,7 @@ Original expression:
 
 A014 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:79
 Disposition: GAP
-Mapping/reason: Swift EditorCamera/GridGeometry owns the editor camera pixels-per-beat scale; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorCamera owns the editor camera pixels-per-beat scale; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -220,7 +220,7 @@ Original expression:
 
 A015 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:80
 Disposition: GAP
-Mapping/reason: Swift GridGeometry owns the grid subdivision at tick 12 (gridTicksAt); no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift PianoGrid owns the grid subdivision at tick 12 (gridTicksAt); no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -229,7 +229,7 @@ Original expression:
 
 A016 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:81
 Disposition: GAP
-Mapping/reason: Swift GridGeometry/PianoGrid owns the snap subdivision at tick 12 (snapTicksAt); no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift PianoGrid owns the snap subdivision at tick 12 (snapTicksAt); no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -257,7 +257,7 @@ Original expression:
 
 A019 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:85
 Disposition: GAP
-Mapping/reason: Swift EditorCamera/GridGeometry owns the drawer context tick rounded up from -1.0 ticks; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorCamera owns the drawer context tick rounded up from -1.0 ticks; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -266,7 +266,7 @@ Original expression:
 
 A020 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:86
 Disposition: GAP
-Mapping/reason: Swift EditorCamera/GridGeometry owns the drawer context tick rounded from 0.49 ticks; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorCamera owns the drawer context tick rounded from 0.49 ticks; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -275,7 +275,7 @@ Original expression:
 
 A021 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:87
 Disposition: GAP
-Mapping/reason: Swift EditorCamera/GridGeometry owns the drawer context tick rounded up from 0.5 ticks; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorCamera owns the drawer context tick rounded up from 0.5 ticks; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -284,7 +284,7 @@ Original expression:
 
 A022 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:88
 Disposition: GAP
-Mapping/reason: Swift EditorCamera/GridGeometry owns the drawer context tick rounded from 0.51 ticks; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: Swift EditorCamera owns the drawer context tick rounded from 0.51 ticks; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
