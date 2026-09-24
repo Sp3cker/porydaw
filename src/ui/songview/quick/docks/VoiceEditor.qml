@@ -51,10 +51,6 @@ ColumnLayout {
                             + Number(hasPulse) * spinHeight
                             + buttonHeight + (visibleRows + 1) * spacingPx
     spacing: spacingPx
-    Layout.leftMargin: Math.round(baseFontPx * 0.33)
-    Layout.rightMargin: Math.round(baseFontPx * 0.25)
-    Layout.topMargin: Math.round(baseFontPx * 0.33)
-    Layout.bottomMargin: 0
 
     Label {
         objectName: "voicegroupEditorNotice"

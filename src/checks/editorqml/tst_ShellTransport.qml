@@ -225,6 +225,36 @@ TestCase {
                 "application output preference survives a fresh shell session")
     }
 
+    function test_explicitOpenSupersedesStartupRestoreDuringPlayback() {
+        settings.setValue("lastProjectDir", bootstrap.projectRoot)
+        settings.setValue("lastOpenSongs", ["mus_littleroot_test"])
+        settings.setValue("lastSongLabel", "mus_littleroot_test")
+        settings.sync()
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the production shell starts with a saved tab recipe")
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "an explicit song opens while startup restore is pending: "
+                   + session.lastSaveError)
+        compare(session.lastSaveError, "")
+        compare(session.songTabs.selectedPage.title, "mus_route101",
+                "the startup recipe never displaces the explicit open")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        const bar = findChild(shell, "transportToolbar")
+        const play = findChild(bar, "transport.play")
+        tryCompare(play, "actionable", true, 3000)
+        mouseClick(play, play.width / 2, play.height / 2)
+        tryCompare(bar.presenter, "state", 3, 3000)
+        wait(400)
+        bar.presenter.refresh()
+        compare(session.songTabs.selectedPage.title, "mus_route101")
+        compare(session.songTabs.tabCount, 1, "startup does not append its saved tab")
+        compare(bar.presenter.state, 3, "a late restore cannot stop explicit playback")
+    }
+
     function test_scaleControlsFollowSelectedTab() {
         var bar = openShell()
         var root = findChild(bar, "transportScaleRoot")
