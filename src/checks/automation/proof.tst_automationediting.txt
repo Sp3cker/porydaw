@@ -6,7 +6,7 @@ Original SHA-256: b230eb77daa26bb9fc832e8029f28c6dd52254390c5f64accbcf1a58f9b2d5
 Swift counterpart: src/checks/automation/tst_automationediting.swift
 Swift SHA-256: 0835a0455f23dbb35310dc8f983ffc2b29e67df4e7784a17941e95bb6f0692e9
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: d2861ca291148a67d21bd3b2c97bcb6d99fa3812875721118e69aadbc6c0c6d4
+Swift SHA-256: d1ee3a04c544ea09c93f71fcbd5baaccae2a223664e580d4a594f833d691a6a4
 Additional Swift counterpart: src/checks/automation/domain/gestures.swift
 Swift SHA-256: 5b86e9ccff282f49293daeda21809428125bd86085e2aa4e57a69fc3dfa60278
 Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
@@ -31,12 +31,15 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-deno task verify --filter swiftcore --verbose passed on this worktree at revision
-470231af89c12f08bf2d8b2562640c40f90a3049 (swiftcore ok; 1/14 harnesses selected, 13
-skipped). The result was supplied by the controller for the settled source snapshot
-recorded above; the ledger agent did not re-run it. The legacy automation C++ harness is
-retired, so this file is an assertion-obligation inventory, never current execution
-evidence for the C++ original. Converted-window command: deno task verify:qml --verbose.
+Command: deno task verify --filter swiftcore --verbose. Result: build: ok (0.13s); ok:
+swiftcore (9.85s) — ********* Finished testing of SwiftCoreTest *********; verify: 1/14 ok
+(9.87s, 13 skipped); run_checks: PASS (all harnesses in 9.87s). The controller ran it in
+this worktree on HEAD 19aca868 plus the uncommitted automationcanvasediting.swift,
+AutomationPageChecks.swift, automationpointmenus.swift and automationtaptempo.swift edits,
+and supplied the banner; the ledger agent did not run it. That snapshot is the one pinned
+above. The legacy automation C++ harness is retired, so this file is an
+assertion-obligation inventory, never current execution evidence for the C++ original.
+Converted-window command: deno task verify:qml --verbose.
 Disposition tally: MATCHED 53, PARTIAL 21, NATIVE 3 (77 sites).
 
 Fixture, sequence, data-row and loop inventory
@@ -301,13 +304,13 @@ Original expression:
 
 A041 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:122
 Disposition: PARTIAL
-Mapping/reason: S021 asserts the cancel ends the gesture synchronously in the model, but the original's rendered transient layer holding no rects has no Swift predicate: the transient layer is scene-graph rendering.
+Mapping/reason: S020 asserts Escape claims the live gesture and S021 that the cancel ends it synchronously in the model, but the original's rendered transient layer holding no rects has no Swift predicate: the transient layer is scene-graph rendering, and no predicate asserts the presenter-equivalent preview state (page.previewPoints) is cleared by handleEscape. [S020][S021]
 Original expression:
   QTRY_VERIFY(quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty())
 
 A042 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:123
 Disposition: PARTIAL
-Mapping/reason: S021 asserts the cancel ends the gesture synchronously in the model, but the original's rendered transient layer holding no triangles has no Swift predicate.
+Mapping/reason: S020 asserts Escape claims the live gesture and S021 that the cancel ends it synchronously in the model, but the original's rendered transient layer holding no triangles has no Swift predicate: no predicate asserts the presenter-equivalent preview state (page.previewPoints) is cleared by handleEscape. [S020][S021]
 Original expression:
   QTRY_VERIFY(
           quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty())
@@ -332,13 +335,13 @@ Original expression:
 
 A046 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:132
 Disposition: PARTIAL
-Mapping/reason: S021 asserts the model ends the gesture synchronously, but the original's rendered transient layer holding no rects after the post-cancel move has no Swift predicate.
+Mapping/reason: S021 asserts the model ends the gesture synchronously and S040 asserts a cancelled gesture never writes on release, but the original's rendered transient layer still holding no rects after the post-cancel move has no Swift predicate: no predicate asserts the preview state (page.previewPoints) stays cleared. [S021][S040]
 Original expression:
   QTRY_VERIFY(quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty())
 
 A047 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:133
 Disposition: PARTIAL
-Mapping/reason: S021 asserts the model ends the gesture synchronously, but the original's rendered transient layer holding no triangles after the post-cancel move has no Swift predicate.
+Mapping/reason: S021 asserts the model ends the gesture synchronously and S040 asserts a cancelled gesture never writes on release, but the original's rendered transient layer still holding no triangles after the post-cancel move has no Swift predicate: no predicate asserts the preview state (page.previewPoints) stays cleared. [S021][S040]
 Original expression:
   QTRY_VERIFY(
           quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty())
@@ -723,3 +726,8 @@ S039 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presenta
 Swift expression:
   report.expectEqual(AutomationCatalog.count, stack.rows.count, cppID: drawerAutomationLabelsID,
                        what: "the row stack carries one row per catalog parameter")
+
+S040 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:72
+Swift expression:
+  report.expectEqual(afterStale, fixture.snapshot, cppID: drawerAutomationCancelID,
+                     what: "a cancelled stale gesture never writes on release")

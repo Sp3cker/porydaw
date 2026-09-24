@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationtaptempo.cpp
 Original SHA-256: 0b180392f9c46d3eb011e0ba238a1fddeb96d0f2833b3fd84aff06f5fb52077d
 Swift counterpart: src/checks/automation/automationtaptempo.swift
-Swift SHA-256: a1c0a24107880f8444c5775f4abf0c7d328fd7ae3e4cf7bfbc84e3e0d2a2a520
+Swift SHA-256: 3070b25046c18aa31e0c40c91abc318fea9fabf2eb8bc21ff4e9a287eff16912
 QML lane counterpart: src/checks/editorqml/tst_EditorDrawer.qml :: test_productionAutomationTapTempoThroughInput
 QML SHA-256: 081c61933828125649cdcc40ba91d7a3d70a5cd917cea918235f0669ab0553c7
 
@@ -1090,146 +1090,146 @@ Swift expression:
   report.expectEqual(AutomationTapTempoSession(), cadence, cppID: drawerAutomationTapTempoID,
                          what: "reset returns the session to its seed state")
 
-S013 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:64
+S013 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:63
 Swift expression:
   report.expectEqual(["0:120"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "the staged document names 120 BPM at tick zero")
 
-S014 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:70
+S014 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:69
 Swift expression:
   report.expectEqual(120, fixture.page.tapTempoSession.draftBpm, cppID: drawerAutomationTapTempoID,
                          what: "the tapped cadence named the tempo already in place")
 
-S015 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:72
+S015 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:71
 Swift expression:
   report.expectEqual(4, fixture.page.tapTempoSession.tapCount, cppID: drawerAutomationTapTempoID,
                          what: "the taps stand in the page's own session")
 
-S016 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:74
+S016 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:73
 Swift expression:
   report.expect(fixture.page.tapTempoActive, cppID: drawerAutomationTapTempoID,
                     message: "a live session is the page's interaction fact")
 
-S017 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:76
+S017 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:75
 Swift expression:
   report.expect(!fixture.page.tapTempoIdleElapsed(), cppID: drawerAutomationTapTempoID,
                     message: "a draft that changes nothing commits nothing")
 
-S018 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:78
+S018 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:77
 Swift expression:
   report.expectEqual(["0:120"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "the no-op idle window left the stream alone")
 
-S019 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:80
+S019 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:79
 Swift expression:
   report.expectEqual(before.revision, fixture.document.revision, cppID: drawerAutomationTapTempoID,
                          what: "the no-op idle window published no revision")
 
-S020 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:82
+S020 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:81
 Swift expression:
   report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationTapTempoID,
                     message: "the no-op idle window recorded no history entry")
 
-S021 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:84
+S021 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:83
 Swift expression:
   report.expect(fixture.page.tapTempoSession.tapCount == 0 && !fixture.page.tapTempoActive,
                     cppID: drawerAutomationTapTempoID,
                     message: "the idle window closed the session either way")
 
-S022 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:90
+S022 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:89
 Swift expression:
   report.expectEqual(150, fixture.page.tapTempoSession.draftBpm, cppID: drawerAutomationTapTempoID,
                          what: "a 400 ms cadence drafts 150 BPM")
 
-S023 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:92
+S023 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:91
 Swift expression:
   report.expect(fixture.page.tapTempoIdleElapsed(), cppID: drawerAutomationTapTempoID,
                     message: "the idle window commits the ready draft")
 
-S024 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:94
+S024 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:93
 Swift expression:
   report.expectEqual(["0:150"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "the commit replaced the tick-zero tempo point")
 
-S025 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:96
+S025 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:95
 Swift expression:
   report.expectEqual(before.revision + 1, fixture.document.revision, cppID: drawerAutomationTapTempoID,
                          what: "the tempo edit published one revision")
 
-S026 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:98
+S026 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:97
 Swift expression:
   report.expect(fixture.document.history.canUndo, cppID: drawerAutomationTapTempoID,
                     message: "the tempo edit recorded one history entry")
 
-S027 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:100
+S027 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:99
 Swift expression:
   report.expect(fixture.undo(), cppID: drawerAutomationTapTempoID, message: "the tempo edit undoes")
 
-S028 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:101
+S028 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:100
 Swift expression:
   report.expectEqual(["0:120"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "undo restored the previous tick-zero tempo")
 
-S029 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:103
+S029 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:102
 Swift expression:
   report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationTapTempoID,
                     message: "one tempo edit is exactly one history entry")
 
-S030 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:108
+S030 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:107
 Swift expression:
   report.fail(drawerAutomationTapTempoID, "redo failed: \(error)")
 
-S031 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:111
+S031 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:110
 Swift expression:
   report.expectEqual(["0:150"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "redo put the committed tempo back on the stream")
 
-S032 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:116
+S032 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:115
 Swift expression:
   report.expectEqual(120, fixture.page.tapTempoSession.draftBpm, cppID: drawerAutomationTapTempoID,
                          what: "the stale session drafts a tempo the stream does not hold")
 
-S033 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:118
+S033 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:117
 Swift expression:
   report.expect(fixture.page.openPrompt(tick: 48, value: 64), cppID: drawerAutomationTapTempoID,
                     message: "the intervening write opened its own prompt")
 
-S034 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:120
+S034 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:119
 Swift expression:
   report.expect(fixture.page.acceptPrompt(displayedValue: 96), cppID: drawerAutomationTapTempoID,
                     message: "the intervening write committed")
 
-S035 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:123
+S035 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:122
 Swift expression:
   report.expect(!fixture.page.tapTempoIdleElapsed(), cppID: drawerAutomationTapTempoID,
                     message: "a capture whose document moved on commits nothing")
 
-S036 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:125
+S036 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:124
 Swift expression:
   report.expectEqual(stale, fixture.document.revision, cppID: drawerAutomationTapTempoID,
                          what: "the stale idle window published no revision")
 
-S037 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:127
+S037 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:126
 Swift expression:
   report.expectEqual(["0:150"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "the stale draft never reached the tempo stream")
 
-S038 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:129
+S038 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:128
 Swift expression:
   report.expect(fixture.page.tapTempoSession.tapCount == 0, cppID: drawerAutomationTapTempoID,
                     message: "the stale idle window closed the session")
 
-S039 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:134
+S039 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:133
 Swift expression:
   report.expect(fixture.page.tapTempoSession.tapCount > 0, cppID: drawerAutomationTapTempoID,
                     message: "the session started on the lane the taps named")
 
-S040 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:137
+S040 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:136
 Swift expression:
   report.expect(!fixture.page.tapTempoIdleElapsed(), cppID: drawerAutomationTapTempoID,
                     message: "a session whose parameter moved on commits nothing")
 
-S041 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:139
+S041 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:138
 Swift expression:
   report.expectEqual(["0:150"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                          what: "the switched parameter left the tempo stream alone")
@@ -1244,94 +1244,94 @@ Swift expression:
     report.expect(burst.idleCommitMs == AutomationTapTempoSession.commitMinimumMs,
                   cppID: drawerAutomationTapTempoID,
 
-S044 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:143
+S044 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:142
 Swift expression:
     report.expectEqual(TimeDefaults.maximumTempoBPM, fixture.page.tapTempoSession.draftBpm,
                        cppID: drawerAutomationTapTempoID,
                        what: "the page session clamps the 150 ms burst to the maximum tempo")
 
-S045 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:146
+S045 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:145
 Swift expression:
     report.expect(fixture.page.tapTempoIdleElapsed(), cppID: drawerAutomationTapTempoID,
                   message: "the idle window commits the clamped draft")
 
-S046 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:148
+S046 | drawerAutomationTapTempoCadenceAndCommit | src/checks/automation/automationtaptempo.swift:147
 Swift expression:
     report.expectEqual(["0:\(TimeDefaults.maximumTempoBPM)"], fixture.tempoValues,
                        cppID: drawerAutomationTapTempoID,
                        what: "the clamped commit lands the maximum tempo at tick zero")
 
-S047 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:157
+S047 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:156
 Swift expression:
     report.expectEqual(TimeDefaults.maximumTempoBPM,
                        AutomationTapTempoSession.bpm(forMeanIntervalMs: 150), cppID: id,
                        what: "a 150 ms mean clamps to the published maximum tempo")
 
-S048 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:160
+S048 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:159
 Swift expression:
     report.expectEqual(TimeDefaults.minimumTempoBPM,
                        AutomationTapTempoSession.bpm(forMeanIntervalMs: 3000), cppID: id,
                        what: "a 3000 ms mean clamps to the published minimum tempo")
 
-S049 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:168
+S049 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:167
 Swift expression:
     report.expect(!stray.page.tapTempoIdleElapsed(), cppID: id,
                   message: "a single stray tap commits nothing")
 
-S050 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:170
+S050 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:169
 Swift expression:
     report.expect(stray.page.tapTempoSession.tapCount == 0, cppID: id,
                   message: "the stray idle window closes the session")
 
-S051 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:172
+S051 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:171
 Swift expression:
     report.expectEqual(strayBefore, stray.snapshot, cppID: id,
                        what: "the stray tap leaves document and history untouched")
 
-S052 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:179
+S052 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:178
 Swift expression:
     report.expect(later.page.tapTempoIdleElapsed(), cppID: id,
                   message: "the idle window commits the ready draft")
 
-S053 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:181
+S053 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:180
 Swift expression:
     report.expectEqual(["0:150", "384:140"], later.tempoValues, cppID: id,
                        what: "the commit replaces tick zero and preserves the later point")
 
-S054 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:183
+S054 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:182
 Swift expression:
     report.expect(later.undo(), cppID: id, message: "the replacement undoes")
 
-S055 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:184
+S055 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:183
 Swift expression:
     report.expectEqual(["0:120", "384:140"], later.tempoValues, cppID: id,
                        what: "undo restores tick zero and preserves the later point")
 
-S056 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:191
+S056 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:190
 Swift expression:
     report.expect(empty.page.tapTempoIdleElapsed(), cppID: id,
                   message: "the idle window commits the first tempo point")
 
-S057 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:193
+S057 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:192
 Swift expression:
     report.expectEqual(["0:150"], empty.tempoValues, cppID: id,
                        what: "the commit inserts tick zero on the empty stream")
 
-S058 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:195
+S058 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:194
 Swift expression:
     report.expect(empty.undo(), cppID: id, message: "the insertion undoes")
 
-S059 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:196
+S059 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:195
 Swift expression:
     report.expect(empty.tempoValues.isEmpty, cppID: id,
                   message: "undo restores the empty tempo stream")
 
-S060 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:202
+S060 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:201
 Swift expression:
     report.expect(seam.page.tapTempoSession.tapCount == 2, cppID: id,
                   message: "two taps stand in the session")
 
-S061 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:206
+S061 | drawerAutomationTapTempoStrayAndEmptyStream | src/checks/automation/automationtaptempo.swift:205
 Swift expression:
     report.expect(seam.page.tapTempoSession.tapCount == 0 && !seam.page.tapTempoActive, cppID: id,
                   message: "the document seam clears the session synchronously")

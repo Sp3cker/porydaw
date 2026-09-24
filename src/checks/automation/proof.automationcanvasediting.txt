@@ -5,7 +5,7 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationcanvasediting.cpp
 Original SHA-256: 86ae100130f53fbd21bcc365842cdb7360a0751afed4e39d4433b8bf9f24d275
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: d2861ca291148a67d21bd3b2c97bcb6d99fa3812875721118e69aadbc6c0c6d4
+Swift SHA-256: e6b78590c3c586824ae89880f2d843d5832bb03c7c550e34062fa9487e785e3f
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 
@@ -35,6 +35,10 @@ drawerAutomationParameterSwitchAndGhosts / drawerAutomationRestoredInteractionCo
 predicates. The predicate line anchors below were read from that settled source.
 Sites mapped to drawerAutomationInflightDragInvalidation cppIDs belong to other
 ledgers (automationnodedrag.cpp, automationownership.cpp) and are not claimed here.
+The controller additionally reports the new drawerAutomationKeyboardIngress and
+drawerAutomationBandEscape predicates (registered at AutomationPageChecks.swift:365-366
+under the selectionClearingAndMultilaneReplacement and rightBandPreviewIsolated cppIDs)
+green in that same swiftcore run; this ledger task did not re-execute them.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -161,44 +165,61 @@ Original expression:
   QCOMPARE(view.selectionModel().timeSelection().endTick, selection.endTick)
 
 A014 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:122
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing explicitly deferred by the user (precedent: proof.automationmenus.txt). The observed state is the time selection after a native Escape key delivery; the Swift page exposes handleEscape() (executed for the gesture contract at S003/S006) and clearTimeSelection(), but no executing predicate routes Escape to the automation page and re-reads the time selection. The selection-persistence half of this original is MATCHED at S059.
+Disposition: MATCHED
+Mapping/reason: S061 and S062 - src/checks/automation/automationcanvasediting.swift:307,309 :: drawerAutomationKeyboardIngress (registered at AutomationPageChecks.swift:365) applies a lane-scoped selection (selectRange 20-60 on the pan lane) and delivers Escape through the page handleEscape() (S061 claims it); S062 asserts page.selection == nil. A nil AutomationTimeSelection is the cleared selection, the observable of the original !cleared.active().
+Swift counterpart expression:
+  report.expect(fixture.page.handleEscape(), cppID: selID,
+                message: "Escape with only an explicit selection claims it")
+  report.expect(fixture.page.selection == nil, cppID: selID,
+                message: "Escape clears the explicit time selection")
 Original expression:
   QVERIFY(!cleared.active())
 
 A015 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:123
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing explicitly deferred by the user (precedent: proof.automationmenus.txt). The observed scope is the time selection state after a native Escape key delivery; no executing Swift predicate routes Escape to the automation page and re-reads the scope. The selection-persistence half of this original is MATCHED at S059.
+Disposition: MATCHED
+Mapping/reason: S062 - src/checks/automation/automationcanvasediting.swift:309 :: drawerAutomationKeyboardIngress clears the explicit selection and asserts page.selection == nil (S061 records the Escape claim). The Swift model represents a cleared selection as absence, so no scope value survives; the original cleared.scope == Tracks reads the same cleared state.
+Swift counterpart expression:
+  report.expect(fixture.page.selection == nil, cppID: selID,
+                message: "Escape clears the explicit time selection")
 Original expression:
   QCOMPARE(cleared.scope, songview::EditorSelectionModel::TimeSelection::Tracks)
 
 A016 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:124
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing explicitly deferred by the user (precedent: proof.automationmenus.txt). The observed start tick is the time selection state after a native Escape key delivery; no executing Swift predicate routes Escape to the automation page and re-reads the range. The selection-persistence half of this original is MATCHED at S059.
+Disposition: MATCHED
+Mapping/reason: S062 - src/checks/automation/automationcanvasediting.swift:309 :: drawerAutomationKeyboardIngress clears the explicit selection and asserts page.selection == nil (S061 records the Escape claim), so no range start survives; the original cleared.startTick == 0 reads the same cleared state.
+Swift counterpart expression:
+  report.expect(fixture.page.selection == nil, cppID: selID,
+                message: "Escape clears the explicit time selection")
 Original expression:
   QCOMPARE(cleared.startTick, uint64_t{0})
 
 A017 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:125
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing explicitly deferred by the user (precedent: proof.automationmenus.txt). The observed end tick is the time selection state after a native Escape key delivery; no executing Swift predicate routes Escape to the automation page and re-reads the range. The selection-persistence half of this original is MATCHED at S059.
+Disposition: MATCHED
+Mapping/reason: S062 - src/checks/automation/automationcanvasediting.swift:309 :: drawerAutomationKeyboardIngress clears the explicit selection and asserts page.selection == nil (S061 records the Escape claim), so no range end survives; the original cleared.endTick == 0 reads the same cleared state.
+Swift counterpart expression:
+  report.expect(fixture.page.selection == nil, cppID: selID,
+                message: "Escape clears the explicit time selection")
 Original expression:
   QCOMPARE(cleared.endTick, uint64_t{0})
 
 A018 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:126
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing explicitly deferred by the user (precedent: proof.automationmenus.txt). The observed empty lane list is the time selection state after a native Escape key delivery; no executing Swift predicate routes Escape to the automation page and re-reads the lanes. The selection-persistence half of this original is MATCHED at S059.
+Disposition: MATCHED
+Mapping/reason: S062 - src/checks/automation/automationcanvasediting.swift:309 :: drawerAutomationKeyboardIngress clears the explicit selection and asserts page.selection == nil (S061 records the Escape claim), so no lane list survives; the original cleared.lanes.empty() reads the same cleared state.
+Swift counterpart expression:
+  report.expect(fixture.page.selection == nil, cppID: selID,
+                message: "Escape clears the explicit time selection")
 Original expression:
   QVERIFY(cleared.lanes.empty())
 
 A019 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:130
 Disposition: PARTIAL
-Mapping/reason: Partial. The Swift suite has no predicate that re-asserts a cleared time selection across a document or rows rebuild; the clear that produced this state is the deferred Escape keyboard path (see A014-A018). Unproved condition: cleared-selection persistence across a rebuild; no Swift predicate re-clears the time selection on a document change either.
+Mapping/reason: Partial. The clear now executes: S061/S062 (automationcanvasediting.swift:307,309 :: drawerAutomationKeyboardIngress) deliver Escape and assert page.selection == nil, with S063 pinning the untouched document. Unproved condition: no executing Swift predicate re-reads page.selection after a document or rows rebuild, so cleared-selection persistence across a rebuild stays unasserted.
 Original expression:
   QVERIFY(!afterRebuild.active())
 
 A020 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:131
 Disposition: PARTIAL
-Mapping/reason: Partial. The Swift suite has no predicate that re-asserts an empty cleared lane list across a document or rows rebuild; the clear that produced this state is the deferred Escape keyboard path (see A014-A018). Unproved condition: cleared-selection lane-list persistence across a rebuild; no Swift predicate re-clears the time selection on a document change either.
+Mapping/reason: Partial. The clear now executes: S061/S062 (automationcanvasediting.swift:307,309 :: drawerAutomationKeyboardIngress) deliver Escape and assert page.selection == nil, with S063 pinning the untouched document. Unproved condition: no executing Swift predicate re-reads the cleared lane list after a document or rows rebuild, so its persistence across a rebuild stays unasserted.
 Original expression:
   QVERIFY(afterRebuild.lanes.empty())
 
@@ -221,14 +242,20 @@ Original expression:
   QVERIFY(view.selectionModel().timeSelection().lanes == noncontiguous.lanes)
 
 A023 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:144
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing explicitly deferred by the user (precedent: proof.automationmenus.txt). The observed inactive state follows a native Escape key delivery; no executing Swift predicate routes Escape to the automation page and re-reads the selection. The selection-persistence half of this original is MATCHED at S059.
+Disposition: MATCHED
+Mapping/reason: S061 and S062 - src/checks/automation/automationcanvasediting.swift:307,309 :: drawerAutomationKeyboardIngress selects the pan lane and its Escape clears the explicit selection (page.selection == nil), the observable of the original !active() after the lane list was replaced by a non-contiguous pair. The Swift fixture selects one lane where the original replaces with a pair; the clear observable is the same, and the pre-Escape read-back stays at S059.
+Swift counterpart expression:
+  report.expect(fixture.page.selection == nil, cppID: selID,
+                message: "Escape clears the explicit time selection")
 Original expression:
   QVERIFY(!view.selectionModel().timeSelection().active())
 
 A024 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:145
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing explicitly deferred by the user (precedent: proof.automationmenus.txt). The observed empty lane list follows a native Escape key delivery; no executing Swift predicate routes Escape to the automation page and re-reads the lanes. The selection-persistence half of this original is MATCHED at S059.
+Disposition: MATCHED
+Mapping/reason: S061 and S062 - src/checks/automation/automationcanvasediting.swift:307,309 :: drawerAutomationKeyboardIngress selects the pan lane and its Escape clears the explicit selection (page.selection == nil), leaving no lane list, the observable of the original lanes.empty() after the non-contiguous replacement. The Swift fixture selects one lane where the original replaces with a pair; the clear observable is the same.
+Swift counterpart expression:
+  report.expect(fixture.page.selection == nil, cppID: selID,
+                message: "Escape clears the explicit time selection")
 Original expression:
   QVERIFY(view.selectionModel().timeSelection().lanes.empty())
 
@@ -668,3 +695,87 @@ S060 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presenta
 Swift expression:
   report.expectEqual([fixture.panLane], fixture.page.selectedParameters, cppID: drawerAutomationSwitchID,
                        what: "the inactive parameter's selection indicator survives the switch")
+
+S061 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:307
+Swift expression:
+  report.expect(fixture.page.handleEscape(), cppID: selID,
+                message: "Escape with only an explicit selection claims it")
+
+S062 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:309
+Swift expression:
+  report.expect(fixture.page.selection == nil, cppID: selID,
+                message: "Escape clears the explicit time selection")
+
+S063 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:311
+Swift expression:
+  report.expectEqual(selected, fixture.snapshot, cppID: selID,
+                     what: "clearing the selection writes nothing")
+
+S064 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:323
+Swift expression:
+  report.expect(precedence.page.handleEscape(), cppID: selID,
+                message: "Escape with a live gesture claims it")
+
+S065 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:325
+Swift expression:
+  report.expect(!precedence.page.hasGesture, cppID: selID,
+                message: "Escape cancels the gesture first")
+
+S066 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:327
+Swift expression:
+  report.expect(precedence.page.selection != nil, cppID: selID,
+                message: "the selection survives a gesture-first Escape")
+
+S067 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:329
+Swift expression:
+  report.expectEqual(grabbed, precedence.snapshot, cppID: selID,
+                     what: "a gesture-first Escape writes nothing")
+
+S068 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:336
+Swift expression:
+  report.expectEqual(EditKeyDecision.execute, EditKeyArbiter.decide(command: .delete, surface: armed),
+                     cppID: keyID, what: "the Delete key routes to the active time selection")
+
+S069 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:338
+Swift expression:
+  report.expectEqual(EditKeyDecision.decline,
+                     EditKeyArbiter.decide(command: nil, surface: armed), cppID: keyID,
+                     what: "an unbound key stays host-owned")
+
+S070 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:344
+Swift expression:
+  report.expectEqual(EditKeyDecision.consume,
+                     EditKeyArbiter.decide(command: .delete, surface: held), cppID: keyID,
+                     what: "a live gesture swallows the Delete key without acting")
+
+S071 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:352
+Swift expression:
+  report.expectEqual(quietBefore, quiet.snapshot, cppID: quietID,
+                     what: "quiescing an idle page writes nothing")
+
+S072 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:364
+Swift expression:
+  report.expect(band.page.bandVisible, cppID: bandID, message: "the right drag arms the band")
+
+S073 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:366
+Swift expression:
+  report.expect(band.page.handleEscape(), cppID: bandID, message: "Escape claims the live band")
+
+S074 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:367
+Swift expression:
+  report.expect(!band.page.bandVisible, cppID: bandID, message: "Escape drops the band")
+
+S075 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:372
+Swift expression:
+  report.expectEqual(bandBefore, band.snapshot, cppID: bandID,
+                     what: "dropping the band writes nothing")
+
+S076 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:368
+Swift expression:
+  report.expect(!band.page.isPanning, cppID: bandID,
+                  message: "no pan owns the band scenario")
+
+S077 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:370
+Swift expression:
+  report.expect(!band.page.hasGesture, cppID: bandID,
+                  message: "no gesture owns the band scenario")

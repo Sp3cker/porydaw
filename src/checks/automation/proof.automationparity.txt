@@ -7,17 +7,16 @@ Original SHA-256: c4bbe92fac0cee53964bc15712503ed0cd350d1836838ad5f546d750b51621
 Swift counterpart: src/checks/automation/domain/gestures.swift
 Swift SHA-256: 5b86e9ccff282f49293daeda21809428125bd86085e2aa4e57a69fc3dfa60278
 Additional Swift counterpart: src/checks/automation/automationselection.swift
-Swift SHA-256: 0a7b0cfb0250cb63deb707a28b4eefa9165d9ec8b0b9ed114240876e62e47d7c
+Swift SHA-256: 036a26f8ce0c6a13f476f164780b2fb8960c989f36c5a5ca500f8675c7bc55a4
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: d2861ca291148a67d21bd3b2c97bcb6d99fa3812875721118e69aadbc6c0c6d4
+Swift SHA-256: d1ee3a04c544ea09c93f71fcbd5baaccae2a223664e580d4a594f833d691a6a4
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-Of the 73 sites in this file, 52 are MATCHED, 4 PARTIAL, 3 NATIVE, and 14 NATIVE-SETUP. Hover non-mutation, stationary node semantics, sweep/ramp commits, pencil preview and the lane band are executed under the original cppIDs by the domain gesture predicates already indexed below and by drawerAutomationRestoredInteractionContracts, drawerAutomationBandIsolatesTempoAndCc and drawerAutomationPencilOwnershipAndShift in src/checks/automation/automationselection.swift. The double-click-to-delete sites stay PARTIAL because the Swift predicates assert the double-click is absorbed with no write while the stationary release delete is asserted separately. NATIVE-SETUP sites are the retired AutomationCanvas lane-row geometry; NATIVE sites are the Quick transient preview layers. Each PARTIAL line names the exact unproved condition.
+Of the 73 sites in this file, 56 are MATCHED, 3 NATIVE, and 14 NATIVE-SETUP. Hover non-mutation, stationary node semantics, sweep/ramp commits, pencil preview and the lane band are executed under the original cppIDs by the domain gesture predicates already indexed below and by drawerAutomationRestoredInteractionContracts, drawerAutomationBandIsolatesTempoAndCc and drawerAutomationPencilOwnershipAndShift in src/checks/automation/automationselection.swift. The double-click-to-delete sites are MATCHED by the same-scenario double-click block of drawerAutomationPencilOwnershipAndShift (handled click, no value prompt, one revision, one count-free history entry, the surviving point set, and the restoring undo) at S156-S158 and S166-S170. NATIVE-SETUP sites are the retired AutomationCanvas lane-row geometry; NATIVE sites are the Quick transient preview layers.
 MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
@@ -26,12 +25,13 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including the predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
+Delta snapshot: the counterpart hashes below were re-pinned for the delta that restored the double-click-once deletion (the doubleID block of drawerAutomationPencilOwnershipAndShift), the cell-snapping/pencil-click predicates in automationactions.swift and the keyboard-ingress/band-escape predicates in automationcanvasediting.swift. The implementing lane reported deno task verify --filter swiftcore --verbose PASS (10.08 s) and deno task verify:qml --verbose PASS (33.90 s) for its own snapshot; the keyboard-ingress and band-escape predicates were registered after that run, so no execution result is claimed for them here. No suite run was made by this ledger task.
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
 
 Execution ownership
-The legacy AutomationEditingTest parity suite asserted behavioral parity across gesture types. In the converted Swift suite, drawerAutomationSweepSteppingAndRampFinish and drawerAutomationPointRangeAndPencilReplacements in src/checks/automation/domain/gestures.swift cover sweep stepping, ramp completion, and point replacements; drawerAutomationRestoredInteractionContracts and drawerAutomationBandIsolatesTempoAndCc in src/checks/automation/automationselection.swift cover hover non-mutation, the stationary click and the lane band; drawerAutomationPencilOwnershipAndShift covers the absorbed double-click. Registered run path: src/checks/automation/AutomationPageChecks.swift:344-393 :: runAutomationPageChecks → projectSession (swiftcore suite 10).
+The legacy AutomationEditingTest parity suite asserted behavioral parity across gesture types. In the converted Swift suite, drawerAutomationSweepSteppingAndRampFinish and drawerAutomationPointRangeAndPencilReplacements in src/checks/automation/domain/gestures.swift cover sweep stepping, ramp completion, and point replacements; drawerAutomationRestoredInteractionContracts and drawerAutomationBandIsolatesTempoAndCc in src/checks/automation/automationselection.swift cover hover non-mutation, the stationary click and the lane band; drawerAutomationPencilOwnershipAndShift covers the absorbed double-click miss, the double-click-once deletion and the Shift axis lock. Registered run path: src/checks/automation/AutomationPageChecks.swift:344-393 :: runAutomationPageChecks → projectSession (swiftcore suite 10).
 
 Fixture, sequence and row constraints
 Data rows expand hoverInsertionDoesNotMutateDocument (cc-lane, tempo-lane), stationaryNodeInteractions (click-node, move-subslop), doubleClickDeletesOnceWithoutValuePrompt (cc-point, tempo-point), sweepAndRampCommit (drag-sweep, shift-ramp), pencilPreviewCommits (pencil-stroke, pencil-click), laneBandSelectsRange (time-range, full-lane), and blankAndSubThresholdNoOps (blank-click, subthreshold-drag). Loops check point values across edited ranges.
@@ -374,7 +374,7 @@ Original expression:
 
 A017 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:210
 Disposition: MATCHED
-Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the committed edit and the revision advance, or the absence of any snapshot change, that publication produces. [S156,S158]
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicates assert the handled double-click and the one-step revision advance its publication produces. [S156,S158]
 Source context since previous assertion:
 
       const QPoint node = automation_test::windowFromContent(page(), automationInput(),
@@ -387,7 +387,7 @@ Original expression:
 
 A018 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:211
 Disposition: MATCHED
-Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicate asserts the committed edit and the revision advance, or the absence of any snapshot change, that publication produces. [S156,S158]
+Mapping/reason: The Qt signal spies are replaced by the Swift publication observable: the same-scenario predicates assert the handled double-click and the one-step revision advance its publication produces. [S156,S158]
 Source context since previous assertion:
 
 
@@ -395,8 +395,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A019 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:221
-Disposition: PARTIAL
-Mapping/reason: drawerAutomationPencilOwnershipAndShift asserts the double-click is absorbed and opens no value prompt, and the stationary release delete is asserted separately by drawerAutomationRestoredInteractionContracts. The original observed the double-click itself committing one delete; that sequencing differs. Unproved: one publication/revision from the double-click sequence. [S157]
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilOwnershipAndShift drives the double-click through the page's own pointer route on both adapter rows and asserts the inline value prompt never opens after the node double-click. [S157]
 Source context since previous assertion:
 
       const uint64_t revision = m_tab->document().revision();
@@ -413,8 +413,8 @@ Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(chrome));
 
 A020 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:222
-Disposition: PARTIAL
-Mapping/reason: drawerAutomationPencilOwnershipAndShift asserts the double-click is absorbed and opens no value prompt, and the stationary release delete is asserted separately by drawerAutomationRestoredInteractionContracts. The original observed the double-click itself committing one delete; that sequencing differs. Unproved: one publication/revision from the double-click sequence. [S158]
+Disposition: MATCHED
+Mapping/reason: The Qt signal count is replaced by the Swift publication observable: the same-scenario predicate asserts the double-click advances the document revision exactly once, so the double-click sequence publishes one edit. [S156,S158]
 Source context since previous assertion:
 
 
@@ -422,8 +422,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), 1);
 
 A021 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:223
-Disposition: PARTIAL
-Mapping/reason: drawerAutomationPencilOwnershipAndShift asserts the double-click is absorbed and opens no value prompt, and the stationary release delete is asserted separately by drawerAutomationRestoredInteractionContracts. The original observed the double-click itself committing one delete; that sequencing differs. Unproved: one publication/revision from the double-click sequence. [S158]
+Disposition: MATCHED
+Mapping/reason: The Qt signal count is replaced by the Swift publication observable: the same-scenario predicate asserts the double-click advances the document revision exactly once, so the double-click sequence publishes one edit. [S156,S158]
 Source context since previous assertion:
 
 
@@ -431,8 +431,8 @@ Original expression:
   QCOMPARE(edited.count(), 1);
 
 A022 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:224
-Disposition: PARTIAL
-Mapping/reason: drawerAutomationPencilOwnershipAndShift asserts the double-click is absorbed and opens no value prompt, and the stationary release delete is asserted separately by drawerAutomationRestoredInteractionContracts. The original observed the double-click itself committing one delete; that sequencing differs. Unproved: one publication/revision from the double-click sequence. [S158]
+Disposition: MATCHED
+Mapping/reason: drawerAutomationPencilOwnershipAndShift asserts the double-click advances the document revision by exactly one, on the tempo and CC adapter rows alike. [S158]
 Source context since previous assertion:
 
 
@@ -441,7 +441,7 @@ Original expression:
 
 A023 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:225
 Disposition: MATCHED
-Mapping/reason: drawerAutomationCancellationAndNoOps asserts the stationary delete is undoable and that one undo reaches the clean base, exactly one recorded history entry. [S159,S160]
+Mapping/reason: drawerAutomationPencilOwnershipAndShift asserts the double-click deletion records exactly one history entry: canUndo after the click and canUndo false after one undo (count-free; no C++ undo index correspondence is claimed). [S167,S168,S169]
 Source context since previous assertion:
 
 
@@ -450,7 +450,7 @@ Original expression:
 
 A024 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:226
 Disposition: MATCHED
-Mapping/reason: drawerAutomationCancellationAndNoOps asserts the stationary delete is undoable and that one undo reaches the clean base, exactly one recorded history entry. [S159,S160]
+Mapping/reason: drawerAutomationPencilOwnershipAndShift asserts the double-click deletion records exactly one history entry: canUndo after the click and canUndo false after one undo (count-free; no C++ undo index correspondence is claimed). [S167,S168,S169]
 Source context since previous assertion:
 
 
@@ -459,7 +459,7 @@ Original expression:
 
 A025 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:227
 Disposition: MATCHED
-Mapping/reason: asserts the committed lane point set after the same pointer sequence. [S154]
+Mapping/reason: drawerAutomationPencilOwnershipAndShift asserts the lane holds exactly the surviving first and last points after the double-click ([S166]) and that one undo restores the deleted node with both neighbours ([S170]). [S166,S170]
 Source context since previous assertion:
 
 
@@ -1718,25 +1718,25 @@ S153 | drawerAutomationRestoredInteractionContracts | src/checks/automation/auto
 Swift expression:
   report.expectEqual(hoverBefore, hover.snapshot, cppID: id, what: "blank hover deletion changes nothing")
 
-S154 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:65
+S154 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:42
 Swift expression:
   report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id, what: "stationary selection click deletes grabbed node only")
 
-S155 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:67
+S155 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:44
 Swift expression:
   report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id, what: "stationary selection click preserves other lanes")
 
-S156 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:328
+S156 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:334
 Swift expression:
-  report.expect(twice.page.pointerDoubleClick(x: twice.x(24), y: twice.y(twice.panLane, 64)), cppID: doubleID, message: "a double-click on a node is absorbed")
+  report.expect(twice.page.pointerDoubleClick(x: nodeX, y: nodeY), cppID: doubleID, message: "a double-click on the node is handled")
 
-S157 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:330
+S157 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:336
 Swift expression:
-  report.expect(!twice.page.hasPrompt, cppID: doubleID, message: "a double-click opens no value prompt")
+  report.expect(!twice.page.hasPrompt, cppID: doubleID, message: "a double-click never opens the value prompt")
 
-S158 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:332
+S158 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:338
 Swift expression:
-  report.expectEqual(twiceBefore, twice.snapshot, cppID: doubleID, what: "a double-click alone writes nothing twice")
+  report.expectEqual(before.revision + 1, twice.document.revision, cppID: doubleID, what: "the double-click publishes exactly one revision")
 
 S159 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:53
 Swift expression:
@@ -1766,7 +1766,27 @@ S165 | drawerAutomationRestoredInteractionContracts | src/checks/automation/auto
 Swift expression:
   report.expect(!page.bandVisible && page.selection?.range == TimeRange(startTick: 0, endTick: fixture.songEndTick), cppID: id, message: "a pending band preserves selection below the Manhattan threshold")
 
+S166 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:342
+Swift expression:
+  report.expectEqual(expected, actual, cppID: doubleID, what: "only the clicked node is deleted from the active adapter")
+
+S167 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:344
+Swift expression:
+  report.expect(twice.document.history.canUndo, cppID: doubleID, message: "the deletion records an undo entry")
+
+S168 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:346
+Swift expression:
+  report.expect(twice.undo(), cppID: doubleID, message: "the double-click deletion can be undone")
+
+S169 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:348
+Swift expression:
+  report.expect(!twice.document.history.canUndo, cppID: doubleID, message: "one undo consumes the double-click's single history entry")
+
+S170 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:351
+Swift expression:
+  report.expectEqual(["0:80", "96:100", "288:64"], restored, cppID: doubleID, what: "one undo restores the deleted node and its two neighbours")
+
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
-src/checks/automation/AutomationPageChecks.swift:381
+SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
+src/checks/automation/AutomationPageChecks.swift:402
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

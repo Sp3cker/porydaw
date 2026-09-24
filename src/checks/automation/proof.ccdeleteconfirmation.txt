@@ -7,7 +7,9 @@ Original SHA-256: d75733bc8844b4f8ca187a03fd69501172f4ee8b727804c945aeaaccae26ab
 Swift counterpart: src/checks/automation/domain/tst_automationdomain.swift
 Swift SHA-256: c7314347f30a129f9ba667ef57a9b569b475c2dd4d6f520f51552f51329c32b7
 Additional Swift counterpart: src/checks/automation/automationpointmenus.swift
-Additional Swift SHA-256: 0482684ce44f2e79306271406de026d1aef2b72f06bebe141f2331bb70a207e7
+Additional Swift SHA-256: 02e53ba32c703c92a5a6f596f62857f5a97173514cb51732da1b563f10ebfd25
+Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
+Additional Swift SHA-256: e6b78590c3c586824ae89880f2d843d5832bb03c7c550e34062fa9487e785e3f
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -24,10 +26,9 @@ MATCHED identifies equivalent model predicates; execution is recorded under Veri
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native pointer-delivery obligations;
 it does not establish coverage of the converted Swift window.
-DEFERRED-KEYBOARD identifies keyboard/focus routing explicitly deferred by the user
-(precedent proof.automationmenus.txt).
 RETIRED-REPRESENTATION identifies retired C++ harness or data plumbing with no Swift ingress.
-GAP identifies an original predicate without a replacement assertion.
+GAP identifies an original predicate without a replacement assertion, including the physical
+Qt key-delivery and native focus-chain rows, which have no Swift or QML ingress.
 Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
@@ -56,8 +57,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:154
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: GAP - native key and focus delivery. The original asserts the native focused band (focusAutomationBand) as the precondition of the confirmation route; the converted Swift page publishes no focused-band state, so no predicate can execute this observation.
 Source context since previous assertion:
   // Regression coverage for the automation canvas' CC-lane delete confirmation:
   // the Quick form that replaced the nonempty-lane QMessageBox on the shared
@@ -303,8 +304,8 @@ Original expression:
                CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
 
 A010 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:179
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: GAP - native key and focus delivery. The original asserts the rendered confirmation gives Cancel the initial focus (inputHasActiveFocus); the Swift presenter owns the confirmation prompt kind but publishes no active-focus state.
 Source context since previous assertion:
 
 
@@ -336,8 +337,8 @@ Original expression:
                    "accepting left confirmation content on the session");
 
 A013 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:186
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: GAP - native key and focus delivery. The original asserts the automation band regains focus after the accept; the Swift page publishes no focused-band state.
 Source context since previous assertion:
 
 
@@ -625,8 +626,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A042 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:243
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: GAP - native key and focus delivery. The original asserts the automation band regains focus after the Cancel route; the Swift page publishes no focused-band state.
 Source context since previous assertion:
 
 
@@ -666,8 +667,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A045 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:262
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Escape and Return key delivery is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter dismisses through its own cancel route.
+Disposition: MATCHED
+Mapping/reason: The dismissal routes through the page Escape and the confirmation cancel block: handleEscape claims the live interaction ([S152]) and ends it synchronously ([S153]), the cancellation mutates nothing ([S154]), and the confirmation own cancel route drops the prompt without a write ([S136], [S137]). The physical Qt key delivery itself is not asserted.
 Source context since previous assertion:
 
 
@@ -715,8 +716,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A050 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:269
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: GAP - native key and focus delivery. The original asserts the automation band regains focus after the Escape dismissal; the Swift page publishes no focused-band state.
 Source context since previous assertion:
 
 
@@ -876,8 +877,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A064 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:318
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: GAP - native key and focus delivery. The original asserts the automation band regains focus after the outside dismissal; the Swift page publishes no focused-band state.
 Source context since previous assertion:
 
 
@@ -917,8 +918,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A067 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:335
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: GAP - native key and focus delivery. The original asserts the confirmation gives Cancel the initial focus before the Return cancellation; the Swift presenter publishes no active-focus state.
 Source context since previous assertion:
 
 
@@ -927,8 +928,8 @@ Original expression:
                    "the confirmation did not give Cancel the initial focus");
 
 A068 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:340
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Escape and Return key delivery is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter dismisses through its own cancel route.
+Disposition: MATCHED
+Mapping/reason: The confirmation initial Return routes to the same guarded cancel: handleEscape claims the deferred interaction ([S152]) and ends it synchronously ([S153]), a cancelled interaction mutates nothing ([S154]), and the confirmation own cancel route drops the prompt without a write ([S136], [S137]). The physical Qt key delivery itself is not asserted.
 Source context since previous assertion:
 
 
@@ -977,8 +978,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A073 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:347
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: GAP - native key and focus delivery. The original asserts the automation band regains focus after the Return cancellation; the Swift page publishes no focused-band state.
 Source context since previous assertion:
 
 
@@ -1007,8 +1008,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A075 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:361
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: GAP - native key and focus delivery. The original asserts the confirmation gives Cancel the initial focus in the stale scenario; the Swift presenter publishes no active-focus state.
 Source context since previous assertion:
 
 
@@ -1190,8 +1191,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A091 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:416
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: GAP - native key and focus delivery. The original asserts the confirmation gives Cancel the initial focus in the foreign-popup scenario; the Swift presenter publishes no active-focus state.
 Source context since previous assertion:
 
 
@@ -1364,8 +1365,8 @@ Original expression:
                songview::GridSelection::musical(uint32_t(targetDenom)));
 
 A106 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:473
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: GAP - native key and focus delivery. The original asserts the ruler control regains active focus after the foreign pick (hasActiveFocus); the Swift page has no ruler-division ingress and publishes no active-focus state.
 Source context since previous assertion:
 
 
@@ -1377,8 +1378,8 @@ Original expression:
                    "the foreign pick did not return focus to the ruler control");
 
 A107 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:476
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Escape and Return key delivery is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter dismisses through its own cancel route.
+Disposition: GAP
+Mapping/reason: GAP - native key delivery. The original asserts a physical Qt Return press on the focused ruler control reopening the foreign division menu; the Swift page has no ruler-menu ingress and no key-delivery predicate, so this observation cannot execute.
 Source context since previous assertion:
 
       keyClick(Qt::Key_Return);
@@ -1737,8 +1738,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A139 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:579
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: GAP - native key and focus delivery. The original asserts the confirmation gives Cancel the initial focus in the written-count scenario; the Swift presenter publishes no active-focus state.
 Source context since previous assertion:
 
 
@@ -1934,7 +1935,10 @@ The S entries are exact predicates called by the paired Swift suite. Their prese
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 S001-S123 index src/checks/automation/domain/tst_automationdomain.swift; S124-S151 index
 drawerAutomationLaneDeleteConfirmation in src/checks/automation/automationpointmenus.swift,
-which owns the confirmation, stale, synthetic-only and written-count predicates.
+which owns the confirmation, stale, synthetic-only and written-count predicates;
+S152-S154 index drawerAutomationCancellationAndNoOps in
+src/checks/automation/automationcanvasediting.swift, which owns the page Escape and
+cancellation route cited for the two dismissal sites.
 
 S001 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:12
   report.expectEqual(AutomationCatalog.count, catalog.count, cppID: drawerAutomationCatalogID,
@@ -2571,7 +2575,19 @@ S151 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automation
     report.expectEqual(syntheticBefore, synthetic.snapshot, cppID: syntheticID,
                        what: "the refused row writes nothing")
 
+S152 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:23
+    report.expect(fixture.page.handleEscape(), cppID: drawerAutomationCancelID,
+                  message: "Escape claims the live gesture")
+
+S153 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:25
+    report.expect(!fixture.page.hasGesture && !fixture.page.interactionActive, cppID: drawerAutomationCancelID,
+                  message: "cancelling ends the gesture synchronously")
+
+S154 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:27
+    report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
+                       what: "a cancelled gesture mutates nothing")
+
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: 66ff0023e15e9a97db73c6437733c92c29d893de5680ce1179876a6e3156dea4
-src/checks/automation/AutomationPageChecks.swift:397
+SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
+src/checks/automation/AutomationPageChecks.swift:402
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationpointmenus.cpp
 Original SHA-256: b15a2e6646fb4e2878367a6ef67473926f9ac2522c626266ce2c090755355325
 Swift counterpart: src/checks/automation/automationpointmenus.swift
-Swift SHA-256: 0482684ce44f2e79306271406de026d1aef2b72f06bebe141f2331bb70a207e7
+Swift SHA-256: 02e53ba32c703c92a5a6f596f62857f5a97173514cb51732da1b563f10ebfd25
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,10 +23,10 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Verification: deno task verify --filter swiftcore --verbose — PASS on this worktree (1/14 harnesses selected, 13 skipped; swiftcore green, including drawerAutomationPointMenuDeleteAndStale, drawerAutomationDuplicatePromptAndParameterSwitch and drawerAutomationLaneDeleteConfirmation). Recorded by the lane controller from the settled run at this source snapshot; this proof-only reconciliation did not re-run the build or the suite.
+Verification: deno task verify --filter swiftcore --verbose — ok: swiftcore on this worktree (1/14 harnesses selected, ~10s) on the tree at 19aca868 plus the lane uncommitted check edits; drawerAutomationOutsidePressRetarget executes green in runAutomationPageChecks with no FAIL lines for its cppID, alongside drawerAutomationPointMenuDeleteAndStale, drawerAutomationDuplicatePromptAndParameterSwitch and drawerAutomationLaneDeleteConfirmation. Recorded by the lane controller from that run; this proof-only reconciliation did not re-run the build or the suite.
 Reference revision pin: the recovered original at the recorded revision hashes to the recorded Original SHA-256; the counterpart hash above is the final checked-in source.
 Registered run path: src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks -> src/checks/workspace/SessionChecks.swift :: runProjectSessionSuite -> projectSession (swiftcore suite 10); the counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
-Execution boundary: MATCHED identifies equivalent executing predicates at the cited S entries. Native popup rendering and pointer delivery, deferred keyboard/focus routing, retired representation and the residual unproved conditions stay recorded per site; parser success is not semantic parity.
+Execution boundary: MATCHED identifies equivalent executing predicates at the cited S entries. Native popup rendering and pointer delivery, native focus and key delivery with no Swift ingress (each recorded as GAP with its observed outcome), retired representation and the residual unproved conditions stay recorded per site; parser success is not semantic parity.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -195,8 +195,8 @@ Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A021 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:170
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the original requires the text input of the inline prompt to hold the active focus of the quick window after the Set Value pick; the counterpart observes the prompt opening and marking the page interacting ([S001], [S002]) but publishes no active-focus fact.
 Original expression:
   QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value pick")
 
@@ -255,8 +255,8 @@ Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndex + 1)
 
 A031 | AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence | src/checks/automation/automationpointmenus.cpp:184
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the original requires the plot automation input to own the active focus of the quick window again after the commit and its undo; the counterpart asserts the committed value, the one revision and the undo ([S008], [S009], [S013], [S014]) but publishes no focus owner.
 Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
@@ -286,8 +286,8 @@ Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A036 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:209
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Escape and Return key delivery is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter dismisses through its own cancel route.
+Disposition: MATCHED
+Mapping/reason: The page claims an open prompt with Escape through the cancel route the predicate exercises: cancelling an open prompt drops the prompt and the live interaction ([S022]) and commits nothing ([S021]).
 Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
@@ -310,8 +310,8 @@ Original expression:
   QCOMPARE(songTab.document().lanePoints(0, kController).size(), std::size_t{1})
 
 A040 | AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched | src/checks/automation/automationpointmenus.cpp:214
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the original requires the automation input to own the active focus of the quick window again after the Escape-cancelled prompt; the counterpart asserts the prompt drop and the untouched document and history ([S021], [S022]) but publishes no focus owner.
 Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
@@ -346,8 +346,8 @@ Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A046 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:233
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the original requires the focused text input of the quick window to belong to the inline prompt before the track switch; the counterpart asserts the prompt and its parameter-switch drop ([S046], [S047]) but publishes no focused-input fact.
 Original expression:
   QVERIFY(automation_valueprompt::focusedTextInput(quickWindow()))
 
@@ -394,8 +394,8 @@ Original expression:
   QCOMPARE(songTab.document().undoStack()->index(), undoIndex)
 
 A054 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:264
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the guard establishes the native automation band focus and the active focus item of the quick window through the deleted C++ harness, and the ported page publishes no focused-band fact, so no executing predicate observes this precondition.
 Original expression:
   QVERIFY(focusAutomationBand())
 
@@ -407,82 +407,82 @@ Original expression:
 
 A056 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:274
 Disposition: MATCHED
-Mapping/reason: The Swift pointer route opens the point menu and asserts its captured target ([S028]).
+Mapping/reason: The Swift retarget scenario opens the first point menu through the same node right-press and asserts its captured point target ([S082]); the sibling delete scenario asserts the same route ([S028]).
 Original expression:
   QVERIFY2(first.session, qUtf8Printable(first.diagnostic))
 
 A057 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:283
-Disposition: NATIVE
-Mapping/reason: Native pointer delivery only: the outside right-press retarget of an open menu has no Swift predicate; Swift stages a single right-press open.
+Disposition: MATCHED
+Mapping/reason: The Swift retarget scenario delivers the outside right press on the second written node through the page outside-press route and asserts the captured point target ([S083]); the consumed Delete then removes the second node only ([S085]), so the retargeted menu names the newly hit node.
 Original expression:
   QVERIFY2(retargeted.session, qUtf8Printable(retargeted.diagnostic))
 
 A058 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:287
 Disposition: MATCHED
-Mapping/reason: The published point menu enables Delete on the written node ([S029]).
+Mapping/reason: The published point menu enables Delete on the written node ([S029]); in the retarget scenario the consumed Delete row proves the retargeted menu published it enabled ([S084]).
 Original expression:
   QVERIFY2(deleteItem && deleteItem->enabled, "the retargeted menu lost its Delete row")
 
 A059 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:288
 Disposition: PARTIAL
-Mapping/reason: The rendered row click is not exercised; the Swift predicate dispatches the same action through the presenter.
+Mapping/reason: The rendered row click is not exercised; the Swift retarget scenario dispatches the same action through the presenter and asserts the consumption ([S084]).
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*retargeted.session, deleteRow),
                "the retargeted Delete row did not receive a real click")
 
 A060 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:291
 Disposition: PARTIAL
-Mapping/reason: The shared menu open state after the pick is not observed in Swift; the Swift predicate asserts the dispatch outcome through consumeMenuAction.
+Mapping/reason: The shared menu open state after the retargeted pick is not observed in Swift; the Swift predicate asserts the dispatch outcome through consumeMenuAction ([S084]).
 Original expression:
   QVERIFY2(!retargeted.session->isOpen(), "the retargeted Delete pick left the menu open")
 
 A061 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:293
 Disposition: MATCHED
-Mapping/reason: Swift requires the Delete to spare the other written node ([S034]).
+Mapping/reason: Swift requires the retargeted Delete to spare the first written node ([S085]) and its undo to restore both written nodes ([S086], [S034]).
 Original expression:
   QVERIFY(songTab.document().findLanePoint(0, kController, kPointTick, &point))
 
 A062 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:294
 Disposition: MATCHED
-Mapping/reason: Swift requires the Delete to remove exactly the targeted node ([S031]).
+Mapping/reason: Swift requires the retargeted Delete to remove exactly the second written node ([S085]), the node the outside press hit ([S083]).
 Original expression:
   QVERIFY(!songTab.document().findLanePoint(0, kController, kOtherPointTick, &point))
 
 A063 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:295
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the original re-reads the focused band of the native quick view after the retargeted Delete pick; the ported page publishes no focused-band fact and this counterpart has no predicate for the return of native band focus.
 Original expression:
   QTRY_VERIFY2(songTab.view().quickView()->focusedBand() == songview::TimelineBand::Automation,
                    "the retargeted Delete pick did not return the band focus")
 
 A064 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:312
 Disposition: MATCHED
-Mapping/reason: The Swift pointer route opens the point menu and asserts its captured target ([S028]).
+Mapping/reason: The Swift retarget scenario reopens the point menu through the same node right-press at the witness node and asserts its captured point target ([S087]).
 Original expression:
   QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic))
 
 A065 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:318
-Disposition: NATIVE
-Mapping/reason: Native pointer delivery only: the plot-miss right-press dismissal has no Swift predicate; the converted page has no miss right-press route.
+Disposition: MATCHED
+Mapping/reason: The Swift retarget scenario reopens the point menu and delivers the outside press on empty plot space through the page outside-press route, then requires the shared menu to be closed ([S088]).
 Original expression:
   QVERIFY2(!reopened.session->isOpen(), "a miss right press did not dismiss the point menu")
 
 A066 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:319
-Disposition: NATIVE
-Mapping/reason: Native pointer delivery only: the swallowed paired release after a miss press has no Swift predicate.
+Disposition: PARTIAL
+Mapping/reason: The release of the Swift page after the miss press claims no band ([S089]) and the paired sequence writes nothing ([S090]); the production QML underlay swallowing that release before it reaches the page is not observed here.
 Original expression:
   QVERIFY2(!quick_popup::popupSession(songTab.view())->isOpen(),
                "the dismissed point menu leaked its paired release into a new menu")
 
 A067 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:321
-Disposition: PARTIAL
-Mapping/reason: The Swift no-op and cancel scenarios assert snapshot equality for the routes they stage ([S003], [S021]); the native miss-press dismissal itself is not staged.
+Disposition: MATCHED
+Mapping/reason: The Swift retarget scenario captures the document state with the menu dismissed, before the empty-space press, and requires it unchanged across the miss press and its paired release ([S090]).
 Original expression:
   QCOMPARE(songTab.document().smf().write(), before)
 
 A068 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:322
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the original re-reads the focused band of the native quick view after the miss dismissal; the ported page publishes no focused-band fact and this counterpart has no predicate for the return of native band focus.
 Original expression:
   QTRY_VERIFY2(songTab.view().quickView()->focusedBand() == songview::TimelineBand::Automation,
                    "the miss dismissal did not restore the automation band focus")
@@ -501,8 +501,8 @@ Original expression:
                "the fallback menu offered no time-selection rows")
 
 A071 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:336
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Escape and Return key delivery is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter dismisses through its own cancel route.
+Disposition: GAP
+Mapping/reason: Native key delivery: the original dismisses the native plot-miss fallback menu with a physical Escape; the fallback time-selection menu has no Swift predicate in this counterpart and no executing predicate routes Escape into an open menu and re-reads its state.
 Original expression:
   QVERIFY2(!fallback.session->isOpen(), "Escape did not dismiss the fallback menu")
 
@@ -571,8 +571,8 @@ Original expression:
                "a selection change cancelled the independent node-value prompt")
 
 A082 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:375
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Escape and Return key delivery is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter dismisses through its own cancel route.
+Disposition: MATCHED
+Mapping/reason: The page claims an open prompt with Escape through the cancel route the predicate exercises: cancelling the prompt on the written node drops the prompt and the interaction ([S022]) and commits nothing ([S021]).
 Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
@@ -788,8 +788,8 @@ Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A115 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:488
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the original requires the text input of the inline prompt to hold the active focus of the quick window after the Set Value pick on the synthetic row; the counterpart asserts the prompt and its empty-tick insertion ([S015], [S016], [S017]) but publishes no active-focus fact.
 Original expression:
   QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value pick")
 
@@ -867,8 +867,8 @@ Original expression:
   QCOMPARE(songTab.document().smf().write(), before)
 
 A128 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:508
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the original re-checks that the automation input owns the active focus of the quick window after the promoted event is undone; the counterpart asserts the empty-tick insertion commit ([S017]) but stages neither that undo nor any focus owner.
 Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
@@ -1036,8 +1036,8 @@ Original expression:
                songview::GridSelection::musical(uint32_t(targetDenom)))
 
 A155 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:615
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the original requires the native ruler control to hold active focus after the foreign division pick; that foreign ruler route is native rendering and ownership with no Swift predicate in this counterpart, and the page publishes no focus owner.
 Original expression:
   QTRY_VERIFY2(division->hasActiveFocus(),
                    "the foreign pick did not return focus to the ruler control")
@@ -1103,8 +1103,8 @@ Original expression:
   QVERIFY(nodeModel)
 
 A166 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:653
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Escape and Return key delivery is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter dismisses through its own cancel route.
+Disposition: GAP
+Mapping/reason: Native key delivery: the original dismisses the open point menu with a physical Escape on the popup session window; no executing predicate in this counterpart routes Escape into a menu and re-reads the page menu-open state (the consumption predicates observe the action route only, [S030], [S084]).
 Original expression:
   QVERIFY2(!menu.session->isOpen(), "Escape did not dismiss the point menu")
 
@@ -1239,8 +1239,8 @@ Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A188 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:739
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the original requires the text input of the inline prompt to hold the active focus of the quick window after the Set Value pick on the switched lane; the counterpart asserts the prompt opening ([S046]) but publishes no active-focus fact.
 Original expression:
   QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value pick")
 
@@ -1372,8 +1372,8 @@ Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A209 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:804
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the original requires the fresh Tempo prompt to take active focus; the counterpart asserts the Tempo prompt and its acceptance ([S048], [S049]) but publishes no active-focus fact.
 Original expression:
   QVERIFY2(freshPrompt, "the fresh Tempo prompt did not take active focus")
 
@@ -1471,8 +1471,8 @@ Original expression:
   QCOMPARE(songTab.document().smf().write(), before.smf)
 
 A225 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:832
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt); the Swift presenter has no predicate for this focus observation.
+Disposition: GAP
+Mapping/reason: Native focus delivery: the original requires the automation input to own the active focus of the quick window again after the Tempo acceptance is undone; the counterpart asserts the acceptance and its undo ([S027], [S049]) but publishes no focus owner.
 Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
@@ -1480,8 +1480,9 @@ Swift executable assertion index
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 S001-S027 index drawerAutomationPromptTransactions, S028-S038 and S079
-drawerAutomationPointMenuDeleteAndStale, S039-S052 drawerAutomationDuplicatePromptAndParameterSwitch and
-S053-S078 plus S080-S081 drawerAutomationLaneDeleteConfirmation, all in
+drawerAutomationPointMenuDeleteAndStale, S039-S052 drawerAutomationDuplicatePromptAndParameterSwitch,
+S053-S078 plus S080-S081 drawerAutomationLaneDeleteConfirmation and
+S082-S090 drawerAutomationOutsidePressRetarget, all in
 src/checks/automation/automationpointmenus.swift.
 
 S001 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:15
@@ -1888,3 +1889,46 @@ S081 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automation
 Swift expression:
     report.expectEqual(syntheticBefore, synthetic.snapshot, cppID: syntheticID,
                        what: "the refused row writes nothing")
+
+S082 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:286
+Swift expression:
+    report.expect(page.menuTargetIsPoint, cppID: id,
+                  message: "the first point owns its captured menu target")
+
+S083 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:290
+Swift expression:
+    report.expect(page.menuTargetIsPoint, cppID: id,
+                  message: "an outside right press on another node retargets the menu")
+
+S084 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:292
+Swift expression:
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
+                  cppID: id, message: "the retargeted Delete row is consumed")
+
+S085 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:294
+Swift expression:
+    report.expectEqual(["24:64"], fixture.values(fixture.panLane), cppID: id,
+                       what: "the retargeted Delete removes the second node only")
+
+S086 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:296
+Swift expression:
+    report.expect(fixture.undo(), cppID: id, message: "the retargeted Delete undoes")
+
+S087 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:302
+Swift expression:
+    report.expect(page.menuTargetIsPoint, cppID: id,
+                  message: "the point menu reopens")
+
+S088 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:306
+Swift expression:
+    report.expect(!page.menuOpen, cppID: id, message: "the miss closes the shared menu")
+
+S089 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:307
+Swift expression:
+    report.expect(!page.pointerRelease(x: fixture.x(168), y: 60, button: AutomationQtButton.right),
+                  cppID: id, message: "the paired release claims no band")
+
+S090 | drawerAutomationOutsidePressRetarget | src/checks/automation/automationpointmenus.swift:309
+Swift expression:
+    report.expectEqual(missBefore, fixture.snapshot, cppID: id,
+                       what: "the dismissed menu writes nothing")

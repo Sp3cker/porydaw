@@ -5,7 +5,7 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationselection.cpp
 Original SHA-256: 589378ab1a0351dd4c2b1963fb45a91b9973abf2ea95ae2456cb8cb11d706ef8
 Swift counterpart: src/checks/automation/automationselection.swift
-Swift SHA-256: 025fb88dde8063b8a0d5c9934d843bdcba79d7cc97ed7ce93cd15e9b72db0cf2
+Swift SHA-256: 036a26f8ce0c6a13f476f164780b2fb8960c989f36c5a5ca500f8675c7bc55a4
 Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 Additional Swift counterpart: src/checks/automation/tst_automationediting.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
@@ -686,8 +686,8 @@ Original expression:
           *page().canvas(), {EditorAutomationRowKind::ControlChange, kTrack, kVolumeController})))
 
 A077 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:387
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing explicitly deferred by the user (precedent: proof.automationmenus.txt): the original focuses the native automation band so the Delete key reaches it. The Swift page exposes consumeSelectionCommand(command: .delete) and the command route now executes through drawerAutomationSelectionDeleteCommand (S072-S080), so the native key and focus delivery is the only unproved half.
+Disposition: GAP
+Mapping/reason: GAP (native focus ingress): the original focuses the native automation band so the Delete key reaches it. The Delete route itself is covered - drawerAutomationSelectionDeleteCommand consumes the selection command (S072-S080) and the arbiter verdict for an armed time selection is asserted at S081 - but EditSurfaceState is a plain host snapshot with no focus or key ingress, and no executing predicate establishes that focusing the band delivers Delete. Missing delivery: the native focus chain and key delivery into the page.
 Original expression:
   QVERIFY(focusAutomationBand())
 
@@ -1819,46 +1819,51 @@ Swift expression:
   report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID,
                        what: "the cancelled drag writes nothing")
 
-S072 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:443
+S072 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:463
 Swift expression:
   report.expect(fixture.page.consumeSelectionCommand(command: .delete), cppID: id,
                   message: "the Delete command removes the covered span")
 
-S073 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:445
+S073 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:465
 Swift expression:
   report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id,
                        what: "Delete keeps CC points outside the span")
 
-S074 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:447
+S074 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:467
 Swift expression:
   report.expect(fixture.tempoValues.isEmpty, cppID: id,
                   message: "Delete removes the covered tempo point")
 
-S075 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:449
+S075 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:469
 Swift expression:
   report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
                        what: "one Delete is one revision")
 
-S076 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:451
+S076 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:471
 Swift expression:
   report.expect(fixture.undo(), cppID: id, message: "the Delete undoes")
 
-S077 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:452
+S077 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:472
 Swift expression:
   report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores the covered CC point")
 
-S078 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:454
+S078 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:474
 Swift expression:
   report.expectEqual(["48:100"], fixture.tempoValues, cppID: id,
                        what: "undo restores the covered tempo point")
 
-S079 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:458
+S079 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:478
 Swift expression:
   report.expect(!fixture.page.consumeSelectionCommand(command: .delete), cppID: id,
                   message: "Delete with no selection commits nothing")
 
-S080 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:460
+S080 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:480
 Swift expression:
   report.expectEqual(emptyBefore, fixture.snapshot, cppID: id,
                        what: "an empty Delete writes nothing")
+
+S081 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:336
+Swift expression:
+  report.expectEqual(EditKeyDecision.execute, EditKeyArbiter.decide(command: .delete, surface: armed),
+                     cppID: keyID, what: "the Delete key routes to the active time selection")

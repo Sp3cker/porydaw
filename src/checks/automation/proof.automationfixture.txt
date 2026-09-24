@@ -7,11 +7,11 @@ Original SHA-256: 1d6668d96212debf3f3930429fbeae4733c422c9b15de920f4ae1a59f693ec
 Swift counterpart: src/checks/automation/tst_automationediting.swift
 Swift SHA-256: 0835a0455f23dbb35310dc8f983ffc2b29e67df4e7784a17941e95bb6f0692e9
 Additional Swift counterpart: src/checks/automation/AutomationPageChecks.swift
-Swift SHA-256: dce1000e17ed29709316b9d84f1c07ecf0f11a0c323d09d5ad642cf3c325dd31
+Swift SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
 Swift SHA-256: d70079064b3497280fc052f594e9d53e374cd8b65e2e902a92abb83f82727e44
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: d2861ca291148a67d21bd3b2c97bcb6d99fa3812875721118e69aadbc6c0c6d4
+Swift SHA-256: d1ee3a04c544ea09c93f71fcbd5baaccae2a223664e580d4a594f833d691a6a4
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
 Swift SHA-256: 591fb9b3c5dc1551c3f2a2ec4caa3b32529389f161b8b09a83841c4625d69aaa
 
@@ -19,7 +19,7 @@ Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-This file contains 12 fixture assertion sites in AutomationEditingTest::init and cleanup. 6 sites are NATIVE (QQuickWindow exposure, the input items' geometry and window ownership, and the input-quiescing cleanup); 4 are PARTIAL (the production fixture's activation, rendered-row and staged-value preconditions); 1 is DEFERRED-KEYBOARD (the automation-band focus wait); 1 is RETIRED-REPRESENTATION (the fallible C++ stageSong pipeline, which has no Swift failure branch).
+This file contains 12 fixture assertion sites in AutomationEditingTest::init and cleanup. 5 sites are NATIVE (QQuickWindow exposure, the input items' geometry and window ownership); 4 are PARTIAL (the production fixture's activation, rendered-row and staged-value preconditions); 1 is MATCHED (the cleanup site's quiescence half); 1 is GAP (the automation-band focus wait, whose native focus chain has no Swift ingress); 1 is RETIRED-REPRESENTATION (the fallible C++ stageSong pipeline, which has no Swift failure branch). The cleanup site (A012) is recorded as one split site: its no-residual-input delivery half is MATCHED by the quiescence predicate, while the original's requirement that the native quick window hold no mouseGrabberItem stays NATIVE — the converted presenter fixture owns no QQuickWindow.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -29,13 +29,20 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: passed on this worktree at revision 470231af89c12f08bf2d8b2562640c40f90a3049
-(swiftcore ok; 1/14 harnesses selected, 13 skipped). The result was supplied by the
-controller for the settled source snapshot recorded above; the ledger agent did not
-re-run it.
+Result: build: ok (0.13s); ok: swiftcore (9.85s) — ********* Finished testing of
+SwiftCoreTest *********; verify: 1/14 ok (9.87s, 13 skipped); run_checks: PASS (all
+harnesses in 9.87s). The controller ran it in this worktree on HEAD 19aca868 plus the
+uncommitted automationcanvasediting.swift, AutomationPageChecks.swift,
+automationpointmenus.swift and automationtaptempo.swift edits, and supplied the banner;
+the ledger agent did not run it. That snapshot is the one pinned above.
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
+The quiescence predicate (cppID automation/AutomationEditingTest::cleanup, indexed as
+S022) and the synchronous-cancel predicate it pairs with (S021) execute in
+drawerAutomationKeyboardIngress and drawerAutomationCancellationAndNoOps
+(automationcanvasediting.swift:300 and :12), registered by runAutomationPageChecks at
+AutomationPageChecks.swift:365 and :363.
 
 Execution ownership
 AutomationEditingTest::init and cleanup bracketed historical automation editing checks. In the converted Swift suite, drawerAutomationAutomationFixture in src/checks/automation/AutomationPageChecks.swift provides shared setup, while src/checks/automation/tst_automationediting.swift exercises document history and undo/redo operations.
@@ -279,8 +286,8 @@ Original expression:
   QVERIFY(laneValue(kPilotIndependentTick) == kPilotIndependentValue);
 
 A011 | AutomationEditingTest::init | src/checks/automation/automationfixture.cpp:153
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: The original focuses the native automation band and waits for the quick window's active focus item. Focus routing is explicitly deferred by the user (precedent: proof.automationmenus.txt).
+Disposition: GAP
+Mapping/reason: GAP (native focus chain): the original focuses the automation band and waits for the quick window's active focus item; the converted presenter fixture owns no QQuickWindow or focus item, and no Swift predicate observes focus routing. Native focus delivery has no ingress in this lane.
 Source context since previous assertion:
 
 
@@ -288,8 +295,8 @@ Original expression:
   QVERIFY(focusAutomationBand());
 
 A012 | AutomationEditingTest::cleanup | src/checks/automation/automationfixture.cpp:166
-Disposition: NATIVE
-Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the cleanup quiesces native input delivery (Escape, held-button releases, held-key releases and mouse-grab clearance)). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: Split site. Delivery half MATCHED: S022 asserts that quiescing an idle page (cancelSectionInteraction on the activated production lane) writes nothing, and S021 that a cancelled gesture ends synchronously with no live interaction — the Swift equivalent of the original's Escape plus held-button and held-key release sequence. Grab-clearance half NATIVE: the original then requires the quick window to hold no mouseGrabberItem after the ungrab; the converted presenter fixture owns no QQuickWindow, so that native observation belongs to the converted-window lane (deno task verify:qml --verbose). [S021][S022]
 Source context since previous assertion:
 
   }
@@ -867,7 +874,15 @@ S020 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationca
   report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationCancelID,
                          what: "one undo restores the deleted node")
 
+S021 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:25
+  report.expect(!fixture.page.hasGesture && !fixture.page.interactionActive, cppID: drawerAutomationCancelID,
+                  message: "cancelling ends the gesture synchronously")
+
+S022 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:352
+  report.expectEqual(quietBefore, quiet.snapshot, cppID: quietID,
+                       what: "quiescing an idle page writes nothing")
+
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: dce1000e17ed29709316b9d84f1c07ecf0f11a0c323d09d5ad642cf3c325dd31
-src/checks/automation/AutomationPageChecks.swift:399
+SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
+src/checks/automation/AutomationPageChecks.swift:402
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

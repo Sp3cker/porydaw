@@ -5,19 +5,19 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationownership.cpp
 Original SHA-256: 986eb97c6899cb8d0af1564890076508b4ee2b4b075444c4c7ff2498c29bb870
 Swift counterpart: src/checks/automation/automationselection.swift
-Swift SHA-256: 0a7b0cfb0250cb63deb707a28b4eefa9165d9ec8b0b9ed114240876e62e47d7c
+Swift SHA-256: 036a26f8ce0c6a13f476f164780b2fb8960c989f36c5a5ca500f8675c7bc55a4
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
 Swift SHA-256: 591fb9b3c5dc1551c3f2a2ec4caa3b32529389f161b8b09a83841c4625d69aaa
 Additional Swift counterpart: src/checks/automation/domain/gestures.swift
 Swift SHA-256: 5b86e9ccff282f49293daeda21809428125bd86085e2aa4e57a69fc3dfa60278
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: d2861ca291148a67d21bd3b2c97bcb6d99fa3812875721118e69aadbc6c0c6d4
+Swift SHA-256: d1ee3a04c544ea09c93f71fcbd5baaccae2a223664e580d4a594f833d691a6a4
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-Of the 127 sites in this file, 76 are MATCHED, 21 PARTIAL, 13 NATIVE, 9 NATIVE-SETUP, 6 RETIRED-REPRESENTATION, and 2 DEFERRED-KEYBOARD. The group drag, outside-selection clear, detail-threshold precedence and parameter-switch cancellation are executed under the original cppIDs by drawerAutomationRestoredInteractionContracts, drawerAutomationBandIsolatesTempoAndCc, drawerAutomationMultiCcDragExcludesOthers, drawerAutomationPencilOwnershipAndShift and drawerAutomationDetailThresholdPrecedence in src/checks/automation/automationselection.swift plus drawerAutomationInflightDragInvalidation in src/checks/automation/automationcanvasediting.swift. NATIVE sites are the Quick scene-graph ring/transient probes and native pointer-grab/cursor feedback; NATIVE-SETUP sites are the retired AutomationCanvas lane-row geometry; RETIRED-REPRESENTATION sites are the QAction/QShortcut pencil-mode representation (the Swift page exposes isPencilMode) and its key delivery is DEFERRED-KEYBOARD. Each PARTIAL line names the exact unproved condition.
+Of the 127 sites in this file, 76 are MATCHED, 21 PARTIAL, 2 GAP, 13 NATIVE, 9 NATIVE-SETUP, and 6 RETIRED-REPRESENTATION. The group drag, outside-selection clear, detail-threshold precedence and parameter-switch cancellation are executed under the original cppIDs by drawerAutomationRestoredInteractionContracts, drawerAutomationBandIsolatesTempoAndCc, drawerAutomationMultiCcDragExcludesOthers, drawerAutomationPencilOwnershipAndShift and drawerAutomationDetailThresholdPrecedence in src/checks/automation/automationselection.swift plus drawerAutomationInflightDragInvalidation in src/checks/automation/automationcanvasediting.swift. NATIVE sites are the Quick scene-graph ring/transient probes and native pointer-grab/cursor feedback; NATIVE-SETUP sites are the retired AutomationCanvas lane-row geometry; RETIRED-REPRESENTATION sites are the QAction/QShortcut pencil-mode representation (the Swift page exposes isPencilMode alone); the shortcut key identity and its delivery stay GAP, owned by the keybindings lane (docs/plans/swift-keybindings), because no predicate in this counterpart observes that key. Each PARTIAL line names the exact unproved condition.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -28,12 +28,13 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including drawerAutomationPencilOwnershipAndShift, drawerAutomationDetailThresholdPrecedence and drawerAutomationInflightDragInvalidation). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
+Delta snapshot: the counterpart hashes and the drawerAutomationDetailThresholdPrecedence anchors were re-pinned because the double-click block moved that function in automationselection.swift, and A045/A055 became GAP for the keybindings-lane shortcut delivery. No execution result for that delta was supplied to this ledger task, so none is claimed.
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
 
 Execution ownership
-The legacy AutomationEditingTest ownership suite verified interaction ownership between selection rings, pencil modes, and node drag gestures. In the converted Swift suite, drawerAutomationRestoredInteractionContracts, drawerAutomationBandIsolatesTempoAndCc and drawerAutomationMultiCcDragExcludesOthers in src/checks/automation/automationselection.swift exercise the restored selection/drag contracts, drawerAutomationPencilOwnershipAndShift exercises the outside-selection clear and Shift axis locks, drawerAutomationDetailThresholdPrecedence exercises the detail-threshold node precedence, and drawerAutomationInflightDragInvalidation in src/checks/automation/automationcanvasediting.swift exercises the parameter-switch cancellation and recovery. Registered run path: src/checks/automation/AutomationPageChecks.swift:363,379-384 :: runAutomationPageChecks → projectSession (swiftcore suite 10).
+The legacy AutomationEditingTest ownership suite verified interaction ownership between selection rings, pencil modes, and node drag gestures. In the converted Swift suite, drawerAutomationRestoredInteractionContracts, drawerAutomationBandIsolatesTempoAndCc and drawerAutomationMultiCcDragExcludesOthers in src/checks/automation/automationselection.swift exercise the restored selection/drag contracts, drawerAutomationPencilOwnershipAndShift exercises the outside-selection clear and Shift axis locks, drawerAutomationDetailThresholdPrecedence exercises the detail-threshold node precedence, and drawerAutomationInflightDragInvalidation in src/checks/automation/automationcanvasediting.swift exercises the parameter-switch cancellation and recovery. The pencil-mode toggle's QAction shortcut rows (A045, A055) stay GAP: the keybindings lane (docs/plans/swift-keybindings) owns that key delivery and no predicate in this counterpart observes it. Registered run path: src/checks/automation/AutomationPageChecks.swift:363,379-384 :: runAutomationPageChecks → projectSession (swiftcore suite 10).
 
 Fixture, sequence and row constraints
 Tests verify selection ring rendering, multi-node group drag undo, gesture retention across tool mode switches, and zoom/detail threshold node filtering. Loops verify selection ring states across multiple track rows and nodes.
@@ -578,8 +579,8 @@ Original expression:
   QVERIFY(action->shortcut().count() == 1);
 
 A045 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:186
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: The shortcut key identity/state is QAction metadata whose delivery routes through keyboard/focus handling; the Swift predicates set the mode flag directly. Keyboard/focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt).
+Disposition: GAP
+Mapping/reason: Native key delivery: the original decodes the pencil-mode shortcut key from the deleted QAction; the Swift page exposes only a plain isPencilMode flag, no predicate observes that key or its delivery, and the pencil-mode toggle shortcut is owned by the keybindings lane (docs/plans/swift-keybindings). No replacement assertion exists in this counterpart.
 Source context since previous assertion:
 
       const QKeyCombination shortcut = action->shortcut()[0];
@@ -714,8 +715,8 @@ Original expression:
   QVERIFY(action->shortcut().count() == 1);
 
 A055 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:242
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: The shortcut key identity/state is QAction metadata whose delivery routes through keyboard/focus handling; the Swift predicates set the mode flag directly. Keyboard/focus routing is explicitly deferred by the user (precedent proof.automationmenus.txt).
+Disposition: GAP
+Mapping/reason: Native key delivery: the original decodes the pencil-mode shortcut key from the deleted QAction; the Swift page exposes only a plain isPencilMode flag, no predicate observes that key or its delivery, and the pencil-mode toggle shortcut is owned by the keybindings lane (docs/plans/swift-keybindings). No replacement assertion exists in this counterpart.
 Source context since previous assertion:
 
       const QKeyCombination shortcut = action->shortcut()[0];
@@ -1726,35 +1727,35 @@ S048 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automatio
 Swift expression:
   report.expect(shifted.count == 2 && shifted[0].tick == 24 && shifted[0].value != 64, cppID: lockID, message: "a vertical Shift drag locks the tick and moves the value")
 
-S049 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:354
+S049 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:374
 Swift expression:
   report.expect(markersVisible(), cppID: id, message: "markers are visible at default zoom")
 
-S050 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:359
+S050 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:379
 Swift expression:
   report.expect(!markersVisible(), cppID: id, message: "markers hide below the detail threshold")
 
-S051 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:361
+S051 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:381
 Swift expression:
   report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 70), surface: 1, button: 1), cppID: id, message: "the pencil press through hidden markers starts a stroke")
 
-S052 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:364
+S052 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:384
 Swift expression:
   report.expect(fixture.page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 70), button: 1), cppID: id, message: "the stroke through hidden markers commits")
 
-S053 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:368
+S053 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:388
 Swift expression:
   report.expect(hidden.count == 3 && hidden.contains(where: { $0.tick == 24 && $0.value == 70 }), cppID: id, message: "the hidden-marker stroke inserts instead of grabbing the node")
 
-S054 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:375
+S054 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:395
 Swift expression:
   report.expect(markersVisible(), cppID: id, message: "markers return above the threshold")
 
-S055 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:381
+S055 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:401
 Swift expression:
   report.expect(shownFixture.page.pointerPress(x: shownFixture.x(24), y: shownFixture.y(shownFixture.panLane, 64), surface: 1, button: 1), cppID: id, message: "the pencil press on a visible node grabs it")
 
-S056 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:387
+S056 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:407
 Swift expression:
   report.expectEqual(["120:40"], shownFixture.values(shownFixture.panLane), cppID: id, what: "a stationary release on the grabbed node deletes exactly it")
 
@@ -1802,7 +1803,7 @@ S067 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/pr
 Swift expression:
   report.expect(!trackScoped.coversTempo(usedTracks: [0, 1]), cppID: drawerAutomationRowsID, message: "Tempo is uncovered when part of the used set is selected")
 
-S068 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:759
+S068 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:764
 Swift expression:
   report.expect(undone, cppID: id, message: "awaited undo completes")
 
@@ -1811,6 +1812,6 @@ Swift expression:
   report.expectEqual(moved, fx.document.state, cppID: id, what: "redo restores the node value move")
 
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
-src/checks/automation/AutomationPageChecks.swift:381
+SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
+src/checks/automation/AutomationPageChecks.swift:402
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

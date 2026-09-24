@@ -5,7 +5,7 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationrouting.cpp
 Original SHA-256: 009c91dba2f96807276b0077fe5421c37ac60bc636a9c0e29f3ded03d7cf427c
 Swift counterpart: src/checks/automation/automationactions.swift
-Swift SHA-256: 04de1ba13dab994fa345d424a2a8bf5e63769ae5543c933c280b14aa4189baad
+Swift SHA-256: d00e05534bcb9e621426c20fbe36aca9d386c8fb906c735901b97509f866fea1
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/automation/automationselection.swift
@@ -34,6 +34,8 @@ drawerAutomationInflightDragInvalidation (automationcanvasediting.swift),
 drawerAutomationRestoredInteractionContracts / drawerAutomationBandIsolatesTempoAndCc
 (automationselection.swift) and drawerAutomationParameterSwitchAndGhosts
 (presentation/tst_automationpresentation.swift). Not re-executed by this ledger task.
+The controller additionally reports drawerAutomationBandEscape in automationcanvasediting.swift
+(the Escape band-dismissal predicates indexed at S038-S041) green in that same run.
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
@@ -378,7 +380,7 @@ Original expression:
 
 A026 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:114
 Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the right press does not start a pan. No executing Swift predicate reads page.isPanning during a band right press (S013/S017 read it for middle-button pans). Unproved condition: isPanning during a band.
+Mapping/reason: Partial: the original asserts the right press does not start a pan. The band scenario now asserts no pan after the arm-and-Escape sequence (S041), but no executing predicate reads page.isPanning at the right-press moment itself (S013/S017 read it for middle-button pans). Unproved condition: press-time isPanning during a band.
 Source context since previous assertion:
 
 
@@ -470,19 +472,24 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A035 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:130
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing explicitly deferred by the user (precedent: proof.automationmenus.txt): the original cancels the band preview with a native Escape delivery. The Swift page exposes handleEscape() (executed for the gesture contract in drawerAutomationCancellationAndNoOps, S003/S006) and the band predicates read bandVisible, but no executing predicate routes Escape to a live band and re-reads bandVisible.
+Disposition: MATCHED
+Mapping/reason: S039 and S040 - src/checks/automation/automationcanvasediting.swift:366,367 :: drawerAutomationBandEscape arms a right-button band on the pan lane (S038), delivers Escape through the page handleEscape() (S039 claims the live band), and asserts !page.bandVisible (S040) with S041 pinning the untouched document. !bandVisible is the Swift form of the retired band preview no longer containing the lane, the same observable as A027/S018.
 Source context since previous assertion:
 
 
       keyClick(Qt::Key_Escape);
 
+Swift counterpart expression:
+  report.expect(!band.page.bandVisible, cppID: bandID, message: "Escape drops the band")
 Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A036 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:131
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing explicitly deferred by the user (precedent: proof.automationmenus.txt): the observed !isPanning follows a native Escape delivery to a live band; no executing predicate routes Escape to a band.
+Disposition: MATCHED
+Mapping/reason: S042 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationBandEscape (automationcanvasediting.swift:368) asserts no pan owns the band scenario after the Escape drops the band, the same !isPanning observable the original reads.
+Swift counterpart expression:
+  report.expect(!band.page.isPanning, cppID: bandID,
+                  message: "no pan owns the band scenario")
 Source context since previous assertion:
 
 
@@ -490,8 +497,11 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A037 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:132
-Disposition: DEFERRED-KEYBOARD
-Mapping/reason: Keyboard and focus routing explicitly deferred by the user (precedent: proof.automationmenus.txt): the observed !userGestureActive follows a native Escape delivery to a live band; no executing predicate routes Escape to a band.
+Disposition: MATCHED
+Mapping/reason: S043 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationBandEscape (automationcanvasediting.swift:370) asserts no gesture owns the band scenario after the Escape drops the band. The Swift predicate reads page.hasGesture (the drawer page owns interactions in the converted architecture) where the original read the SongView userGestureActive flag: the flag owner changed, the observable - no live gesture remains - is the same.
+Swift counterpart expression:
+  report.expect(!band.page.hasGesture, cppID: bandID,
+                  message: "no gesture owns the band scenario")
 Source context since previous assertion:
 
 
@@ -1253,8 +1263,8 @@ S012 | drawerAutomationQtModifierMapping | src/checks/automation/automationactio
                          what: "the Qt control bit a QML event carries lands the drag on the neutral")
 
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: 66ff0023e15e9a97db73c6437733c92c29d893de5680ce1179876a6e3156dea4
-src/checks/automation/AutomationPageChecks.swift:381
+SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
+src/checks/automation/AutomationPageChecks.swift:402
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")
 
 Cross-lane predicates cited by the mappings above (final source anchors)
@@ -1358,3 +1368,24 @@ S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/auto
 S037 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:637
   report.expect(!stroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
                   message: "an empty lane's first stroke is a change")
+
+S038 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:364
+  report.expect(band.page.bandVisible, cppID: bandID, message: "the right drag arms the band")
+
+S039 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:366
+  report.expect(band.page.handleEscape(), cppID: bandID, message: "Escape claims the live band")
+
+S040 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:367
+  report.expect(!band.page.bandVisible, cppID: bandID, message: "Escape drops the band")
+
+S041 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:372
+  report.expectEqual(bandBefore, band.snapshot, cppID: bandID,
+                    what: "dropping the band writes nothing")
+
+S042 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:368
+  report.expect(!band.page.isPanning, cppID: bandID,
+                  message: "no pan owns the band scenario")
+
+S043 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:370
+  report.expect(!band.page.hasGesture, cppID: bandID,
+                  message: "no gesture owns the band scenario")
