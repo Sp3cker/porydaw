@@ -195,6 +195,17 @@ if(APPLE)
         trackheaders/TrackHeadersInputChecks.swift
         workspace/SessionChecks.swift
         projectstore/ProjectIdentityChecks.swift
+        projectstore/SongModelChecks.swift
+        projectstore/MidiCfgChecks.swift
+        projectstore/SongsMkChecks.swift
+        projectstore/SongCatalogChecks.swift
+        projectstore/SynthCatalogChecks.swift
+        projectstore/VoicegroupValueChecks.swift
+        projectstore/SaveCoreChecks.swift
+        projectstore/VoicegroupEditingChecks.swift
+        projectstore/VoicegroupCatalogAbsentChecks.swift
+        projectstore/VoicegroupContextChecks.swift
+        projectstore/VoicegroupBankLogicChecks.swift
         workspace/session_support.swift
         workspace/session_fixtures.swift
         workspace/session_editor_semantics.swift
@@ -217,6 +228,7 @@ if(APPLE)
     target_compile_options(swift_core_check PRIVATE
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
     )

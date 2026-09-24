@@ -143,6 +143,31 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         }
     case 12:
         runProjectIdentitySuite(report)
+    case 13:
+        runSongModelSuite(report)
+    case 14:
+        runMidiCfgSuite(report)
+    case 15:
+        runSongsMkSuite(report)
+    case 16:
+        runSongCatalogSuite(report)
+    case 17:
+        runSynthCatalogSuite(report)
+    case 18:
+        runVoicegroupValueSuite(report)
+    case 19:
+        runSaveCoreSuite(report)
+    case 20:
+        runVoicegroupEditingSuite(report)
+    case 21:
+        runVoicegroupCatalogAbsentSuite(report)
+    case 22:
+        runVoicegroupEditingSuite(report)
+        runSaveCoreSuite(report)
+    case 23:
+        runVoicegroupContextSuite(report)
+    case 24:
+        runVoicegroupBankLogicSuite(report)
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

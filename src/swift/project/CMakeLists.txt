@@ -1,6 +1,18 @@
 add_library(PorydawProject STATIC
     ProjectFileStore.swift
     ProjectIdentity.swift
+    FileIo.swift
+    MidiCfg.swift
+    SongModel.swift
+    ProjectContext.swift
+    SongsMk.swift
+    VoiceValues.swift
+    SongCatalog.swift
+    VoicegroupSource.swift
+    VoiceEdits.swift
+    VoicegroupSave.swift
+    SynthCatalog.swift
+    VoicegroupStore.swift
 )
 
 configure_file(
@@ -27,3 +39,5 @@ target_compile_options(PorydawProject PUBLIC
 target_include_directories(PorydawProject INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawProject,Swift_MODULE_DIRECTORY>>"
 )
+
+target_link_libraries(PorydawProject PUBLIC PorydawCore)

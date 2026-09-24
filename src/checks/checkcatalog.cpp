@@ -52,6 +52,9 @@ int swiftCore(QApplication &, const QStringList &arguments, const QStringList &q
     auto selected = QStringList{
         QStringLiteral("--pdc-mid2agb=") + argumentAt(arguments, 2),
     };
+    // argv[3] optionally names one QTest slot; without it the whole suite runs.
+    if (arguments.size() > 3)
+        selected.append(arguments.at(3));
     selected.append(qtArguments);
     return runSwiftCoreCheck(argumentAt(arguments, 1), selected);
 }
@@ -73,6 +76,7 @@ const std::vector<CheckDefinition> &catalog()
     static const auto definitions = [] {
         const QStringList project = fixtures::decompProjectFiles();
         const QStringList rich = fixtures::richVoicegroupFiles();
+        const QStringList editor = fixtures::voicegroupEditorFiles();
         const QStringList route101 =
             project + strings({"sound/songs/midi/mus_route101.mid"}) + rich;
         // The tab scenarios open more than one song at a time, so the
@@ -163,7 +167,7 @@ const std::vector<CheckDefinition> &catalog()
                                                    "test_midis/smf/valid/note_lifecycle.mid",
                                                    "test_midis/smf/malformed/duplicate_eot.mid",
                                                    "test_midis/smf/stress/automation_burst.mid"}) +
-                                          rich});
+                                          rich + editor});
         result.push_back(
             {.name = "projectidentitycheck",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectIdentity"}),
@@ -171,6 +175,112 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = project});
+        result.push_back({.name = "projectstore-songmodel",
+                          .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "songModel"}),
+                          .handler = swiftCore,
+                          .scratchKind = ScratchKind::ExistingDirectory,
+                          .fixtureRootKind = FixtureRootKind::DecompProject,
+                          .fixtureFiles = project});
+        result.push_back({.name = "projectstore-midicfg",
+                          .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "midiCfg"}),
+                          .handler = swiftCore,
+                          .scratchKind = ScratchKind::ExistingDirectory,
+                          .fixtureRootKind = FixtureRootKind::DecompProject,
+                          .fixtureFiles = project});
+        result.push_back({.name = "projectstore-songsmk",
+                          .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "songsMk"}),
+                          .handler = swiftCore,
+                          .scratchKind = ScratchKind::ExistingDirectory,
+                          .fixtureRootKind = FixtureRootKind::DecompProject,
+                          .fixtureFiles = project});
+        result.push_back({.name = "projectstore-catalog",
+                          .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "songCatalog"}),
+                          .handler = swiftCore,
+                          .scratchKind = ScratchKind::ExistingDirectory,
+                          .fixtureRootKind = FixtureRootKind::DecompProject,
+                          .fixtureFiles = project});
+        result.push_back(
+            {.name = "projectstore-synthcatalog",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "synthCatalog"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + rich});
+        result.push_back(
+            {.name = "projectstore-values",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupValues"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project});
+        result.push_back({.name = "projectstore-savecore",
+                          .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "saveCore"}),
+                          .handler = swiftCore,
+                          .scratchKind = ScratchKind::ExistingDirectory,
+                          .fixtureRootKind = FixtureRootKind::DecompProject,
+                          .fixtureFiles = project + editor});
+        result.push_back(
+            {.name = "projectstore-editing",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupEditing"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor});
+        result.push_back(
+            {.name = "projectstore-open",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupEditing"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor});
+        result.push_back(
+            {.name = "projectstore-edits",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupEditing"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor});
+        result.push_back({.name = "projectstore-save",
+                          .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "saveCore"}),
+                          .handler = swiftCore,
+                          .scratchKind = ScratchKind::ExistingDirectory,
+                          .fixtureRootKind = FixtureRootKind::DecompProject,
+                          .fixtureFiles = project + editor});
+        result.push_back(
+            {.name = "projectstore-checks",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreChecks"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor});
+        result.push_back(
+            {.name = "projectstore-checks-catalog-absent",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "catalogAbsent"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor});
+        result.push_back(
+            {.name = "projectstore-context",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupContext"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor});
+        result.push_back(
+            {.name = "projectstore-fileio",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupContext"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor});
+        result.push_back(
+            {.name = "projectstore-banklogic",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupBankLogic"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor});
         // Swift grid input/raster and cross-surface routing. swiftrollgated also
         // covers standalone Quick drawer hover/drag pixels and Tab/arrow ownership.
         for (const char *name : {"swiftrollgated", "swiftbandkeys", "swiftqtml", "selectionkey"}) {

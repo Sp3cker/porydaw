@@ -1,15 +1,43 @@
 #pragma once
 
+// C-ABI surface — parsed by the Swift Clang importer in C mode. Nothing
+// C++-only may appear outside the __cplusplus guards.
+#include "voicegroup_loader.h"
+
+typedef struct PdBankLease PdBankLease;
+
+// Swift-owned file-I/O handler record. VoicegroupFileIo.user points at one of
+// these for the context's lifetime; Swift allocates, fills, and frees it.
+// readBatch fans out inside Swift; releaseBatch frees every populated blob.
+typedef struct PdFileIoHandler {
+    void *context;
+    bool (*readBatch)(void *context, const char *const *paths, size_t count,
+                      VoicegroupFileBlob *out, char *error, size_t errorCapacity);
+    void (*releaseBatch)(void *context, VoicegroupFileBlob *blobs, size_t count);
+} PdFileIoHandler;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// The single C trampoline pair for VoicegroupFileIo callbacks. Install as
+// VoicegroupFileIo{user: handler, readBatch: pd_fileio_read_batch,
+// releaseBatch: pd_fileio_release_batch}.
+bool pd_fileio_read_batch(void *user, const char *const *paths, size_t count,
+                          VoicegroupFileBlob *out, char *error, size_t errorCapacity);
+void pd_fileio_release_batch(void *user, VoicegroupFileBlob *blobs, size_t count);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+#ifdef __cplusplus
+
 #include "projectidentity.h"
 
 #include <QString>
 #include <memory>
 #include <utility>
-
-extern "C" {
-#include "voicegroup_loader.h"
-typedef struct PdBankLease PdBankLease;
-}
 
 class VoicegroupLease;
 
@@ -87,7 +115,6 @@ inline VoicegroupLease borrowVoicegroupLease(LoadedVoiceGroup *raw)
     return lease;
 }
 
-#ifdef __cplusplus
 PdBankLease *pd_bank_lease_box(const VoicegroupId &id, VoicegroupLease lease,
                                const QString &loadName);
 #endif

@@ -25,6 +25,18 @@ class SwiftCoreTest final : public QObject
     void projectSession();
     void bankHistory();
     void projectIdentity();
+    void songModel();
+    void midiCfg();
+    void songsMk();
+    void songCatalog();
+    void synthCatalog();
+    void voicegroupValues();
+    void saveCore();
+    void voicegroupEditing();
+    void catalogAbsent();
+    void projectStoreChecks();
+    void voicegroupContext();
+    void voicegroupBankLogic();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

@@ -17,9 +17,23 @@ NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted Swift window. GAP identifies an
 original predicate without a replacement assertion. These VoicegroupSourceTest catalog cases prove ADSR default scans, synth catalog write/gate rules, single-colon symbol scans, and synth-descriptor loads through real and synthetic project trees. No Swift catalog coverage exists, so every site is GAP.
 
+Retirement
+Task 18 retires this ledger with the dead catalog surface (spec.md:78): zero of
+the sites below are ported into Swift, no Swift counterpart file exists, and no
+S entries pair with these sites. The retirement is recorded in
+src/checks/projectstore/VoicegroupCatalogAbsentChecks.swift, and the harness
+projectstore-checks-catalog-absent asserts it (voicegroupEditingRowIDs 90 rows,
+saveCoreRowIDs 1 row, and no ported check name deriving from
+voicegroupsourcecatalog/). Row dispositions below are unchanged by the
+retirement; the C++ suite has no registered harness (runVgCheck is defined in
+this file but is not listed in checkcatalog.cpp).
+
 Verification
-Command: deno task verify --filter vgbankcheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter projectstore-checks-catalog-absent --verbose
+Result: PASS - observed for this tree (the retirement assertion ran: 90 ported
+editing rows, 1 ported save-core row, and no ported check name deriving from
+voicegroupsourcecatalog/). This bookkeeping pass re-ran only deno task proof
+(structure); execution evidence is that observed run, not a re-run here.
 
 Execution and ownership
 C++ entry point runVgCheck (qExec name "voicegroup-source") drives VoicegroupSourceTest; the cases in this file use QTemporaryDir synthetic trees, voicegroup_test::copyProject fixtures, or the staged session (m_session) opened in init(). Shared C++ fixtures: checks/voicegroup/voicegrouptestfixture.h/.cpp (openSession, writeFile/readFile, copyProject) and checks/voicegroup/tst_voicegroupsource.h (class declaration). This file's cases are not on the vgbankcheck lane. No Swift entry point executes any paired check.

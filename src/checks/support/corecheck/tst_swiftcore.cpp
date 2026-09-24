@@ -83,6 +83,66 @@ void SwiftCoreTest::projectIdentity()
     pdc_suite_run(PDC_SUITE_PROJECT_IDENTITY, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::songModel()
+{
+    pdc_suite_run(PDC_SUITE_SONG_MODEL, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::midiCfg()
+{
+    pdc_suite_run(PDC_SUITE_MIDI_CFG, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::songsMk()
+{
+    pdc_suite_run(PDC_SUITE_SONGS_MK, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::songCatalog()
+{
+    pdc_suite_run(PDC_SUITE_SONG_CATALOG, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::synthCatalog()
+{
+    pdc_suite_run(PDC_SUITE_SYNTH_CATALOG, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::voicegroupValues()
+{
+    pdc_suite_run(PDC_SUITE_VOICE_VALUES, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::saveCore()
+{
+    pdc_suite_run(PDC_SUITE_SAVECORE, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::voicegroupEditing()
+{
+    pdc_suite_run(PDC_SUITE_VOICE_EDITING, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::catalogAbsent()
+{
+    pdc_suite_run(PDC_SUITE_CATALOG_ABSENT, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::projectStoreChecks()
+{
+    pdc_suite_run(PDC_SUITE_PROJECTSTORE_CHECKS, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::voicegroupContext()
+{
+    pdc_suite_run(PDC_SUITE_VOICE_CONTEXT, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::voicegroupBankLogic()
+{
+    pdc_suite_run(PDC_SUITE_VOICE_BANKLOGIC, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);

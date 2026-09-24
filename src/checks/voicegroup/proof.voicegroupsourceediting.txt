@@ -3,35 +3,79 @@ Assertion correspondence: voicegroup/voicegroupsourceediting.cpp
 Reference revision: fbe1015aaf056089f5d773f99d961ba906246cff
 Original: src/checks/voicegroup/voicegroupsourceediting.cpp
 Original SHA-256: c837c97a48a868618574a575613652e4e138678f8519528c7f5285d7e905812b
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/projectstore/VoicegroupEditingChecks.swift
+Swift SHA-256: 9baae97dffe2258889636a999bd92dbe5c78caef5dbb86967efb5d1ef6abe48c
+Shared helper: none; the fixture, snapshot and tone helpers are file-private in the Swift counterpart.
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below. Source context preserves setup, rows,
-loops, and guards between assertions verbatim. S identifiers would identify exact
-Swift predicates; none exist for this file, so every site below is GAP.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted Swift window. GAP identifies an
-original predicate without a replacement assertion. These VoicegroupSourceTest editing cases prove blank-slot materialize/restore, sparse end-insertions with save/reload, seven-family edit-preview-save-reload-create round trips, and display-name stability. No Swift editing coverage exists, so every site is GAP.
+original macro/failure site appears below in file order, including fixture
+guards and data rows. Source context preserves setup, rows, loops, and guards
+between assertions verbatim. S identifiers identify exact Swift predicates in
+the counterpart file, listed under Swift assertion predicates after the
+inventory.
+MATCHED identifies an equivalent Swift predicate that would execute for the
+original site; PARTIAL identifies a related Swift predicate with an explicit
+unproved condition; GAP identifies an original predicate without an equivalent
+Swift assertion. Bookkeeping does not overclaim: a row keeps GAP unless a Swift
+predicate under the same row id establishes the same observable.
+Task 18 ports 90 of the 98 rows into VoicegroupEditingChecks.swift as
+voicegroupsourceediting/<row> checks (editingBlankSlot, editingSparseInsertions,
+editingFamily for families 0-6, editingDisplayNames); A002 and A086-A092 are not
+ported. The native-oracle rows (A038-A041, A057-A060, A066-A081) load the
+Swift-written tree through the same C entry point (voicegroup_load) and the same
+relative voicegroupPaths and audition-key configuration the original used, so that
+oracle is not reduced; editingSnapshot, editingSameResolvedTone,
+editingSameVoiceFields and editingLoaderVoiceName mirror
+voicegroup_test::snapshot/sameResolvedTone/sameVoiceFields/loaderVoiceName field
+for field, and editingSameResolvedTone carries the same auditionKey=60/36 rule.
+Tally: MATCHED 88, PARTIAL 2, GAP 8.
 
 Verification
-Command: deno task verify --filter vgbankcheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter projectstore-checks --verbose
+Result: PASS - observed for this tree (both ported suites ran with no failures),
+with deno task verify --filter projectstore-checks-catalog-absent --verbose also
+PASS. This bookkeeping pass re-ran only deno task proof (structure and tallies);
+execution evidence is that observed run, not a re-run here.
 
 Execution and ownership
-C++ entry point runVgCheck (qExec name "voicegroup-source") drives VoicegroupSourceTest; the cases in this file use the staged session (m_session) opened in init(), except sparseInsertions which builds a QTemporaryDir tree and displayNamesAreStable which is pure function output. Shared C++ fixtures: checks/voicegroup/voicegrouptestfixture.h/.cpp (openSession, snapshot, sameVoiceFields, sameResolvedTone, loaderVoiceName, isDirectSound/isSquare1/isNoise/isProgWave, readFile/writeFile) and checks/voicegroup/tst_voicegroupsource.h. This file's cases are not on the vgbankcheck lane. No Swift entry point executes any paired check.
+The historical C++ entry point runVgCheck (qExec name "voicegroup-source") drove
+VoicegroupSourceTest; that harness is no longer registered in checkcatalog.cpp,
+so the inventory above is the historical site record. Shared C++ fixtures:
+checks/voicegroup/voicegrouptestfixture.h/.cpp (openSession, snapshot,
+sameVoiceFields, sameResolvedTone, loaderVoiceName,
+isDirectSound/isSquare1/isNoise/isProgWave, readFile/writeFile) and
+checks/voicegroup/tst_voicegroupsource.h.
+The Swift entry point is src/checks/support/corecheck/CoreCheckSupport.swift ::
+pdc_suite_run case 20 (PDC_SUITE_VOICE_EDITING) and case 22
+(PDC_SUITE_PROJECTSTORE_CHECKS), both calling runVoicegroupEditingSuite;
+src/checks/support/corecheck/tst_swiftcore.cpp ::
+SwiftCoreTest::voicegroupEditing/projectStoreChecks dispatch them, and
+checkcatalog.cpp :: projectstore-edits and projectstore-checks register the
+harnesses with fixtureRootKind DecompProject. runVoicegroupEditingSuite calls
+editingBlankSlot, editingSparseInsertions, editingFamily for family 0..<7 and
+editingDisplayNames; every predicate reports cppID
+"voicegroupsourceediting/<row>" through editingExpect/editingEqual
+(src/checks/projectstore/VoicegroupEditingChecks.swift:26-33). Each case copies
+CheckEnvironment.fixtureRoot (the harness-staged decompproject fixture) and opens
+it with the literal voicegroup arg _fixture_rich, the -G value every fixture song
+carries in sound/songs/midi/midi.cfg.
 
 Fixture, sequence and row constraints
-editedFamiliesPreviewSaveReloadAndCreate_data contributes seven rows (direct-sound, square-1, noise, programmable-wave, keysplit, drumkit-swap, drumkit-conversion); the case body branches per family on slot selection, expected aggregate name, subgroup oracle, and audition key (36 for drumkits, else 60). Preview bytes must equal pre-save file bytes (fileBefore) with exactly one changed line after save; the untouched-slot loop re-snapshots all VOICEGROUP_SIZE slots against the baseline. sparseInsertions pins slots 12/36/80 before and after save plus loaded voice types; createVoicegroup/appendIncludeLine must grow voice_groups.inc by exactly one line and register _voicegroup_qtest_copy.
+editedFamiliesPreviewSaveReloadAndCreate_data contributes seven rows (direct-sound, square-1, noise, programmable-wave, keysplit, drumkit-swap, drumkit-conversion); the case body branches per family on slot selection, expected aggregate name, subgroup oracle, and audition key (36 for drumkits, else 60). Preview bytes must equal pre-save file bytes (fileBefore) with exactly one changed line after save; the untouched-slot loop re-snapshots all VOICEGROUP_SIZE slots against the baseline. sparseInsertions pins slots 12/36/80 before and after save plus loaded voice types; createVoicegroup/appendIncludeLine must grow voice_groups.inc by exactly one line
+and register _voicegroup_qtest_copy (the unported A086-A092 tail).
+The Swift port inlines the seven editedFamiliesPreviewSaveReloadAndCreate_data
+rows as editingFamily(family: 0..<7) with the same per-family slot selection,
+expected-name oracle (baseline slot name for families 0-3, baseline donor name
+for 4, loader voice name of the drumkit symbol for 5-6) and audition key (36 for
+drumkits, 60 otherwise); the createVoicegroup/appendIncludeLine tail
+(A086-A092) is not ported.
 
 Original assertion inventory and source sequence
 
 A001 | VoicegroupSourceTest::init | src/checks/voicegroup/voicegroupsourceediting.cpp:73
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S001 (src/checks/projectstore/VoicegroupEditingChecks.swift:66 editingBlankSlot) asserts the native baseline loads for the copied fixture; unproved: the original site guards the whole openSession stimulus (ProjectFixture copy, Project::open, playableSong config resolution, VoicegroupSource::open, baseline voicegroup_load) while the Swift fixture opens the source with the literal voicegroup arg _fixture_rich instead of the resolved song config.
 Source context since previous assertion:
 #include "checks/voicegroup/tst_voicegroupsource.h"
 
@@ -111,7 +155,7 @@ Original expression:
 
 A002 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:78
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: redundant retired Qt session-pointer guard, subsumed by the A001 baseline. No Swift predicate carries this row id; the fixture-availability condition it guards is asserted only under voicegroupsourceediting/A001, so this original predicate remains an unported obligation.
 Source context since previous assertion:
 
 }
@@ -123,8 +167,8 @@ Original expression:
     QVERIFY(m_session);
 
 A003 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:87
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S002 scans slots 0..<128 with source.kindAt(slot:) == .none and asserts the first blank slot is found on the same fixture copy; same oracle as the fixture_rich materializable-blank-slot guard.
 Source context since previous assertion:
 
     VoicegroupSource &source = m_session->source;
@@ -140,8 +184,8 @@ Original expression:
     QVERIFY2(blankSlot >= 0, "fixture_rich must retain a materializable blank slot");
 
 A004 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:94
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S003 asserts source.voiceDraft(slot:blank:) returns a non-nil draft for the scanned blank slot with VgVoice(macro: .square1, sustain: 15); same oracle as QVERIFY(draft.has_value()).
 Source context since previous assertion:
 
 
@@ -155,8 +199,8 @@ Original expression:
     QVERIFY(draft.has_value());
 
 A005 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:95
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S004 asserts draft?.materializesBlank == true; same oracle as QVERIFY(draft->materializesBlank).
 Source context since previous assertion:
 
 
@@ -164,8 +208,8 @@ Original expression:
     QVERIFY(draft->materializesBlank);
 
 A006 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:96
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S005 compares the draft voice to the created VgVoice; same oracle as QCOMPARE(draft->voice, created), whose Swift VgVoice defaults match the C++ member initializers.
 Source context since previous assertion:
 
 
@@ -173,8 +217,8 @@ Original expression:
     QCOMPARE(draft->voice, created);
 
 A007 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:97
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S006 asserts source.setVoice(slot:voice:) succeeds for that slot; same oracle as QVERIFY(source.setVoice(blankSlot, created)).
 Source context since previous assertion:
 
 
@@ -182,8 +226,8 @@ Original expression:
     QVERIFY(source.setVoice(blankSlot, created));
 
 A008 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:98
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S007 asserts source.voiceAt(slot:) is non-nil; same oracle as QVERIFY(source.voiceAt(blankSlot)).
 Source context since previous assertion:
 
 
@@ -191,8 +235,8 @@ Original expression:
     QVERIFY(source.voiceAt(blankSlot));
 
 A009 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:99
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S008 compares the stored voice to created; same oracle as QCOMPARE(*source.voiceAt(blankSlot), created).
 Source context since previous assertion:
 
 
@@ -200,8 +244,8 @@ Original expression:
     QCOMPARE(*source.voiceAt(blankSlot), created);
 
 A010 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:100
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 asserts source.dirty after materialization; same oracle as QVERIFY(source.dirty()).
 Source context since previous assertion:
 
 
@@ -209,8 +253,8 @@ Original expression:
     QVERIFY(source.dirty());
 
 A011 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:101
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S010 asserts source.restoreSourceBytes(before) succeeds with the bytes captured from the same source; same oracle.
 Source context since previous assertion:
 
 
@@ -218,8 +262,8 @@ Original expression:
     QVERIFY(source.restoreSourceBytes(before));
 
 A012 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:102
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S011 asserts kindAt(slot:) == .none after the restore; same oracle as QCOMPARE(source.kindAt(blankSlot), VgLineKind::None).
 Source context since previous assertion:
 
 
@@ -227,8 +271,8 @@ Original expression:
     QCOMPARE(source.kindAt(blankSlot), VgLineKind::None);
 
 A013 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:103
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S012 compares source.sourceBytes() to the captured pristine bytes; same oracle as QCOMPARE(source.sourceBytes(), before).
 Source context since previous assertion:
 
 
@@ -236,8 +280,8 @@ Original expression:
     QCOMPARE(source.sourceBytes(), before);
 
 A014 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:104
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S013 asserts !source.dirty after restoring pristine bytes; same oracle as QVERIFY(!source.dirty()).
 Source context since previous assertion:
 
 
@@ -245,8 +289,8 @@ Original expression:
     QVERIFY(!source.dirty());
 
 A015 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:110
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S014 asserts the constructed temporary root exists after createDirectory; same observable as QTemporaryDir::isValid() (a usable temporary directory). A throwing Foundation setup failure is reported through this row's catch predicate at line 146.
 Source context since previous assertion:
 
 }
@@ -259,8 +303,8 @@ Original expression:
     QVERIFY(temporary.isValid());
 
 A016 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:112
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S015 asserts the sound/voicegroups directory exists after createDirectory; same observable as QDir().mkpath(voices).
 Source context since previous assertion:
 
     const QString voices = temporary.filePath(QStringLiteral("sound/voicegroups"));
@@ -269,8 +313,8 @@ Original expression:
     QVERIFY(QDir().mkpath(voices));
 
 A017 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:114
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S016 asserts sparse.inc exists after Data.write; same observable as the voicegroup_test::writeFile helper succeeding.
 Source context since previous assertion:
 
     QString error;
@@ -284,8 +328,8 @@ Original expression:
         qPrintable(error));
 
 A018 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:122
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S017 asserts source.open(projectRoot:voicegroupArg:error:) succeeds for the temporary tree and _sparse; same oracle as QVERIFY2(source.open(temporary.path(), "_sparse", &error)).
 Source context since previous assertion:
 
 
@@ -295,8 +339,8 @@ Original expression:
     QVERIFY2(source.open(temporary.path(), QStringLiteral("_sparse"), &error), qPrintable(error));
 
 A019 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:131
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S018 asserts kindAt(slot: 12) == .none on the sparse fixture; same oracle as QCOMPARE(source.kindAt(12), VgLineKind::None).
 Source context since previous assertion:
 
     VgVoice beforeFirst;
@@ -312,8 +356,8 @@ Original expression:
     QCOMPARE(source.kindAt(12), VgLineKind::None);
 
 A020 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:132
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S019 asserts kindAt(slot: 80) == .none on the sparse fixture; same oracle as QCOMPARE(source.kindAt(80), VgLineKind::None).
 Source context since previous assertion:
 
 
@@ -321,8 +365,8 @@ Original expression:
     QCOMPARE(source.kindAt(80), VgLineKind::None);
 
 A021 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:133
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S020 asserts setVoice(slot: 12, voice: beforeFirst) with VgVoice(macro: .square2, sustain: 15); same oracle as QVERIFY(source.setVoice(12, beforeFirst)).
 Source context since previous assertion:
 
 
@@ -330,8 +374,8 @@ Original expression:
     QVERIFY(source.setVoice(12, beforeFirst));
 
 A022 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:134
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S021 asserts voiceAt(slot: 12) is non-nil after the first insertion; same oracle.
 Source context since previous assertion:
 
 
@@ -339,8 +383,8 @@ Original expression:
     QVERIFY(source.voiceAt(12));
 
 A023 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:135
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S022 compares voiceAt(slot: 12) to beforeFirst; same oracle as QCOMPARE(*source.voiceAt(12), beforeFirst).
 Source context since previous assertion:
 
 
@@ -348,8 +392,8 @@ Original expression:
     QCOMPARE(*source.voiceAt(12), beforeFirst);
 
 A024 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:136
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S023 asserts the original slot 36 stays populated across the first insertion; same oracle.
 Source context since previous assertion:
 
 
@@ -357,8 +401,8 @@ Original expression:
     QVERIFY(source.voiceAt(36));
 
 A025 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:137
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S024 compares slot 36 to the voice captured before the insertions; same oracle as QCOMPARE(*source.voiceAt(36), original).
 Source context since previous assertion:
 
 
@@ -366,8 +410,8 @@ Original expression:
     QCOMPARE(*source.voiceAt(36), original);
 
 A026 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:138
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S025 asserts setVoice(slot: 80, voice: afterLast) with VgVoice(macro: .noise, sustain: 15, release: 3); same oracle.
 Source context since previous assertion:
 
 
@@ -375,8 +419,8 @@ Original expression:
     QVERIFY(source.setVoice(80, afterLast));
 
 A027 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:139
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S026 asserts voiceAt(slot: 80) is non-nil after the last insertion; same oracle.
 Source context since previous assertion:
 
 
@@ -384,8 +428,8 @@ Original expression:
     QVERIFY(source.voiceAt(80));
 
 A028 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:140
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S027 compares voiceAt(slot: 80) to afterLast; same oracle as QCOMPARE(*source.voiceAt(80), afterLast).
 Source context since previous assertion:
 
 
@@ -393,8 +437,8 @@ Original expression:
     QCOMPARE(*source.voiceAt(80), afterLast);
 
 A029 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:141
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S028 asserts try source.save() succeeds; same oracle as QVERIFY2(source.save(&error)).
 Source context since previous assertion:
 
 
@@ -402,8 +446,8 @@ Original expression:
     QVERIFY2(source.save(&error), qPrintable(error));
 
 A030 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:142
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S029 asserts !source.dirty after save; same oracle as QVERIFY(!source.dirty()).
 Source context since previous assertion:
 
 
@@ -411,8 +455,8 @@ Original expression:
     QVERIFY(!source.dirty());
 
 A031 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:145
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S030 asserts a freshly constructed VoicegroupSource reopens the saved sparse file; same oracle as QVERIFY2(reloaded.open(temporary.path(), "_sparse", &error)).
 Source context since previous assertion:
 
 
@@ -422,8 +466,8 @@ Original expression:
     QVERIFY2(reloaded.open(temporary.path(), QStringLiteral("_sparse"), &error), qPrintable(error));
 
 A032 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:146
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S031 asserts slot 12 is populated after reload; same oracle as QVERIFY(reloaded.voiceAt(12)).
 Source context since previous assertion:
 
 
@@ -431,8 +475,8 @@ Original expression:
     QVERIFY(reloaded.voiceAt(12));
 
 A033 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:147
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S032 compares reloaded slot 12 to beforeFirst; same oracle as QCOMPARE(*reloaded.voiceAt(12), beforeFirst).
 Source context since previous assertion:
 
 
@@ -440,8 +484,8 @@ Original expression:
     QCOMPARE(*reloaded.voiceAt(12), beforeFirst);
 
 A034 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:148
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S033 asserts slot 36 survives reload; same oracle as QVERIFY(reloaded.voiceAt(36)).
 Source context since previous assertion:
 
 
@@ -449,8 +493,8 @@ Original expression:
     QVERIFY(reloaded.voiceAt(36));
 
 A035 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:149
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S034 compares reloaded slot 36 to the original voice; same oracle as QCOMPARE(*reloaded.voiceAt(36), original).
 Source context since previous assertion:
 
 
@@ -458,8 +502,8 @@ Original expression:
     QCOMPARE(*reloaded.voiceAt(36), original);
 
 A036 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:150
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S035 asserts slot 80 survives reload; same oracle as QVERIFY(reloaded.voiceAt(80)).
 Source context since previous assertion:
 
 
@@ -467,8 +511,8 @@ Original expression:
     QVERIFY(reloaded.voiceAt(80));
 
 A037 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:151
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S036 compares reloaded slot 80 to afterLast; same oracle as QCOMPARE(*reloaded.voiceAt(80), afterLast).
 Source context since previous assertion:
 
 
@@ -476,8 +520,8 @@ Original expression:
     QCOMPARE(*reloaded.voiceAt(80), afterLast);
 
 A038 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:154
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S037 asserts the saved tree loads through the same C entry point (voicegroup_load) the original called; same oracle as QVERIFY(loaded).
 Source context since previous assertion:
 
     const QByteArray root = temporary.path().toLocal8Bit();
@@ -487,8 +531,8 @@ Original expression:
     QVERIFY(loaded);
 
 A039 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:155
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S038 compares the native loader tone type at slot 12 to vgMacroVoiceType(.square2); same oracle as QCOMPARE(loaded->voices[12].type, uint8_t(VOICE_SQUARE_2)).
 Source context since previous assertion:
 
 
@@ -496,8 +540,8 @@ Original expression:
     QCOMPARE(loaded->voices[12].type, uint8_t(VOICE_SQUARE_2));
 
 A040 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:156
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S039 compares the native loader tone type at slot 36 to vgMacroVoiceType(.square1); same oracle as QCOMPARE(loaded->voices[36].type, uint8_t(VOICE_SQUARE_1)).
 Source context since previous assertion:
 
 
@@ -505,8 +549,8 @@ Original expression:
     QCOMPARE(loaded->voices[36].type, uint8_t(VOICE_SQUARE_1));
 
 A041 | VoicegroupSourceTest::sparseInsertionsSerializeAtBothEnds | src/checks/voicegroup/voicegroupsourceediting.cpp:157
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S040 compares the native loader tone type at slot 80 to vgMacroVoiceType(.noise); same oracle as QCOMPARE(loaded->voices[80].type, uint8_t(VOICE_NOISE)).
 Source context since previous assertion:
 
 
@@ -514,8 +558,8 @@ Original expression:
     QCOMPARE(loaded->voices[80].type, uint8_t(VOICE_NOISE));
 
 A042 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:175
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S041 (src/checks/projectstore/VoicegroupEditingChecks.swift:289 editingFamily) asserts the native baseline loads before the per-family edit; unproved: the original site guards the whole openSession stimulus (project copy, Project::open, playableSong config resolution, VoicegroupSource::open, baseline voicegroup_load) while the Swift family case opens the source with the literal voicegroup arg _fixture_rich; a throwing fixture failure is reported through this row's catch predicate at line 474.
 Source context since previous assertion:
 
     voicegroup_free(loaded);
@@ -540,8 +584,8 @@ Original expression:
     QVERIFY(m_session);
 
 A043 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:188
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S042 asserts editingFirstSlot finds a voice whose macro is directSound, directSoundNoResample or directSoundAlt; same predicate set and oracle as the DirectSound guard over voicegroup_test::isDirectSound.
 Source context since previous assertion:
 
     QFETCH(int, family);
@@ -561,8 +605,8 @@ Original expression:
         QVERIFY2(slot >= 0, "fixture_rich must retain a DirectSound voice");
 
 A044 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:196
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S043 asserts slot 1 (the hard-coded donor) is present before its symbol is copied; same oracle as QVERIFY(source.voiceAt(donor)).
 Source context since previous assertion:
 
         edited = *source.voiceAt(slot);
@@ -577,8 +621,8 @@ Original expression:
         QVERIFY(source.voiceAt(donor));
 
 A045 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:201
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S044 asserts a square-1 or square-1-alt voice is found; same oracle as the Square 1 guard over voicegroup_test::isSquare1.
 Source context since previous assertion:
 
         edited.symbol = source.voiceAt(donor)->symbol;
@@ -590,8 +634,8 @@ Original expression:
         QVERIFY2(slot >= 0, "fixture_rich must retain a Square 1 voice");
 
 A046 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:209
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S045 asserts a noise or noise-alt voice is found; same oracle as the Noise guard over voicegroup_test::isNoise.
 Source context since previous assertion:
 
         edited = *source.voiceAt(slot);
@@ -606,8 +650,8 @@ Original expression:
         QVERIFY2(slot >= 0, "fixture_rich must retain a Noise voice");
 
 A047 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:215
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S046 asserts a programmable-wave or alt voice is found; same oracle as the programmable-wave guard over voicegroup_test::isProgWave.
 Source context since previous assertion:
 
         edited = *source.voiceAt(slot);
@@ -620,8 +664,8 @@ Original expression:
         QVERIFY2(slot >= 0, "fixture_rich must retain a programmable-wave voice");
 
 A048 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:222
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S047 asserts the first keysplit voice and its adjacent keysplit donor both exist; same oracle as the original conjunction of the slot and donor macro checks.
 Source context since previous assertion:
 
         edited = *source.voiceAt(slot);
@@ -637,8 +681,8 @@ Original expression:
                  "fixture_rich must retain two Keysplit voices");
 
 A049 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:233
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S048 asserts VoicegroupSource.drumkitInstruments(root) returns at least two definitions for the drumkit families; same oracle as QVERIFY2(drumkits.size() >= 2).
 Source context since previous assertion:
 
         edited = *source.voiceAt(slot);
@@ -654,8 +698,8 @@ Original expression:
         QVERIFY2(drumkits.size() >= 2, "fixture must retain two drumkit definitions");
 
 A050 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:236
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S049 asserts a keysplitAll drumkit aggregate slot exists for family 5; same oracle as QVERIFY(slot >= 0) after firstMacro(source, VgMacro::KeysplitAll).
 Source context since previous assertion:
 
         if (family == 5) {
@@ -665,8 +709,8 @@ Original expression:
             QVERIFY(slot >= 0);
 
 A051 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:241
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S050 asserts slot 4 is populated before the family-6 conversion edit; same oracle as QVERIFY(source.voiceAt(slot)).
 Source context since previous assertion:
 
             edited = *source.voiceAt(slot);
@@ -678,8 +722,8 @@ Original expression:
             QVERIFY(source.voiceAt(slot));
 
 A052 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:250
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S051 asserts an existing keysplitAll aggregate with the edited symbol exists outside the edited slot; same oracle as firstMacroWithSymbol(source, VgMacro::KeysplitAll, edited.symbol, slot) >= 0.
 Source context since previous assertion:
 
             edited = {};
@@ -696,8 +740,8 @@ Original expression:
                  "fixture must retain the selected drumkit as an existing aggregate");
 
 A053 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:255
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S052 asserts source.setVoice(slot:voice:) accepts the per-family edited voice, family 6 using VgVoice(macro: .keysplitAll, symbol: drumkits[0]) whose defaults match the C++ VgVoice{} reset; same oracle as QVERIFY(source.setVoice(slot, edited)).
 Source context since previous assertion:
 
         auditionKey = 36;
@@ -708,8 +752,8 @@ Original expression:
     QVERIFY(source.setVoice(slot, edited));
 
 A054 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:256
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S053 asserts source.dirty after the edit; same oracle as QVERIFY(source.dirty()).
 Source context since previous assertion:
 
 
@@ -717,8 +761,8 @@ Original expression:
     QVERIFY(source.dirty());
 
 A055 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:258
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S054 asserts the .porydaw/vgpreview directory exists after createDirectory; same observable as QDir().mkpath(root + "/.porydaw/vgpreview").
 Source context since previous assertion:
 
     const QByteArray previewDirectory = QByteArrayLiteral(".porydaw/vgpreview");
@@ -728,8 +772,8 @@ Original expression:
                           QString::fromLatin1(previewDirectory)));
 
 A056 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:264
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S055 asserts the preview file named <loadName>.inc exists after writing Data(source.renderPreview()); same observable as writeFile(previewPath, source.renderPreview(), error).
 Source context since previous assertion:
 
     const QString previewPath = m_session->root() + QLatin1Char('/') +
@@ -742,8 +786,8 @@ Original expression:
              qPrintable(error));
 
 A057 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:273
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S056 asserts the edited preview loads through voicegroup_load with voicegroupPaths = [.porydaw/vgpreview] and voicegroupPathCount 1; same stimulus and oracle as QVERIFY(preview).
 Source context since previous assertion:
 
     VoicegroupLoaderConfig config{};
@@ -758,8 +802,8 @@ Original expression:
     QVERIFY(preview);
 
 A058 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:274
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S057 compares the preview voice name at the edited slot to the same per-family expectedName the original derived (baseline slot name for families 0-3, baseline donor name for 4, loader voice name of the drumkit symbol for 5-6); same oracle as QCOMPARE(snapshot(*preview, slot).name, expectedName).
 Source context since previous assertion:
 
 
@@ -767,8 +811,8 @@ Original expression:
     QCOMPARE(voicegroup_test::snapshot(*preview, slot).name, expectedName);
 
 A059 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:275
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S058 compares the preview tone type to vgMacroVoiceType(edited.macro); same oracle as QCOMPARE(preview->voices[slot].type, vgMacroVoiceType(edited.macro)).
 Source context since previous assertion:
 
 
@@ -776,8 +820,8 @@ Original expression:
     QCOMPARE(preview->voices[slot].type, vgMacroVoiceType(edited.macro));
 
 A060 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:277
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S059 applies editingSameResolvedTone, a field-for-field port of voicegroup_test::sameResolvedTone/samePlayableTone, to the preview aggregate and the baseline oracle slot at audition key 60 (keysplit) or 36 (drumkits), the original key rule; the no-oracle-slot branch reports false at line 406.
 Source context since previous assertion:
 
     if (expectsSubgroup) {
@@ -787,8 +831,8 @@ Original expression:
             preview->voices[slot], m_session->baseline->voices[aggregateOracleSlot], auditionKey));
 
 A061 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:280
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S060 applies editingSameVoiceFields, a port of voicegroup_test::sameVoiceFields, to the live source slot; same oracle as QVERIFY(voicegroup_test::sameVoiceFields(*source.voiceAt(slot), edited)).
 Source context since previous assertion:
 
     }
@@ -797,8 +841,8 @@ Original expression:
     QVERIFY(voicegroup_test::sameVoiceFields(*source.voiceAt(slot), edited));
 
 A062 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:282
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S061 compares the on-disk file bytes with the pre-edit capture; same oracle as QCOMPARE(voicegroup_test::readFile(source.filePath()), fileBefore).
 Source context since previous assertion:
 
     voicegroup_free(preview);
@@ -807,8 +851,8 @@ Original expression:
     QCOMPARE(voicegroup_test::readFile(source.filePath()), fileBefore);
 
 A063 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:284
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S062 asserts try source.save() succeeds; same oracle as QVERIFY2(source.save(&error)).
 Source context since previous assertion:
 
 
@@ -817,8 +861,8 @@ Original expression:
     QVERIFY2(source.save(&error), qPrintable(error));
 
 A064 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:285
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S063 asserts !source.dirty after save; same oracle as QVERIFY(!source.dirty()).
 Source context since previous assertion:
 
 
@@ -826,8 +870,8 @@ Original expression:
     QVERIFY(!source.dirty());
 
 A065 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:286
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S064 asserts editingChangedLineCount(before, current) == 1 using the same newline-split comparison as the original changedLineCount helper; same oracle.
 Source context since previous assertion:
 
 
@@ -835,8 +879,8 @@ Original expression:
     QCOMPARE(changedLineCount(fileBefore, voicegroup_test::readFile(source.filePath())), 1);
 
 A066 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:289
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S065 asserts voicegroup_load accepts the saved source; same oracle as QVERIFY(reloaded).
 Source context since previous assertion:
 
     LoadedVoiceGroup *const reloaded =
@@ -846,8 +890,8 @@ Original expression:
     QVERIFY(reloaded);
 
 A067 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:294
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S066 compares the reloaded tone type at the edited slot to vgMacroVoiceType(edited.macro); same oracle as QCOMPARE(tone.type, vgMacroVoiceType(edited.macro)).
 Source context since previous assertion:
 
     const ToneData &tone = reloaded->voices[slot];
@@ -859,8 +903,8 @@ Original expression:
     QCOMPARE(tone.type, vgMacroVoiceType(edited.macro));
 
 A068 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:296
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S067 asserts tone.subGroup is non-nil for the aggregate families 4-6; same oracle as QVERIFY(tone.subGroup) under expectsSubgroup.
 Source context since previous assertion:
 
     if (expectsSubgroup) {
@@ -869,8 +913,8 @@ Original expression:
         QVERIFY(tone.subGroup);
 
 A069 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:298
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S068 asserts tone.keySplitTable is non-nil for keysplit family 4; same oracle as QVERIFY(tone.keySplitTable).
 Source context since previous assertion:
 
         if (family == 4)
@@ -879,8 +923,8 @@ Original expression:
             QVERIFY(tone.keySplitTable);
 
 A070 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:299
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S069 applies editingSameResolvedTone to the saved aggregate and the baseline oracle slot at the same audition key; the no-oracle-slot branch reports false at line 435.
 Source context since previous assertion:
 
 
@@ -889,8 +933,8 @@ Original expression:
             tone, m_session->baseline->voices[aggregateOracleSlot], auditionKey));
 
 A071 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:302
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S070 compares the native tone key to UInt8(truncatingIfNeeded: edited.key) for families 0-3; same oracle as QCOMPARE(tone.key, uint8_t(edited.key)).
 Source context since previous assertion:
 
     } else {
@@ -899,8 +943,8 @@ Original expression:
         QCOMPARE(tone.key, uint8_t(edited.key));
 
 A072 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:303
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S071 compares the native tone attack to UInt8(truncatingIfNeeded: edited.attack) for families 0-3; same oracle as QCOMPARE(tone.attack, uint8_t(edited.attack)).
 Source context since previous assertion:
 
 
@@ -908,8 +952,8 @@ Original expression:
         QCOMPARE(tone.attack, uint8_t(edited.attack));
 
 A073 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:304
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S072 compares the native tone decay to UInt8(truncatingIfNeeded: edited.decay) for families 0-3; same oracle as QCOMPARE(tone.decay, uint8_t(edited.decay)).
 Source context since previous assertion:
 
 
@@ -917,8 +961,8 @@ Original expression:
         QCOMPARE(tone.decay, uint8_t(edited.decay));
 
 A074 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:305
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S073 compares the native tone sustain to UInt8(truncatingIfNeeded: edited.sustain) for families 0-3; same oracle as QCOMPARE(tone.sustain, uint8_t(edited.sustain)).
 Source context since previous assertion:
 
 
@@ -926,8 +970,8 @@ Original expression:
         QCOMPARE(tone.sustain, uint8_t(edited.sustain));
 
 A075 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:306
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S074 compares the native tone release to UInt8(truncatingIfNeeded: edited.release) for families 0-3; same oracle as QCOMPARE(tone.release, uint8_t(edited.release)).
 Source context since previous assertion:
 
 
@@ -935,8 +979,8 @@ Original expression:
         QCOMPARE(tone.release, uint8_t(edited.release));
 
 A076 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:311
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S075 compares tone.panSweep to 0 when edited.pan == 0 and to UInt8(0x80 | edited.pan) otherwise for families 0 and 3; same oracle as the original ternary.
 Source context since previous assertion:
 
         // Sweep rides panSweep and duty packs into wavePointer for square 1;
@@ -948,8 +992,8 @@ Original expression:
             QCOMPARE(tone.panSweep, edited.pan ? uint8_t(0x80 | edited.pan) : uint8_t(0));
 
 A077 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:313
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S076 compares tone.panSweep to UInt8(truncatingIfNeeded: edited.sweep) for family 1; same oracle as QCOMPARE(tone.panSweep, uint8_t(edited.sweep)).
 Source context since previous assertion:
 
         if (family == 1) {
@@ -958,8 +1002,8 @@ Original expression:
             QCOMPARE(tone.panSweep, uint8_t(edited.sweep));
 
 A078 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:314
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S077 compares UInt(bitPattern: tone.wavePointer) to UInt(edited.duty & 0x03) for family 1; same oracle as the original uintptr_t comparison.
 Source context since previous assertion:
 
 
@@ -967,8 +1011,8 @@ Original expression:
             QCOMPARE(uintptr_t(tone.wavePointer), uintptr_t(edited.duty & 0x03));
 
 A079 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:316
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S078 compares UInt(bitPattern: tone.wavePointer) to UInt(edited.period & 0x01) for family 2; same oracle as the original uintptr_t comparison.
 Source context since previous assertion:
 
         } else if (family == 2) {
@@ -977,8 +1021,8 @@ Original expression:
             QCOMPARE(uintptr_t(tone.wavePointer), uintptr_t(edited.period & 0x01));
 
 A080 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:319
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S079 compares the saved bank voice name at the edited slot to expectedName; same oracle as QCOMPARE(voicegroup_test::snapshot(*reloaded, slot).name, expectedName).
 Source context since previous assertion:
 
         }
@@ -988,8 +1032,8 @@ Original expression:
     QCOMPARE(voicegroup_test::snapshot(*reloaded, slot).name, expectedName);
 
 A081 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:322
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S080 compares editingSnapshot(baseline, untouched) with editingSnapshot(reloaded, untouched) for every slot != the edited slot; editingSnapshot is a field-for-field port of voicegroup_test::snapshot (type, key, panSweep, ADSR, name, and the packed square/noise payload), and the original loop runs once per family.
 Source context since previous assertion:
 
     for (int untouched = 0; untouched < VOICEGROUP_SIZE; ++untouched) {
@@ -1000,8 +1044,8 @@ Original expression:
                      voicegroup_test::snapshot(*m_session->baseline, untouched));
 
 A082 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:328
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S081 asserts a fresh VoicegroupSource reopens the saved tree at the same voicegroup arg the original passed (cfg.voicegroupArg, _fixture_rich in this fixture); same oracle as QVERIFY2(roundTrip.open(..., &error)).
 Source context since previous assertion:
 
     }
@@ -1014,8 +1058,8 @@ Original expression:
              qPrintable(error));
 
 A083 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:330
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S082 asserts the freshly opened source is not dirty; same oracle as QVERIFY(!roundTrip.dirty()).
 Source context since previous assertion:
 
 
@@ -1023,8 +1067,8 @@ Original expression:
     QVERIFY(!roundTrip.dirty());
 
 A084 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:331
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S083 asserts the edited slot is still populated after reopen; same oracle as QVERIFY(roundTrip.voiceAt(slot)).
 Source context since previous assertion:
 
 
@@ -1032,8 +1076,8 @@ Original expression:
     QVERIFY(roundTrip.voiceAt(slot));
 
 A085 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:332
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S084 applies editingSameVoiceFields to the reopened slot; same oracle as QVERIFY(voicegroup_test::sameVoiceFields(*roundTrip.voiceAt(slot), edited)).
 Source context since previous assertion:
 
 
@@ -1042,7 +1086,7 @@ Original expression:
 
 A086 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:337
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: retired createVoicegroup/SongRegistry creation flow. spec.md:63 lists create/remove voicegroup among the surface whose callers are uncompiled (ProjectIo has no CMake target), VoicegroupSource::createVoicegroup has no Swift counterpart, and the Swift checks never create a voicegroup.
 Source context since previous assertion:
 
 
@@ -1057,7 +1101,7 @@ Original expression:
 
 A087 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:340
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: retired appendIncludeLine creation flow. spec.md:63 lists include-line management as dead surface; the Swift VoicegroupSource has no include-line writer and no Swift predicate covers this site.
 Source context since previous assertion:
 
 
@@ -1067,7 +1111,7 @@ Original expression:
 
 A088 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:344
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: depends on the retired createVoicegroup output (the created _voicegroup_qtest_copy), so the native load has no Swift ingress.
 Source context since previous assertion:
 
     LoadedVoiceGroup *const created =
@@ -1078,7 +1122,7 @@ Original expression:
 
 A089 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:345
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: snapshot(*created, slot).name needs the created voicegroup the retired createVoicegroup flow produced; no Swift ingress.
 Source context since previous assertion:
 
 
@@ -1087,7 +1131,7 @@ Original expression:
 
 A090 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:347
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: sameResolvedTone(created->voices[slot], baseline->voices[aggregateOracleSlot], auditionKey) needs the created voicegroup; no Swift ingress.
 Source context since previous assertion:
 
     if (expectsSubgroup) {
@@ -1098,7 +1142,7 @@ Original expression:
 
 A091 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:351
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: SongRegistry::voicegroupArgs registration query belongs to the retired SongRegistry creation flow (spec.md:63: zero live callers).
 Source context since previous assertion:
 
     }
@@ -1110,7 +1154,7 @@ Original expression:
 
 A092 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:353
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: the voice_groups.inc hub growth follows appendIncludeLine, which is retired (spec.md:63 include-line management); no Swift predicate loads or appends the include hub.
 Source context since previous assertion:
 
 
@@ -1118,8 +1162,8 @@ Original expression:
     QCOMPARE(voicegroup_test::readFile(hub).split('\n').size(), hubBefore.split('\n').size() + 1);
 
 A093 | VoicegroupSourceTest::displayNamesAreStable | src/checks/voicegroup/voicegroupsourceediting.cpp:358
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S085 compares vgMacroDisplayName(.directSound) to Sample; the Swift function is a string-for-string port of the original table; same oracle.
 Source context since previous assertion:
 
 }
@@ -1131,8 +1175,8 @@ Original expression:
     QCOMPARE(vgMacroDisplayName(VgMacro::DirectSound), QStringLiteral("Sample"));
 
 A094 | VoicegroupSourceTest::displayNamesAreStable | src/checks/voicegroup/voicegroupsourceediting.cpp:359
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S086 compares vgMacroDisplayName(.directSoundNoResample) to Sample (fixed pitch); same oracle as the original table row.
 Source context since previous assertion:
 
 
@@ -1141,8 +1185,8 @@ Original expression:
              QStringLiteral("Sample (fixed pitch)"));
 
 A095 | VoicegroupSourceTest::displayNamesAreStable | src/checks/voicegroup/voicegroupsourceediting.cpp:361
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S087 compares vgMacroDisplayName(.directSoundAlt) to Sample (reverse); same oracle as the original table row.
 Source context since previous assertion:
 
 
@@ -1150,8 +1194,8 @@ Original expression:
     QCOMPARE(vgMacroDisplayName(VgMacro::DirectSoundAlt), QStringLiteral("Sample (reverse)"));
 
 A096 | VoicegroupSourceTest::displayNamesAreStable | src/checks/voicegroup/voicegroupsourceediting.cpp:362
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S088 compares the Swift port of m4aVoiceTypeName (PorydawCore MidiSemantics.swift) for VOICE_DIRECTSOUND_NO_RESAMPLE to Sample (fixed pitch); the original core/m4asemantics.cpp returned the same literal through QObject::tr with no translation loaded.
 Source context since previous assertion:
 
 
@@ -1160,8 +1204,8 @@ Original expression:
              QStringLiteral("Sample (fixed pitch)"));
 
 A097 | VoicegroupSourceTest::displayNamesAreStable | src/checks/voicegroup/voicegroupsourceediting.cpp:364
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S089 compares the Swift port of m4aVoiceTypeName for VOICE_DIRECTSOUND_ALT to Sample (reverse); same oracle.
 Source context since previous assertion:
 
 
@@ -1169,8 +1213,8 @@ Original expression:
     QCOMPARE(m4aVoiceTypeName(VOICE_DIRECTSOUND_ALT), QStringLiteral("Sample (reverse)"));
 
 A098 | VoicegroupSourceTest::displayNamesAreStable | src/checks/voicegroup/voicegroupsourceediting.cpp:365
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S090 compares the Swift port of m4aVoiceTypeName for VOICE_KEYSPLIT to Sample, preserving the original keysplit fall-through; same oracle.
 Source context since previous assertion:
 
 
@@ -1183,7 +1227,323 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-none: no Swift counterpart file exists, so there are no S entries.
+The 90 ported rows link to the predicates below. Each entry gives the ledger
+check name, the Swift function, the counterpart path and the line of the call,
+followed by the predicate expression verbatim. A row whose call site carries a
+companion failure or branch predicate names that site in its Mapping/reason
+instead of indexing it separately.
+
+S001 | voicegroupsourceediting/A001 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:66
+    editingExpect("A001", baseline != nil, report, "fixture session opens source and native baseline")
+
+S002 | voicegroupsourceediting/A003 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:70
+    editingExpect("A003", slot != nil, report, "fixture_rich retains a materializable blank slot")
+
+S003 | voicegroupsourceediting/A004 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:75
+    editingExpect("A004", draft != nil, report, "blank slot produces a draft")
+
+S004 | voicegroupsourceediting/A005 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:76
+    editingExpect("A005", draft?.materializesBlank == true, report, "draft marks materialization")
+
+S005 | voicegroupsourceediting/A006 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:77
+    editingEqual("A006", created, draft?.voice, report, "draft retains the requested voice")
+
+S006 | voicegroupsourceediting/A007 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:78
+    editingExpect("A007", source.setVoice(slot: slot, voice: created), report, "blank slot accepts voice")
+
+S007 | voicegroupsourceediting/A008 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:79
+    editingExpect("A008", source.voiceAt(slot: slot) != nil, report, "inserted voice is present")
+
+S008 | voicegroupsourceediting/A009 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:80
+    editingEqual("A009", created, source.voiceAt(slot: slot), report, "inserted voice equals request")
+
+S009 | voicegroupsourceediting/A010 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:81
+    editingExpect("A010", source.dirty, report, "materialization marks source dirty")
+
+S010 | voicegroupsourceediting/A011 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:82
+    editingExpect("A011", source.restoreSourceBytes(before), report, "original source bytes restore")
+
+S011 | voicegroupsourceediting/A012 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:83
+    editingEqual("A012", VgLineKind.none, source.kindAt(slot: slot), report, "restored slot is empty")
+
+S012 | voicegroupsourceediting/A013 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:84
+    editingEqual("A013", before, source.sourceBytes(), report, "restored bytes equal original")
+
+S013 | voicegroupsourceediting/A014 | editingBlankSlot | src/checks/projectstore/VoicegroupEditingChecks.swift:85
+    editingExpect("A014", !source.dirty, report, "restoring pristine bytes clears dirty")
+
+S014 | voicegroupsourceediting/A015 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:97
+    editingExpect("A015", FileManager.default.fileExists(atPath: root.path), report,
+                  "temporary directory is available")
+
+S015 | voicegroupsourceediting/A016 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:100
+    editingExpect("A016", FileManager.default.fileExists(atPath: folder.path), report,
+                  "sound/voicegroups directory exists")
+
+S016 | voicegroupsourceediting/A017 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:104
+    editingExpect("A017", FileManager.default.fileExists(atPath: path.path), report,
+                  "sparse source fixture is written")
+
+S017 | voicegroupsourceediting/A018 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:109
+    editingExpect("A018", opened, report, "sparse source opens: \(error ?? "")")
+
+S018 | voicegroupsourceediting/A019 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:113
+    editingEqual("A019", VgLineKind.none, source.kindAt(slot: 12), report, "slot 12 starts blank")
+
+S019 | voicegroupsourceediting/A020 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:114
+    editingEqual("A020", VgLineKind.none, source.kindAt(slot: 80), report, "slot 80 starts blank")
+
+S020 | voicegroupsourceediting/A021 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:115
+    editingExpect("A021", source.setVoice(slot: 12, voice: beforeFirst), report, "insert before first voice")
+
+S021 | voicegroupsourceediting/A022 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:116
+    editingExpect("A022", source.voiceAt(slot: 12) != nil, report, "slot 12 is populated")
+
+S022 | voicegroupsourceediting/A023 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:117
+    editingEqual("A023", beforeFirst, source.voiceAt(slot: 12), report, "slot 12 matches inserted voice")
+
+S023 | voicegroupsourceediting/A024 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:118
+    editingExpect("A024", source.voiceAt(slot: 36) != nil, report, "original slot is populated")
+
+S024 | voicegroupsourceediting/A025 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:119
+    editingEqual("A025", original, source.voiceAt(slot: 36), report, "original slot is unchanged")
+
+S025 | voicegroupsourceediting/A026 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:120
+    editingExpect("A026", source.setVoice(slot: 80, voice: afterLast), report, "insert after last voice")
+
+S026 | voicegroupsourceediting/A027 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:121
+    editingExpect("A027", source.voiceAt(slot: 80) != nil, report, "slot 80 is populated")
+
+S027 | voicegroupsourceediting/A028 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:122
+    editingEqual("A028", afterLast, source.voiceAt(slot: 80), report, "slot 80 matches inserted voice")
+
+S028 | voicegroupsourceediting/A029 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:123
+    editingExpect("A029", try source.save(), report, "sparse source saves")
+
+S029 | voicegroupsourceediting/A030 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:124
+    editingExpect("A030", !source.dirty, report, "save clears dirty")
+
+S030 | voicegroupsourceediting/A031 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:127
+    editingExpect("A031", reopened, report, "saved sparse source reopens: \(error ?? "")")
+
+S031 | voicegroupsourceediting/A032 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:129
+    editingExpect("A032", reloaded.voiceAt(slot: 12) != nil, report, "slot 12 survives reload")
+
+S032 | voicegroupsourceediting/A033 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:130
+    editingEqual("A033", beforeFirst, reloaded.voiceAt(slot: 12), report, "slot 12 survives exactly")
+
+S033 | voicegroupsourceediting/A034 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:131
+    editingExpect("A034", reloaded.voiceAt(slot: 36) != nil, report, "slot 36 survives reload")
+
+S034 | voicegroupsourceediting/A035 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:132
+    editingEqual("A035", original, reloaded.voiceAt(slot: 36), report, "slot 36 survives exactly")
+
+S035 | voicegroupsourceediting/A036 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:133
+    editingExpect("A036", reloaded.voiceAt(slot: 80) != nil, report, "slot 80 survives reload")
+
+S036 | voicegroupsourceediting/A037 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:134
+    editingEqual("A037", afterLast, reloaded.voiceAt(slot: 80), report, "slot 80 survives exactly")
+
+S037 | voicegroupsourceediting/A038 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:136
+    editingExpect("A038", loaded != nil, report, "native loader accepts saved sparse source")
+
+S038 | voicegroupsourceediting/A039 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:139
+    editingEqual("A039", vgMacroVoiceType(.square2), editingTone(loaded, 12).type, report,
+                 "inserted slot 12 loads as square 2")
+
+S039 | voicegroupsourceediting/A040 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:141
+    editingEqual("A040", vgMacroVoiceType(.square1), editingTone(loaded, 36).type, report,
+                 "original slot 36 loads as square 1")
+
+S040 | voicegroupsourceediting/A041 | editingSparseInsertions | src/checks/projectstore/VoicegroupEditingChecks.swift:143
+    editingEqual("A041", vgMacroVoiceType(.noise), editingTone(loaded, 80).type, report,
+                 "inserted slot 80 loads as noise")
+
+S041 | voicegroupsourceediting/A042 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:289
+    editingExpect("A042", baseline != nil, report, "fixture session opens source and native baseline")
+
+S042 | voicegroupsourceediting/A043 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:304
+    editingExpect("A043", found != nil, report, "fixture retains a DirectSound voice")
+
+S043 | voicegroupsourceediting/A044 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:313
+    editingExpect("A044", donor != nil, report, "fixture retains donor at slot 1")
+
+S044 | voicegroupsourceediting/A045 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:319
+    editingExpect("A045", found != nil, report, "fixture retains a square-1 voice")
+
+S045 | voicegroupsourceediting/A046 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:328
+    editingExpect("A046", found != nil, report, "fixture retains a noise voice")
+
+S046 | voicegroupsourceediting/A047 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:335
+    editingExpect("A047", found != nil, report, "fixture retains a programmable-wave voice")
+
+S047 | voicegroupsourceediting/A048 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:343
+    editingExpect("A048", found != nil && donor?.macro == .keysplit, report,
+                      "fixture retains adjacent keysplit voices")
+
+S048 | voicegroupsourceediting/A049 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:294
+    editingExpect("A049", drumkits.count >= 2, report, "fixture retains two drumkit definitions")
+
+S049 | voicegroupsourceediting/A050 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:352
+    editingExpect("A050", found != nil, report, "fixture retains a drumkit aggregate")
+
+S050 | voicegroupsourceediting/A051 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:359
+    editingExpect("A051", source.voiceAt(slot: slot) != nil, report,
+                      "conversion slot 4 is populated")
+
+S051 | voicegroupsourceediting/A052 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:369
+    editingExpect("A052", aggregateOracleSlot >= 0, report,
+                      "selected drumkit has an existing aggregate")
+
+S052 | voicegroupsourceediting/A053 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:375
+    editingExpect("A053", source.setVoice(slot: slot, voice: edited), report, "edited voice is accepted")
+
+S053 | voicegroupsourceediting/A054 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:376
+    editingExpect("A054", source.dirty, report, "edited voice makes source dirty")
+
+S054 | voicegroupsourceediting/A055 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:379
+    editingExpect("A055", FileManager.default.fileExists(atPath: previewDir.path), report,
+                  "preview directory is available")
+
+S055 | voicegroupsourceediting/A056 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:383
+    editingExpect("A056", FileManager.default.fileExists(atPath: previewFile.path), report,
+                  "preview bytes are written to the loader path")
+
+S056 | voicegroupsourceediting/A057 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:392
+    editingExpect("A057", preview != nil, report, "native loader accepts edited preview")
+
+S057 | voicegroupsourceediting/A058 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:395
+    editingEqual("A058", expectedName, editingVoiceName(preview, slot), report,
+                 "preview resolves edited display name")
+
+S058 | voicegroupsourceediting/A059 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:397
+    editingEqual("A059", vgMacroVoiceType(edited.macro), editingTone(preview, slot).type, report,
+                 "preview loads the edited voice type")
+
+S059 | voicegroupsourceediting/A060 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:401
+    editingExpect("A060", editingSameResolvedTone(
+                editingTone(preview, slot), editingTone(baseline, aggregateOracleSlot),
+                key: family >= 5 ? 36 : 60), report,
+                "preview aggregate resolves the same playable child as existing aggregate")
+
+S060 | voicegroupsourceediting/A061 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:409
+    editingExpect("A061", editingSameVoiceFields(source.voiceAt(slot: slot), edited), report,
+                  "edited source retains the requested family fields")
+
+S061 | voicegroupsourceediting/A062 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:411
+    editingEqual("A062", before, try Data(contentsOf: file), report,
+                 "preview does not modify the original file")
+
+S062 | voicegroupsourceediting/A063 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:413
+    editingExpect("A063", try source.save(), report, "edited source saves")
+
+S063 | voicegroupsourceediting/A064 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:414
+    editingExpect("A064", !source.dirty, report, "save clears dirty")
+
+S064 | voicegroupsourceediting/A065 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:415
+    editingEqual("A065", 1, editingChangedLineCount(before, try Data(contentsOf: file)), report,
+                 "saving the edit changes exactly one source line")
+
+S065 | voicegroupsourceediting/A066 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:418
+    editingExpect("A066", reloaded != nil, report, "saved source loads as native bank")
+
+S066 | voicegroupsourceediting/A067 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:422
+    editingEqual("A067", vgMacroVoiceType(edited.macro), tone.type, report,
+                 "saved bank retains edited native voice type")
+
+S067 | voicegroupsourceediting/A068 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:425
+    editingExpect("A068", tone.subGroup != nil, report, "aggregate has a subgroup")
+
+S068 | voicegroupsourceediting/A069 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:427
+    editingExpect("A069", tone.keySplitTable != nil, report, "keysplit retains lookup table")
+
+S069 | voicegroupsourceediting/A070 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:430
+    editingExpect("A070", editingSameResolvedTone(
+                tone, editingTone(baseline, aggregateOracleSlot),
+                key: family >= 5 ? 36 : 60), report,
+                "saved aggregate resolves unchanged child")
+
+S070 | voicegroupsourceediting/A071 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:438
+    editingEqual("A071", UInt8(truncatingIfNeeded: edited.key), tone.key, report, "native key")
+
+S071 | voicegroupsourceediting/A072 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:439
+    editingEqual("A072", UInt8(truncatingIfNeeded: edited.attack), tone.attack, report, "native attack")
+
+S072 | voicegroupsourceediting/A073 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:440
+    editingEqual("A073", UInt8(truncatingIfNeeded: edited.decay), tone.decay, report, "native decay")
+
+S073 | voicegroupsourceediting/A074 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:441
+    editingEqual("A074", UInt8(truncatingIfNeeded: edited.sustain), tone.sustain, report, "native sustain")
+
+S074 | voicegroupsourceediting/A075 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:442
+    editingEqual("A075", UInt8(truncatingIfNeeded: edited.release), tone.release, report, "native release")
+
+S075 | voicegroupsourceediting/A076 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:444
+    editingEqual("A076", edited.pan == 0 ? UInt8(0) : UInt8(0x80 | edited.pan),
+                         tone.panSweep, report, "native sample/wave pan flags")
+
+S076 | voicegroupsourceediting/A077 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:448
+    editingEqual("A077", UInt8(truncatingIfNeeded: edited.sweep), tone.panSweep,
+                         report, "square sweep packing")
+
+S077 | voicegroupsourceediting/A078 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:450
+    editingEqual("A078", UInt(edited.duty & 0x03), UInt(bitPattern: tone.wavePointer),
+                         report, "square duty packing")
+
+S078 | voicegroupsourceediting/A079 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:453
+    editingEqual("A079", UInt(edited.period & 0x01), UInt(bitPattern: tone.wavePointer),
+                         report, "noise period packing")
+
+S079 | voicegroupsourceediting/A080 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:457
+    editingEqual("A080", expectedName, editingVoiceName(reloaded, slot), report,
+                 "saved bank resolves edited display name")
+
+S080 | voicegroupsourceediting/A081 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:460
+    editingEqual("A081", editingSnapshot(baseline, untouched), editingSnapshot(reloaded, untouched),
+                     report, "native slot \(untouched) remains equal to baseline")
+
+S081 | voicegroupsourceediting/A082 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:466
+    editingExpect("A082", opened, report, "saved edited source reopens: \(error ?? "")")
+
+S082 | voicegroupsourceediting/A083 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:468
+    editingExpect("A083", !roundTrip.dirty, report, "freshly opened source is pristine")
+
+S083 | voicegroupsourceediting/A084 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:469
+    editingExpect("A084", roundTrip.voiceAt(slot: slot) != nil, report,
+                  "edited slot remains populated after reopen")
+
+S084 | voicegroupsourceediting/A085 | editingFamily | src/checks/projectstore/VoicegroupEditingChecks.swift:471
+    editingExpect("A085", editingSameVoiceFields(roundTrip.voiceAt(slot: slot), edited), report,
+                  "edited voice family fields survive save and reopen")
+
+S085 | voicegroupsourceediting/A093 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift:479
+    editingEqual("A093", "Sample", vgMacroDisplayName(.directSound), report,
+             "DirectSound display name")
+
+S086 | voicegroupsourceediting/A094 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift:481
+    editingEqual("A094", "Sample (fixed pitch)", vgMacroDisplayName(.directSoundNoResample), report,
+             "fixed-pitch sample display name")
+
+S087 | voicegroupsourceediting/A095 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift:483
+    editingEqual("A095", "Sample (reverse)", vgMacroDisplayName(.directSoundAlt), report,
+             "reverse sample display name")
+
+S088 | voicegroupsourceediting/A096 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift:485
+    editingEqual("A096", "Sample (fixed pitch)", m4aVoiceTypeName(UInt8(VOICE_DIRECTSOUND_NO_RESAMPLE)),
+             report, "native fixed-pitch sample type name")
+
+S089 | voicegroupsourceediting/A097 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift:487
+    editingEqual("A097", "Sample (reverse)", m4aVoiceTypeName(UInt8(VOICE_DIRECTSOUND_ALT)),
+             report, "native reverse sample type name")
+
+S090 | voicegroupsourceediting/A098 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift:489
+    editingEqual("A098", "Sample", m4aVoiceTypeName(UInt8(VOICE_KEYSPLIT)),
+             report, "native keysplit voice type name")
 
 Shared helpers
-none: no Swift fixture files carry expects for this suite.
+none: the fixture, snapshot and tone helpers are file-private in
+src/checks/projectstore/VoicegroupEditingChecks.swift (editingRichSource,
+editingBlankSlot, editingSparseInsertions, editingFamily, editingDisplayNames,
+editingSnapshot, editingSameResolvedTone, editingSameVoiceFields,
+editingLoaderVoiceName, editingChangedLineCount); no separate Swift fixture file
+carries expects for this suite.
