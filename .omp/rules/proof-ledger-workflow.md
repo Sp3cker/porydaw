@@ -47,6 +47,16 @@ branch, and one commit series close one surface.
 - Every row of a ledger is `MATCHED` or `RETIRED-*`. Delete that ledger and
   its C++ source together.
 
+## Compact ledger form
+
+Closed rows (`MATCHED`, `RETIRED-*`, `NATIVE-*`) carry header +
+`Disposition` + one S-citing mapping line only. S entries carry header +
+`Anchor:` only. `GAP`/`PARTIAL`/`DEFERRED` rows keep the full spec form.
+Never paste C++ or Swift code back into closed rows; cite the pinned
+revision instead (`git show <Reference revision>:<Original path>`).
+`proof:compact` is the only bulk rewriter and runs post-merge, never
+inside a feature lane.
+
 ## Forbidden
 
 - Waves of reconciliation, re-pinning, re-anchoring, or rewording across
