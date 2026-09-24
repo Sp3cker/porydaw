@@ -78,8 +78,8 @@ lifecycle_data expands two rows (A-then-B, B-then-A via the reverse flag); dirty
 Original assertion inventory
 
 A001 | (anonymous)::verifyFreshView | src/checks/workspace/tabs_lifecycle.cpp:45
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_lifecycle.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   #include "checks/workspace/tst_workspacesessions.h"
 
@@ -129,88 +129,88 @@ Original expression:
   QVERIFY(state.valid)
 
 A002 | (anonymous)::verifyFreshView | src/checks/workspace/tabs_lifecycle.cpp:46
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_lifecycle.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::abs(state.pxPerBeat - defaults.pxPerBeat) < 0.5)
 
 A003 | (anonymous)::verifyFreshView | src/checks/workspace/tabs_lifecycle.cpp:47
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_lifecycle.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(state.keyHeight, defaults.keyHeight)
 
 A004 | (anonymous)::verifyFreshView | src/checks/workspace/tabs_lifecycle.cpp:48
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_lifecycle.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(state.scrollPx, -view.camera().leadPadPx())
 
 A005 | (anonymous)::verifyFreshView | src/checks/workspace/tabs_lifecycle.cpp:49
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_lifecycle.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(state.scrollY, canonical.scrollY)
 
 A006 | (anonymous)::verifyFreshView | src/checks/workspace/tabs_lifecycle.cpp:50
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_lifecycle.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(state.selectedTrack, canonical.selectedTrack)
 
 A007 | (anonymous)::verifyFreshView | src/checks/workspace/tabs_lifecycle.cpp:51
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_lifecycle.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(state.editCursorTick, uint64_t(0))
 
 A008 | (anonymous)::verifyFreshView | src/checks/workspace/tabs_lifecycle.cpp:52
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_lifecycle.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(state.gridSelection, songview::GridSelection::automatic())
 
 A009 | (anonymous)::verifyFreshView | src/checks/workspace/tabs_lifecycle.cpp:53
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_lifecycle.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!state.gridTriplet)
 
 A010 | (anonymous)::verifyFreshView | src/checks/workspace/tabs_lifecycle.cpp:54
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_lifecycle.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!state.eventList)
 
 A011 | (anonymous)::verifyFreshView | src/checks/workspace/tabs_lifecycle.cpp:55
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_lifecycle.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!view.eventListVisible())
 
 A012 | WorkspaceTabsTest::init | src/checks/workspace/tabs_lifecycle.cpp:72
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
   }
@@ -233,8 +233,8 @@ Original expression:
   QVERIFY2(m_project.reset(error), qPrintable(error))
 
 A013 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:104
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
   }
@@ -272,16 +272,16 @@ Original expression:
   QVERIFY(firstName)
 
 A014 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:105
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(secondName)
 
 A015 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:109
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -291,8 +291,8 @@ Original expression:
   QVERIFY(workspace)
 
 A016 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:111
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       workspace->requestProjectOpenAt(m_project.root());
@@ -300,8 +300,8 @@ Original expression:
   QVERIFY(workspace_test::waitForProject(*workspace))
 
 A017 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:115
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -311,8 +311,8 @@ Original expression:
   QVERIFY(!first || !first->isReady())
 
 A018 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:117
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       first = workspace_test::waitReady(*workspace, *firstName);
@@ -320,64 +320,64 @@ Original expression:
   QVERIFY(first)
 
 A019 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:118
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(workspace->openTabCount(), qsizetype(1))
 
 A020 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:119
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_selectedTab, first)
 
 A021 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:120
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(first->isReady())
 
 A022 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:121
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(first->document().label(), firstLabel)
 
 A023 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:122
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_audio.timeline(), first->timeline().get())
 
 A024 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:123
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_audio.voicegroup(), first->voicegroupLease().get())
 
 A025 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:124
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_uiTimer->interval(), 500)
 
 A026 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:128
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -387,8 +387,8 @@ Original expression:
   QVERIFY(!second || !second->isReady())
 
 A027 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:130
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       second = workspace_test::waitReady(*workspace, *secondName);
@@ -396,72 +396,72 @@ Original expression:
   QVERIFY(second)
 
 A028 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:131
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(second != first)
 
 A029 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:132
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(workspace->openTabCount(), qsizetype(2))
 
 A030 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:133
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_selectedTab, second)
 
 A031 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:134
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(second->isReady())
 
 A032 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:135
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(second->document().label(), secondLabel)
 
 A033 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:136
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_audio.timeline(), second->timeline().get())
 
 A034 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:137
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(workspace->songTabFor(*firstName), first)
 
 A035 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:138
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!first->document().isDirty())
 
 A036 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:142
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       const SongView::ViewState secondCanonical = second->view().viewState();
@@ -471,16 +471,16 @@ Original expression:
   QCOMPARE(workspace->openTabCount(), qsizetype(2))
 
 A037 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:143
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(workspace->selectedSongTab(), second)
 
 A038 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:146
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -489,40 +489,40 @@ Original expression:
   QTRY_COMPARE(workspace->openTabCount(), qsizetype(1))
 
 A039 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:147
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(workspace->selectedSongTab(), first)
 
 A040 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:148
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_audio.timeline(), first->timeline().get())
 
 A041 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:149
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(workspace->songTabFor(*secondName), nullptr)
 
 A042 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:151
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(first->autoFillBackground())
 
 A043 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:162
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       QPointer<QQuickWindow> outgoingWindow = first->view().quickView()->quickWindow();
@@ -539,64 +539,64 @@ Original expression:
   QVERIFY(replacement)
 
 A044 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:163
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(outgoingAliveAtSelection)
 
 A045 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:164
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(outgoingWindow.isNull())
 
 A046 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:165
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(selections.count(), 1)
 
 A047 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:166
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ; // no empty or unrelated song between replacements
 Original expression:
   QCOMPARE(workspace->openTabCount(), qsizetype(1))
 
 A048 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:167
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(replacement->document().label(), secondLabel)
 
 A049 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:168
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(workspace->songTabFor(*firstName), nullptr)
 
 A050 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:169
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_audio.timeline(), replacement->timeline().get())
 
 A051 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:172
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Transport play/stop behavior owned in Swift by ApplicationSession (transport publication at src/swift/app/ApplicationSession.swift:750-763; open/save at :413-427,491); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -605,8 +605,8 @@ Original expression:
   QTRY_COMPARE(window.m_audio.transport(), Transport::Playing)
 
 A052 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:174
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       window.synchronizePlayhead();
@@ -614,8 +614,8 @@ Original expression:
   QCOMPARE(window.m_uiTimer->interval(), 100)
 
 A053 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:176
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       workspace->requestCloseSelectedTab();
@@ -623,24 +623,24 @@ Original expression:
   QTRY_COMPARE(workspace->openTabCount(), qsizetype(0))
 
 A054 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:177
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(workspace->selectedSongTab(), nullptr)
 
 A055 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:178
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_uiTimer->interval(), 500)
 
 A056 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:183
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       auto *root = window.findChild<QComboBox *>(QStringLiteral("transportScaleRoot"));
@@ -651,64 +651,64 @@ Original expression:
   QVERIFY(root)
 
 A057 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:184
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(scale)
 
 A058 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:185
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(highlight)
 
 A059 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:186
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fold)
 
 A060 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:187
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead scale-selector widget enabled-state plumbing (root/scale/highlight/fold controls report disabled with no open tab). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget mechanism is absent from Swift. The scale-selector feature itself is NOT retired here; it is owned by proof.tabs_scale.txt, untouched. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!root->isEnabled())
 
 A061 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:188
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead scale-selector widget enabled-state plumbing (root/scale/highlight/fold controls report disabled with no open tab). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget mechanism is absent from Swift. The scale-selector feature itself is NOT retired here; it is owned by proof.tabs_scale.txt, untouched. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!scale->isEnabled())
 
 A062 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:189
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead scale-selector widget enabled-state plumbing (root/scale/highlight/fold controls report disabled with no open tab). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget mechanism is absent from Swift. The scale-selector feature itself is NOT retired here; it is owned by proof.tabs_scale.txt, untouched. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!highlight->isEnabled())
 
 A063 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:190
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead scale-selector widget enabled-state plumbing (root/scale/highlight/fold controls report disabled with no open tab). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget mechanism is absent from Swift. The scale-selector feature itself is NOT retired here; it is owned by proof.tabs_scale.txt, untouched. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!fold->isEnabled())
 
 A064 | WorkspaceTabsTest::lifecycle | src/checks/workspace/tabs_lifecycle.cpp:193
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -717,8 +717,8 @@ Original expression:
   QVERIFY(reopened)
 
 A065 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:201
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       verifyFreshView(reopened->view(), secondCanonical);
@@ -732,8 +732,8 @@ Original expression:
   QVERIFY(workspace)
 
 A066 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:203
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       workspace->requestProjectOpenAt(m_project.root());
@@ -741,8 +741,8 @@ Original expression:
   QVERIFY(workspace_test::waitForProject(*workspace))
 
 A067 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:206
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       SongTab *first = open(window, m_songA);
@@ -751,16 +751,16 @@ Original expression:
   QVERIFY(first)
 
 A068 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:207
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(second)
 
 A069 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:211
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -770,8 +770,8 @@ Original expression:
   QVERIFY(document.engineTrackCount() > 0)
 
 A070 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:216
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       uint64_t end = 0;
@@ -782,16 +782,16 @@ Original expression:
   QVERIFY(first->document().isDirty())
 
 A071 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:217
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!second->document().isDirty())
 
 A072 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:219
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       auto *tabs = window.findChild<QTabWidget *>();
@@ -799,24 +799,24 @@ Original expression:
   QVERIFY(tabs)
 
 A073 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:220
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tabs->tabText(tabs->indexOf(first)).endsWith(QLatin1Char('*')))
 
 A074 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:221
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!tabs->tabText(tabs->indexOf(second)).endsWith(QLatin1Char('*')))
 
 A075 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:224
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Transport play/stop behavior owned in Swift by ApplicationSession (transport publication at src/swift/app/ApplicationSession.swift:750-763; open/save at :413-427,491); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -825,8 +825,8 @@ Original expression:
   QTRY_COMPARE(window.m_audio.transport(), Transport::Playing)
 
 A076 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:226
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       window.synchronizePlayhead();
@@ -834,8 +834,8 @@ Original expression:
   QCOMPARE(window.m_uiTimer->interval(), 100)
 
 A077 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:228
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Transport play/stop behavior owned in Swift by ApplicationSession (transport publication at src/swift/app/ApplicationSession.swift:750-763; open/save at :413-427,491); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       workspace->selectSongTab(second);
@@ -843,32 +843,32 @@ Original expression:
   QCOMPARE(window.m_audio.transport(), Transport::Stopped)
 
 A078 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:229
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_uiTimer->interval(), 500)
 
 A079 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:230
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_audio.timeline(), second->timeline().get())
 
 A080 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:231
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!second->history().canUndo())
 
 A081 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:233
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       workspace->requestUndo();
@@ -876,8 +876,8 @@ Original expression:
   QVERIFY(!second->document().isDirty())
 
 A082 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:236
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -886,8 +886,8 @@ Original expression:
   QVERIFY(first->document().isDirty())
 
 A083 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:238
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       workspace->requestUndo();
@@ -895,16 +895,16 @@ Original expression:
   QVERIFY(!first->document().isDirty())
 
 A084 | WorkspaceTabsTest::editUndoIsPerTab | src/checks/workspace/tabs_lifecycle.cpp:239
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!second->document().isDirty())
 
 A085 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:246
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
   }
@@ -917,8 +917,8 @@ Original expression:
   QVERIFY(workspace)
 
 A086 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:248
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       workspace->requestProjectOpenAt(m_project.root());
@@ -926,8 +926,8 @@ Original expression:
   QVERIFY(workspace_test::waitForProject(*workspace))
 
 A087 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:250
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       SongTab *tab = open(window, m_songB);
@@ -935,8 +935,8 @@ Original expression:
   QVERIFY(tab)
 
 A088 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:259
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       const SongView::ViewState canonical = tab->view().viewState();
@@ -951,16 +951,16 @@ Original expression:
   QVERIFY(!document.isDirty())
 
 A089 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:260
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(document.undoStack()->count() > 0)
 
 A090 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:275
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -982,7 +982,7 @@ Original expression:
 
 A091 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:282
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP. Tab-landing view-state preservation (seeded pixel scale, key height, scroll, selected track, edit cursor, grid selection, triplet and event-list state) owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226) with hidden-tab grid/pages/camera/history preservation in SongTabsController (src/swift/app/SongTabsController.swift:7); no equivalent Swift/QML predicate established for sameViewState; native harness unexecuted (src/checks/workspace/tabs_lifecycle.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp).
 Source context since previous assertion:
   ;
       seeded.editCursorTick = oldTimeline->lengthTicks / 2;
@@ -995,8 +995,8 @@ Original expression:
   QVERIFY(sameViewState(landed, seeded))
 
 A092 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:286
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -1006,104 +1006,104 @@ Original expression:
   QTRY_VERIFY(tab->isReady())
 
 A093 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:287
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(workspace->openTabCount(), qsizetype(1))
 
 A094 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:288
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(workspace->selectedSongTab(), tab)
 
 A095 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:289
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Dead-widget representation plumbing with no behavioral content (MainWindow/QTabWidget lookup, autoFillBackground, tab-text dirty asterisk, QPointer liveness, QQuickWindow teardown, QSignalSpy selection accounting, or action-enabled state). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the widget key/mechanism is absent from Swift. End-state tab behavior stays GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(workspace->openProjectEnabled())
 
 A096 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:290
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(workspace->songTabFor(name), tab)
 
 A097 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:291
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(document.undoStack()->count(), 0)
 
 A098 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:292
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Reloaded-tab view-state preservation owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift:81,226) with hidden-tab preservation in SongTabsController (src/swift/app/SongTabsController.swift:7); no equivalent Swift/QML predicate established for sameViewState; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sameViewState(tab->view().viewState(), landed))
 
 A099 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:293
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tab->timeline())
 
 A100 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:294
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tab->timeline().get() != oldTimeline.get())
 
 A101 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:295
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(window.m_audio.timeline(), tab->timeline().get())
 
 A102 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:296
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(tab->view().timeline(), tab->timeline().get())
 
 A103 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:297
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tab->voicegroupLease())
 
 A104 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:298
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Null-audio-backend engine-wiring observation with no behavioral content (audio timeline/voicegroup pointer identity, SongView-to-lease wiring, uiTimer interval, readiness poll, or timeline/lease pointer liveness and reload pointer-identity). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the backend key/mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(tab->view().voicegroup(), tab->voicegroupLease().get())
 
 A105 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:301
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -1112,8 +1112,8 @@ Original expression:
   QTRY_COMPARE(workspace->openTabCount(), qsizetype(0))
 
 A106 | WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt | src/checks/workspace/tabs_lifecycle.cpp:303
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       SongTab *reopened = open(window, m_songB);
@@ -1121,8 +1121,8 @@ Original expression:
   QVERIFY(reopened)
 
 A107 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:322
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       verifyFreshView(reopened->view(), canonical);
@@ -1147,8 +1147,8 @@ Original expression:
   QVERIFY(workspace)
 
 A108 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:324
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       workspace->requestProjectOpenAt(m_project.root());
@@ -1156,8 +1156,8 @@ Original expression:
   QVERIFY(workspace_test::waitForProject(*workspace))
 
 A109 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:326
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Tab open/select/close/move/count/lookup behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift:129-132,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       SongTab *tab = open(window, m_songA);
@@ -1165,16 +1165,16 @@ Original expression:
   QVERIFY(tab)
 
 A110 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:327
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tab->document().engineTrackCount() > 0)
 
 A111 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:331
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -1184,8 +1184,8 @@ Original expression:
   QVERIFY2(originalFile.open(QIODevice::ReadOnly), qPrintable(originalFile.errorString()))
 
 A112 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:340
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       const QByteArray originalBytes = originalFile.readAll();
@@ -1200,16 +1200,16 @@ Original expression:
   QVERIFY(tab->document().isDirty())
 
 A113 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:341
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tab->history().canUndo())
 
 A114 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:381
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Native-popup delivery mechanics with no behavioral content (QTimer-driven production-QMessageBox chooser arming: dialog appeared without error). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the popup mechanism is absent from Swift. Dirty-close gate outcomes stay GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -1255,16 +1255,16 @@ Original expression:
   QVERIFY2(dialogError.isEmpty(), qPrintable(dialogError))
 
 A115 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:382
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Native-popup delivery mechanics with no behavioral content (QTimer-driven production-QMessageBox chooser arming: dialog appeared without error). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); the popup mechanism is absent from Swift. Dirty-close gate outcomes stay GAP at neighboring sites. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY2(handled, "dirty-close production dialog did not appear")
 
 A116 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:385
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Dirty-close Save/Discard/Cancel gate and save round-trip owned in Swift by ApplicationSession.saveTabBeforeClose (src/swift/app/ApplicationSession.swift:491; open/save at :413-427); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -1273,32 +1273,32 @@ Original expression:
   QCOMPARE(workspace->openTabCount(), qsizetype(1))
 
 A117 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:386
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Dirty-close Save/Discard/Cancel gate and save round-trip owned in Swift by ApplicationSession.saveTabBeforeClose (src/swift/app/ApplicationSession.swift:491; open/save at :413-427); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(workspace->selectedSongTab(), tab)
 
 A118 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:387
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tab->document().isDirty())
 
 A119 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:388
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(tab->history().canUndo())
 
 A120 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:390
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
           workspace->requestUndo();
@@ -1306,16 +1306,16 @@ Original expression:
   QVERIFY(!tab->document().isDirty())
 
 A121 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:391
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!tab->history().canUndo())
 
 A122 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:393
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Dirty-close Save/Discard/Cancel gate and save round-trip owned in Swift by ApplicationSession.saveTabBeforeClose (src/swift/app/ApplicationSession.swift:491; open/save at :413-427); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
           workspace->requestCloseSelectedTab();
@@ -1323,8 +1323,8 @@ Original expression:
   QTRY_COMPARE(workspace->openTabCount(), qsizetype(0))
 
 A123 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:395
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Dirty-close Save/Discard/Cancel gate and save round-trip owned in Swift by ApplicationSession.saveTabBeforeClose (src/swift/app/ApplicationSession.swift:491; open/save at :413-427); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       } else {
@@ -1332,8 +1332,8 @@ Original expression:
   QTRY_COMPARE(workspace->openTabCount(), qsizetype(0))
 
 A124 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:399
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Staging/fixture plumbing with no behavioral content (staged-ProjectCopy reset, song-name guard, waitForProject/readiness gate, seed-scan precondition, or file-IO guard). No-ingress proof: src/checks/workspace/tabs_lifecycle.cpp is uncompiled in every CMake target (zero references repo-wide) and WorkspaceTabsTest is unregistered in src/checks/checkcatalog.cpp (6 checks only); this staging mechanism is absent from Swift. (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       }
@@ -1343,8 +1343,8 @@ Original expression:
   QVERIFY2(persistedFile.open(QIODevice::ReadOnly), qPrintable(persistedFile.errorString()))
 
 A125 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:403
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Dirty-close Save/Discard/Cancel gate and save round-trip owned in Swift by ApplicationSession.saveTabBeforeClose (src/swift/app/ApplicationSession.swift:491; open/save at :413-427); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       const QByteArray persistedBytes = persistedFile.readAll();
@@ -1354,8 +1354,8 @@ Original expression:
   QVERIFY(persistedBytes != originalBytes)
 
 A126 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:405
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Dirty-close Save/Discard/Cancel gate and save round-trip owned in Swift by ApplicationSession.saveTabBeforeClose (src/swift/app/ApplicationSession.swift:491; open/save at :413-427); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       else
@@ -1363,8 +1363,8 @@ Original expression:
   QCOMPARE(persistedBytes, originalBytes)
 
 A127 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:408
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Dirty-close Save/Discard/Cancel gate and save round-trip owned in Swift by ApplicationSession.saveTabBeforeClose (src/swift/app/ApplicationSession.swift:491; open/save at :413-427); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 
@@ -1373,24 +1373,24 @@ Original expression:
   QVERIFY(reopened)
 
 A128 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:409
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!reopened->document().isDirty())
 
 A129 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:410
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Per-tab dirty/undo/history isolation owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift:40-48,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!reopened->history().canUndo())
 
 A130 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:412
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Dirty-close Save/Discard/Cancel gate and save round-trip owned in Swift by ApplicationSession.saveTabBeforeClose (src/swift/app/ApplicationSession.swift:491; open/save at :413-427); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       DocNote inserted;
@@ -1399,8 +1399,8 @@ Original expression:
                requestedChoice == QMessageBox::Save)
 
 A131 | WorkspaceTabsTest::dirtyCloseUsesProductionGate | src/checks/workspace/tabs_lifecycle.cpp:415
-Disposition: NATIVE
-Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Disposition: GAP
+Mapping/reason: GAP. Dirty-close Save/Discard/Cancel gate and save round-trip owned in Swift by ApplicationSession.saveTabBeforeClose (src/swift/app/ApplicationSession.swift:491; open/save at :413-427); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp). (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
 Source context since previous assertion:
   ;
       workspace->requestCloseSelectedTab();
