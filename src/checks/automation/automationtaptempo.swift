@@ -57,7 +57,6 @@ func drawerAutomationTapTempoCadenceAndCommit(_ report: CheckReport, suite: Docu
     report.expect(burst.idleCommitMs == AutomationTapTempoSession.commitMinimumMs,
                   cppID: drawerAutomationTapTempoID,
                   message: "the clamped draft's idle window sits at the commit floor")
-    // The page commits a clamped burst through the same idle window below.
 
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     fixture.activate(fixture.panLane)

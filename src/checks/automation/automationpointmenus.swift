@@ -270,3 +270,42 @@ func drawerAutomationLaneDeleteConfirmation(_ report: CheckReport, suite: Docume
     report.expectEqual(["48:70"], single.values(single.volumeLane), cppID: countID,
                        what: "undo restores the written event")
 }
+
+@MainActor
+func drawerAutomationOutsidePressRetarget(_ report: CheckReport, suite: DocumentSession,
+                                          service: ProjectService) {
+    let id = "automation/AutomationEditingTest::outsideRightClickDismissesPointMenu"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 64), (120, 40)])
+    fixture.activate(fixture.panLane)
+    let page = fixture.page
+    _ = page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
+                           surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
+                             button: AutomationQtButton.right)
+    report.expect(page.menuTargetIsPoint, cppID: id,
+                  message: "the first point owns its captured menu target")
+    page.outsideMenuPress(x: fixture.x(120), y: fixture.y(fixture.panLane, 40),
+                          button: AutomationQtButton.right)
+    report.expect(page.menuTargetIsPoint, cppID: id,
+                  message: "an outside right press on another node retargets the menu")
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
+                  cppID: id, message: "the retargeted Delete row is consumed")
+    report.expectEqual(["24:64"], fixture.values(fixture.panLane), cppID: id,
+                       what: "the retargeted Delete removes the second node only")
+    report.expect(fixture.undo(), cppID: id, message: "the retargeted Delete undoes")
+
+    _ = page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
+                           surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
+                             button: AutomationQtButton.right)
+    report.expect(page.menuTargetIsPoint, cppID: id,
+                  message: "the point menu reopens")
+    let missBefore = fixture.snapshot
+    page.outsideMenuPress(x: fixture.x(168), y: 60, button: AutomationQtButton.right)
+    report.expect(!page.menuOpen, cppID: id, message: "the miss closes the shared menu")
+    report.expect(!page.pointerRelease(x: fixture.x(168), y: 60, button: AutomationQtButton.right),
+                  cppID: id, message: "the paired release claims no band")
+    report.expectEqual(missBefore, fixture.snapshot, cppID: id,
+                       what: "the dismissed menu writes nothing")
+}
