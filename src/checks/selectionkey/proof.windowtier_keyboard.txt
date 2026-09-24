@@ -4,9 +4,9 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/selectionkey/windowtier_keyboard.cpp
 Original SHA-256: f00861f60ece3fc2b9de78b2c6b886d6139a71f79c7c07aeb5d1c8a69a5730d0
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Swift SHA-256: aef988778b56b851301cff37fb9ad9781de638aa4cba36e5f24511baf13103e8
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
+Additional Swift SHA-256: 39595ccddb010182c8e01df9f89ba18a8a00adcb9d060200bc1776197b566bb2
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift SHA-256: c4092dcabd070ecb2b17b3551e13c528f3bcb60607c825e5d8a152adb118af6d
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
@@ -18,10 +18,11 @@ Verification
 Command: deno task verify --filter swiftcore --verbose (controller-observed)
 Result: PASS; build ok (0.15 s), ok swiftcore (10.38 s); verify 1/6 ok (5 skipped); run_checks PASS. That run executes the paired prompt-transaction predicates S001-S017 only.
 Command: deno task verify:shell --filter shellwindow --verbose (controller-observed)
-Result: PASS; build ok (0.16 s), ok shellwindow (3.74 s); verify 1/11 ok (10 skipped); run_checks PASS. That run executes the shellwindow predicates S018-S035 plus the grip/chrome rows S037-S040 through the shellwindow entry of ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift:46).
+Result: PASS; build ok (4.47 s), ok shellwindow (3.87 s); verify 1/11 ok (10 skipped); run_checks PASS. That run executes the shellwindow predicates S018-S036 plus the grip/chrome rows S037-S040 and the parameter-tab/tap rows S041-S060 through the shellwindow entry of ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift:46).
+Result (post-fix re-pin, this checkout): PASS; build ok (6.64 s), ok swiftcore (10.58 s); verify 1/6 ok (5 skipped); run_checks PASS — the paired prompt-transaction predicates S001-S017 still pass against localinputtier_text.swift de186cca (S-line audit: all cited rows unshifted). Post-fix shellwindow: build ok (4.64 s), verify 1/11 ok (3.87 s, 10 skipped); run_checks PASS — the shellwindow predicates S018-S060 pass; tst_ShellWindow.qml unchanged at 39595ccd.
 The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
 
-drawerOriginalNumericPromptTransaction in src/checks/selectionkey/localinputtier_text.swift (called by the swiftcore session suite) executes the paired prompt-transaction predicates (S002 through S017); the window-tier Copy/Solo, clipboard, document-dirty, soloed-state and window-Space-priority sites are executed by test_cWindowShortcutsAndNumericOwnership in src/checks/editorqml/tst_ShellWindow.qml (the shellwindow entry of ShellQmlTests.swift), whose predicates are S018 through S036; the grip-locality sites are executed by test_gEditorRoutedNoteKeysAndChromeArrows (grip rows S037 through S039) and the chrome-Space selection site by test_hKeyboardFocusAndDrawerSpacePriority (S040); the file's remaining keyboard-routing, Tab-traversal, drawer-height, tap-tempo and committed-edit cases have no executing Swift entry point. The drawerAutomationAutomationFixture struct carries no report predicates, so no Shared helper section applies. The transaction also carries a report.fail path for fixture-note creation failure, which short-circuits before any predicate; no deleted C++ site corresponds to it.
+drawerOriginalNumericPromptTransaction in src/checks/selectionkey/localinputtier_text.swift (called by the swiftcore session suite) executes the paired prompt-transaction predicates (S002 through S017); the window-tier Copy/Solo, clipboard, document-dirty, soloed-state and window-Space-priority sites are executed by test_cWindowShortcutsAndNumericOwnership in src/checks/editorqml/tst_ShellWindow.qml (the shellwindow entry of ShellQmlTests.swift), whose predicates are S018 through S036; the grip-locality sites are executed by test_gEditorRoutedNoteKeysAndChromeArrows (grip rows S037 through S039) and the chrome-Space selection site by test_hKeyboardFocusAndDrawerSpacePriority (S040); the parameter-tab activation and tap-cession sites are executed by test_kParameterTabActivationAndTapCession (tab/transport rows S041 through S060); the file's remaining keyboard-routing, Tab-traversal, drawer-height and committed-edit cases have no executing Swift entry point. The drawerAutomationAutomationFixture struct carries no report predicates, so no Shared helper section applies. The transaction also carries a report.fail path for fixture-note creation failure, which short-circuits before any predicate; no deleted C++ site corresponds to it.
 
 Fixture, sequence and row constraints
 Copy/solo count rows, grip-arrow rows, label-activation rows, and the prompt keyboard-ownership block (open, select-all, copy, delete, paste, Escape, then post-prompt copy/remove/paste/move rows) expand one site per delivered key. The note-move loop expands tick/key assertions per selected note id; tap-button rows expand Enter, Return, auto-repeat, and Space delivery into per-key count and document-identity sites.
@@ -440,8 +441,8 @@ Original expression:
   QVERIFY(focusParameter(kController))
 
 A025 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:225
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: The pre-Space precondition is observed directly on the production parameter tabs: firstLabel takes keyboard focus (:977-979) while still unchecked (S041, :980, the focused label is not yet active), so it is not the active parameter before Space. The tabs are plain AutomationTabs.qml controls whose local keys are Enter/Return only; the focused-but-inactive state is stable until activation.
 Source context since previous assertion:
   ;
       // Bare Space on a focused non-active label is transport input, not label
@@ -456,7 +457,7 @@ Original expression:
 
 A026 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:229
 Disposition: MATCHED
-Mapping/reason: The window-Space-priority rule is exercised by the drawer-toggle probe: with the production drawerToggle_velocity owning active focus (S031) and the production transport.play_pause sequence bound to Space (S022), bare Space drives the transport presenter playing state while the focused section visibility and documentDirty stay unchanged (S032-S034). The original focused parameter-label chrome has no focusable Swift-shell counterpart, so the persistent drawer toggle (Rectangle with activeFocusOnTab and Return/Enter-only local keys) stands in for that retired chrome; the pinned local no-change fact is observed on that control, and the original playPause trigger count is observed as a presenter playing-state transition rather than a native signal count.
+Mapping/reason: The window-Space-priority rule is exercised by the drawer-toggle probe: with the production drawerToggle_velocity owning active focus (S031) and the production transport.play_pause sequence bound to Space (S022), bare Space drives the transport presenter playing state while the focused section visibility and documentDirty stay unchanged (S032-S034). The original focused parameter-label chrome has no focusable Swift-shell counterpart, so the persistent drawer toggle (Rectangle with activeFocusOnTab and Return/Enter-only local keys) stands in for that retired chrome; the pinned local no-change fact is observed on that control, and the original playPause trigger count is observed as a presenter playing-state transition rather than a native signal count. Extended by S042 (:988-999): bare Space on the focused inactive parameter label drives transport playing true while the label stays unchecked, the active tab is unchanged, documentDirty stays false, and the note summary is unchanged; the second Space stops transport (:1000-1002). The AutomationTabs.qml labels claim only plain Enter/Return, so unclaimed Space cedes to the window transport shortcut.
 Source context since previous assertion:
   ;
       QSignalSpy playPause(m_workspace, &WorkspaceUi::playPauseRequested);
@@ -483,8 +484,8 @@ Original expression:
   QVERIFY(focusParameter(kSecondController))
 
 A028 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:242
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Enter on the focused inactive label activates it exactly once: keyClick Enter (:1003) drives firstLabel checked true (S043, :1004-1005, Enter activates the focused label once). AutomationTabs.qml binds plain Enter with no modifiers to local activation, matching the original deliverKey Enter; the signal-count half (A029) stays GAP since no activeParameterChanged signal is staged.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Enter);
@@ -504,8 +505,8 @@ Original expression:
   QCOMPARE(parameterChanges.count(), 1)
 
 A030 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:244
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Partial via S044 (:1007-1009): label Enter leaves the note summary, edit cursor tick, and track index unchanged, but the time-selection half of selectionUnchanged() is unproved — the shell lane stages no time selection — and byte-level document identity is pinned only through the dirty flag (S046).
 Source context since previous assertion:
   ;
 
@@ -522,8 +523,8 @@ Original expression:
   QVERIFY(focusParameter(7))
 
 A032 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:248
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Return on the focused second label retargets activation exactly once: keyClick Return (:1013) drives secondLabel checked true (:1014-1015) while firstLabel.checked drops to false (S045, :1016, Return retargets activation exactly once). AutomationTabs.qml binds plain Return to the same local activation as Enter; the signal-count half (A033) stays GAP.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Return);
@@ -542,8 +543,8 @@ Original expression:
   QCOMPARE(parameterChanges.count(), 2)
 
 A034 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:250
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Label activation never edits the song: documentDirty stays false after Enter (S046, :1006) and after Return (:1017). The dirty flag is the Swift-shell observable for the original byte-level SMF identity; the undo-index half (A035) stays GAP since no QML undo stack is staged.
 Source context since previous assertion:
   ;
 
@@ -560,8 +561,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undoBefore)
 
 A036 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:252
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Label activation never moves the cursor: grid.editCursorTick equals cursorBefore after Enter (S047, :1008) and after Return (:1019).
 Source context since previous assertion:
   ;
 
@@ -569,8 +570,8 @@ Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
 A037 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:253
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Label Enter never retargets the track: grid.trackIndex equals trackBefore (S048, :1009).
 Source context since previous assertion:
   ;
 
@@ -578,8 +579,8 @@ Original expression:
   QCOMPARE(view.selectionModel().primaryTrack(), kTrack)
 
 A038 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:254
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Partial via S044 (:1007-1009): the Enter-side note/cursor/track no-change triple bounds the Return activation, whose own note-summary no-change is exercised at :1018 without a split S row; the time-selection half of selectionUnchanged() stays unproved.
 Source context since previous assertion:
   ;
 
@@ -587,8 +588,8 @@ Original expression:
   QVERIFY(selectionUnchanged())
 
 A039 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:258
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Up on the focused active label never edits the song: documentDirty stays false (S049, :1022, Up on a label never edits the song).
 Source context since previous assertion:
   ;
 
@@ -599,8 +600,8 @@ Original expression:
   QCOMPARE(document.smf().write(), before)
 
 A040 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:259
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Up never retargets the active label: secondLabel.checked stays true (S049, :1021, Up never retargets the active label).
 Source context since previous assertion:
   ;
 
@@ -608,8 +609,8 @@ Original expression:
   QCOMPARE(canvas->parameterRow(canvas->activeParameter()), std::optional{volume})
 
 A041 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:260
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Up on a label never moves the selection: grid note summary equals notesBefore (S049, :1023).
 Source context since previous assertion:
   ;
 
@@ -1126,8 +1127,8 @@ Original expression:
   QVERIFY(focusTap())
 
 A088 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:398
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: Enter on the focused production Tap button registers exactly one tap and keeps focus: tryCompare tapTempoTapCount 1 (:1028-1029) with tapButton.activeFocus still true (S050, :1030, the first tap keeps button focus). The control is the real automationTempoTapButton on the tempo tab, focused by forceActiveFocus (:1024-1026).
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Enter);
@@ -1137,8 +1138,8 @@ Original expression:
                "Enter on the focused Tap button did not register exactly one tap")
 
 A089 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:401
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: Return on the focused Tap button adds the second tap: tryCompare tapTempoTapCount 2 (S051, :1032-1033, Return on the focused Tap button adds the second tap).
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Return);
@@ -1148,8 +1149,8 @@ Original expression:
                "Return on the focused Tap button did not add the second tap")
 
 A090 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:403
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Tap keys never edit the song: documentDirty stays false after the Return tap (S052, :1037, tap keys never edit the song).
 Source context since previous assertion:
   ;
 
@@ -1193,8 +1194,8 @@ Original expression:
   QVERIFY2(canvas->activeParameter() == activeBefore, "Return changed the active parameter")
 
 A095 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:408
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Tap keys never move the selection: grid note summary equals notesBefore after the Return tap (S053, :1038, tap keys never move the selection).
 Source context since previous assertion:
   ;
 
@@ -1202,8 +1203,8 @@ Original expression:
   QVERIFY2(selectionUnchanged(), "Return changed the selection")
 
 A096 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:412
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: The two-tap session shows the draft readout with a tempo: draft visible (S054, :1035, the two-tap session shows the draft readout) with text naming BPM (:1036).
 Source context since previous assertion:
   ;
       // The draft readout reflects the two-tap accumulator.
@@ -1215,8 +1216,8 @@ Original expression:
                "the two-tap session did not make the draft tempo readout visible")
 
 A097 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:418
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: Modified Return is shared editing input, not button activation: keyClick Return with ShiftModifier leaves tapTempoTapCount at 2 (S055, :1039-1040, Shift+Return never registers a tap).
 Source context since previous assertion:
   ;
 
@@ -1230,7 +1231,7 @@ Original expression:
 
 A098 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:425
 Disposition: MATCHED
-Mapping/reason: Bare Space on the focused persistent chrome requests transport without a local change: the drawer-toggle probe observes the transport presenter playing state toggle once with the section visibility and documentDirty unchanged (S032-S034), and the production transport.play_pause sequence is Space (S022). The original tap-button chrome has no focusable Swift-shell counterpart, so the persistent drawer toggle (Rectangle with activeFocusOnTab and Return/Enter-only local keys) stands in for that retired chrome, and the trigger count is observed as a presenter playing-state transition rather than a native signal count.
+Mapping/reason: Bare Space on the focused persistent chrome requests transport without a local change: the drawer-toggle probe observes the transport presenter playing state toggle once with the section visibility and documentDirty unchanged (S032-S034), and the production transport.play_pause sequence is Space (S022). The original tap-button chrome has no focusable Swift-shell counterpart, so the persistent drawer toggle (Rectangle with activeFocusOnTab and Return/Enter-only local keys) stands in for that retired chrome, and the trigger count is observed as a presenter playing-state transition rather than a native signal count. Extended by S056 (:1042-1043): bare Space on the focused Tap button drives transport playing true — the tap button claims only Enter/Return locally, so unclaimed Space cedes to the window transport shortcut, matching the original play/pause request.
 Source context since previous assertion:
   ;
 
@@ -1243,8 +1244,8 @@ Original expression:
   QVERIFY2(playPause.count() == 1, "bare Space did not request exactly one play/pause")
 
 A099 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:426
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: Transport Space never taps: tapTempoTapCount stays 2 across the Space press (S057, :1044, transport Space never taps).
 Source context since previous assertion:
   ;
 
@@ -1252,8 +1253,8 @@ Original expression:
   QVERIFY2(canvas->tapTempoTapCount() == 2, "bare Space changed the tap count")
 
 A100 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:427
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Tap Space never edits the song: documentDirty stays false (S058, :1045, tap Space never edits the song).
 Source context since previous assertion:
   ;
 
@@ -1280,7 +1281,7 @@ Original expression:
 
 A103 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:430
 Disposition: PARTIAL
-Mapping/reason: Related predicate S040 in src/checks/editorqml/tst_ShellWindow.qml (test_hKeyboardFocusAndDrawerSpacePriority): bare Space on the focused drawer chrome leaves the full grid note summary, selection flags included, unchanged (S040, "chrome Space never changes musical selection"). Unproved as stated: the two-tap tempo session and draft-readout preconditions, the time-selection component of selectionUnchanged() (the shell lane stages no time selection), and byte-level document identity.
+Mapping/reason: Related predicate S040 in src/checks/editorqml/tst_ShellWindow.qml (test_hKeyboardFocusAndDrawerSpacePriority): bare Space on the focused drawer chrome leaves the full grid note summary, selection flags included, unchanged (S040, "chrome Space never changes musical selection"). Unproved as stated: the two-tap tempo session and draft-readout preconditions, the time-selection component of selectionUnchanged() (the shell lane stages no time selection), and byte-level document identity. Extended by the tap-Space note no-change predicate (S059-partial, :1046, tap Space never moves the selection): the grid note summary is unchanged after transport Space on the Tap button; the time-selection half stays unproved.
 Source context since previous assertion:
   ;
 
@@ -1288,8 +1289,8 @@ Original expression:
   QVERIFY2(selectionUnchanged(), "bare Space changed the selection")
 
 A104 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:433
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: resetTapTempo drops the draft: model.resetTapTempo() returns tapTempoTapCount to 0 (S060, :1050-1051, resetTapTempo drops the draft).
 Source context since previous assertion:
   ;
 
@@ -1659,6 +1660,75 @@ S040 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_Shel
           "chrome Space never changes musical selection")
   // drawerToggle_velocity owns active focus (:691-692); the second Space stops
   // transport (:700-701).
+S041 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:980
+  verify(!firstLabel.checked, "the focused label is not yet active")
+  // firstLabel holds keyboard focus (:977-979) without being active: the
+  // pre-Space precondition that it is not the active parameter.
+S042 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:988
+  keyClick(Qt.Key_Space) (:987)
+  tryCompare(playhead, "playing", true, 3000) (:988-989, bare Space owns transport)
+  compare(firstLabel.checked, false, "transport Space never activates the label") (:990)
+  compare(activeAfterSpace, activeBeforeSpace, "transport Space never retargets activation") (:997)
+  compare(session.documentDirty, false, "transport Space never edits the song") (:998)
+  compare(grid.noteSummary, notesBefore, "transport Space never moves the selection") (:999)
+  // the second Space stops transport (:1000-1002).
+S043 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1004
+  keyClick(Qt.Key_Enter) (:1003)
+  tryCompare(firstLabel, "checked", true, 3000, "Enter activates the focused label once") (:1004-1005)
+S044 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1007
+  compare(grid.noteSummary, notesBefore, "label Enter never moves the selection") (:1007)
+  compare(grid.editCursorTick, cursorBefore, "label Enter never moves the cursor") (:1008)
+  compare(grid.trackIndex, trackBefore, "label Enter never retargets the track") (:1009)
+  // Partial: the time-selection half is unproved (the shell lane stages no
+  // time selection); the Return-side note no-change at :1018 rides unsplit.
+S045 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1014
+  keyClick(Qt.Key_Return) (:1013)
+  tryCompare(secondLabel, "checked", true, 3000, "Return activates the focused second label") (:1014-1015)
+  compare(firstLabel.checked, false, "Return retargets activation exactly once") (:1016)
+S046 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1006
+  compare(session.documentDirty, false, "label Enter never edits the song") (:1006)
+  compare(session.documentDirty, false, "label Return never edits the song") (:1017)
+S047 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1008
+  compare(grid.editCursorTick, cursorBefore, "label Enter never moves the cursor") (:1008)
+  compare(grid.editCursorTick, cursorBefore, "label Return never moves the cursor") (:1019)
+S048 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1009
+  compare(grid.trackIndex, trackBefore, "label Enter never retargets the track") (:1009)
+S049 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1021
+  keyClick(Qt.Key_Up) (:1020)
+  compare(secondLabel.checked, true, "Up never retargets the active label") (:1021)
+  compare(session.documentDirty, false, "Up on a label never edits the song") (:1022)
+  compare(grid.noteSummary, notesBefore, "Up on a label never moves the selection") (:1023)
+S050 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1028
+  keyClick(Qt.Key_Enter) (:1027)
+  tryCompare(model, "tapTempoTapCount", 1, 3000, "Enter on the focused Tap button registers exactly one tap") (:1028-1029)
+  compare(tapButton.activeFocus, true, "the first tap keeps button focus") (:1030)
+S051 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1032
+  keyClick(Qt.Key_Return) (:1031)
+  tryCompare(model, "tapTempoTapCount", 2, 3000, "Return on the focused Tap button adds the second tap") (:1032-1033)
+S052 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1037
+  compare(session.documentDirty, false, "tap keys never edit the song") (:1037)
+S053 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1038
+  compare(grid.noteSummary, notesBefore, "tap keys never move the selection") (:1038)
+S054 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1035
+  verify(draft && draft.visible, "the two-tap session shows the draft readout") (:1035)
+  verify(draft.text.indexOf("BPM") >= 0, "the two-tap draft names a tempo") (:1036)
+S055 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1039
+  keyClick(Qt.Key_Return, Qt.ShiftModifier) (:1039)
+  compare(model.tapTempoTapCount, 2, "Shift+Return never registers a tap") (:1040)
+S056 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1042
+  keyClick(Qt.Key_Space) (:1041)
+  tryCompare(playhead, "playing", true, 3000, "bare Space on the Tap button owns transport") (:1042-1043)
+S057 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1044
+  compare(model.tapTempoTapCount, 2, "transport Space never taps") (:1044)
+S058 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1045
+  compare(session.documentDirty, false, "tap Space never edits the song") (:1045)
+S059 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1046
+  compare(grid.noteSummary, notesBefore, "tap Space never moves the selection") (:1046)
+  // Partial: the time-selection half is unproved (the shell lane stages no
+  // time selection).
+S060 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1050
+  model.resetTapTempo() (:1050)
+  compare(model.tapTempoTapCount, 0, "resetTapTempo drops the draft") (:1051)
 
 Supplemental converted-window evidence
 
@@ -1675,7 +1745,7 @@ unchanged.
 
 The staged song and selected note differ from the original reserved note pair.
 This standalone check does not replace the original QWidget-window Copy/Solo
-action-counter assertions; the shellwindow lane predicates S018 through S040
+action-counter assertions; the shellwindow lane predicates S018 through S060
 cover those window-tier sites, and this check does not establish them. The
 grip-arrow dispositions recorded above are unchanged by that crosswalk.
 
