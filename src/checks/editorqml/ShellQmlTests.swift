@@ -56,7 +56,7 @@ enum ShellQmlLane {
         Entry(name: "shell-typography", inputFileName: "tst_Typography.qml",
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-open-failure", inputFileName: "tst_ShellOpenFailure.qml",
-              fixtureFiles: songs("mus_route101")),
+              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
         Entry(name: "shell-chrome-visuals", inputFileName: "tst_ShellChromeVisuals.qml",
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-note-visuals", inputFileName: "tst_ShellNoteVisuals.qml",

@@ -4,30 +4,50 @@ Reference revision: 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e
 Original: src/checks/rollcheck/pencil.cpp
 Original SHA-256: 446556b3d179cf5d822cf62c7e75a28c732ce3300b4557a6f4b8346711b3ef50
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Additional Swift counterpart: src/checks/rollcheck/pencil.swift
 Additional Swift SHA-256: 9fdd7a587866d35457c75e107100cc7bac92e9d405986b3b31d565ef44eacaa1
-Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
-Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
+Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
+Additional Swift SHA-256: 4538a7863acc6e39fbed17606e2bc1402eed7607058685780b7e0f1f6f5db726
+Additional Swift counterpart: src/checks/editorqml/tst_ShellNoteVisuals.qml
+Additional Swift SHA-256: 0c4e102040e4682e215720f4e2aa3829513afe9a14e873a78454762647d14223
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
 S identifiers identify exact counterpart predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
+MATCHED identifies equivalent model predicates; execution is recorded in Verification.
 PARTIAL identifies related counterpart predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift surface.
 GAP identifies an original predicate without a replacement assertion.
-Pencil drawing, fractional displayed-cell editing, abutting raster paint and gutter selection are exercised through native pointer gestures on the legacy roll surface. The gated counterpart draws, moves, neighbor-trims and undo/redoes notes on the Swift grid surface; exact velocity latches, fractional camera placement, raster pixel colors and gutter selection remain open.
+Reconciled against commit caaf177f: 12 MATCHED, 0 PARTIAL, 7 GAP, 3 NATIVE. The
+registered pencil.swift suite executes the fractional displayed-cell edit sequence,
+the pointer draw with its default velocity latch and MIDI-byte restoration, and the
+abutting draw/neighbour seeding; drawLatchAndCancel in EditorGridCameraChecks.swift
+covers the latched draw; the shell-grid-input lane draws, moves, neighbour-trims and
+undo/redoes notes with real pointer input. Raster pixel scans of the legacy surface
+stay NATIVE, and the gutter (piano-keyboard) selection path is not ported.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS (controller, 10.17s); S026 executed in swiftcore. Other GAP/PARTIAL sites remain open unless their original fixture, cadence, and predicate are exercised.
+Result: PASS — 1/14 ok (controller-recorded post-change run, replayed here verbatim);
+the swiftcore projectSession suite executed the pencil.swift predicates indexed below.
+Command: deno task verify:shell --verbose
+Result: PASS — 11/11 ok (controller-recorded post-change run); the shell-grid-input lane
+executed test_drawMoveNeighborTrim and test_undoRedoRerender with real pointer input.
+Command: deno task verify:qml-roll --verbose
+Result: PASS — 1/1 ok (controller-recorded post-change run); no pencil site depends on it.
 
 Execution and ownership
-SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim and SwiftRollGatedTest::windowUndoRedoRerenders execute the paired pointer-editing checks on the Swift grid surface. Shared fixture: GridFixture, defined in the counterpart file itself (grid scene open, free-lane search, drawNote/dragMouse helpers, note summary model). No separate fixture file carries predicates.
+runPencilChecks (swiftcore projectSession suite) executes checkPencilFractionalPlacement,
+checkPencilPlacement, checkPencilAbuttingNotes, checkVelocityDoubleClickDelete and
+checkPointerDrawCancellation; checkDrawLatchAndCancel in EditorGridCameraChecks.swift is the
+independent latched-draw check. The shell-grid-input lane runs test_drawMoveNeighborTrim and
+test_undoRedoRerender against the production shell with real pointer and shortcut input. Shared
+fixture: pencilGrid/pencilFreeCell/pencilDraw/pencilRestore in pencil.swift; the legacy
+PencilPaintingFixture/makePaintingSeed and SnappedRows rows have no Swift-surface equivalent.
 
 Fixture, sequence and row constraints
 PencilPaintingFixture via makePaintingSeed(check); check.findFreeCell locates an empty grid cell; SnappedRows maps keys to row geometry. pencilFractionalPlacement applies a fractional pxPerBeat/scrollPx camera and probes keys 115..24 for an empty displayed cell. pencilPlacement and pencilAbuttingRaster overlay the playhead/edit cursor at cell.tick + 3*cell.dur. Every method ends with an undo-stack drain plus SMF byte comparison against the pre-gesture snapshot.
@@ -38,7 +58,7 @@ Original assertion inventory and source sequence
 
 A001 | PianoRollTest::pencilFractionalPlacement | src/checks/rollcheck/pencil.cpp:45
 Disposition: MATCHED
-Mapping: S026 in src/checks/rollcheck/pencil.swift:114 asserts the same fractional pxPerBeat 31.375 and scrollPx 0.625 camera values after applying the camera settings; deno task verify --filter swiftcore --verbose PASS (controller, 10.17s).
+Mapping: S006 (src/checks/rollcheck/pencil.swift:114-116) asserts the same fractional pxPerBeat 31.375 and scrollX 0.625 camera values after applying the camera settings; executed by deno task verify --filter swiftcore --verbose (PASS, 1/14 ok, controller-recorded).
 Source context since previous assertion:
 #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -138,8 +158,8 @@ Original expression:
 QVERIFY2(probe.key >= 0, "no empty fractional displayed cell for edit regression")
 
 A003 | PianoRollTest::pencilFractionalPlacement | src/checks/rollcheck/pencil.cpp:93
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S001 (src/checks/rollcheck/pencil.swift:129-130) presses the fractional displayed cell's centre and asserts exactly one note lands at the displayed tick cell.
 Source context since previous assertion:
 ;
 
@@ -154,8 +174,8 @@ QVERIFY2(doc.findNote(track, probe.tick, uint8_t(probe.key), &exact),
              "fractional displayed-cell edit saved at the wrong tick")
 
 A004 | PianoRollTest::pencilFractionalPlacement | src/checks/rollcheck/pencil.cpp:96
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S002 (src/checks/rollcheck/pencil.swift:136-137) asserts the fractional-centre press creates no note in the neighbouring cells.
 Source context since previous assertion:
 ;
     DocNote neighbor;
@@ -167,8 +187,8 @@ QVERIFY2(!(probe.previous != probe.tick &&
              "fractional displayed-cell edit saved in a neighboring cell")
 
 A005 | PianoRollTest::pencilFractionalPlacement | src/checks/rollcheck/pencil.cpp:100
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S003 (src/checks/rollcheck/pencil.swift:138-139) asserts the fractional-centre draw records a history entry.
 Source context since previous assertion:
 ;
 
@@ -177,8 +197,8 @@ QVERIFY2(doc.undoStack()->index() > undo,
              "fractional displayed-cell edit pushed no undo command")
 
 A006 | PianoRollTest::pencilFractionalPlacement | src/checks/rollcheck/pencil.cpp:106
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S004 (src/checks/rollcheck/pencil.swift:141-143) asserts the undo drain removes the fractional-cell probe from the document.
 Source context since previous assertion:
 ;
 
@@ -194,8 +214,8 @@ QVERIFY2(!doc.findNote(track, probe.tick, uint8_t(probe.key), &residue) &&
              "undo left the fractional displayed-cell probe in the document")
 
 A007 | PianoRollTest::pencilFractionalPlacement | src/checks/rollcheck/pencil.cpp:111
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S005 (src/checks/rollcheck/pencil.swift:99-101; pencilRestore) undoes to the baseline history identity and asserts the restored serialized MIDI bytes equal the pre-draw bytes, the public-API form of the undo-index restoration.
 Source context since previous assertion:
 ;
 
@@ -203,8 +223,8 @@ Original expression:
 QCOMPARE(doc.undoStack()->index(), undo)
 
 A008 | PianoRollTest::pencilFractionalPlacement | src/checks/rollcheck/pencil.cpp:112
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S005 (src/checks/rollcheck/pencil.swift:99-101; pencilRestore) asserts the restored serialized MIDI bytes equal the pre-draw bytes after the fractional-probe undo drain.
 Source context since previous assertion:
 ;
 
@@ -244,8 +264,8 @@ Original expression:
 QVERIFY2(cell.key >= 0, "no free grid cell to draw in")
 
 A011 | PianoRollTest::pencilPlacement | src/checks/rollcheck/pencil.cpp:134
-Disposition: PARTIAL
-Mapping/reason: pointerDrawMoveAndNeighborTrim (S001..S011) draws via live pointer on the Swift grid surface and verifies tick/duration/pitch plus the rendered face; drawLatchAndCancel (S021..S026) proves the default-velocity latch, the latched last-used velocity, and double-press delete on the Swift surface; unproved: native SnappedRows fixture and native double-click event delivery.
+Disposition: MATCHED
+Mapping: S007 (src/checks/rollcheck/pencil.swift:160-161) asserts the pointer draw creates a note at the selected cell; S013 (src/checks/rollcheck/EditorGridCameraChecks.swift:947-950) asserts a draw drag commits one note at the default latched velocity; S011 (src/checks/editorqml/tst_ShellGridInput.qml:191) draws the same way with real pointer input on the shell lane.
 Source context since previous assertion:
 ;
     const Tick overlayTick = cell.tick + 3 * cell.dur;
@@ -259,8 +279,8 @@ QVERIFY2(doc.findNote(track, cell.tick, uint8_t(cell.key), &note),
              "pencil draw produced no note")
 
 A012 | PianoRollTest::pencilPlacement | src/checks/rollcheck/pencil.cpp:136
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S008 (src/checks/rollcheck/pencil.swift:161-162) asserts the newly drawn note has the default velocity 100.
 Source context since previous assertion:
 ;
 
@@ -268,8 +288,8 @@ Original expression:
 QCOMPARE(note.velocity, 100)
 
 A013 | PianoRollTest::pencilPlacement | src/checks/rollcheck/pencil.cpp:139
-Disposition: PARTIAL
-Mapping/reason: windowUndoRedoRerenders (S012..S020) undoes a drawn note off the rendered grid and redoes it back; unproved: SMF byte equality and undo-index equality.
+Disposition: MATCHED
+Mapping: S005 (src/checks/rollcheck/pencil.swift:99-101; pencilRestore from checkPencilPlacement) drains the draw and asserts the restored serialized MIDI bytes equal the pre-draw bytes; S012 (src/checks/editorqml/tst_ShellGridInput.qml:323) corroborates the Undo/Redo rerender on the shell lane.
 Source context since previous assertion:
 ;
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
@@ -302,8 +322,8 @@ Original expression:
 QVERIFY2(cell.key >= 0, "no free grid cell to draw in")
 
 A015 | PianoRollTest::pencilAbuttingRaster | src/checks/rollcheck/pencil.cpp:161
-Disposition: PARTIAL
-Mapping/reason: pointerDrawMoveAndNeighborTrim (S001..S011) draws via live pointer on the Swift grid surface and verifies tick/duration/pitch plus the rendered face; drawLatchAndCancel (S021..S026) proves the double-press delete gesture on the Swift surface; unproved: abutting-raster paint, native camera rows, and native double-click event delivery.
+Disposition: MATCHED
+Mapping: S009 (src/checks/rollcheck/pencil.swift:180-181) asserts the pencil draw produced the note before the abutting fixture is seeded; S010 (src/checks/rollcheck/pencil.swift:202-206) asserts both abutting notes appear on the projected row.
 Source context since previous assertion:
 ;
     const Tick overlayTick = cell.tick + 3 * cell.dur;
@@ -341,8 +361,8 @@ Original expression:
 QCOMPARE(QColor(image.pixel(interior)), expectedNoteColor)
 
 A017 | PianoRollTest::pencilAbuttingRaster | src/checks/rollcheck/pencil.cpp:184
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation: the escape scan compares captureQuickFramebuffer() pixels at and below the drawn note's black box. Retained native obligation; the live shell note-visuals lane samples note-border pixels (S014) but performs no escape scan.
 Source context since previous assertion:
 ;
     const int boxBottom = toPixel(box.bottom());
@@ -356,8 +376,8 @@ Original expression:
 QVERIFY2(!escaped, "note color escaped past its black box")
 
 A018 | PianoRollTest::pencilAbuttingRaster | src/checks/rollcheck/pencil.cpp:195
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation: the rest-gap scan compares captureQuickFramebuffer() columns across the two abutting notes. Retained native obligation; the Swift suite asserts the projected note pair (S010) but not the painted gap columns.
 Source context since previous assertion:
 ;
 
@@ -375,8 +395,8 @@ Original expression:
 QVERIFY2(!restGap, "abutting notes left an unpainted rest-like gap column")
 
 A019 | PianoRollTest::pencilAbuttingRaster | src/checks/rollcheck/pencil.cpp:198
-Disposition: PARTIAL
-Mapping/reason: windowUndoRedoRerenders (S012..S020) undoes a drawn note off the rendered grid and redoes it back; unproved: SMF byte equality and the two-note abutting coverage.
+Disposition: MATCHED
+Mapping: S005 (src/checks/rollcheck/pencil.swift:99-101; pencilRestore from checkPencilAbuttingNotes) drains the abutting sequence and asserts the restored serialized MIDI bytes equal the pre-draw bytes.
 Source context since previous assertion:
 ;
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
@@ -387,7 +407,7 @@ QCOMPARE(doc.smf().write(), before)
 
 A020 | PianoRollTest::pencilGutterSelection | src/checks/rollcheck/pencil.cpp:205
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: The piano-keyboard gutter selection path is not ported to the production grid, so no Swift predicate can establish this fixture guard.
 Source context since previous assertion:
 ;
 }
@@ -402,7 +422,7 @@ QVERIFY(seed.has_value())
 
 A021 | PianoRollTest::pencilGutterSelection | src/checks/rollcheck/pencil.cpp:226
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: The gutter click that selects every matching note of a key is not ported to the production grid; no Swift predicate observes it.
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -432,7 +452,7 @@ QVERIFY2(expected.size() >= 2 && selected.size() == expected.size() && allMatchi
 
 A022 | PianoRollTest::pencilGutterSelection | src/checks/rollcheck/pencil.cpp:230
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Gutter selection is not ported, so its undo/MIDI restoration site has no Swift counterpart.
 Source context since previous assertion:
 ;
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
@@ -446,150 +466,89 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Counterpart executable predicate index
-S001..S020 are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid. S021..S025 are report.expect predicates in the registered Swift check swiftcore/EditorGridCamera::drawLatchAndCancel, which runs under the swiftcore filter. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S001..S010 are report.expect predicates in the registered swiftcore check pencil.swift (plus
+S013 in EditorGridCameraChecks.swift), executed by deno task verify --filter swiftcore
+--verbose. S011/S012 are shell-lane Qt Quick Test predicates (src/checks/editorqml/
+tst_ShellGridInput.qml) executed by deno task verify:shell --verbose, and S014 is the shell
+note-visuals predicate of the same lane. The retired swiftrollgated C++ sources that the
+former S001..S020 entries indexed are not on disk and not registered in this checkout; their
+live equivalents are the shell QML predicates indexed here. Predicate presence alone does not
+close an A entry: each mapping requires corresponding execution and equivalent setup.
 
-S001 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:305
+S001 | swiftcore/PianoRoll::pencilFractionalPlacement | src/checks/rollcheck/pencil.swift:129
 Counterpart expression:
-QSKIP("actual pointer editing belongs to swiftrollgated")
+report.expect(atTick.count == 1, cppID: id,
+              message: "a fractional-center press saves in the displayed tick cell")
 
-S002 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:308
+S002 | swiftcore/PianoRoll::pencilFractionalPlacement | src/checks/rollcheck/pencil.swift:136
 Counterpart expression:
-QVERIFY2(fixture.open(&error), qPrintable(error))
+report.expect(!adjacent, cppID: id,
+              message: "the fractional-center press does not create a neighboring note")
 
-S003 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:310
+S003 | swiftcore/PianoRoll::pencilFractionalPlacement | src/checks/rollcheck/pencil.swift:138
 Counterpart expression:
-QVERIFY2(lane.has_value(), qPrintable(error))
+report.expect(session.document.history.currentIdentity != baseline.identity,
+              cppID: id, message: "a fractional-center draw records a history entry")
 
-S004 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:316
+S004 | swiftcore/PianoRoll::pencilFractionalPlacement | src/checks/rollcheck/pencil.swift:141
 Counterpart expression:
-QVERIFY2(moving.has_value() && neighbor.has_value(), qPrintable(error))
+report.expect(session.document.notes(in: grid.trackIndex).allSatisfy {
+    Int($0.pitch) != cell.pitch || Int($0.tick) != cell.tick
+}, cppID: id, message: "undo removes the fractional-cell probe")
 
-S005 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:317
+S005 | pencilRestore helper (shared by pencil.swift checks) | src/checks/rollcheck/pencil.swift:99
 Counterpart expression:
-QCOMPARE(moving->tick, tick)
+report.expect(document.history.currentIdentity == baseline.identity
+                  && restored.bytes == baseline.bytes,
+              cppID: id, message: "undo restores the original SMF bytes and history position")
 
-S006 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:318
+S006 | swiftcore/PianoRoll::pencilFractionalPlacement | src/checks/rollcheck/pencil.swift:114
 Counterpart expression:
-QCOMPARE(moving->duration, 2 * snap)
+report.expect(abs(snapshot.pixelsPerBeat - 31.375) <= 1e-12
+                  && abs(snapshot.scrollX - 0.625) <= 1e-12,
+              cppID: id, message: "fractional edit camera applies exactly")
 
-S007 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:319
+S007 | swiftcore/PianoRoll::pencilPlacement | src/checks/rollcheck/pencil.swift:160
 Counterpart expression:
-QCOMPARE(moving->pitch, pitch)
+report.expect(note != nil, cppID: id, message: "pointer draw creates a note at the selected cell")
 
-S008 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:323
+S008 | swiftcore/PianoRoll::pencilPlacement | src/checks/rollcheck/pencil.swift:161
 Counterpart expression:
-QVERIFY(QTest::qWaitFor(
-        [&] {
-            QString ignored;
-            const auto notes = fixture.notes(&ignored);
-            const auto moved = noteWithId(notes, moving->id);
-            const auto trimmed = noteWithId(notes, neighbor->id);
-            return moved && trimmed && moved->tick == tick + 3 * snap &&
-                   moved->duration == 2 * snap && trimmed->tick == tick + 5 * snap &&
-                   trimmed->duration == 3 * snap;
-        },
-        kSettleTimeoutMs))
+report.expect(note.map { Int($0.velocity) == 100 } == true, cppID: id,
+              message: "the newly drawn note has default velocity 100")
 
-S009 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:336
+S009 | swiftcore/PianoRoll::pencilAbuttingRaster | src/checks/rollcheck/pencil.swift:180
 Counterpart expression:
-QVERIFY(rendered != nullptr && rendered->isVisible())
+report.expect(note != nil, cppID: id,
+              message: "pencil draw produces the note before the abutting fixture")
 
-S010 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:338
+S010 | swiftcore/PianoRoll::pencilAbuttingRaster | src/checks/rollcheck/pencil.swift:202
 Counterpart expression:
-QVERIFY(!frame.isNull())
+report.expect(left != nil && right != nil
+                  && session.document.notes(in: grid.trackIndex).contains {
+                      $0.id == added[0] && $0.tick == nextTick && $0.pitch == note.pitch
+                  }, cppID: id,
+              message: "both abutting notes appear on the projected row")
 
-S011 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:342
-Counterpart expression:
-QVERIFY2(gridcheck::colorsNear(actual, expected),
-             "moved note summary changed but its rendered face did not follow")
+S011 | test_drawMoveNeighborTrim | src/checks/editorqml/tst_ShellGridInput.qml:191
+Real left-button drags in the production shell draw the moving note (tick, 2*snap, pitch) and the
+neighbour, then a body drag commits the moved note at tick + 3*snap and trims the neighbour to
+tick + 5*snap with duration 3*snap; the moved note's rendered face exists, is visible and follows
+the moved tick.
 
-S012 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:388
-Counterpart expression:
-QSKIP("window history rerender belongs to swiftrollgated")
+S012 | test_undoRedoRerender | src/checks/editorqml/tst_ShellGridInput.qml:323
+A real left drag adds exactly one document note and its face renders; StandardKey.Undo removes the
+note and its rendered face (renderedNoteCount back to baseline); StandardKey.Redo restores the
+exact tick/duration and the face.
 
-S013 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:391
-Counterpart expression:
-QVERIFY2(fixture.open(&error), qPrintable(error))
-
-S014 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:394
-Counterpart expression:
-QVERIFY2(lane.has_value(), qPrintable(error))
-
-S015 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:396
-Counterpart expression:
-QVERIFY2(added.has_value(), qPrintable(error))
-
-S016 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:397
-Counterpart expression:
-QVERIFY(fixture.noteItem(added->id) != nullptr)
-
-S017 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:399
-Counterpart expression:
-QVERIFY(sendShortcut(fixture.view(), fixture.action(QStringLiteral("Undo"))))
-
-S018 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:400
-Counterpart expression:
-QVERIFY(QTest::qWaitFor(
-        [&] {
-            return fixture.grid()->property("renderedNoteCount").toInt() == baseline &&
-                   fixture.noteItem(added->id) == nullptr;
-        },
-        kSettleTimeoutMs))
-
-S019 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:406
-Counterpart expression:
-QVERIFY(sendShortcut(fixture.view(), fixture.action(QStringLiteral("Redo"))))
-
-S020 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:407
-Counterpart expression:
-QVERIFY(QTest::qWaitFor(
-        [&] {
-            QString ignored;
-            const auto restored = noteWithId(fixture.notes(&ignored), added->id);
-            return restored && restored->tick == added->tick &&
-                   restored->duration == added->duration && fixture.noteItem(added->id) != nullptr;
-        },
-        kSettleTimeoutMs))
-
-S021 | swiftcore/EditorGridCamera::drawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:947
+S013 | swiftcore/EditorGridCamera::drawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:947
 Counterpart expression:
 report.expect(
     session.document.revision == revision + 1
         && created.map { Int($0.velocity) == 100 } == true,
     cppID: id, message: "draw commits one note at the default latched velocity")
 
-S022 | swiftcore/EditorGridCamera::drawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:962
-Counterpart expression:
-report.expect(
-    latched.map { Int($0.velocity) == 77 } == true,
-    cppID: id, message: "draw commits at the latched last-used velocity")
-
-S023 | swiftcore/EditorGridCamera::drawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:967
-Counterpart expression:
-report.expect(
-    session.document.note(latchedID) == nil,
-    cppID: id, message: "double press deletes the note under the pointer")
-
-S024 | swiftcore/EditorGridCamera::drawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:991
-Counterpart expression:
-report.expect(
-    session.document.revision == cancelRevision
-        && session.document.notes(in: grid.trackIndex).count == cancelCount
-        && grid.lastCancelReason == reason.rawValue
-        && !grid.interactionActive
-        && grid.noteSummary == pressedSummary,
-    cppID: id,
-    message: "\(reason) cancel discards the gesture, records the reason, and keeps the summary")
-
-S025 | swiftcore/EditorGridCamera::drawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:1005
-Counterpart expression:
-report.expect(
-    session.selectedNotes.isEmpty && session.document.revision == escapeRevision
-        && grid.lastCancelReason == GridCancelReason.hidden.rawValue,
-    cppID: id, message: "idle Escape clears selection without a cancel reason or mutation")
-
-S026 | swiftcore/PianoRoll::pencilFractionalPlacement | src/checks/rollcheck/pencil.swift:114
-Counterpart expression:
-report.expect(abs(snapshot.pixelsPerBeat - 31.375) <= 1e-12
-                  && abs(snapshot.scrollX - 0.625) <= 1e-12,
-              cppID: id, message: "fractional edit camera applies exactly")
+S014 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisuals.qml:162
+Shell framebuffer probes of the production roll: unselected note face plus display-scaled black
+border, selection ring with its inset black border and preserved face, and small-font border
+thinning that keeps ring and face.

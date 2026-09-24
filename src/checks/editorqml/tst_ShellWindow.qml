@@ -31,6 +31,22 @@ TestCase {
         id: shortcutTargetComponent
         Item { width: 24; height: 24; focus: true }
     }
+    Component {
+        id: foreignWindowComponent
+        Window {
+            width: 320
+            height: 120
+            visible: true
+            TextField {
+                objectName: "foreignSoloField"
+                x: 20
+                y: 20
+                width: 220
+                height: 32
+                text: "foreign draft"
+            }
+        }
+    }
 
     function initTestCase() {
         // Preserve the original fixture's private store while exercising the
@@ -166,6 +182,18 @@ TestCase {
         tryCompare(shell.shellPresenter.session.velocityPage(), "selectedCount", 1, 3000)
     }
 
+    function windowShortcut(name) {
+        var delegates = shell.contentItem.children
+        for (var i = 0; i < delegates.length; ++i) {
+            var objects = delegates[i].data
+            for (var j = 0; objects && j < objects.length; ++j) {
+                if (objects[j].objectName === name)
+                    return objects[j]
+            }
+        }
+        return null
+    }
+
     function test_aKeymapNativeSettingsSeeds() {
         // KeymapCheckTest::keymapSettingsSeedsAreIgnored writes these four values
         // through QSettings. This test writes the same values through QtCore.Settings.
@@ -244,17 +272,6 @@ TestCase {
         var menuCopy = findChild(editMenu, "shellAction_roll.copy")
         var menuSolo = findChild(editMenu, "shellAction_roll.solo_tracks")
         verify(menuCopy && menuSolo, "Copy and Solo are real Edit-menu actions")
-        function windowShortcut(name) {
-            var delegates = shell.contentItem.children
-            for (var i = 0; i < delegates.length; ++i) {
-                var objects = delegates[i].data
-                for (var j = 0; objects && j < objects.length; ++j) {
-                    if (objects[j].objectName === name)
-                        return objects[j]
-                }
-            }
-            return null
-        }
         var copyShortcut = windowShortcut("shellShortcut_roll.copy")
         var soloShortcut = windowShortcut("shellShortcut_roll.solo_tracks")
         verify(copyShortcut && soloShortcut, "the real window shortcuts are mounted")
@@ -391,6 +408,43 @@ TestCase {
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", false, 3000,
                    "the second chrome Space stops transport")
+    }
+
+    function test_cForeignWindowKeepsSoloLocal() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        verify(surface && surface.visible, "the selected song page is mounted")
+        var headers = findChild(surface, "timelineTrackHeaderRows")
+        verify(headers && headers.count > 0, "the track headers are mounted")
+        var firstTrack = headers.itemAt(surface.gridModel.trackIndex)
+        verify(firstTrack && !firstTrack.isAddTrack, "the selected track is actionable")
+        selectDrawnVelocityNote(surface)
+        compare(firstTrack.soloChecked, false, "Solo starts off on the selected track")
+        var soloShortcut = windowShortcut("shellShortcut_roll.solo_tracks")
+        verify(soloShortcut, "the production window Solo shortcut is mounted")
+        soloActivatedSpy.target = soloShortcut
+        soloActivatedSpy.clear()
+
+        var foreign = foreignWindowComponent.createObject(null)
+        verify(foreign !== null, "the foreign window loads")
+        try {
+            foreign.requestActivate()
+            tryCompare(foreign, "active", true, 3000)
+            tryCompare(shell, "active", false, 3000)
+            var field = findChild(foreign, "foreignSoloField")
+            verify(field, "the foreign window has its own text field")
+            field.selectAll()
+            field.forceActiveFocus(Qt.OtherFocusReason)
+            tryCompare(field, "activeFocus", true, 3000)
+            keyClick(Qt.Key_S)
+            tryCompare(field, "text", "s", 3000)
+            compare(firstTrack.soloChecked, false,
+                    "a foreign-window S does not Solo the main song")
+            compare(soloActivatedSpy.count, 0,
+                    "a foreign-window S never activates the main window shortcut")
+        } finally {
+            foreign.destroy()
+        }
     }
 
     function test_dCopyFromOneSongTabPastesIntoAnother() {
@@ -1026,6 +1080,138 @@ TestCase {
         compare(grid.appliedRevisionText, beforeRevision,
                 "a cancelled drag never increments the document revision")
         compare(session.documentDirty, false, "a cancelled drag never dirties the document")
+    }
+
+    function test_kParameterTabActivationAndTapCession() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var session = shell.shellPresenter.session
+        var grid = surface.gridModel
+        var roll = findChild(surface, "swiftRollInput")
+        verify(roll && roll.visible, "the production roll is mounted")
+        selectDrawnVelocityNote(surface)
+        var notesBefore = grid.noteSummary
+        var cursorBefore = grid.editCursorTick
+        var trackBefore = grid.trackIndex
+        compare(session.documentDirty, false, "tab activation starts from a clean song")
+        var playhead = session.playheadPresenter()
+        compare(playhead.playing, false, "tab activation starts with transport stopped")
+        var toggle = findChild(surface, "drawerToggle_automation")
+        verify(toggle && toggle.visible, "the real automation section can be opened")
+        mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+        var page = null
+        tryVerify(function() {
+            page = findChild(surface, "automationPage")
+            return page && page.visible && page.height > 0
+        }, 3000, "the active song mounts its automation plot")
+        var model = page.pageModel
+        verify(model && model.tabCount > 1, "the track exposes multiple parameter tabs")
+        var initialActive = null
+        for (var scanIndex = 0; scanIndex < model.tabCount; ++scanIndex) {
+            var scanCandidate = findChild(page, "automationParameterTab" + scanIndex)
+            if (scanCandidate && scanCandidate.enabled && scanCandidate.checked)
+                initialActive = scanCandidate
+        }
+        verify(initialActive, "one parameter tab starts active")
+        var firstLabel = null
+        for (var index = 0; index < model.tabCount; ++index) {
+            var candidate = findChild(page, "automationParameterTab" + index)
+            if (candidate && candidate.enabled && !candidate.checked
+                    && !findChild(candidate, "automationTempoTapButton")) {
+                firstLabel = candidate
+                break
+            }
+        }
+        verify(firstLabel && firstLabel !== initialActive, "an inactive label is available")
+        var secondLabel = initialActive
+        verify(secondLabel && secondLabel !== firstLabel, "a second label is available")
+        var tempoTab = null
+        for (var tempoIndex = 0; tempoIndex < model.tabCount; ++tempoIndex) {
+            var tempoCandidate = findChild(page, "automationParameterTab" + tempoIndex)
+            if (tempoCandidate && tempoCandidate.enabled
+                    && findChild(tempoCandidate, "automationTempoTapButton")) {
+                tempoTab = tempoCandidate
+                break
+            }
+        }
+        verify(tempoTab, "the tempo tab hosts the tap button")
+        var tapButton = findChild(page, "automationTempoTapButton")
+        verify(tapButton && tapButton.visible, "the tempo Tap button is drawn")
+        firstLabel.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(firstLabel, "activeFocus", true, 3000,
+                   "the first label takes keyboard focus")
+        verify(!firstLabel.checked, "the focused label is not yet active")
+        var activeBeforeSpace = null
+        for (var checkedIndex = 0; checkedIndex < model.tabCount; ++checkedIndex) {
+            var checkedCandidate = findChild(page, "automationParameterTab" + checkedIndex)
+            if (checkedCandidate && checkedCandidate.checked)
+                activeBeforeSpace = checkedCandidate.objectName
+        }
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", true, 3000,
+                   "bare Space on a focused label owns transport")
+        compare(firstLabel.checked, false, "transport Space never activates the label")
+        var activeAfterSpace = null
+        for (var rescanIndex = 0; rescanIndex < model.tabCount; ++rescanIndex) {
+            var rescanCandidate = findChild(page, "automationParameterTab" + rescanIndex)
+            if (rescanCandidate && rescanCandidate.checked)
+                activeAfterSpace = rescanCandidate.objectName
+        }
+        compare(activeAfterSpace, activeBeforeSpace, "transport Space never retargets activation")
+        compare(session.documentDirty, false, "transport Space never edits the song")
+        compare(grid.noteSummary, notesBefore, "transport Space never moves the selection")
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", false, 3000,
+                   "the second label Space stops transport")
+        keyClick(Qt.Key_Enter)
+        tryCompare(firstLabel, "checked", true, 3000,
+                   "Enter activates the focused label once")
+        compare(session.documentDirty, false, "label Enter never edits the song")
+        compare(grid.noteSummary, notesBefore, "label Enter never moves the selection")
+        compare(grid.editCursorTick, cursorBefore, "label Enter never moves the cursor")
+        compare(grid.trackIndex, trackBefore, "label Enter never retargets the track")
+        secondLabel.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(secondLabel, "activeFocus", true, 3000,
+                   "the second label takes keyboard focus")
+        keyClick(Qt.Key_Return)
+        tryCompare(secondLabel, "checked", true, 3000,
+                   "Return activates the focused second label")
+        compare(firstLabel.checked, false, "Return retargets activation exactly once")
+        compare(session.documentDirty, false, "label Return never edits the song")
+        compare(grid.noteSummary, notesBefore, "label Return never moves the selection")
+        compare(grid.editCursorTick, cursorBefore, "label Return never moves the cursor")
+        keyClick(Qt.Key_Up)
+        compare(secondLabel.checked, true, "Up never retargets the active label")
+        compare(session.documentDirty, false, "Up on a label never edits the song")
+        compare(grid.noteSummary, notesBefore, "Up on a label never moves the selection")
+        tapButton.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(tapButton, "activeFocus", true, 3000,
+                   "the tempo Tap button takes keyboard focus")
+        keyClick(Qt.Key_Enter)
+        tryCompare(model, "tapTempoTapCount", 1, 3000,
+                   "Enter on the focused Tap button registers exactly one tap")
+        compare(tapButton.activeFocus, true, "the first tap keeps button focus")
+        keyClick(Qt.Key_Return)
+        tryCompare(model, "tapTempoTapCount", 2, 3000,
+                   "Return on the focused Tap button adds the second tap")
+        var draft = findChild(page, "automationTempoTapDraft")
+        verify(draft && draft.visible, "the two-tap session shows the draft readout")
+        verify(draft.text.indexOf("BPM") >= 0, "the two-tap draft names a tempo")
+        compare(session.documentDirty, false, "tap keys never edit the song")
+        compare(grid.noteSummary, notesBefore, "tap keys never move the selection")
+        keyClick(Qt.Key_Return, Qt.ShiftModifier)
+        compare(model.tapTempoTapCount, 2, "Shift+Return never registers a tap")
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", true, 3000,
+                   "bare Space on the Tap button owns transport")
+        compare(model.tapTempoTapCount, 2, "transport Space never taps")
+        compare(session.documentDirty, false, "tap Space never edits the song")
+        compare(grid.noteSummary, notesBefore, "tap Space never moves the selection")
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", false, 3000,
+                   "the second tap Space stops transport")
+        model.resetTapTempo()
+        compare(model.tapTempoTapCount, 0, "resetTapTempo drops the draft")
     }
 
 }

@@ -6,9 +6,10 @@ Original SHA-256: 35206c7f5c5ea64c6eca1fcc455d8559248b5f974a71989f8306cc2bfe9eba
 Swift counterpart: src/checks/rollcheck/keyboard.swift
 Swift SHA-256: 6db4784f8cd68510a8e4791ad0d6f772db480fde64718efdd0d174baab9220cd
 Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Additional Swift SHA-256: 00fef6b54dfe09c78960fca23f31e3fc0eb5b680e0f2536d1d6e9768115a4eb5
+Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
 Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
+Retired in: 4d7fa617 Delete C++ window host, main.cpp and legacy keymap/layout/typography/theme C++; the pinned SHA is the 5f0924e8 blob, resolvable via git show 5f0924e8:src/checks/swiftrollgated/gesturechecks.cpp. S001-S028 index that pinned revision and close no A entry.
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -20,14 +21,18 @@ PARTIAL identifies related counterpart predicates with an explicit unproved cond
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift surface.
 GAP identifies an original predicate without a replacement assertion.
-Eleven keyboard and timeline slots (transpose, keep-visible, ruler scope, other-events strip, partial repaint, time shortcuts, duplicate-time, two insert-time variants, batch resize). The registered keyboard Swift checks establish seed, transpose and off-grid snap, and uniform batch-resize outcomes; the insert-time checks establish scoped document effects, but not the native cursor/selection composite or host key delivery. Coverage: 18 MATCHED, 3 PARTIAL, 73 GAP, 11 NATIVE.
+Ten keyboard and timeline slots (transpose, keep-visible, ruler scope, other-events strip, partial repaint, time shortcuts, duplicate-time, two insert-time variants, batch resize). The registered keyboard Swift checks establish seed, transpose and off-grid snap, uniform batch-resize outcomes, and scoped insert-time document effects; exact history-index increments, cursor/selection composites, and host key delivery remain unproved. Time selection, edit cursor, ruler/other-events bands, keep-in-sight scroll, and rendered pixels have no Swift model. Coverage: 18 MATCHED, 5 PARTIAL, 67 GAP, 15 NATIVE.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS (controller, 10.17s); the registered swiftcore suite executed keyboard.swift S043..S060 and EditorGridCameraChecks.swift S029..S042 (not the gated S001..S028).
+Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore projectSession suite executed runKeyboardChecks (S043..S060) and EditorGridCameraChecks commandRouting (S029..S042), not the gated S001..S028.
+Command: deno task verify:qml-roll --verbose
+Result: PASS — 1/1 ok (controller-recorded post-change run); no keyboard site depends on the roll QML lane.
+Command: deno task verify:shell --verbose
+Result: PASS — 11/11 ok (controller-recorded post-change run); no keyboard site depends on the shell lane.
 
 Execution and ownership
-runKeyboardChecks executes keyboardTranspose, keyboardResizeNotes, timelineInsertBlankTimeTracks, and timelineInsertBlankTimeLanes in the registered swiftcore projectSession suite. withKeyboardSeed builds a visible unoccupied note with pixel-88 tick, keys 115 down to 24, velocity 100, and grid-drawn duration; each scenario restores its document and camera on exit. EditorGridCamera::commandRouting and the retained native gated checks supply the older related predicates, not host key-delivery proof.
+runKeyboardChecks executes keyboardTranspose, keyboardResizeNotes, timelineInsertBlankTimeTracks, and timelineInsertBlankTimeLanes in the registered swiftcore projectSession suite. withKeyboardSeed builds a visible unoccupied note with pixel-88 tick, keys 115 down to 24, velocity 100, and grid-drawn duration; each scenario restores its document and camera on exit. EditorGridCamera::commandRouting and the retained native gated checks supply the older related predicates, not host key-delivery proof. Host key delivery (sendKeyStroke/Escape), pointer clicks, framebuffer pixels, and native popup sessions stay NATIVE; time selection, edit cursor, ruler/other-events bands, and keep-in-sight scroll have no Swift model and stay GAP.
 
 Fixture, sequence and row constraints
 Every slot snapshots SMF bytes plus undo index and count, then unwinds to them; timelineInsertBlankTimeTracks additionally probes a rejected insert mid-slot and restores afterwards; keyboardResizeNotes re-executes its shrink sites once per Shift+Left press (up to 256 presses). No _data rows expand sites in this file.
@@ -142,7 +147,7 @@ Original expression:
 
 A007 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:75
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Mapping/reason: GAP — the Swift roll has no keep-in-sight scroll, so this keep-visible seed guard has no executing counterpart: withKeyboardSeed (keyboard.swift:25-92) builds a visible seed and S043 (keyboard.swift:86-89) guards its presence, but no predicate parks a transposed row outside the viewport.
 Source context since previous assertion:
   }
 
@@ -155,7 +160,7 @@ Original expression:
 
 A008 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:86
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: S043 (keyboard.swift:86-89) guards the transpose slot seed, not this keep-visible seed lookup, and no predicate observes scroll state after an edit.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -173,7 +178,7 @@ Original expression:
 
 A009 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:89
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: the post-transpose seed position has no executing counterpart (S044-S045 in keyboard.swift:108-114 prove the transpose slot moves, not this slot parked state).
 Source context since previous assertion:
       doc.moveNotes({transposed}, int64_t(snapCell), -11);
 Original expression:
@@ -182,7 +187,7 @@ Original expression:
 
 A010 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:95
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: no predicate parks a note row above the viewport via scrollRollBy or asserts the parked-row geometry.
 Source context since previous assertion:
       view.selectionModel().setNoteSelection({transposed.noteId});
 
@@ -194,7 +199,7 @@ Original expression:
 
 A011 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:98
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: S044 (keyboard.swift:108-110) proves Up-transpose on the transpose slot selection, not this parked-viewport transpose.
 Source context since previous assertion:
       sendKeyStroke(roll, Qt::Key_Up, Qt::NoModifier, false);
 Original expression:
@@ -203,7 +208,7 @@ Original expression:
 
 A012 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:100
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: no predicate asserts a transposed row top/bottom against the roll bounds after scrolling.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -212,7 +217,7 @@ Original expression:
 
 A013 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:108
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: no predicate parks a note past the left edge via scrollByPx.
 Source context since previous assertion:
       sendKeyStroke(roll, Qt::Key_Down, Qt::NoModifier, false);
 
@@ -226,7 +231,7 @@ Original expression:
 
 A014 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:112
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: no predicate asserts displayX == 0.0 scroll-to-edge after a Right nudge.
 Source context since previous assertion:
       sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
       nStart += snapCell;
@@ -235,7 +240,7 @@ Original expression:
 
 A015 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:120
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: the multi-ride Right loop and its camera ride have no executing counterpart.
 Source context since previous assertion:
       const qreal vw = std::max<qreal>(50, roll.width());
       const qreal cellPx =
@@ -250,7 +255,7 @@ Original expression:
 
 A016 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:125
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: no predicate asserts a nudged note displayX span stays inside the viewport width.
 Source context since previous assertion:
       const qreal visibleStart = view.camera().displayX(double(transposed.tick), 0.0, dpr);
       const qreal visibleEnd =
@@ -261,7 +266,7 @@ Original expression:
 
 A017 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:129
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no keep-in-sight scroll in the Swift roll: the ride-right-and-back return has no executing counterpart.
 Source context since previous assertion:
       for (int i = 0; i < rides + 1; ++i)
           sendKeyStroke(roll, Qt::Key_Left, Qt::NoModifier, false);
@@ -271,7 +276,7 @@ Original expression:
 
 A018 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:133
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — S048 (keyboard.swift:53-55) restores the pre-seed document, camera, and history identity, whereas this unwind targets the post-seed snapshot; the keep-visible slot SMF restoration is unproved and its scroll state is unmodelled.
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -280,7 +285,7 @@ Original expression:
 
 A019 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:140
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Mapping/reason: GAP — no ruler UI in the Swift roll; so this ruler-slot seed guard has no executing counterpart (S043 in keyboard.swift:86-89 guards the transpose slot seed; PianoGrid models no timeline ruler or time selection).
 Source context since previous assertion:
   }
 
@@ -293,7 +298,7 @@ Original expression:
 
 A020 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:151
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no ruler UI in the Swift roll: the ruler-slot seed lookup is unmodelled (S043 guards the transpose slot seed).
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -311,7 +316,7 @@ Original expression:
 
 A021 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:154
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no ruler UI in the Swift roll: the ruler-slot post-transpose setup is unmodelled (S044-S045 prove the transpose slot moves).
 Source context since previous assertion:
       doc.moveNotes({transposed}, int64_t(snapCell), -11);
 Original expression:
@@ -320,7 +325,7 @@ Original expression:
 
 A022 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:166
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no Quick track-header model in the Swift roll: no predicate looks up header records.
 Source context since previous assertion:
       auto *quick =
           view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
@@ -336,7 +341,7 @@ Original expression:
 
 A023 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:167
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no Quick track-header model in the Swift roll, so recordsMatchTimeline has no executing counterpart.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -345,7 +350,7 @@ Original expression:
 
 A024 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:169
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no timeline ruler band or ruler input item in the Swift roll.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -353,7 +358,7 @@ Original expression:
 
 A025 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:197
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no ruler-drag time selection in the Swift roll: PianoGrid has no time-selection state (the automation page owns it separately) and no ruler pointer handling.
 Source context since previous assertion:
       const qreal rulerDpr = rulerInput->devicePixelRatio();
       // Press at the drawn-cell edge: snapCell ticks past the cell start can
@@ -391,7 +396,7 @@ Original expression:
 
 A026 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:232
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no ruler-drag scope derivation in the Swift roll: modified-drag track-scope computation is unmodelled.
 Source context since previous assertion:
       uint32_t expectedScope = uint32_t{1} << track;
       const ViewNote *scopedGhost = nullptr;
@@ -430,7 +435,7 @@ Original expression:
 
 A027 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:236
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — ruler fixture setup with no executing counterpart: no Swift predicate pins the overlapping secondary-track note precondition.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -438,7 +443,7 @@ Original expression:
 
 A028 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:251
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no ruler UI in the Swift roll: ghost-note viewport placement is unmodelled.
 Source context since previous assertion:
       const SongView::ViewState priorViewState = view.viewState();
       SongView::ViewState ghostViewState = priorViewState;
@@ -460,7 +465,7 @@ Original expression:
 
 A029 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:256
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: NATIVE — framebuffer pixel observation: isSelectionRingColor at device pixels. Swift predicates assert model state (tick/pitch/duration), never rendered pixels.
 Source context since previous assertion:
       const qreal scopedDpr = scopedImage.devicePixelRatio();
       const int centerX = qRound(visibleGhostBox.center().x() * scopedDpr);
@@ -471,7 +476,7 @@ Original expression:
 
 A030 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:262
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no Quick track-header model in the Swift roll: the secondary-track record lookup is unmodelled.
 Source context since previous assertion:
       view.applyViewState(priorViewState);
       view.selectionModel().setTimeSelection(
@@ -482,7 +487,7 @@ Original expression:
 
 A031 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:267
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no Quick track-header model roles in the Swift roll: OverlayColorRole publication is unmodelled.
 Source context since previous assertion:
       const QColor selectedOverlay = headers
                                          ->data(headers->index(*secondaryRecord, 0),
@@ -494,7 +499,7 @@ Original expression:
 
 A032 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:270
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: NATIVE — header-band framebuffer capture: Swift asserts model state, never captured band pixels.
 Source context since previous assertion:
       const QImage selectedHeaderFrame = headercheck::captureBand(check, view);
 Original expression:
@@ -503,7 +508,7 @@ Original expression:
 
 A033 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:275
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: NATIVE — header-band framebuffer recapture: Swift asserts model state, never captured band pixels.
 Source context since previous assertion:
       if (plainHeaderFrame == selectedHeaderFrame) {
           QCoreApplication::processEvents();
@@ -514,7 +519,7 @@ Original expression:
 
 A034 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:277
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: NATIVE — header repaint pixel comparison: Swift has no repaint observation.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -523,7 +528,7 @@ Original expression:
 
 A035 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:288
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no ruler mouse handling in the Swift roll: outside-selection click retention is unmodelled.
 Source context since previous assertion:
       }
 
@@ -540,7 +545,7 @@ Original expression:
 
 A036 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:295
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no ruler mouse handling in the Swift roll: right-drag refusal is unmodelled.
 Source context since previous assertion:
       view.selectionModel().clearTimeSelection();
       checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::RightButton,
@@ -553,7 +558,7 @@ Original expression:
 
 A037 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:302
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: NATIVE — native ruler-menu popup session open via host window events: Swift invokes command handlers directly and never opens a native menu.
 Source context since previous assertion:
       checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::RightButton,
                                 Qt::NoButton, Qt::NoModifier);
@@ -567,7 +572,7 @@ Original expression:
 
 A038 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:307
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: NATIVE — host Escape key delivery (QTest::keyClick) dismissing the native ruler menu: Swift has no native window or host key path.
 Source context since previous assertion:
       QTest::keyClick(live->window(), Qt::Key_Escape);
       QCoreApplication::processEvents();
@@ -576,7 +581,7 @@ Original expression:
 
 A039 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:310
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — S048 (keyboard.swift:53-55) restores the pre-seed document, camera, and history identity, whereas this unwind targets the post-seed snapshot; the ruler slot SMF restoration is unproved.
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -585,7 +590,7 @@ Original expression:
 
 A040 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:317
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Mapping/reason: GAP — no OtherEvents band in the Swift roll; so this strip-slot seed guard has no executing counterpart.
 Source context since previous assertion:
   }
 
@@ -598,7 +603,7 @@ Original expression:
 
 A041 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:326
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no timeline band layout in the Swift roll: the OtherEvents band geometry lookup is unmodelled.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -613,7 +618,7 @@ Original expression:
 
 A042 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:334
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no OtherEvents strip model in the Swift roll: the track-colored marker fixture is unmodelled.
 Source context since previous assertion:
       const StripItem *trackEvent = nullptr;
       for (const StripItem &item : view.model().strip) {
@@ -627,7 +632,7 @@ Original expression:
 
 A043 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:351
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: NATIVE — strip framebuffer pixel invariance: Swift asserts model state, never band pixels.
 Source context since previous assertion:
       view.selectionModel().setTimeSelection({d.tick + snapCell,
                                               d.tick + 2 * snapCell,
@@ -652,7 +657,7 @@ Original expression:
 
 A044 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:371
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: NATIVE — strip framebuffer marker positioning at device pixels: Swift has no rendered-strip observation.
 Source context since previous assertion:
       const qreal stripDpr = afterStripImage.devicePixelRatioF();
       const qreal plotOffset = otherEvents->plotRect.left() - otherEvents->rect.left();
@@ -677,7 +682,7 @@ Original expression:
 
 A045 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:373
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: NATIVE — rendered diamond pixel search in the strip framebuffer: Swift has no rendered-strip observation.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -685,7 +690,7 @@ Original expression:
 
 A046 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:378
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — S048 (keyboard.swift:53-55) restores the pre-seed document, camera, and history identity, whereas this unwind targets the post-seed snapshot; the strip slot SMF restoration is unproved.
 Source context since previous assertion:
       view.setEditorHorizontalScroll(originalScroll);
       QCoreApplication::processEvents();
@@ -696,7 +701,7 @@ Original expression:
 
 A047 | PianoRollTest::timelinePartialSelectionRepaint | src/checks/rollcheck/keyboard.cpp:385
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Mapping/reason: GAP — no time-selection or repaint model in the Swift roll; so this repaint-slot seed guard has no executing counterpart.
 Source context since previous assertion:
   }
 
@@ -709,7 +714,7 @@ Original expression:
 
 A048 | PianoRollTest::timelinePartialSelectionRepaint | src/checks/rollcheck/keyboard.cpp:404
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: NATIVE — full-framebuffer repaint comparison: Swift asserts document and history state, never framebuffer pixels.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -734,7 +739,7 @@ Original expression:
 
 A049 | PianoRollTest::timelinePartialSelectionRepaint | src/checks/rollcheck/keyboard.cpp:407
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — S048 (keyboard.swift:53-55) restores the pre-seed document, camera, and history identity, whereas this unwind targets the post-seed snapshot; the repaint slot SMF restoration is unproved.
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -743,7 +748,7 @@ Original expression:
 
 A050 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:414
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Mapping/reason: GAP — no time selection in PianoGrid; so this time-shortcut seed guard has no executing counterpart (S043 in keyboard.swift:86-89 guards the transpose slot seed).
 Source context since previous assertion:
   }
 
@@ -756,7 +761,7 @@ Original expression:
 
 A051 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:426
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no time selection in PianoGrid: the time-shortcut seed lookup is unmodelled (S043 guards the transpose slot seed).
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -775,7 +780,7 @@ Original expression:
 
 A052 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:429
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no time selection in PianoGrid: the time-shortcut post-transpose setup is unmodelled.
 Source context since previous assertion:
       doc.moveNotes({transposed}, int64_t(snapCell), -11);
 Original expression:
@@ -784,7 +789,7 @@ Original expression:
 
 A053 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:447
 Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: NATIVE — framebuffer selection-ring pixel observation on a time-selected note: Swift asserts model state, never rendered pixels.
 Source context since previous assertion:
       songview::EditorSelectionModel::TimeSelection band;
       band.startTick = d.tick + snapCell;
@@ -807,7 +812,7 @@ Original expression:
 
 A054 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:449
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — PianoGrid owns only the note selection: time-selected-versus-note-selected leakage has no observable counterpart (PianoGrid has no time-selection state).
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -816,7 +821,7 @@ Original expression:
 
 A055 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:466
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no time selection in PianoGrid: the empty-space-inside-selection fixture search over the native view model is unmodelled.
 Source context since previous assertion:
       const Tick emptyTick = band.startTick + (band.endTick - band.startTick) / 2;
       int emptyKey = -1;
@@ -838,7 +843,7 @@ Original expression:
 
 A056 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:470
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no pointer-click delivery or time selection in the Swift roll: click-to-clear-time-selection is unmodelled (Swift drives grid.performCommand directly).
 Source context since previous assertion:
       const QPoint emptyInside(qRound(view.camera().displayX(double(emptyTick), 0.0, rows.dpr())),
                                rows.centerY(emptyKey));
@@ -848,8 +853,8 @@ Original expression:
                "left-clicking empty space inside the time selection did not clear it");
 
 A057 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:474
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE
+Mapping/reason: NATIVE — host key delivery: sendKeyStroke Up with an active time selection transposing the covered note. Swift drives grid.performCommand on the note selection directly and models no time-covered key routing; only the native host path establishes this site.
 Source context since previous assertion:
       view.selectionModel().setTimeSelection(band);
       sendKeyStroke(roll, Qt::Key_Up, Qt::NoModifier, false);
@@ -858,8 +863,8 @@ Original expression:
                "time-selection Up did not transpose the covered note");
 
 A058 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:477
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE
+Mapping/reason: NATIVE — host key delivery: sendKeyStroke Right with an active time selection nudging the covered note. Swift models no time-covered key routing; only the native host path establishes this site.
 Source context since previous assertion:
       sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
 Original expression:
@@ -868,7 +873,7 @@ Original expression:
 
 A059 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:479
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no time selection in PianoGrid: time-selection tick advancement after a nudge is unmodelled.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -876,7 +881,7 @@ Original expression:
 
 A060 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:482
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — S048 (keyboard.swift:53-55) restores the pre-seed document, camera, and history identity, whereas this unwind targets the post-seed snapshot; the time-shortcut slot SMF restoration is unproved.
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -885,7 +890,7 @@ Original expression:
 
 A061 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:489
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Mapping/reason: GAP — no time-range duplication in PianoGrid; so this duplicate-time seed guard has no executing counterpart.
 Source context since previous assertion:
   }
 
@@ -898,7 +903,7 @@ Original expression:
 
 A062 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:499
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no time duplication in PianoGrid: the duplicate-time seed lookup is unmodelled.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -915,7 +920,7 @@ Original expression:
 
 A063 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:502
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no time duplication in PianoGrid: the duplicate-time post-transpose setup is unmodelled.
 Source context since previous assertion:
       doc.moveNotes({transposed}, int64_t(snapCell), -11);
 Original expression:
@@ -923,8 +928,8 @@ Original expression:
                "duplicate-time seed did not reach the expected post-transpose state");
 
 A064 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:522
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE
+Mapping/reason: NATIVE — host key delivery: sendKeyStroke Ctrl+D duplicating a time range and advancing the time selection plus edit cursor. Swift models no time-range duplication, time selection, or edit cursor; only the native host path establishes this site.
 Source context since previous assertion:
       view.selectionModel().setTimeSelection({d.tick + snapCell,
                                               d.tick + 2 * snapCell,
@@ -952,7 +957,7 @@ Original expression:
 
 A065 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:528
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no duplicate-time camera follow in the Swift roll: making the duplicated range visible via displayX has no executing counterpart.
 Source context since previous assertion:
       const qreal duplicateDpr = roll.devicePixelRatio();
       const qreal duplicateViewport = std::max<qreal>(50, roll.width());
@@ -962,8 +967,8 @@ Original expression:
                "first duplicated range was not made visible");
 
 A066 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:536
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: NATIVE
+Mapping/reason: NATIVE — host key delivery: repeated sendKeyStroke Ctrl+D duplicating the newest copy. Swift models no time-range duplication; only the native host path establishes this site.
 Source context since previous assertion:
       sendKeyStroke(roll, Qt::Key_D, Qt::ControlModifier, false);
       const Tick secondStart = firstEnd;
@@ -978,7 +983,7 @@ Original expression:
 
 A067 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:542
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — S048 (keyboard.swift:53-55) restores the pre-seed document, camera, and history identity, whereas this unwind targets the post-seed snapshot; the duplicate-time slot SMF restoration is unproved.
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -1025,7 +1030,7 @@ Original expression:
 
 A071 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:568
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Early-return path when the fixture has fewer than two tracks.
+Mapping/reason: GAP — the fewer-than-two-tracks early-return path is unasserted in Swift: the guard at keyboard.swift:212 returns without a report.expect.
 Source context since previous assertion:
       const Tick insertStart = d.tick + 2 * snapCell;
       const Tick insertEnd = insertStart + snapCell;
@@ -1037,7 +1042,7 @@ Original expression:
 
 A072 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:579
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — the free-key reservation loop is guard-only in Swift (keyboard.swift:214-217 report.fail, no report.expect pins the reservation).
 Source context since previous assertion:
           return;
       }
@@ -1054,7 +1059,7 @@ Original expression:
 
 A073 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:583
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — the unselected-track fixture creation is guard-only in Swift (keyboard.swift:218-225 report.fail, no report.expect pins otherBefore).
 Source context since previous assertion:
       const uint8_t otherPitch = uint8_t(otherKey);
       doc.addNote(otherTrack, insertStart, otherPitch, uint32_t(snapCell), 91);
@@ -1065,7 +1070,7 @@ Original expression:
 
 A074 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:593
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no edit cursor in the Swift session: parking the cursor past the range end is unmodelled.
 Source context since previous assertion:
       view.selectTrack(track);
       songview::EditorSelectionModel::TimeSelection trackSelection;
@@ -1081,7 +1086,7 @@ Original expression:
 
 A075 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:606
 Disposition: GAP
-Mapping/reason: S057 keyboard.swift:234 verifies that track-scoped insertion moves the selected note and leaves the other track intact; the original composite also requires one history-index increment, the retained time-selection band, and cursor reset to range start, none asserted here. GAP remains.
+Mapping/reason: S057 (keyboard.swift:234-242) proves the document half — the selected note shifts to insertEnd and the other track stays byte-identical. GAP remains: the undo-index +1 increment, the retained Tracks band, and the cursor reset to range start are unasserted in Swift.
 Source context since previous assertion:
       const int insertUndoIndex = doc.undoStack()->index();
       view.insertTime();
@@ -1104,7 +1109,7 @@ Original expression:
 
 A076 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:614
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — S058 (keyboard.swift:243-246) restores the scenario-local post-fixture baseline, whereas this unwind targets the slot-level post-seed snapshot; the slot SMF restoration is unproved.
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -1113,7 +1118,7 @@ Original expression:
 
 A077 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:624
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no timeline-unused-track concept in the Swift roll: the rejected-insert track precondition is unmodelled.
 Source context since previous assertion:
       // An active but unresolved scope is a rejected command: the unified
       // entry must refuse without falling through to the whole-song prompt.
@@ -1128,7 +1133,7 @@ Original expression:
 
 A078 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:631
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no primaryTrack, storedTrackScope, or time selection in the Swift session: the invalid active-scope setup is unmodelled.
 Source context since previous assertion:
       view.selectTrack(unusedTrack);
       songview::EditorSelectionModel::TimeSelection rejectedSelection;
@@ -1149,7 +1154,7 @@ Original expression:
 
 A079 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:649
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — the rejected Insert Time path is unmodelled in Swift: no prompt UI exists and no scenario asserts refusal without a prompt.
 Source context since previous assertion:
       const quick_popup::PromptGuard guard(view);
       const QByteArray rejectedBefore = doc.smf().write();
@@ -1165,7 +1170,7 @@ Original expression:
 
 A080 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:651
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — the rejected-insert invariance (bytes, revision, undo index/count, cursor, selection, scope) is unmodelled in Swift: no scenario drives the invalid-scope path.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -1182,7 +1187,7 @@ Original expression:
 
 A081 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:666
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — S058 (keyboard.swift:243-246) restores the scenario-local post-fixture baseline, whereas this restore targets the slot-level post-seed snapshot; the slot SMF restoration is unproved.
 Source context since previous assertion:
       // Restore the fixture state after the rejected scenario.
       view.selectTrack(track);
@@ -1222,7 +1227,7 @@ Original expression:
 
 A084 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:685
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — the lane-seed shortcut position has no report.expect in Swift: checkTimelineInsertBlankTimeLanes performs the same nudgeNotes (keyboard.swift:258) but only fail-guards the fixture (keyboard.swift:261-266); S056 belongs to the tracks scenario.
 Source context since previous assertion:
       doc.moveNotes({transposed}, int64_t(2 * snapCell), -10);
 Original expression:
@@ -1231,7 +1236,7 @@ Original expression:
 
 A085 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:694
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — the lane-point fixture (findLanePoint plus findNote) is guard-only in Swift (keyboard.swift:261-266 report.fail, no report.expect).
 Source context since previous assertion:
       const Tick insertStart = d.tick + 2 * snapCell;
       const Tick insertEnd = insertStart + snapCell;
@@ -1247,7 +1252,7 @@ Original expression:
 
 A086 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:706
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no edit cursor in the Swift session: parking the cursor past the range end is unmodelled.
 Source context since previous assertion:
       songview::EditorSelectionModel::TimeSelection laneSelection;
       laneSelection.startTick = insertStart;
@@ -1264,7 +1269,7 @@ Original expression:
 
 A087 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:721
 Disposition: GAP
-Mapping/reason: S059 keyboard.swift:271 verifies the CC7 shift and stationary note for lane-scoped insertion; the original composite additionally asserts a history-index increment, retained lane-scoped time-selection band, and cursor reset to range start, none asserted here. GAP remains.
+Mapping/reason: S059 (keyboard.swift:271-279) proves the document half — CC7 shifts by one snap and the note stays byte-identical. GAP remains: the undo-index +1 increment, the retained Lanes band and lane list, and the cursor reset to range start are unasserted in Swift.
 Source context since previous assertion:
       const int insertUndoIndex = doc.undoStack()->index();
       view.insertTime();
@@ -1290,7 +1295,7 @@ Original expression:
 
 A088 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:730
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — S060 (keyboard.swift:280-283) restores the scenario-local post-fixture baseline, whereas this unwind targets the slot-level post-seed snapshot; the slot SMF restoration is unproved.
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -1329,7 +1334,7 @@ Original expression:
 
 A091 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:762
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — the free-row search for the second resize note is guard-only in Swift (keyboard.swift:134-144 report.fail, no report.expect).
 Source context since previous assertion:
       // A second selected note starts strictly after the seed's onset and
       // carries a different duration: the batch delta must come from the grid
@@ -1347,8 +1352,8 @@ Original expression:
   QVERIFY2(laterKey >= 0, "could not find a free row for the second resize note");
 
 A092 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:765
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL — S049 (keyboard.swift:148-150) proves the second note exists with its intended different duration. Unproved: the laterTick/key placement asserted here (S049 addresses the note by ID, not by tick and key).
 Source context since previous assertion:
       doc.addNote(track, laterTick, uint8_t(laterKey), laterDur, 100);
       DocNote noteB;
@@ -1385,8 +1390,8 @@ Original expression:
                "Shift+Right did not lengthen every selected note by the earliest-onset snap");
 
 A095 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:782
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL — S050 (keyboard.swift:162-164) proves the merged two-snap delta and S051 (keyboard.swift:167-169) proves one undo restores the baseline. Unproved: the exact undo index +1 and count +1 arithmetic asserted here.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -1415,7 +1420,7 @@ Original expression:
 
 A098 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:800
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Executes once per Shift+Left press in the shrink loop.
+Mapping/reason: GAP — per-press note survival is guard/fail-only in Swift (keyboard.swift:172-179); no report.expect pins it (S052 asserts the shrink deltas, not survival). Re-executes once per Shift+Left press in the shrink loop.
 Source context since previous assertion:
       view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
       const int floorUndo = doc.undoStack()->index();
@@ -1441,7 +1446,7 @@ Original expression:
 
 A100 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:808
 Disposition: PARTIAL
-Mapping/reason: S052 keyboard.swift:181 verifies every uniform Shift+Left delta and S053 keyboard.swift:185 verifies the one-tick floor; PARTIAL remains because native key-event delivery and the active-time-selection block in this slot are unproved.
+Mapping/reason: S052 (keyboard.swift:181-183) verifies every uniform Shift+Left delta and S053 (keyboard.swift:185-187) verifies the one-tick floor. PARTIAL remains: host key-event delivery is unproved (Swift drives grid.performCommand directly).
 Source context since previous assertion:
       }
 Original expression:
@@ -1450,7 +1455,7 @@ Original expression:
 
 A101 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:814
 Disposition: PARTIAL
-Mapping/reason: S054 keyboard.swift:192 asserts the extra Shift+Left at the one-tick floor leaves document, history identity and revision unchanged; PARTIAL remains because native key-event delivery and the active-time-selection block in this slot are unproved.
+Mapping/reason: S054 (keyboard.swift:192-195) asserts the extra Shift+Left at the floor leaves document, history identity, and revision unchanged. PARTIAL remains: host key-event delivery and the exact undo-count arithmetic are unproved.
 Source context since previous assertion:
       const QByteArray floorBytes = doc.smf().write();
       const int floorIndex = doc.undoStack()->index();
@@ -1483,7 +1488,7 @@ Original expression:
 
 A104 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:835
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — no time selection in PianoGrid: the active-time-selection block refusing Shift+Right/Shift+Left is unmodelled (no Swift scenario sets a time selection).
 Source context since previous assertion:
       view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
       view.selectionModel().setTimeSelection(
@@ -1503,7 +1508,7 @@ Original expression:
 
 A105 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:843
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP — S048 (keyboard.swift:53-55) restores the pre-seed document, camera, and history identity, whereas this final unwind targets the post-seed snapshot; the slot SMF restoration is unproved.
 Source context since previous assertion:
       view.selectionModel().clearTimeSelection();
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
@@ -1515,7 +1520,7 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Counterpart executable predicate index
-S001..S028 are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid. S029..S042 are report.expect predicates in the registered Swift check swiftcore/EditorGridCamera::commandRouting, which runs under the swiftcore filter. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S001..S028 index the RETIRED gated Swift-surface suite (C++ QTest checks that drove the Swift grid; source retired in 4d7fa617, pinned blob at 5f0924e8): they execute nowhere in the current tree and close no A entry. S029..S042 are report.expect predicates in the registered Swift check swiftcore/EditorGridCamera::commandRouting, which runs under the swiftcore filter. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
 S001 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:349
 Counterpart expression:
@@ -1648,64 +1653,64 @@ S028 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated
 Counterpart expression:
   QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
 
-S029 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:661
+S029 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:660
 Counterpart expression:
 report.expect(
     session.document.note(a).map { Int($0.tick) == 24 + snap } == true,
     cppID: id, message: "nudge right advances the selected note one snap cell")
 
-S030 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:665
+S030 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:664
 Counterpart expression:
 report.expect(
     session.document.note(a).map { Int($0.tick) == 24 } == true,
     cppID: id, message: "nudge left returns the selected note one snap cell")
 
-S031 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:670
+S031 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:669
 Counterpart expression:
 report.expect(
     session.document.note(c).map { Int($0.tick) == 12 } == true,
     cppID: id, message: "nudge right snaps an off-grid note forward to the lattice")
 
-S032 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:674
+S032 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:673
 Counterpart expression:
 report.expect(
     session.document.note(c).map { Int($0.tick) == 6 } == true,
     cppID: id, message: "nudge left snaps an off-grid note back to the lattice")
 
-S033 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:679
+S033 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:678
 Counterpart expression:
 report.expect(
     session.document.note(a).map { Int($0.pitch) == pitch + 12 } == true,
     cppID: id, message: "octave transpose raises the selected note twelve keys")
 
-S034 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:683
+S034 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:682
 Counterpart expression:
 report.expect(
     session.document.note(a).map { Int($0.pitch) == pitch } == true,
     cppID: id, message: "octave transpose down restores the selected note pitch")
 
-S035 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:688
+S035 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:687
 Counterpart expression:
 report.expect(
     session.document.note(a).map { Int($0.duration) == 1 } == true
         && session.document.note(b).map { Int($0.duration) == 7 } == true,
     cppID: id, message: "shorten clamps the shorter note at one tick")
 
-S036 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:694
+S036 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:693
 Counterpart expression:
 report.expect(
     session.document.note(a).map { Int($0.duration) == 1 } == true
         && session.document.note(b).map { Int($0.duration) == 1 } == true,
     cppID: id, message: "repeated shorten at the floor is a no-op")
 
-S037 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:699
+S037 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:698
 Counterpart expression:
 report.expect(
     session.document.note(a).map { Int($0.duration) == 7 } == true
         && session.document.note(b).map { Int($0.duration) == 13 } == true,
     cppID: id, message: "merged shorten presses undo in one step")
 
-S038 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:706
+S038 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:705
 Counterpart expression:
 report.expect(
     grid.noteSummary == summaryBeforeCopy

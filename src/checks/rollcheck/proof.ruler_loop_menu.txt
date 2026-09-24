@@ -21,7 +21,7 @@ Ruler context-menu loop editing (set start/end, two-command remove with two-step
 Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS (controller, 10.17s).
-Counts: MATCHED 15, PARTIAL 0, GAP 98, NATIVE 0.
+Counts: MATCHED 15, PARTIAL 1, GAP 97, NATIVE 0.
 
 Execution and ownership
 The Swift projectSession suite executes the indexed model assertions. Original helpers rulerInput, rulerPressPoint, openRulerMenu and rulerRow (all local to this file) plus the quick_popup PromptGuard/menu-frame/row-click harness have no Swift-surface equivalent.
@@ -35,7 +35,7 @@ Original assertion inventory and source sequence
 
 A001 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:119
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: fixture/seed setup observation (seed presence, snap alignment, or seed-note reachability) with no executing Swift predicate; the Swift counterpart builds its own synthetic document. Open setup obligation.
 Source context since previous assertion:
 // Ruler context-menu loop editing through the shared Quick canvas menu. These
 // checks drive real right-press/release gestures on the live ruler input and
@@ -161,7 +161,7 @@ QVERIFY(seed.has_value())
 
 A002 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:121
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     songview::TimelineInputItem *input = rulerInput(view);
@@ -171,7 +171,7 @@ QVERIFY2(input, "could not find the time ruler Quick input")
 
 A003 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:128
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: fixture/seed setup observation (seed presence, snap alignment, or seed-note reachability) with no executing Swift predicate; the Swift counterpart builds its own synthetic document. Open setup obligation.
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -202,7 +202,7 @@ QTRY_VERIFY2(check.timeline().loopStartTick == CoreTimeDefaults::kNoTick &&
 
 A005 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:145
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -219,7 +219,7 @@ QVERIFY2(startMenu.session, qUtf8Printable(startMenu.diagnostic))
 
 A006 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:147
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const int setStartRow = rulerRow(*startMenu.model, songview::RulerMenuAction::SetLoopStart);
@@ -229,7 +229,7 @@ QVERIFY2(setStartRow >= 0, "the ruler menu has no Set loop start row")
 
 A007 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:148
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -239,7 +239,7 @@ QVERIFY2(quick_popup::clickMenuRow(*startMenu.session, setStartRow),
 
 A008 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:151
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -260,7 +260,7 @@ QTRY_VERIFY2(check.timeline().loopStartTick == startTick,
 
 A010 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:155
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -269,7 +269,7 @@ QCOMPARE(doc.undoStack()->index(), undo + 1)
 
 A011 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:156
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -279,7 +279,7 @@ QTRY_VERIFY2(input->hasActiveFocus(),
 
 A012 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:160
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -290,7 +290,7 @@ QVERIFY2(endMenu.session, qUtf8Printable(endMenu.diagnostic))
 
 A013 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:162
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const int setEndRow = rulerRow(*endMenu.model, songview::RulerMenuAction::SetLoopEnd);
@@ -300,7 +300,7 @@ QVERIFY2(setEndRow >= 0, "the ruler menu has no Set loop end row")
 
 A014 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:163
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -321,7 +321,7 @@ QTRY_VERIFY2(check.timeline().loopEndTick == endTick,
 
 A016 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:168
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -340,7 +340,7 @@ QVERIFY2(afterSets != before, "setting both loop markers did not change the song
 
 A018 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:175
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -353,7 +353,7 @@ QVERIFY2(removeMenu.session, qUtf8Printable(removeMenu.diagnostic))
 
 A019 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:177
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const int removeRow = rulerRow(*removeMenu.model, songview::RulerMenuAction::RemoveLoop);
@@ -364,7 +364,7 @@ QVERIFY2(removeRow >= 0 && removeMenu.model->itemAt(removeRow)->enabled,
 
 A020 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:179
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -374,7 +374,7 @@ QVERIFY2(quick_popup::clickMenuRow(*removeMenu.session, removeRow),
 
 A021 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:182
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -396,7 +396,7 @@ QTRY_VERIFY2(check.timeline().loopStartTick == CoreTimeDefaults::kNoTick &&
 
 A023 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:187
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -439,7 +439,7 @@ QCOMPARE(doc.smf().write(), afterSets)
 
 A027 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:210
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -460,7 +460,7 @@ QVERIFY2(selectionMenu.session, qUtf8Printable(selectionMenu.diagnostic))
 
 A028 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:213
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const int loopSelectionRow =
@@ -472,7 +472,7 @@ QVERIFY2(loopSelectionRow >= 0,
 
 A029 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:215
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -494,7 +494,7 @@ QTRY_VERIFY2(check.timeline().loopStartTick == selectionStart &&
 
 A031 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:221
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -527,7 +527,7 @@ QTRY_VERIFY2(doc.smf().write() == afterSets,
 
 A034 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:238
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: fixture/seed setup observation (seed presence, snap alignment, or seed-note reachability) with no executing Swift predicate; the Swift counterpart builds its own synthetic document. Open setup obligation.
 Source context since previous assertion:
 ;
     view.selectionModel().clearTimeSelection();
@@ -544,7 +544,7 @@ QVERIFY(seed.has_value())
 
 A035 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:240
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     songview::TimelineInputItem *input = rulerInput(view);
@@ -554,7 +554,7 @@ QVERIFY2(input, "could not find the time ruler Quick input")
 
 A036 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:244
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: fixture/seed setup observation (seed presence, snap alignment, or seed-note reachability) with no executing Swift predicate; the Swift counterpart builds its own synthetic document. Open setup obligation.
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -582,7 +582,7 @@ QTRY_VERIFY2(std::any_of(check.timeline().timeSigs.cbegin(), check.timeline().ti
 
 A038 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:263
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     view.selectionModel().clearTimeSelection();
@@ -601,7 +601,7 @@ QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A039 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:264
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -611,7 +611,7 @@ QVERIFY2(view.editCursorTick() == chipTick,
 
 A040 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:267
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const int removeLoopRow = rulerRow(*opened.model, songview::RulerMenuAction::RemoveLoop);
@@ -622,7 +622,7 @@ QVERIFY2(removeLoopRow >= 0 && !opened.model->itemAt(removeLoopRow)->enabled,
 
 A041 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:269
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -635,7 +635,7 @@ QVERIFY2(rulerRow(*opened.model, songview::RulerMenuAction::LoopFromSelection) <
 
 A042 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:275
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const int insertRow = rulerRow(*opened.model, songview::RulerMenuAction::InsertBlank);
@@ -646,7 +646,7 @@ QVERIFY2(insertRow >= 0 && opened.model->itemAt(insertRow)->enabled,
 
 A043 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:278
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const int removeSigRow = rulerRow(*opened.model, songview::RulerMenuAction::RemoveTimeSig);
@@ -657,7 +657,7 @@ QVERIFY2(removeSigRow >= 0 && opened.model->itemAt(removeSigRow)->enabled,
 
 A044 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:280
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -667,7 +667,7 @@ QVERIFY2(rulerRow(*opened.model, songview::RulerMenuAction::EditTimeSig) >= 0,
 
 A045 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:285
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -680,7 +680,7 @@ QVERIFY2(quick_popup::clickMenuRow(*opened.session, removeLoopRow),
 
 A046 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:288
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -691,7 +691,7 @@ QVERIFY2(opened.session && opened.session->isOpen(),
 
 A047 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:290
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -700,7 +700,7 @@ QCOMPARE(doc.undoStack()->index(), undo)
 
 A048 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:293
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -712,7 +712,7 @@ QVERIFY2(quick_popup::clickMenuRow(*opened.session, removeSigRow),
 
 A049 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:296
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -734,7 +734,7 @@ QTRY_VERIFY2(std::none_of(check.timeline().timeSigs.cbegin(), check.timeline().t
 
 A051 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:301
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -743,7 +743,7 @@ QCOMPARE(doc.undoStack()->index(), undo + 1)
 
 A052 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:308
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -758,7 +758,7 @@ QVERIFY2(implicitMenu.session, qUtf8Printable(implicitMenu.diagnostic))
 
 A053 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:311
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const int implicitRemoveRow =
@@ -770,7 +770,7 @@ QVERIFY2(implicitRemoveRow >= 0 && !implicitMenu.model->itemAt(implicitRemoveRow
 
 A054 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:313
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -780,7 +780,7 @@ QVERIFY2(quick_popup::clickMenuRow(*implicitMenu.session, implicitRemoveRow),
 
 A055 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:316
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -791,7 +791,7 @@ QVERIFY2(implicitMenu.session && implicitMenu.session->isOpen(),
 
 A056 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:318
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -801,7 +801,7 @@ QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo,
 
 A057 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:322
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QTest::keyClick(implicitMenu.session->window(), Qt::Key_Escape);
@@ -813,7 +813,7 @@ QVERIFY2(implicitMenu.session && !implicitMenu.session->isOpen(),
 
 A058 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:329
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     // A chip press commits the chip's exact event tick even off the snap
@@ -827,7 +827,7 @@ QVERIFY2(exactChip.session, qUtf8Printable(exactChip.diagnostic))
 
 A059 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:330
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -837,7 +837,7 @@ QVERIFY2(view.editCursorTick() == chipTick + 1,
 
 A060 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:333
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const int exactRemoveRow = rulerRow(*exactChip.model, songview::RulerMenuAction::RemoveTimeSig);
@@ -848,7 +848,7 @@ QVERIFY2(exactRemoveRow >= 0 && exactChip.model->itemAt(exactRemoveRow)->enabled
 
 A061 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:337
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QTest::keyClick(exactChip.session->window(), Qt::Key_Escape);
@@ -860,7 +860,7 @@ QVERIFY2(exactChip.session && !exactChip.session->isOpen(),
 
 A062 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:348
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -878,7 +878,7 @@ QVERIFY2(scoped.session, qUtf8Printable(scoped.diagnostic))
 
 A063 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:350
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const int clearRow = rulerRow(*scoped.model, songview::RulerMenuAction::ClearSelection);
@@ -889,7 +889,7 @@ QVERIFY2(clearRow >= 0 && scoped.model->itemAt(clearRow)->enabled,
 
 A064 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:352
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -899,7 +899,7 @@ QVERIFY2(quick_popup::clickMenuRow(*scoped.session, clearRow),
 
 A065 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:355
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -910,7 +910,7 @@ QVERIFY2(scoped.session && !scoped.session->isOpen(),
 
 A066 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:357
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -920,7 +920,7 @@ QVERIFY2(!view.selectionModel().timeSelection().active(),
 
 A067 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:360
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const SharedRulerMenu rescoped = openRulerMenu(view, *input, chipTick);
@@ -930,7 +930,7 @@ QVERIFY2(rescoped.session, qUtf8Printable(rescoped.diagnostic))
 
 A068 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:361
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -940,7 +940,7 @@ QVERIFY2(rulerRow(*rescoped.model, songview::RulerMenuAction::LoopFromSelection)
 
 A069 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:370
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: fixture/seed setup observation (seed presence, snap alignment, or seed-note reachability) with no executing Swift predicate; the Swift counterpart builds its own synthetic document. Open setup obligation.
 Source context since previous assertion:
 ;
 }
@@ -956,7 +956,7 @@ QVERIFY(seed.has_value())
 
 A070 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:372
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     songview::TimelineInputItem *input = rulerInput(view);
@@ -966,7 +966,7 @@ QVERIFY2(input, "could not find the time ruler Quick input")
 
 A071 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:376
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: fixture/seed setup observation (seed presence, snap alignment, or seed-note reachability) with no executing Swift predicate; the Swift counterpart builds its own synthetic document. Open setup obligation.
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -979,7 +979,7 @@ QVERIFY2(view.grid().snapTick(double(tick)) == tick,
 
 A072 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:383
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     // The escape focus contract routes to a visible drawer page first; close
@@ -994,7 +994,7 @@ QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Ruler, Qt::OtherFocusRea
 
 A073 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:389
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QCoreApplication::sendPostedEvents();
@@ -1009,7 +1009,7 @@ QTRY_VERIFY2(QGuiApplication::focusWindow() == input->window() &&
 
 A074 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:406
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     doc.setLoopTick(false, -1);
@@ -1032,7 +1032,7 @@ QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A075 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:407
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1042,7 +1042,7 @@ QVERIFY2(view.editCursorTick() == tick,
 
 A076 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:411
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QTest::keyClick(opened.session->window(), Qt::Key_Escape);
@@ -1053,7 +1053,7 @@ QVERIFY2(opened.session && !opened.session->isOpen(), "Escape did not dismiss th
 
 A077 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:412
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1064,7 +1064,7 @@ QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
 
 A078 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:415
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1074,7 +1074,7 @@ QTRY_VERIFY2(input->hasActiveFocus(),
 
 A079 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:417
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1084,7 +1084,7 @@ QVERIFY2(view.editCursorTick() == tick,
 
 A080 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:423
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1097,7 +1097,7 @@ QVERIFY2(stale.session, qUtf8Printable(stale.diagnostic))
 
 A081 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:429
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     doc.setTimeSig(tick + 4 * snapCell, 7, 2);
@@ -1112,7 +1112,7 @@ QVERIFY2(stale.session && !stale.session->isOpen(),
 
 A082 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:431
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1122,7 +1122,7 @@ QTRY_VERIFY2(input->hasActiveFocus(),
 
 A083 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:433
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1134,7 +1134,7 @@ QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == st
 
 A084 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:443
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1149,7 +1149,7 @@ QVERIFY2(scoped.session, qUtf8Printable(scoped.diagnostic))
 
 A085 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:446
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     view.selectionModel().clearTimeSelection();
@@ -1161,7 +1161,7 @@ QVERIFY2(scoped.session && !scoped.session->isOpen(),
 
 A086 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:448
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1171,7 +1171,7 @@ QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == st
 
 A087 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:454
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1184,7 +1184,7 @@ QVERIFY2(outside.session, qUtf8Printable(outside.diagnostic))
 
 A088 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:456
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QQuickItem *const frame = quick_popup::menuFrame(*outside.session);
@@ -1194,7 +1194,7 @@ QVERIFY2(frame, "the ruler menu rendered no outside boundary frame")
 
 A089 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:474
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const QRectF frameScene = frame->mapRectToScene(frame->boundingRect());
@@ -1220,7 +1220,7 @@ QVERIFY2(found, "no ruler point outside the menu frame stayed inside the live in
 
 A090 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:478
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QTest::mouseClick(outside.session->window(), Qt::LeftButton, Qt::NoModifier,
@@ -1233,7 +1233,7 @@ QVERIFY2(outside.session && !outside.session->isOpen(),
 
 A091 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:480
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1243,7 +1243,7 @@ QVERIFY2(!quick_popup::popupSession(view)->isOpen(),
 
 A092 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:482
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1253,7 +1253,7 @@ QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == st
 
 A093 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:491
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: fixture/seed setup observation (seed presence, snap alignment, or seed-note reachability) with no executing Swift predicate; the Swift counterpart builds its own synthetic document. Open setup obligation.
 Source context since previous assertion:
 ;
 }
@@ -1269,7 +1269,7 @@ QVERIFY(seed.has_value())
 
 A094 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:493
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     songview::TimelineInputItem *input = rulerInput(view);
@@ -1279,7 +1279,7 @@ QVERIFY2(input, "could not find the time ruler Quick input")
 
 A095 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:498
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: fixture/seed setup observation (seed presence, snap alignment, or seed-note reachability) with no executing Swift predicate; the Swift counterpart builds its own synthetic document. Open setup obligation.
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -1294,7 +1294,7 @@ QVERIFY2(view.grid().snapTick(double(insertStart)) == insertStart &&
 
 A096 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:502
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: fixture/seed setup observation (seed presence, snap alignment, or seed-note reachability) with no executing Swift predicate; the Swift counterpart builds its own synthetic document. Open setup obligation.
 Source context since previous assertion:
 ;
     DocNote movedNote;
@@ -1305,7 +1305,7 @@ QVERIFY2(doc.findNote(check.track(), seed->cell.tick, uint8_t(seed->cell.key), &
 
 A097 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:506
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: fixture/seed setup observation (seed presence, snap alignment, or seed-note reachability) with no executing Swift predicate; the Swift counterpart builds its own synthetic document. Open setup obligation.
 Source context since previous assertion:
 ;
     doc.moveNotes({movedNote}, int64_t(snapCell), 0);
@@ -1317,7 +1317,7 @@ QVERIFY2(doc.findNote(check.track(), insertStart, uint8_t(seed->cell.key), &sele
 
 A098 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:522
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1340,7 +1340,7 @@ QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A099 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:523
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1351,7 +1351,7 @@ QVERIFY2(view.selectionModel().timeSelection().active() &&
 
 A100 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:527
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const int insertRow = rulerRow(*opened.model, songview::RulerMenuAction::InsertBlank);
@@ -1361,7 +1361,7 @@ QVERIFY2(insertRow >= 0, "the ruler menu has no Insert Time row")
 
 A101 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:528
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1371,7 +1371,7 @@ QVERIFY2(opened.model->itemAt(insertRow)->enabled,
 
 A102 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:530
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1381,7 +1381,7 @@ QVERIFY2(quick_popup::clickMenuRow(*opened.session, insertRow),
 
 A103 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:533
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -1391,8 +1391,8 @@ QVERIFY2(opened.session && !opened.session->isOpen(),
              "the Insert Time activation left the ruler menu open")
 
 A104 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:535
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S012 | src/checks/rollcheck/ruler_loop_menu.swift:136 shifts the seed note to the interval end with changed song bytes and a new history identity. Unproved: the exact undo-index +1 conjunct (no executing history-depth predicate); the menu-row click delivery itself is unported.
 Source context since previous assertion:
 ;
 
@@ -1403,7 +1403,7 @@ QVERIFY2(doc.undoStack()->index() == undoIndex + 1 &&
 
 A105 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:540
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
     const songview::EditorSelectionModel::TimeSelection insertedSelection =
@@ -1416,7 +1416,7 @@ QVERIFY2(insertedSelection.active() && insertedSelection.startTick == insertStar
 
 A106 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:543
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1426,7 +1426,7 @@ QVERIFY2(view.editCursorTick() == insertStart,
 
 A107 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:545
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1457,7 +1457,7 @@ QTRY_VERIFY2(doc.smf().write() == before,
 
 A110 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:559
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1473,7 +1473,7 @@ QVERIFY2(atEnd.session, qUtf8Printable(atEnd.diagnostic))
 
 A111 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:560
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1483,7 +1483,7 @@ QVERIFY2(!view.selectionModel().timeSelection().active(),
 
 A112 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:562
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1493,7 +1493,7 @@ QVERIFY2(view.editCursorTick() == insertEnd,
 
 A113 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:564
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
 Source context since previous assertion:
 ;
 
@@ -1572,7 +1572,7 @@ Counterpart expression:
   report.expect(document.notes(in: 0).contains {
       $0.tick == insertEnd && $0.pitch == note.pitch && $0.velocity == note.velocity
   } && document.history.currentIdentity != identity && coreTimeBytes(document) != before,
-  cppID: id, message: "A104/A108: the note shifts by exactly one span and the song bytes change")
+  cppID: id, message: "A108: the note shifts by exactly one span and the song bytes change (the shifted-note conjunct also grounds A104 PARTIAL)")
 
 S013 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu.swift:141
 Counterpart expression:

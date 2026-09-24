@@ -148,6 +148,12 @@ public final class DocumentSession {
         publishChange([.selection])
     }
 
+    public func selectPrimaryTrack(_ track: Int) {
+        guard (0..<document.engineTracks.usedTrackCount).contains(track),
+              selectedTrack != track else { return }
+        adjustTrackScope(track: track, action: .plain)
+    }
+
     public func adjustTrackScope(track: Int, action: TrackScopeAction) {
         guard (0..<document.engineTracks.usedTrackCount).contains(track) else { return }
         var primary = selectedTrack ?? track

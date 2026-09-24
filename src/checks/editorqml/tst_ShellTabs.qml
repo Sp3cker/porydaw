@@ -793,6 +793,37 @@ TestCase {
         verify(pageOf(firstId) !== null, "the background close kept the first tab")
     }
 
+    function test_gSelectedCleanCloseRetargetsSurvivor() {
+        var ids = openShell(["mus_route101", "mus_littleroot_test"])
+        var survivorId = ids[0]
+        var closingId = ids[1]
+        compare(tabs().selectedId, closingId, "the second tab is selected")
+        var close = closeButton(closingId)
+        verify(close && close.visible, "the selected tab has a close control")
+        mouseClick(close, close.width / 2, close.height / 2)
+        tryCompare(tabs(), "tabCount", 1, 5000)
+        tryCompare(tabs(), "selectedId", survivorId, 5000)
+        verify(waitForNative(function() { return pageOf(closingId) === null }, 5000),
+               "the closed tab left the strip and its page is destroyed")
+        verify(waitForNative(function() {
+            var survivorSurface = surfaceOf(survivorId)
+            return survivorSurface && survivorSurface.visible
+        }, 5000), "the survivor page is presented")
+        var survivorSurface = surfaceOf(survivorId)
+        verify(survivorSurface, "the survivor surface resolves after presentation")
+        var headers = findChild(survivorSurface, "timelineTrackHeaderRows")
+        verify(headers && headers.count > 0, "the survivor track headers are mounted")
+        var track = headers.itemAt(survivorSurface.gridModel.trackIndex)
+        verify(track && !track.isAddTrack, "the survivor has a selected track")
+        compare(track.soloChecked, false, "the survivor starts with Solo off")
+        var roll = findChild(survivorSurface, "swiftRollInput")
+        verify(roll && roll.visible, "the survivor roll can receive the shortcut")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keyClick(Qt.Key_S)
+        tryCompare(track, "soloChecked", true, 3000)
+    }
+
     function test_hFinalCloseEmptyAndReopen() {
         var ids = openShell(["mus_route101"])
         var onlyId = ids[0]

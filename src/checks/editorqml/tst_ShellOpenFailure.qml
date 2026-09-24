@@ -133,4 +133,41 @@ TestCase {
         compare(reopened.gridModel.noteSummary, baseline,
                 "the reopened song restores the original note summary")
     }
+
+    function test_liveTabCleanBeforeFailedProjectOpen() {
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the production ShellWindow loads")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        var session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 1 || session.lastSaveError.length > 0
+        }, 30000), "the first song loads")
+        tryCompare(session.songTabs, "tabCount", 1)
+        session.openSong("mus_littleroot_test")
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 2 || session.lastSaveError.length > 0
+        }, 30000), "the second song opens")
+        tryCompare(session.songTabs, "tabCount", 2)
+        verify(session.songTabs.selectedPage !== null, "the live second tab has a page")
+        compare(session.songTabs.selectedPage.dirty, false,
+                "the live selected tab is clean before the project-open failure")
+
+        openFailedSpy.target = session
+        criticalSpy.target = shell.shellPresenter
+        openFailedSpy.clear()
+        criticalSpy.clear()
+        var missingPath = bootstrap.projectRoot + "/missing-native-project"
+        session.openProject(missingPath)
+        verify(waitForNative(function() { return openFailedSpy.count === 1 }, 30000),
+               "opening the missing project reports one failure")
+        verify(waitForNative(function() { return criticalSpy.count === 1 }, 5000),
+               "the failed project open raises the production error dialog")
+        var dialog = findChild(shell, "shellCriticalDialog")
+        verify(dialog !== null, "the production critical dialog exists")
+        verify(waitForNative(function() { return dialog.visible }, 3000),
+               "the project-open failure dialog is shown")
+        dialog.close()
+    }
 }

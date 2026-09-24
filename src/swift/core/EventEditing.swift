@@ -206,8 +206,10 @@ extension SongDocument {
     public func insertRawEvent(chunk: Int, event: MidiEvent) {
         guard history.acceptsDocumentMutation else { return }
         guard state.file.chunks.indices.contains(chunk), !isTempo(event) else { return }
+        var stored = event
+        if stored.isNoteOn { stored.noteID = mintNoteID() }
         var mutation = DocumentMutation(state)
-        mutation.insert(event, chunk: chunk)
+        mutation.insert(stored, chunk: chunk)
         commit(mutation, group: nil, operation: .insertRawEvent)
     }
 
@@ -216,11 +218,18 @@ extension SongDocument {
         guard state.file.chunks.indices.contains(chunk),
               state.file.chunks[chunk].events.indices.contains(index), !isTempo(event),
               state.file.chunks[chunk].events[index] != event else { return }
-        var mutation = DocumentMutation(state)
-        if mutation.state.file.chunks[chunk].events[index].tick == event.tick {
-            mutation.replace(chunk: chunk, offset: index, with: event)
+        let old = state.file.chunks[chunk].events[index]
+        var replacement = event
+        if replacement.isNoteOn {
+            replacement.noteID = old.isNoteOn ? old.noteID : mintNoteID()
         } else {
-            mutation.apply(removing: [index], inserting: [event], chunk: chunk)
+            replacement.noteID = nil
+        }
+        var mutation = DocumentMutation(state)
+        if old.tick == replacement.tick {
+            mutation.replace(chunk: chunk, offset: index, with: replacement)
+        } else {
+            mutation.apply(removing: [index], inserting: [replacement], chunk: chunk)
         }
         commit(mutation, group: nil, operation: .modifyRawEvent)
     }

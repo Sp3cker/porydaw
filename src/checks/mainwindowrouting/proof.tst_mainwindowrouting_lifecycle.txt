@@ -4,7 +4,7 @@ Reference revision: b5815a6e23296a9cc48c85a201a2ce858b99aae9
 Original: src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp
 Original SHA-256: 8cbb6d5233d79b129a9bdf3aefa2030e44f879d81a99c91841e10504c1c0541f
 Swift counterpart: src/checks/workspace/SessionChecks.swift
-Swift SHA-256: 8783f082390c2394febe9205babef51ca6ac5b211a9453cffdc171e4f699c520
+Swift SHA-256: 8a39e6257c5fdd3dfc4744b109a3341efbf9f2ebddaad157a93c81f517398dfb
 Additional Swift counterpart: src/checks/workspace/bank_edits.swift
 Additional Swift SHA-256: 4f94c92dec40ec6fb3754697a01105667eb1e9448ada18bd5b40bcb3786be94d
 Additional Swift counterpart: src/checks/workspace/bank_history_probes.swift
@@ -22,9 +22,9 @@ Additional Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f886ff36eec
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: c4092dcabd070ecb2b17b3551e13c528f3bcb60607c825e5d8a152adb118af6d
+Additional Swift SHA-256: 1736e3944298a15c5a69e9a7c8aa96f51944f5109acca86a5d6ecaf230af8003
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
+Additional Swift SHA-256: 6354c47dd5e55e254188d5a7e7556baf6e2cf7e2d923282d46095bfaffab6d10
 
 Status and evidence
 Thirteen test methods covering tab close/reopen global state, ready-reload transient preservation, reload focus handoff, fresh-bind/staged-reload/bank-rebind staging, failed-open preservation, project switch/quit, and five MouseHints drag/focus/tab delivery cases.
@@ -38,12 +38,16 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native harness obligations;
 it does not establish coverage of a converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 0 / PARTIAL 10 / GAP 107 / NATIVE 47. No MATCHED site is claimed:
-the two reconciled sites (A002, A003) are PARTIAL on the close-walk tab accounting
-crosswalked to the offscreen Qt Quick shellwindow lane (S186-S188), and no
-same-dir Swift counterpart exists for the rest of this suite; the paired
-SessionChecks-suite predicates do not assert these Qt-routing observations.
-Reopen, focus, staging and project-switch paths stay GAP.
+Tally: MATCHED 0 / PARTIAL 31 / GAP 86 / NATIVE 47. No MATCHED site is claimed:
+no Qt lifecycle observation coincides exactly with a Swift model predicate.
+PARTIAL covers the shell-lane close-walk/tab-selection crosswalk (A002/A003 to
+S186/S187; A035/A037/A038 to S188), the service-level song/voicegroup/MIDI/name
+resolutions (A043-A045/A056-A059/A073-A075 to S029/S091/S092), clean-doc and
+failed-open retention (A083 to S030/S057/S060-S063; A087/A090 to S027), reopen
+preservation and undo clean-point restoration (A100/A104 to S065/S066; A101/A105
+to S061/S079), and the MouseHints ownership/text model (S002-S009). Reopen,
+readiness, staging and project-switch paths stay GAP awaiting swift-project-store
+or the unported staged pipeline; native delivery stays NATIVE.
 The Swift SHA-256 values pin the worktree content inspected here, which is currently
 modified relative to its HEAD revision.
 
@@ -89,7 +93,7 @@ Related-but-outside suites invoked by the same file — runEditorDrawerChecks
 (EditorDrawerChecks.swift), runTrackHeadersInputChecks
 (TrackHeadersInputChecks.swift), PlaybackChecks, and the camera/page suites —
 carry their own predicates in their own files and are not inventoried here.
-Of these, the MouseHints ownership predicates (S002–S009) and the dirty-tracking predicates (S030, S057, S060–S063) are the ones cited as PARTIAL mappings below. The offscreen shellwindow lane (src/checks/editorqml/tst_ShellWindow.qml with its src/checks/editorqml/ShellQmlTests.swift bootstrap) owns S186-S188.
+Of these, the MouseHints ownership predicates (S002–S009) and the dirty-tracking predicates (S030, S057, S060–S063), the open/recovery predicates (S027, S029, S091, S092), the save/reopen predicates (S061, S065, S066, S079), and the shell-lane predicates (S186–S188) are the ones cited as PARTIAL mappings below. The offscreen shellwindow lane (src/checks/editorqml/tst_ShellWindow.qml with its src/checks/editorqml/ShellQmlTests.swift bootstrap) owns S186-S188.
 
 Fixture, sequence and row constraints
 Two-song MainWindow session opened per test. No QTest _data rows. Loops expand single sites: the 16-track alternate-track search, the three-name Quick scrollbar search, the track-row counting loop, and header title/drop coordinate computation. completeSeed() EditorViewState values seed the close/reopen, reload, and switch cases; scroll-max seeding falls back when the viewport cannot move; QTRY/async gates order reload completion, hover claims, and drag settle.
@@ -98,7 +102,7 @@ Original assertion inventory and source sequence
 
 A001 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:40
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
 #include "checks/support/support.h"
 #include "mainwindowroutingfixture.h"
@@ -166,7 +170,7 @@ Original expression:
 
 A004 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:50
 Disposition: GAP
-Mapping/reason: Fixture-root byte snapshot or project-snapshot-root observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (porydawSnapshot sidecars): fixture-root byte snapshot observation; no Swift predicate snapshots the Qt fixture root or sidecar bytes.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -174,7 +178,7 @@ Original expression:
 
 A005 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:53
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (tab reopen): reopened Qt tab object/timeline observation after requestSongOpen; no Swift predicate reopens a Qt tab.
 Source context since previous assertion:
         window.m_workspace->requestSongOpen(name, true);
         SongTab *reopened = window.m_workspace->selectedSongTab();
@@ -183,7 +187,7 @@ Original expression:
 
 A006 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:54
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (tab reopen): waitForTabReady readiness gate on the reopened Qt tab; no Swift predicate gates Qt tab readiness.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -191,7 +195,7 @@ Original expression:
 
 A007 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:55
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -199,7 +203,7 @@ Original expression:
 
 A008 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:56
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (tab reopen): reopened Qt tab object/timeline observation after requestSongOpen; no Swift predicate reopens a Qt tab.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -207,7 +211,7 @@ Original expression:
 
 A009 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:57
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -215,7 +219,7 @@ Original expression:
 
 A010 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:58
 Disposition: GAP
-Mapping/reason: Fixture-root byte snapshot or project-snapshot-root observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (porydawSnapshot sidecars): fixture-root byte snapshot observation; no Swift predicate snapshots the Qt fixture root or sidecar bytes.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -223,7 +227,7 @@ Original expression:
 
 A011 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:64
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
     }
 
@@ -235,7 +239,7 @@ Original expression:
 
 A012 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:76
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): alternate-track seed guard scanning the Qt fixture timeline tracks; no Swift predicate searches Qt timeline tracks.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongTab *reopened = session->b;
@@ -253,7 +257,7 @@ Original expression:
 
 A013 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:99
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
 Source context since previous assertion:
         SongView::ViewState requested;
         requested.valid = true;
@@ -282,7 +286,7 @@ Original expression:
 
 A014 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:100
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -290,7 +294,7 @@ Original expression:
 
 A015 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:101
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt seeded selectedTrack observation; no Swift predicate observes Qt SongView selection. Verified: neighboring track/camera suites observe header mix-state and EditorCamera, not SongView ViewState; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -298,7 +302,7 @@ Original expression:
 
 A016 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:102
 Disposition: GAP
-Mapping/reason: Grid/time-signature/camera observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt grid/time-signature seed observation in SongView ViewState; no Swift predicate observes Qt grid selection. Verified: neighboring presentation/camera suites observe header/camera types, not SongView grid state; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -306,7 +310,7 @@ Original expression:
 
 A017 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:103
 Disposition: GAP
-Mapping/reason: Grid/time-signature/camera observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt grid/time-signature seed observation in SongView ViewState; no Swift predicate observes Qt grid selection. Verified: neighboring presentation/camera suites observe header/camera types, not SongView grid state; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -314,7 +318,7 @@ Original expression:
 
 A018 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:104
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -348,7 +352,7 @@ Original expression:
 
 A022 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:118
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (in-place reload): Qt tab readiness/timeline-identity observation across in-place requestSongOpen reload; no Swift predicate reloads a Qt tab in place.
 Source context since previous assertion:
         eventListTraffic.clear();
         const MidiTimeline *beforeReload = reopened->timeline().get();
@@ -360,7 +364,7 @@ Original expression:
 
 A023 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:119
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (in-place reload): Qt tab readiness/timeline-identity observation across in-place requestSongOpen reload; no Swift predicate reloads a Qt tab in place.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -395,7 +399,7 @@ Original expression:
 
 A026 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:134
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (in-place reload): Qt tab readiness/timeline-identity observation across in-place requestSongOpen reload; no Swift predicate reloads a Qt tab in place.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -403,7 +407,7 @@ Original expression:
 
 A027 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:135
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (in-place reload): Qt tab readiness/timeline-identity observation across in-place requestSongOpen reload; no Swift predicate reloads a Qt tab in place.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -411,7 +415,7 @@ Original expression:
 
 A028 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:136
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -419,7 +423,7 @@ Original expression:
 
 A029 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:137
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: Qt signal-emission count on eventListVisibilityChanged with no corresponding SessionChecks predicate; GAP. Verified: runEventListPlayheadChecks observes event-list rows/tint/follow-scroll, never reload signal silence; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -435,7 +439,7 @@ Original expression:
 
 A031 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:139
 Disposition: GAP
-Mapping/reason: Fixture-root byte snapshot or project-snapshot-root observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (porydawSnapshot sidecars): fixture-root byte snapshot observation; no Swift predicate snapshots the Qt fixture root or sidecar bytes.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -443,7 +447,7 @@ Original expression:
 
 A032 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:145
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
     }
 
@@ -455,7 +459,7 @@ Original expression:
 
 A033 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:149
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-tab readiness observation on the two-song Qt session; no Swift predicate observes Qt tab readiness.
 Source context since previous assertion:
         WorkspaceUi &workspace = *session->window->m_workspace;
         SongTab *const a = session->a;
@@ -465,15 +469,15 @@ Original expression:
 
 A034 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:150
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-tab readiness observation on the two-song Qt session; no Swift predicate observes Qt tab readiness.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(b->isReady())
 
 A035 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:151
-Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S188 in src/checks/editorqml/tst_ShellWindow.qml (test_d clicks songTabSelect_<id> with tryCompare selectedId and test_e re-selects the first tab by id, proving QML tab-selection switching); unproved: C++ WorkspaceUi pointer identity (selectedSongTab() == tab pointer) in the Qt workspace. [S188]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -481,7 +485,7 @@ Original expression:
 
 A036 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:154
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (in-place reload): Qt tab readiness/timeline-identity observation across in-place requestSongOpen reload; no Swift predicate reloads a Qt tab in place.
 Source context since previous assertion:
 
         workspace.requestSongOpen(b->name());
@@ -489,16 +493,16 @@ Original expression:
         QVERIFY(!b->isReady())
 
 A037 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:156
-Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S188 in src/checks/editorqml/tst_ShellWindow.qml (test_d clicks songTabSelect_<id> with tryCompare selectedId and test_e re-selects the first tab by id, proving QML tab-selection switching); unproved: C++ WorkspaceUi pointer identity (selectedSongTab() == tab pointer) in the Qt workspace. [S188]
 Source context since previous assertion:
         workspace.selectSongTab(a);
 Original expression:
         QCOMPARE(workspace.selectedSongTab(), a)
 
 A038 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:158
-Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S188 in src/checks/editorqml/tst_ShellWindow.qml (test_d clicks songTabSelect_<id> with tryCompare selectedId and test_e re-selects the first tab by id, proving QML tab-selection switching); unproved: C++ WorkspaceUi pointer identity (selectedSongTab() == tab pointer) in the Qt workspace. [S188]
 Source context since previous assertion:
         workspace.selectSongTab(b);
 Original expression:
@@ -506,7 +510,7 @@ Original expression:
 
 A039 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:159
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (in-place reload): Qt tab readiness/timeline-identity observation across in-place requestSongOpen reload; no Swift predicate reloads a Qt tab in place.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -514,7 +518,7 @@ Original expression:
 
 A040 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:161
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (in-place reload): waitForTabReady readiness gate after in-place reload; no Swift predicate gates Qt tab readiness.
 Source context since previous assertion:
 
 Original expression:
@@ -530,7 +534,7 @@ Original expression:
 
 A042 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:169
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
     }
 
@@ -541,8 +545,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A043 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:176
-Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S029 and S092 in src/checks/workspace/session_io.swift (DocumentSession adopts the requested song source; native service round-trips the accepted playable label, proving the label resolves); unproved: snapshot.songs() linear-search identity (find_if by label) over the Qt project snapshot. [S029][S092]
 Source context since previous assertion:
         WorkspaceUi &workspace = *session->window->m_workspace;
         const SongName name = session->b->name();
@@ -554,16 +558,16 @@ Original expression:
         QVERIFY(song != songs.cend())
 
 A044 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:177
-Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S091 in src/checks/workspace/session_io.swift (native service publishes the project-relative normalized bank identity, proving the voicegroup resolves); unproved: Qt SongTab voicegroupId() optional binding value. [S091]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(session->b->voicegroupId())
 
 A045 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:180
-Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S029 in src/checks/workspace/session_io.swift (DocumentSession open of the requested label succeeds, implying its MIDI source read); unproved: Qt SmfFile::readFile byte parsing of song->midPath. [S029]
 Source context since previous assertion:
         SmfFile stage;
         QString error;
@@ -572,7 +576,7 @@ Original expression:
 
 A046 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:186
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
         LoadedVoiceGroup bank = {};
         SongTab probe(name);
@@ -584,7 +588,7 @@ Original expression:
 
 A047 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:189
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
         probe.applyMidiStage(*song, std::move(stage),
                              workspace.projectState().snapshot.trackBudgetFor(*song));
@@ -593,7 +597,7 @@ Original expression:
 
 A048 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:190
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -601,7 +605,7 @@ Original expression:
 
 A049 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:191
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -609,7 +613,7 @@ Original expression:
 
 A050 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:192
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -617,7 +621,7 @@ Original expression:
 
 A051 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:193
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -625,7 +629,7 @@ Original expression:
 
 A052 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:200
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
 Source context since previous assertion:
         probe.applyBankView(LoadedBankView{
             .id = *session->b->voicegroupId(),
@@ -638,7 +642,7 @@ Original expression:
 
 A053 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:202
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
         probe.applyVoicegroupBound(*session->b->voicegroupId());
 Original expression:
@@ -646,7 +650,7 @@ Original expression:
 
 A054 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:204
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
 Source context since previous assertion:
         checks::support::bindEditActionsForTest(probe.view());
 Original expression:
@@ -654,7 +658,7 @@ Original expression:
 
 A055 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:210
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
     }
 
@@ -665,8 +669,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A056 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:217
-Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S029 and S092 in src/checks/workspace/session_io.swift (DocumentSession adopts the requested song source; native service round-trips the accepted playable label, proving the label resolves); unproved: snapshot.songs() linear-search identity (find_if by label) over the Qt project snapshot. [S029][S092]
 Source context since previous assertion:
         WorkspaceUi &workspace = *session->window->m_workspace;
         const SongName name = session->b->name();
@@ -678,16 +682,16 @@ Original expression:
         QVERIFY(song != songs.cend())
 
 A057 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:218
-Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S091 in src/checks/workspace/session_io.swift (native service publishes the project-relative normalized bank identity, proving the voicegroup resolves); unproved: Qt SongTab voicegroupId() optional binding value. [S091]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(session->b->voicegroupId())
 
 A058 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:222
-Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S029 in src/checks/workspace/session_io.swift (DocumentSession open of the requested label succeeds, implying its MIDI source read); unproved: Qt SmfFile::readFile byte parsing of song->midPath. [S029]
 Source context since previous assertion:
         QString error;
         SmfFile initial;
@@ -696,8 +700,8 @@ Original expression:
         QVERIFY(SmfFile::readFile(song->midPath, &initial, &error))
 
 A059 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:223
-Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S029 in src/checks/workspace/session_io.swift (DocumentSession open of the requested label succeeds, implying its MIDI source read); unproved: Qt SmfFile::readFile byte parsing of song->midPath. [S029]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -705,7 +709,7 @@ Original expression:
 
 A060 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:237
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
         const VoicegroupId identity = *session->b->voicegroupId();
         LoadedVoiceGroup bank = {};
@@ -725,7 +729,7 @@ Original expression:
 
 A061 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:250
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
         const MidiTimeline *bound = probe.timeline().get();
         SongView::ViewState state = probe.view().viewState();
@@ -744,7 +748,7 @@ Original expression:
 
 A062 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:251
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -752,7 +756,7 @@ Original expression:
 
 A063 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:252
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -760,7 +764,7 @@ Original expression:
 
 A064 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:253
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -768,7 +772,7 @@ Original expression:
 
 A065 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:255
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
         probe.applyMidiStage(*song, std::move(replacement), budget);
 Original expression:
@@ -776,7 +780,7 @@ Original expression:
 
 A066 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:256
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -784,7 +788,7 @@ Original expression:
 
 A067 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:257
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -792,7 +796,7 @@ Original expression:
 
 A068 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:258
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -800,7 +804,7 @@ Original expression:
 
 A069 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:260
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
         probe.applyVoicegroupBound(identity);
 Original expression:
@@ -808,7 +812,7 @@ Original expression:
 
 A070 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:261
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -816,7 +820,7 @@ Original expression:
 
 A071 | MainWindowRoutingLifecycleTest::stagedReload | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:262
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -824,7 +828,7 @@ Original expression:
 
 A072 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:268
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
     }
 
@@ -835,8 +839,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A073 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:275
-Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S029 and S092 in src/checks/workspace/session_io.swift (DocumentSession adopts the requested song source; native service round-trips the accepted playable label, proving the label resolves); unproved: snapshot.songs() linear-search identity (find_if by label) over the Qt project snapshot. [S029][S092]
 Source context since previous assertion:
         WorkspaceUi &workspace = *session->window->m_workspace;
         const SongName name = session->b->name();
@@ -848,16 +852,16 @@ Original expression:
         QVERIFY(song != songs.cend())
 
 A074 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:276
-Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S091 in src/checks/workspace/session_io.swift (native service publishes the project-relative normalized bank identity, proving the voicegroup resolves); unproved: Qt SongTab voicegroupId() optional binding value. [S091]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(session->b->voicegroupId())
 
 A075 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:279
-Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S029 in src/checks/workspace/session_io.swift (DocumentSession open of the requested label succeeds, implying its MIDI source read); unproved: Qt SmfFile::readFile byte parsing of song->midPath. [S029]
 Source context since previous assertion:
         SmfFile stage;
         QString error;
@@ -866,7 +870,7 @@ Original expression:
 
 A076 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:294
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
         const VoicegroupId identity = *session->b->voicegroupId();
         LoadedVoiceGroup initial;
@@ -887,7 +891,7 @@ Original expression:
 
 A077 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:305
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
         const MidiTimeline *timeline = probe.timeline().get();
         const SongView::ViewState state = probe.view().viewState();
@@ -904,7 +908,7 @@ Original expression:
 
 A078 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:306
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -912,7 +916,7 @@ Original expression:
 
 A079 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:307
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline (applyMidiStage/applyBankView/applyVoicegroupBound/beginMidiReload) observation; no Swift predicate executes the Qt staged binding pipeline.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -920,7 +924,7 @@ Original expression:
 
 A080 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:308
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -928,7 +932,7 @@ Original expression:
 
 A081 | MainWindowRoutingLifecycleTest::bankRebind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:309
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: GAP feature not yet ported: SongTab staged readiness pipeline readinessChanged signal observation; no Swift predicate observes Qt readinessChanged emission.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -936,7 +940,7 @@ Original expression:
 
 A082 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:315
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
     }
 
@@ -983,7 +987,7 @@ Original expression:
 
 A085 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:339
 Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (project switch/error recovery): selected-tab/tab-count retention across failed Qt project open; no Swift predicate retains Qt tabs across failed opens.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -991,15 +995,15 @@ Original expression:
 
 A086 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:340
 Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (project switch/error recovery): selected-tab/tab-count retention across failed Qt project open; no Swift predicate retains Qt tabs across failed opens.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(workspace.openTabCount(), count)
 
 A087 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:341
-Disposition: GAP
-Mapping/reason: Fixture-root byte snapshot or project-snapshot-root observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S027 in src/checks/workspace/session_io.swift (failed replacement open retains the worker prior project, proving failed-open retention); unproved: Qt snapshot.root() path identity (Swift retains source.label, never the Qt snapshot root). [S027]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1007,7 +1011,7 @@ Original expression:
 
 A088 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:342
 Disposition: GAP
-Mapping/reason: Fixture-root byte snapshot or project-snapshot-root observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (porydawSnapshot sidecars): fixture-root byte snapshot observation; no Swift predicate snapshots the Qt fixture root or sidecar bytes.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1015,15 +1019,15 @@ Original expression:
 
 A089 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:343
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (in-place reload): waitForTabReady readiness gate after in-place reload; no Swift predicate gates Qt tab readiness.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(waitForTabReady(workspace, old))
 
 A090 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:344
-Disposition: GAP
-Mapping/reason: Document label or track-count observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S027 in src/checks/workspace/session_io.swift (failed replacement open retains the worker prior project with source.label == mus_session_test); unproved: Qt SongTab document().label() QString identity and reload/teardown wiring (Swift observes the service source.label, not the Qt document label). [S027]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1031,7 +1035,7 @@ Original expression:
 
 A091 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:350
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
     }
 
@@ -1043,7 +1047,7 @@ Original expression:
 
 A092 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:361
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (project switch): waitForProjectReady gate after requestProjectOpenAt; no Swift predicate switches Qt projects.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         WorkspaceUi &workspace = *window.m_workspace;
@@ -1060,7 +1064,7 @@ Original expression:
 
 A093 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:362
 Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (project switch): tab-set emptied by Qt project switch; no Swift predicate switches Qt projects.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1068,7 +1072,7 @@ Original expression:
 
 A094 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:363
 Disposition: GAP
-Mapping/reason: Fixture-root byte snapshot or project-snapshot-root observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (porydawSnapshot sidecars): fixture-root byte snapshot observation; no Swift predicate snapshots the Qt fixture root or sidecar bytes.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1076,15 +1080,15 @@ Original expression:
 
 A095 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:364
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (project-level view-state settings): QSettings loadEditorViewState persistence observation; no Swift predicate persists Qt EditorViewState.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(loadEditorViewState(QSettings{}), state)
 
 A096 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:367
-Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S092 in src/checks/workspace/session_io.swift (native service round-trips the accepted playable song label); unproved: Qt SongName::create spelling validation for the fixture names (Swift proves service-level label round-trip, not the Qt value constructor). [S092]
 Source context since previous assertion:
         const auto aName = SongName::create(m_songA);
         const auto bName = SongName::create(m_songB);
@@ -1092,8 +1096,8 @@ Original expression:
         QVERIFY(aName)
 
 A097 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:368
-Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S092 in src/checks/workspace/session_io.swift (native service round-trips the accepted playable song label); unproved: Qt SongName::create spelling validation for the fixture names (Swift proves service-level label round-trip, not the Qt value constructor). [S092]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1101,7 +1105,7 @@ Original expression:
 
 A098 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:371
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (tab reopen): waitForTabReady readiness gate on the reopened Qt tab; no Swift predicate gates Qt tab readiness.
 Source context since previous assertion:
         workspace.requestSongOpen(*aName);
         SongTab *reopenedA = workspace.selectedSongTab();
@@ -1110,23 +1114,23 @@ Original expression:
 
 A099 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:372
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (project-level view-state settings): QSettings loadEditorViewState persistence observation; no Swift predicate persists Qt EditorViewState.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(reopenedA->view().editorViewState(), state)
 
 A100 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:373
-Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S065 and S066 in src/checks/workspace/session_save.swift (reopen reproduces settings-sensitive note-release timing; note and non-tempo metadata streams survive save/reopen, proving reopen preservation); unproved: serialized Qt SmfFile::write() byte equality (Swift compares state streams and timing, never Qt SMF bytes). [S065][S066]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(reopenedA->document().smf().write(), midiA)
 
 A101 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:374
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S061 and S079 in src/checks/workspace/session_save.swift (undo to the saved state is clean, proving undo restores the clean point); unproved: Qt undoStack()->count() integer equality across tab reopen (Swift proves dirty-flag restoration, never Qt undo-stack depth). [S061][S079]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1134,7 +1138,7 @@ Original expression:
 
 A102 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:377
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (tab reopen): waitForTabReady readiness gate on the reopened Qt tab; no Swift predicate gates Qt tab readiness.
 Source context since previous assertion:
         workspace.requestSongOpen(*bName, true);
         SongTab *reopenedB = workspace.selectedSongTab();
@@ -1143,23 +1147,23 @@ Original expression:
 
 A103 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:378
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (project-level view-state settings): QSettings loadEditorViewState persistence observation; no Swift predicate persists Qt EditorViewState.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(reopenedB->view().editorViewState(), state)
 
 A104 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:379
-Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S065 and S066 in src/checks/workspace/session_save.swift (reopen reproduces settings-sensitive note-release timing; note and non-tempo metadata streams survive save/reopen, proving reopen preservation); unproved: serialized Qt SmfFile::write() byte equality (Swift compares state streams and timing, never Qt SMF bytes). [S065][S066]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(reopenedB->document().smf().write(), midiB)
 
 A105 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:380
-Disposition: GAP
-Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S061 and S079 in src/checks/workspace/session_save.swift (undo to the saved state is clean, proving undo restores the clean point); unproved: Qt undoStack()->count() integer equality across tab reopen (Swift proves dirty-flag restoration, never Qt undo-stack depth). [S061][S079]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1194,7 +1198,7 @@ Original expression:
 
 A109 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:389
 Disposition: GAP
-Mapping/reason: Fixture-root byte snapshot or project-snapshot-root observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (porydawSnapshot sidecars): fixture-root byte snapshot observation; no Swift predicate snapshots the Qt fixture root or sidecar bytes.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1202,7 +1206,7 @@ Original expression:
 
 A110 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:390
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: GAP awaiting swift-project-store (project-level view-state settings): QSettings loadEditorViewState persistence observation; no Swift predicate persists Qt EditorViewState.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1210,7 +1214,7 @@ Original expression:
 
 A111 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:396
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
     }
 
@@ -1333,7 +1337,7 @@ Original expression:
 
 A122 | MainWindowRoutingLifecycleTest::mouseHintQuickDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:452
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
         dial->setValue(originalValue);
     }
@@ -1429,7 +1433,7 @@ Original expression:
 
 A130 | MainWindowRoutingLifecycleTest::mouseHintHeaderDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:499
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
     }
 
@@ -1572,7 +1576,7 @@ Original expression:
 
 A143 | MainWindowRoutingLifecycleTest::mouseHintSurvivesFocusChange | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:561
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
     }
 
@@ -1670,7 +1674,7 @@ Original expression:
 
 A154 | MainWindowRoutingLifecycleTest::mouseHintDiesWithItsTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:589
 Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Mapping/reason: GAP awaiting swift-project-store (multi-song open fixture): fixture-open precondition for the two-song Qt MainWindow session (and the two tabs being distinct); no Swift predicate opens a two-song Qt session.
 Source context since previous assertion:
     }
 
@@ -2283,66 +2287,66 @@ S098 | sessionLifetime | src/checks/workspace/session_io.swift:299
                            cppID: lifetimeID,
                            what: "explicit project service close owns worker shutdown")
 
-S099 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:89
+S099 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:118
     report.expect(session.bankSlots.count >= 4,
                   cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                   message: "published bank has slot views")
 
-S100 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:92
+S100 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:121
     report.expectEqual(BankSlotKind.editable, session.bankSlots[0].kind,
                        cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                        what: "slot 0 is editable square 1")
 
-S101 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:95
+S101 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:124
     report.expectEqual(BankSlotKind.none, session.bankSlots[3].kind,
                        cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                        what: "slot 3 is initially blank")
 
-S102 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:119
+S102 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:148
         report.expectEqual(true, session.bankDirty,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "bank edit dirties bank")
 
-S103 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:122
+S103 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:151
         report.expectEqual(scalarEditedSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "scalar edit changes the requested voice and preserves every other slot")
 
-S104 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:125
+S104 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:154
         report.expect(result.lease.bankToken != oldToken,
                       cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                       message: "applied bank edit mints a fresh lease")
 
-S105 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:128
+S105 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:157
         report.expectEqual(oldToken, oldLease.bankToken,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "superseded lease retains its bank token and stays valid")
 
-S106 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:131
+S106 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:160
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "bank edit publishes bank, dirty, and history exactly once")
 
-S107 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:142
+S107 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:171
         report.expectEqual(originalSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "undo restores the complete original bank view")
 
-S108 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:145
+S108 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:174
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "bank undo publishes bank, dirty, and history exactly once")
 
-S109 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:156
+S109 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:185
         report.expectEqual(scalarEditedSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "redo restores the scalar edit without changing other slots")
 
-S110 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:159
+S110 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:188
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
@@ -2429,39 +2433,39 @@ S126 | bankConflicts | src/checks/workspace/bank_edits.swift:201
                            cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
                            what: "unknown token triggers bankConflict")
 
-S127 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:191
+S127 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:220
         report.expectEqual(false, session.document.isDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "unified save marks the song clean")
 
-S128 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:194
+S128 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:223
         report.expectEqual(false, session.bankDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "unified save marks the bank clean")
 
-S129 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:197
+S129 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:226
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "unified bank save publishes bank, dirty, and history exactly once")
 
-S130 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:202
+S130 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:231
         report.expect(bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
                       cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                       message: "unified save changes persisted MIDI bytes")
 
-S131 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:205
+S131 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:234
         report.expect(bytes(at: unifiedBankPath) != bankBeforeUnifiedSave,
                       cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                       message: "unified save changes persisted bank bytes")
 
-S132 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:216
+S132 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:245
         report.expectEqual(expectedUnifiedFile, reopened.document.state.file,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "fresh reopen reads the unified song edit from disk")
 
-S133 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:219
+S133 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:248
         report.expectEqual(expectedUnifiedSlots, reopened.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "fresh reopen reads the unified bank edits and preserved slots from disk")
@@ -2735,24 +2739,26 @@ counterpart: the session_fixtures.swift/session_support.swift staging helpers
 nothing and are not inventoried. Predicates from related suites invoked by runProjectSessionSuite
 live in their own files and are likewise outside this inventory.
 
-S186 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:455
-    shell.close() at :454 then verify(waitForNative(function() { return tabs.pendingCloseId ===
-    firstId }, 5000), "the window close walk pauses at the dirty destination") at :455-457, preceded
+S186 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:521
+    shell.close() at :517 then verify(waitForNative(function() { return tabs.pendingCloseId ===
+    firstId }, 5000), "the window close walk pauses at the dirty destination") at :518-520, preceded
     by mouseClick(firstButton, ...) with tryCompare(tabs, "selectedId", firstId, 3000, "the
-    destination is active when the close-all walk begins") at :449-451; then
-    compare(tabs.tabCount, 2, "the dirty gate cannot silently close a tab") at :458.
+    destination is active when the close-all walk begins") at :512-514; then
+    compare(tabs.tabCount, 2, "the dirty gate cannot silently close a tab") at :521.
 
-S187 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:463
+S187 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:531
     var discard = findChild(shell, "songTabDiscard") with verify(discard && discard.visible, "the
-    close gate exposes Discard") at :461-462; mouseClick(discard, discard.width / 2,
-    discard.height / 2) at :463 then verify(waitForNative(function() { return
+    close gate exposes Discard") at :524-525; mouseClick(discard, discard.width / 2,
+    discard.height / 2) at :526 then verify(waitForNative(function() { return
     shell.shellPresenter.closeReady && tabs.tabCount === 0 && shell.sceneLoader.item === null },
-    5000), "Discard advances the remaining clean tab and detaches the scene") at :464-467;
-    compare(tabs.pendingCloseId, -1, "the close-all gate is fully resolved") at :468.
+    5000), "Discard advances the remaining clean tab and detaches the scene") at :527-530;
+    compare(tabs.pendingCloseId, -1, "the close-all gate is fully resolved") at :531.
 
-S188 | test_eTimeAndTracksMenuContainment (with test_d retarget rows) | src/checks/editorqml/tst_ShellWindow.qml:538
-    test_d :442-445 clicks songTabSelect_<secondId> with tryCompare(tabs, "selectedId", secondId,
-    3000) and :449-451 clicks songTabSelect_<firstId> with tryCompare(tabs, "selectedId", firstId,
-    3000); test_e :538-539 mouseClick(firstButton, ...) then tryCompare(shell.shellPresenter.session
-    .songTabs, "selectedId", firstId) and compare(findChild(tracksMenu, "shellAction_roll.solo_tracks")
-    .enabled, true, "Solo rebinds to the newly active song") at :540-542.
+S188 | test_eTimeAndTracksMenuContainment (with test_d retarget rows) | src/checks/editorqml/tst_ShellWindow.qml:602
+    test_d :476-479 clicks songTabSelect_<firstId> with tryCompare(tabs, "selectedId", firstId,
+    3000), :505-508 clicks songTabSelect_<secondId> with tryCompare(tabs, "selectedId", secondId,
+    3000), and :512-514 clicks songTabSelect_<firstId> with tryCompare(tabs, "selectedId", firstId,
+    3000, "the destination is active when the close-all walk begins"); test_e :601-602
+    mouseClick(firstButton, ...) then tryCompare(shell.shellPresenter.session.songTabs, "selectedId",
+    firstId) and compare(findChild(tracksMenu, "shellAction_roll.solo_tracks").enabled, true,
+    "the active song offers Solo") at :596-597.

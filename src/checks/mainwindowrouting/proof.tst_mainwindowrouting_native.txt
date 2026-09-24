@@ -4,7 +4,7 @@ Reference revision: 39652ca375fc033fb930ad13291f551940a73581
 Original: src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp
 Original SHA-256: 5cff3396fa2e9a6835a0b390cc988163cc2131ae382b898cbd1f14b2fc762d13
 Swift counterpart: src/checks/workspace/SessionChecks.swift
-Swift SHA-256: 699365d4e7c02d253c0ba487c22cabb17dd44f1809c8b09c1579ee76e7179e3a
+Swift SHA-256: 8a39e6257c5fdd3dfc4744b109a3341efbf9f2ebddaad157a93c81f517398dfb
 Additional Swift counterpart: src/checks/workspace/bank_edits.swift
 Additional Swift SHA-256: 4f94c92dec40ec6fb3754697a01105667eb1e9448ada18bd5b40bcb3786be94d
 Additional Swift counterpart: src/checks/workspace/bank_history_probes.swift
@@ -22,9 +22,13 @@ Additional Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f886ff36eec
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: e6d919d7052150913adb2b7aea97b9f5a5c3697e259177def2c011224ba09a3f
+Additional Swift SHA-256: 1736e3944298a15c5a69e9a7c8aa96f51944f5109acca86a5d6ecaf230af8003
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 8bfc62d0ee7a984bcf7b8c03831d2922ce1587f37a2a88ea1cb8a970ce13ae26
+Additional Swift SHA-256: 8ba1fbe0ec80dffe8b68f66b65908d4f2a1a74a26deeb56f647d1641a5e683db
+Additional Swift counterpart: src/checks/editorqml/tst_ShellTabs.qml
+Additional Swift SHA-256: d5875c0c5d83b79f1ab4f0bda4d25127de7d5a71e3af4fab57fd3f3e63c5055f
+Additional Swift counterpart: src/checks/editorqml/tst_ShellOpenFailure.qml
+Additional Swift SHA-256: aec647538487e81a7145bd2a3d234b6eb5ab3887ceadb4940cee1935b41e1d09
 
 Status and evidence
 Four test methods, every one gated on the Cocoa WindowSystem backend (QSKIP otherwise): native menu/window shortcut routing, foreign-window key isolation with Insert Time popup protection, bound-view teardown unbinding, and the failed-project modal dialog preserving the live tab.
@@ -38,30 +42,41 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native harness obligations;
 it does not establish coverage of a converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 28 / PARTIAL 2 / GAP 14 / NATIVE 36. A002 and A004-A030 are
+Tally: MATCHED 33 / PARTIAL 0 / GAP 9 / NATIVE 38. A002 and A004-A030 are
 MATCHED to the Qt Quick Test shellwindow lane
 (src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership
 with openTwoSongShell, plus the ShellQmlBootstrap clipboard helpers in
 src/checks/editorqml/ShellQmlTests.swift), cited inline without new S
 identifiers because that lane is not the paired SessionChecks counterpart.
-The remaining MATCHED/PARTIAL sites keep the paired SessionChecks predicates
-named in their mappings.
+A032, A037, and A046 are likewise MATCHED to that lane through
+test_cForeignWindowKeepsSoloLocal (openTwoSongShell, selectDrawnVelocityNote,
+and the foreign-window Solo isolation probes), A069 is MATCHED to the
+shell-tabs lane through test_gSelectedCleanCloseRetargetsSurvivor, and A074
+is MATCHED to the shell-open-failure lane through
+test_liveTabCleanBeforeFailedProjectOpen, all cited inline without new S
+identifiers. The remaining MATCHED sites keep the paired SessionChecks
+predicates named in their mappings.
 The Swift SHA-256 values pin the worktree content inspected here, which is currently
 modified relative to its HEAD revision.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-The swiftcore lane executes the paired Swift counterpart only. A002 and
-A004-A030 execute in the Qt Quick Test shellwindow lane instead
-(deno task verify:shell --filter shellwindow); this bookkeeping pass restates
-no result for that lane. The Cocoa-gated, native-window, and harness-timing
+Command: deno task verify --filter swiftcore --verbose; deno task verify:shell --filter shellwindow --filter shell-tabs --filter shell-open-failure --verbose
+Result: PASS on both runs cited here: the swiftcore lane PASS per the frozen-check run, and the shellwindow + shell-tabs + shell-open-failure lanes PASS per the controller integrated run. Source hashes pin the tree inspected here.
+The swiftcore lane executes the paired Swift counterpart only. A002, A004-A032, A037, and A046 execute in the Qt Quick Test shellwindow lane instead
+(deno task verify:shell --filter shellwindow), A069 in the shell-tabs lane
+(deno task verify:shell --filter shell-tabs), and A074 in the shell-open-failure lane
+(deno task verify:shell --filter shell-open-failure). The Cocoa-gated, native-window, and harness-timing
 observations inventoried here execute only in the native Qt check harness.
 
 Execution and ownership
-A002 and A004-A030 execute in the Qt Quick Test shellwindow lane
-(src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership,
-entry shellwindow in src/checks/editorqml/ShellQmlTests.swift). The rest of this
+A002, A004-A032, A037, and A046 execute in the Qt Quick Test shellwindow lane
+(src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership
+and test_cForeignWindowKeepsSoloLocal, entry shellwindow in
+src/checks/editorqml/ShellQmlTests.swift); A069 executes in the shell-tabs lane
+(src/checks/editorqml/tst_ShellTabs.qml test_gSelectedCleanCloseRetargetsSurvivor,
+entry shell-tabs); A074 executes in the shell-open-failure lane
+(src/checks/editorqml/tst_ShellOpenFailure.qml test_liveTabCleanBeforeFailedProjectOpen,
+entry shell-open-failure). The rest of this
 section describes the paired Swift checks.
 The paired Swift checks execute under runProjectSessionSuite and
 runBankHistorySuite in src/checks/workspace/SessionChecks.swift; the
@@ -89,7 +104,7 @@ Related-but-outside suites invoked by the same file — runEditorDrawerChecks
 (EditorDrawerChecks.swift), runTrackHeadersInputChecks
 (TrackHeadersInputChecks.swift), PlaybackChecks, and the camera/page suites —
 carry their own predicates in their own files and are not inventoried here.
-Of these, the solo publication (S050–S051) and dirty-tracking (S030) predicates are the ones cited as PARTIAL mappings below.
+Of these, the solo publication (S050–S051) predicates are additionally cited as supporting predicates in the MATCHED A046 mapping below.
 
 Fixture, sequence and row constraints
 Two-song MainWindow session opened per test after the Cocoa platform gate; no QTest _data rows. Loops expand single sites: per-track note-search loops seeding the copy/solo probes. waitUntil activation gates order MainWindow and foreign-window activity; the foreign-window case sequences clipboard, key, solo, popup, and Escape phases on one session; modal dismissal is driven through the active modal widget with a queued reject.
@@ -427,8 +442,8 @@ Original expression:
             QSKIP("requires the Cocoa WindowSystem backend")
 
 A032 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:137
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml openTwoSongShell (lines 104-147) opens mus_route101 then mus_littleroot_test from the same staged two-song fixture, observing songOpen with tabCount 1 then 2 and Littleroot as the selected second tab; test_cForeignWindowKeepsSoloLocal executes it (line 414) as the two-song session precondition for this case. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
         const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
 Original expression:
@@ -476,8 +491,8 @@ Original expression:
         QVERIFY(copy && solo)
 
 A037 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:168
-Disposition: GAP
-Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml selectDrawnVelocityNote (lines 169-183) clicks the drawn velocity-node hit target and tryCompares selectedCount 1, establishing one eligible selected note; test_cForeignWindowKeepsSoloLocal executes it (line 421) as the enabled-action seed for this case. Selection-model identity is not claimed.
 Source context since previous assertion:
         SongView &view = session->b->view();
         // Copy has no standalone arm: it is only enabled with an eligible
@@ -593,8 +608,8 @@ Original expression:
         QCOMPARE(soloTriggered.count(), 0)
 
 A046 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:214
-Disposition: PARTIAL
-Mapping/reason: Related predicates S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Disposition: MATCHED
+Mapping/reason: S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing) plus src/checks/editorqml/tst_ShellWindow.qml test_cForeignWindowKeepsSoloLocal (lines 413-448): a real foreign Window owns focus (foreign active, shell inactive, lines 431-438) while S types s into its own field (lines 439-440), firstTrack.soloChecked stays false (lines 441-442), and soloActivatedSpy.count stays 0 (lines 443-444) — the foreign-window S never reaches the main-window Solo shortcut.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -602,7 +617,7 @@ Original expression:
 
 A047 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:215
 Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Exact SMF-byte equality has no exposed byte surface in the shell: no shell predicate reads document SMF bytes, and dirty/summary observations would be weaker. GAP.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -610,7 +625,7 @@ Original expression:
 
 A048 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:216
 Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Exact SMF-byte equality has no exposed byte surface in the shell: no shell predicate reads document SMF bytes, and dirty/summary observations would be weaker. GAP.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -698,7 +713,7 @@ Original expression:
 
 A057 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:246
 Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Exact SMF-byte equality has no exposed byte surface in the shell: no shell predicate reads document SMF bytes, and dirty/summary observations would be weaker. GAP.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -706,7 +721,7 @@ Original expression:
 
 A058 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:247
 Disposition: GAP
-Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Exact SMF-byte equality has no exposed byte surface in the shell: no shell predicate reads document SMF bytes, and dirty/summary observations would be weaker. GAP.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -730,8 +745,8 @@ Original expression:
             QSKIP("requires the Cocoa WindowSystem backend")
 
 A060 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:260
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: NATIVE
+Mapping/reason: Setup open for the native bound-view teardown sequence: the tab-hide cancels the prompt while the closing view is still bound and the destructor unbind follows in the same synchronous stack. The teardown delivery this open feeds is native Qt action retargeting no presenter-level Swift check can establish.
 Source context since previous assertion:
         const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
 Original expression:
@@ -813,8 +828,8 @@ Original expression:
         QCOMPARE(soloTriggered.count(), 0)
 
 A069 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:285
-Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellTabs.qml test_gSelectedCleanCloseRetargetsSurvivor (lines 796-825) closes the selected clean tab and observes tabCount 1 (line 804) with selectedId retargeted to the survivor (line 805) and pageOf(closingId) null (lines 806-807), so the closed tab left the set and its page is destroyed; the survivor page is presented (lines 808-813) and S on its roll drives soloChecked true (lines 819-824), so the survivor is the only target and stays actionable. No QWidget EditActions identity is claimed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -852,16 +867,16 @@ Original expression:
             QSKIP("requires the Cocoa WindowSystem backend")
 
 A073 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:298
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: NATIVE
+Mapping/reason: Setup open for the native failed-project modal delivery case: the Cocoa activeModalWidget dismissal is driven with a queued reject while the live tab must stay interactive. The modal delivery this open feeds is a native-harness obligation no presenter-level Swift check can establish.
 Source context since previous assertion:
         const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
 Original expression:
         QVERIFY(session.has_value())
 
 A074 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:303
-Disposition: PARTIAL
-Mapping/reason: Related predicates S030, S057, S060, S061, S062, S063 in src/checks/workspace/session_io.swift and src/checks/workspace/session_save.swift (document dirty tracking across open/save/edit/undo/redo); unproved: Qt undo-stack and reload/teardown dirtiness wiring in this test.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellOpenFailure.qml test_liveTabCleanBeforeFailedProjectOpen (lines 137-155) opens the two live tabs and compares session.songTabs.selectedPage.dirty false (lines 154-155): the live selected tab is clean before the project-open failure. Qt undo-stack and reload dirtiness wiring is not claimed.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongTab *old = session->b;
@@ -892,7 +907,7 @@ Original expression:
 
 A076 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:318
 Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Parity divergence awaiting swift-project-store: C++ failed project open preserves live tabs; Swift closes tabs (SongTabsController.startCloseAll) before replaceProject can fail; GAP.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -900,7 +915,7 @@ Original expression:
 
 A077 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:319
 Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Parity divergence awaiting swift-project-store: C++ failed project open preserves live tabs; Swift closes tabs (SongTabsController.startCloseAll) before replaceProject can fail; GAP.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -908,7 +923,7 @@ Original expression:
 
 A078 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:320
 Disposition: GAP
-Mapping/reason: Fixture-root byte snapshot or project-snapshot-root observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Project root is private and unexposed: no Swift surface publishes the workspace project-snapshot root, so projectState().snapshot.root() has no shell counterpart; GAP.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -916,7 +931,7 @@ Original expression:
 
 A079 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:321
 Disposition: GAP
-Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Parity divergence awaiting swift-project-store: C++ failed project open preserves live tabs; Swift closes tabs (SongTabsController.startCloseAll) before replaceProject can fail; GAP.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -924,7 +939,7 @@ Original expression:
 
 A080 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:322
 Disposition: GAP
-Mapping/reason: Document label or track-count observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Parity divergence awaiting swift-project-store: C++ failed project open preserves live tabs; Swift closes tabs (SongTabsController.startCloseAll) before replaceProject can fail; GAP.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:

@@ -201,6 +201,15 @@ private func clipboardTrackSelectionChecks(_ report: CheckReport, session: Docum
     report.expect(changes.count == 1 && changes[0].contains(.selection)
                   && changes[0].contains(.document), cppID: remapID,
                   message: "deleted-primary remap publishes one coalesced selection and document change")
+    document.deleteTrack(4)
+    document.deleteTrack(3)
+    document.deleteTrack(2)
+    changes.removeAll()
+    document.deleteTrack(1)
+    report.expectEqual(0, session.selectedTrack, cppID: remapID,
+                       what: "A093 deleting every track above the fallback clamps the primary to track zero")
+    report.expectEqual(Set([0]), session.selectedTracks, cppID: remapID,
+                       what: "A094 deleting every track above the fallback leaves the scope on track zero")
 }
 
 @MainActor
