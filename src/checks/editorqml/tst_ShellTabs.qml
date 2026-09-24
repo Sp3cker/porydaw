@@ -104,6 +104,9 @@ TestCase {
         seedDrawerPrefs()
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
+        var toolbar = findChild(shell, "transportToolbar")
+        verify(toolbar !== null && toolbar.height > 0, "mounted transport has a measured height")
+        shell.height += toolbar.height
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         var session = shell.shellPresenter.session

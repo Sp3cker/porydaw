@@ -17,6 +17,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runTypographyLayoutChecks(report)
     mouseHintOwnershipChecks(report)
 
+    runTransportBarChecks(report)
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail("project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
                     "missing --swiftcore fixture root")

@@ -42,6 +42,7 @@ ApplicationWindow {
         source: "qrc:/fonts/AtkinsonHyperlegibleNext-SemiBold.ttf"
     }
     FontLoader {
+        id: monoFont
         source: "qrc:/fonts/AtkinsonHyperlegibleMono-Regular.ttf"
     }
     FontMetrics {
@@ -73,6 +74,7 @@ ApplicationWindow {
             Qt.application.organization = "sp3cker"
             Qt.application.domain = ""
         }
+        transportBar.restoreOutputVolume()
         appearanceStore.active = true
     }
 
@@ -376,6 +378,20 @@ ApplicationWindow {
         font: root.font
         color: shell.session.palette.windowText
         horizontalAlignment: Text.AlignHCenter
+    }
+    header: TransportBar {
+        id: transportBar
+        width: root.width
+        songAvailable: shell.session.songOpen
+        baseFontPx: Math.max(1, Math.round(baseFontInfo.pixelSize))
+        presenter: shell.session.transportBarPresenter()
+        colors: root.colors
+        toolbarFont: Qt.font({ family: root.font.family, pixelSize: baseFontPx,
+                               hintingPreference: Font.PreferNoHinting,
+                               features: { "tnum": 1 } })
+        clockFont: Qt.font({ family: monoFont.name, pixelSize: baseFontPx + 2,
+                             hintingPreference: Font.PreferNoHinting,
+                             features: { "tnum": 1 } })
     }
     footer: Rectangle {
         implicitHeight: Math.ceil(bodyMetrics.height * 1.5)
