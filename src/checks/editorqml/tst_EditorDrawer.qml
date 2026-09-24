@@ -1823,6 +1823,116 @@ TestCase {
         tryCompare(text, "text", instructions, 1000, "re-entry restores node instructions")
     }
 
+    // The production hover through real input: a node move shows the value
+    // label and rings exactly its node, a repeat move publishes nothing new,
+    // a background move reads the held value with no ring, leaving clears,
+    // and a menu dismissal recovers through the next pointer motion.
+    function test_productionAutomationHoverThroughInput() {
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+        testCase.mountProductionAutomation(bootstrap.preferencesUrl("production-automation-hover"))
+        verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
+        var model = testCase.automationModel()
+        var page = testCase.automationPageItem()
+        var label = findChild(page, "automationHoverLabel")
+        verify(label, "the page composed its hover label")
+        var nodes = testCase.automationLaneNodes()
+        var written = testCase.automationWrittenNodeIndex()
+        verify(written >= 0, "the written lane draws a written node")
+        var point = testCase.automationNodePoint(nodes[written])
+        verify(point, "the written node has a drawn hit target")
+        var input = testCase.automationPlotInput()
+        var revision = bootstrap.automationDocumentRevision()
+        var builds = bootstrap.automationHoverBuilds()
+        mouseMove(input, point.x, point.y)
+        tryVerify(function() { return model.hoverVisible === true }, 2000,
+                  "the node move published its hover")
+        tryCompare(label, "visible", true)
+        verify(label.text.length > 0, "the node hover names its value ('" + label.text + "')")
+        verify(model.hoverText === label.text, "the drawn label shows the published hover text")
+        compare(bootstrap.automationHoverBuilds() > builds, true,
+                "the node move published one hover")
+        compare(bootstrap.automationInteractionActive(), false,
+                "a hover is not the page's interaction")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "hovering a node writes nothing")
+        var ringed = 0
+        var laneNodes = testCase.automationLaneNodes()
+        for (var i = 0; i < laneNodes.length; ++i) {
+            if (laneNodes[i].model.hovered === true)
+                ++ringed
+        }
+        compare(ringed, 1, "exactly the hovered node carries the ring")
+        var nodeText = label.text
+        builds = bootstrap.automationHoverBuilds()
+        mouseMove(input, point.x, point.y)
+        wait(100)
+        compare(bootstrap.automationHoverBuilds(), builds,
+                "a repeated hover at the same point publishes nothing new")
+        var free = testCase.automationFreePoint()
+        verify(free, "the lane leaves a pointer row clear of every drawn node")
+        mouseMove(input, free.x, free.y)
+        tryVerify(function() { return model.hoverVisible === true
+                                       && model.hoverText !== nodeText }, 2000,
+                  "the background move reads the held value ('" + model.hoverText + "')")
+        verify(Math.abs(model.hoverTick - nodes[written].model.tick) > 0.5,
+               "the background hover sits between nodes, not on one")
+        ringed = 0
+        laneNodes = testCase.automationLaneNodes()
+        for (var j = 0; j < laneNodes.length; ++j) {
+            if (laneNodes[j].model.hovered === true)
+                ++ringed
+        }
+        compare(ringed, 0, "a background hover rings no node")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "hovering the background writes nothing")
+        var backgroundGrab = grabImage(testCase.surface)
+        var idleRegion = testCase.regionOf(backgroundGrab, testCase.surface, input)
+        var scaleX = (idleRegion.x1 - idleRegion.x0 + 1) / input.width
+        var scaleY = (idleRegion.y1 - idleRegion.y0 + 1) / input.height
+        var gutter = testCase.automationGutter()
+        mouseMove(gutter, gutter.width / 2, gutter.height / 2)
+        tryVerify(function() { return model.hoverVisible === false }, 2000,
+                  "leaving the plot clears the hover")
+        compare(model.hoverText, "", "leaving the plot clears the hover text")
+        ringed = 0
+        laneNodes = testCase.automationLaneNodes()
+        for (var k = 0; k < laneNodes.length; ++k) {
+            if (laneNodes[k].model.hovered === true)
+                ++ringed
+        }
+        compare(ringed, 0, "leaving the plot unrings every node")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "leaving the plot writes nothing")
+        mouseMove(input, point.x, point.y)
+        tryVerify(function() { return model.hoverVisible === true }, 2000,
+                  "a move after a leave revives the hover")
+        var hovered = grabImage(testCase.surface)
+        var changed = false
+        for (var dx = -8; dx <= 8; dx += 4) {
+            for (var dy = -8; dy <= 8; dy += 4) {
+                var sx = Math.min(backgroundGrab.width - 1, Math.max(0,
+                    Math.round(idleRegion.x0 + (point.x + dx) * scaleX)))
+                var sy = Math.min(backgroundGrab.height - 1, Math.max(0,
+                    Math.round(idleRegion.y0 + (point.y + dy) * scaleY)))
+                if (hovered.red(sx, sy) !== backgroundGrab.red(sx, sy)
+                        || hovered.green(sx, sy) !== backgroundGrab.green(sx, sy)
+                        || hovered.blue(sx, sy) !== backgroundGrab.blue(sx, sy)) {
+                    changed = true
+                }
+            }
+        }
+        verify(changed, "the node hover paints over the background hover")
+        mouseClick(input, point.x, point.y, Qt.RightButton)
+        tryVerify(function() { return bootstrap.automationMenuOpen() === true }, 2000,
+                  "the right click opened the node menu")
+        keyClick(Qt.Key_Escape)
+        tryVerify(function() { return bootstrap.automationMenuOpen() === false }, 2000,
+                  "dismissing the menu closes it")
+        mouseMove(input, point.x, point.y)
+        tryVerify(function() { return model.hoverVisible === true }, 2000,
+                  "pointer motion after a dismissal recovers the hover")
+    }
+
     /// Renders one reference pane and records its metadata. The observed facts
     /// must be the requested profile's, so a DPR or font mismatch fails here
     /// rather than in a reviewer's eye.

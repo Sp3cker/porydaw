@@ -137,3 +137,155 @@ func drawerAutomationRowStackAndSelectionIndicators(_ report: CheckReport, suite
     report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
                        what: "unpinning drops the ghost label")
 }
+
+let drawerAutomationPaintingModelID = "swiftcore/AutomationPage::presentationPaintingModel"
+
+@MainActor
+func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: DocumentSession,
+                                              service: ProjectService) {
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                    volume: [(0, 127), (96, 64)], pan: [(24, 64), (120, 40)],
+                                    tempo: [(0, 500_000), (48, 400_000)])
+    let page = fixture.page
+    let catalog = AutomationCatalog.parameters(track: 0)
+    report.expectEqual(AutomationCatalog.count, page.tabCount, cppID: drawerAutomationPaintingModelID,
+                       what: "the selector publishes one tab per catalog parameter")
+    report.expectEqual(catalog.count, page.publishedTabs.count, cppID: drawerAutomationPaintingModelID,
+                       what: "every catalog parameter draws a selector tab")
+    report.expectEqual(true, page.publishedTabs.last?.tempo ?? false, cppID: drawerAutomationPaintingModelID,
+                       what: "the Tempo row closes the selector")
+    report.expectEqual(catalog.map(AutomationCatalog.tabLabel),
+                       page.publishedTabs.map(\.label), cppID: drawerAutomationPaintingModelID,
+                       what: "each tab carries its catalog label")
+    report.expectEqual(2, page.publishedTabs[page.catalogIndex(of: fixture.volumeLane)].eventCount,
+                       cppID: drawerAutomationPaintingModelID,
+                       what: "a tab counts its lane's written events")
+    report.expectEqual(0, page.publishedTabs[page.catalogIndex(of: fixture.modulationLane)].eventCount,
+                       cppID: drawerAutomationPaintingModelID,
+                       what: "a lane the document never wrote counts no event")
+    let before = fixture.snapshot
+    let firstActive = page.activeParameterIndex
+    for parameter in catalog {
+        guard let index = AutomationCatalog.index(of: parameter, track: 0) else {
+            report.fail(drawerAutomationPaintingModelID, "catalog parameter has no index")
+            return
+        }
+        let accepted = page.activateParameter(index: index)
+        report.expect(accepted || index == firstActive, cppID: drawerAutomationPaintingModelID,
+                      message: "activating a catalog row is accepted unless already active")
+        report.expectEqual(parameter, page.activeParameter, cppID: drawerAutomationPaintingModelID,
+                           what: "the activated row becomes active")
+    }
+    report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationPaintingModelID,
+                       what: "switching every parameter mutates nothing")
+    fixture.activate(fixture.volumeLane)
+    report.expectEqual(fixture.projection(fixture.volumeLane).points.map(\.x),
+                       page.projection?.points.map(\.x) ?? [], cppID: drawerAutomationPaintingModelID,
+                       what: "the active projection is the switched parameter's")
+    report.expectEqual(2, page.nodeCount, cppID: drawerAutomationPaintingModelID,
+                       what: "the active lane draws one marker per written event")
+    report.expect(page.publishedNodes.allSatisfy { !$0.projected },
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "a fully written lane shows no synthetic nodes")
+    report.expect(!page.publishedCurveRuns.isEmpty, cppID: drawerAutomationPaintingModelID,
+                  message: "a lane with events draws its curve")
+    report.expect(page.publishedCurveRuns.allSatisfy { $0.primitiveName == "automationCurve" },
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "an unpinned lane draws no ghost curve")
+    fixture.activate(fixture.modulationLane)
+    report.expectEqual(0, page.nodeCount, cppID: drawerAutomationPaintingModelID,
+                       what: "an empty lane draws no markers")
+    report.expect(page.publishedCurveRuns.isEmpty, cppID: drawerAutomationPaintingModelID,
+                  message: "an empty lane draws no curve")
+    fixture.activate(fixture.volumeLane)
+    let tempoIndex = AutomationCatalog.index(of: .tempo, track: 0) ?? 0
+    let activeRuns = page.publishedCurveRuns.count
+    report.expect(page.toggleGhostParameter(index: tempoIndex), cppID: drawerAutomationPaintingModelID,
+                  message: "Tempo pins as a ghost under the active lane")
+    report.expectEqual(["Tempo (BPM) · 2 Events"], page.ghostLabels, cppID: drawerAutomationPaintingModelID,
+                       what: "the ghost label names the curve and its event count")
+    report.expect(page.publishedCurveRuns.count > activeRuns, cppID: drawerAutomationPaintingModelID,
+                  message: "pinning a ghost adds its curve under the active lane")
+    report.expect(page.publishedCurveRuns.last?.primitiveName == "automationCurve",
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "the active lane keeps the top curve run")
+    report.expect(page.publishedCurveRuns.dropLast(activeRuns)
+        .allSatisfy { $0.primitiveName == "automationGhostCurve" },
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "every earlier run is the pinned ghost's curve")
+    report.expect(page.publishedCurveRuns.suffix(activeRuns)
+        .allSatisfy { $0.primitiveName == "automationCurve" },
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "the active tail keeps its own runs on top")
+    report.expect(page.toggleGhostParameter(index: tempoIndex), cppID: drawerAutomationPaintingModelID,
+                  message: "the ghost unpins")
+    report.expectEqual(activeRuns, page.publishedCurveRuns.count, cppID: drawerAutomationPaintingModelID,
+                       what: "unpinning drops the ghost curve")
+    let tempoProjection = fixture.makeProjection(.tempo)
+    let volumeProjection = fixture.makeProjection(fixture.volumeLane)
+    report.expectEqual(volumeProjection.points.first?.x ?? -1, tempoProjection.points.first?.x ?? -2,
+                       cppID: drawerAutomationPaintingModelID,
+                       what: "Tempo shares the active lane's plot origin")
+    report.expectEqual(2, tempoProjection.eventCount, cppID: drawerAutomationPaintingModelID,
+                       what: "Tempo keeps its own event count on the shared body")
+    fixture.activate(fixture.panLane)
+    let shortY = page.projection?.points.first(where: { $0.tick == 24 })?.y ?? -1
+    let shortGrid = page.gridLines.count > 0 ? (0..<page.gridLines.count).map { page.gridLines[$0].x } : []
+    report.expect(!shortGrid.isEmpty, cppID: drawerAutomationPaintingModelID,
+                  message: "the plot draws its time grid")
+    page.configureBody(width: 480, height: 240, gutter: 0, devicePixelRatio: 1,
+                       baseFontPx: 13, dragDistance: 10)
+    report.expect(page.projection?.points.first(where: { $0.tick == 24 })?.y != shortY,
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "drawer growth moves the value axis")
+    let tallGrid = (0..<page.gridLines.count).map { page.gridLines[$0].x }
+    report.expectEqual(shortGrid, tallGrid, cppID: drawerAutomationPaintingModelID,
+                       what: "drawer growth keeps every grid line's horizontal center")
+    report.expectEqual(3, page.valueLines.count, cppID: drawerAutomationPaintingModelID,
+                       what: "the centered lane keeps its three value rules")
+    report.expectEqual(["c_v+63", "c_v-64", "c_v+0"],
+                       (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText },
+                       cppID: drawerAutomationPaintingModelID,
+                       what: "the value axis labels the centered lane's extremes and neutral")
+    let labelTop = (0..<page.valueLabels.count).map { page.valueLabels[$0].labelRect["y"] as? Double ?? -1 }
+    report.expect(labelTop[0] < labelTop[2] && labelTop[2] < labelTop[1],
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "maximum, neutral and minimum stack top to bottom without overlap")
+    let labelsBefore = (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText }
+    if let probe = fixture.projection(fixture.panLane).points.first {
+        _ = page.pointerMove(x: probe.x, y: probe.y, buttons: 0)
+        report.expectEqual(labelsBefore,
+                           (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText },
+                           cppID: drawerAutomationPaintingModelID,
+                           what: "a hover pass preserves the scale labels")
+        report.expectEqual(3, page.valueLines.count, cppID: drawerAutomationPaintingModelID,
+                           what: "a hover pass appends no duplicate value rules")
+        page.pointerLeave()
+    } else {
+        report.fail(drawerAutomationPaintingModelID, "the pan lane projected no hover probe")
+    }
+    fixture.activate(.tempo)
+    if let node = page.projection?.points.first(where: { $0.tick == 48 }) {
+        let revision = fixture.snapshot
+        _ = page.pointerMove(x: node.x, y: node.y, buttons: 0)
+        report.expect(page.hoverVisible, cppID: drawerAutomationPaintingModelID,
+                      message: "hovering a tempo node shows its readout")
+        report.expectEqual(page.hover?.text ?? "", page.hoverText, cppID: drawerAutomationPaintingModelID,
+                           what: "the readout text is the hovered value's own text")
+        report.expect(!page.hoverText.isEmpty, cppID: drawerAutomationPaintingModelID,
+                      message: "the tempo hover names its value")
+        let rect = page.hoverLabelRect
+        let inPlot = (rect["x"] as? Double ?? -1) >= 0 && (rect["y"] as? Double ?? -1) >= 0
+            && ((rect["x"] as? Double ?? 0) + (rect["width"] as? Double ?? 0)) <= page.plotWidth + 1
+            && ((rect["y"] as? Double ?? 0) + (rect["height"] as? Double ?? 0)) <= page.plotHeight + 1
+        report.expect(inPlot, cppID: drawerAutomationPaintingModelID,
+                      message: "the hover label stays inside the plot")
+        report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationPaintingModelID,
+                           what: "hovering a tempo node writes nothing")
+        page.pointerLeave()
+        report.expect(!page.hoverVisible, cppID: drawerAutomationPaintingModelID,
+                      message: "leaving the plot clears the tempo hover")
+    } else {
+        report.fail(drawerAutomationPaintingModelID, "the tempo lane projected no node at tick 48")
+    }
+}

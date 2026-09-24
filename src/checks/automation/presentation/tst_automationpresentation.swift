@@ -79,3 +79,47 @@ func drawerAutomationParameterSwitchAndGhosts(_ report: CheckReport, suite: Docu
     report.expectEqual("", fixture.page.plotMessage, cppID: drawerAutomationSwitchID,
                        what: "a selected track presents again")
 }
+
+let drawerAutomationCursorKindID = "swiftcore/AutomationPage::pencilCursorKind"
+
+@MainActor
+func drawerAutomationPencilCursorKind(_ report: CheckReport, suite: DocumentSession,
+                                     service: ProjectService) {
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                    pan: [(24, 64), (120, 40)])
+    fixture.activate(fixture.panLane)
+    let page = fixture.page
+    report.expectEqual(AutomationCursorKind.arrow.rawValue, page.cursorKind,
+                       cppID: drawerAutomationCursorKindID, what: "the plot starts with the arrow")
+    page.isPencilMode = true
+    let pressX = fixture.x(72)
+    let pressY = fixture.y(fixture.panLane, 64)
+    let pencilBefore = fixture.snapshot
+    _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: AutomationQtButton.left)
+    _ = page.pointerRelease(x: pressX, y: pressY, button: AutomationQtButton.left)
+    report.expectEqual(AutomationCursorKind.pencil.rawValue, page.cursorKind,
+                       cppID: drawerAutomationCursorKindID,
+                       what: "a pencil release arms the pencil cursor")
+    report.expectEqual(pencilBefore.revision + 1, fixture.document.revision,
+                       cppID: drawerAutomationCursorKindID, what: "the pencil stroke is one revision")
+    page.isPencilMode = false
+    page.cancelSectionInteraction()
+    if let node = fixture.projection(fixture.panLane).points.first(where: { $0.tick == 24 }) {
+        _ = page.pointerPress(x: node.x, y: node.y, surface: 1,
+                              button: AutomationQtButton.left, modifiers: AutomationQtModifier.shift)
+        _ = page.pointerMove(x: node.x + 30, y: node.y, buttons: AutomationQtButton.left,
+                             modifiers: AutomationQtModifier.shift)
+        _ = page.pointerMove(x: node.x + 34, y: node.y, buttons: AutomationQtButton.left,
+                             modifiers: AutomationQtModifier.shift)
+        report.expectEqual(AutomationCursorKind.sizeHorizontal.rawValue, page.cursorKind,
+                           cppID: drawerAutomationCursorKindID,
+                           what: "a Shift node drag locks the time axis")
+        _ = page.pointerRelease(x: node.x + 34, y: node.y, button: AutomationQtButton.left,
+                                modifiers: AutomationQtModifier.shift)
+        report.expectEqual(AutomationCursorKind.arrow.rawValue, page.cursorKind,
+                           cppID: drawerAutomationCursorKindID,
+                           what: "releasing the drag reverts to the arrow")
+    } else {
+        report.fail(drawerAutomationCursorKindID, "the pan lane projected no node at tick 24")
+    }
+}

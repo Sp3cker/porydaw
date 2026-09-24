@@ -231,3 +231,141 @@ func drawerAutomationContextAndPublicationDiagnostics(_ report: CheckReport, sui
     report.expect(copyAvailable, cppID: drawerAutomationContextID,
                   message: "a retained command subscriber observes selection after page reattachment")
 }
+
+let drawerAutomationHoverModelID = "swiftcore/AutomationPage::hoverModel"
+
+@MainActor
+func drawerAutomationHoverModel(_ report: CheckReport, suite: DocumentSession,
+                                service: ProjectService) {
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                    pan: [(24, 64), (120, 40)],
+                                    tempo: [(0, 500_000), (48, 400_000)])
+    let page = fixture.page
+    fixture.activate(fixture.panLane)
+    let lane = fixture.projection(fixture.panLane)
+    let backgroundTick = Tick(72)
+    let backgroundX = fixture.x(backgroundTick)
+    let backgroundY = fixture.y(fixture.panLane, lane.heldValue(at: backgroundTick) ?? 64)
+    let revision = fixture.snapshot
+    _ = page.pointerMove(x: backgroundX, y: backgroundY, buttons: 0)
+    report.expect(page.hoverVisible, cppID: drawerAutomationHoverModelID,
+                  message: "a background move publishes its hover")
+    report.expectEqual(false, page.hover?.hasPoint ?? true, cppID: drawerAutomationHoverModelID,
+                       what: "a background hover names no node")
+    report.expectEqual(AutomationParameterMetadata(parameter: fixture.panLane)
+        .valueText(lane.heldValue(at: backgroundTick) ?? 64), page.hoverText,
+                       cppID: drawerAutomationHoverModelID,
+                       what: "a background hover reads the value the lane holds there")
+    report.expect(page.hover?.tick != 24 && page.hover?.tick != 120,
+                  cppID: drawerAutomationHoverModelID,
+                  message: "the insertion tick sits between its neighboring nodes")
+    report.expect(page.publishedNodes.allSatisfy { !$0.hovered },
+                  cppID: drawerAutomationHoverModelID,
+                  message: "a background hover rings no node")
+    report.expectEqual(17, page.hoverHintProfile, cppID: drawerAutomationHoverModelID,
+                       what: "a background hover offers the sweep profile")
+    report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                       what: "hovering the background writes nothing")
+    let builds = page.hoverBuildCount
+    _ = page.pointerMove(x: backgroundX, y: backgroundY, buttons: 0)
+    report.expectEqual(builds, page.hoverBuildCount, cppID: drawerAutomationHoverModelID,
+                       what: "a repeated hover does not churn")
+    report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                       what: "a repeated hover still writes nothing")
+    if let node = lane.points.first(where: { $0.tick == 24 }) {
+        _ = page.pointerMove(x: node.x, y: node.y, buttons: 0)
+        report.expectEqual(true, page.hover?.hasPoint, cppID: drawerAutomationHoverModelID,
+                           what: "a node move hovers its point")
+        report.expectEqual(Tick(24), page.hover?.tick ?? 0, cppID: drawerAutomationHoverModelID,
+                           what: "the node hover names its tick")
+        report.expectEqual(AutomationParameterMetadata(parameter: fixture.panLane).valueText(64),
+                           page.hoverText, cppID: drawerAutomationHoverModelID,
+                           what: "the node hover reads the node's own text")
+        report.expectEqual(1, page.publishedNodes.filter(\.hovered).count,
+                           cppID: drawerAutomationHoverModelID,
+                           what: "exactly the hovered node carries the ring")
+        report.expectEqual(15, page.hoverHintProfile, cppID: drawerAutomationHoverModelID,
+                           what: "an arrow node hover offers the node profile")
+        report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                           what: "hovering a node writes nothing")
+    } else {
+        report.fail(drawerAutomationHoverModelID, "the pan lane projected no node at tick 24")
+    }
+    page.pointerLeave()
+    report.expect(!page.hoverVisible, cppID: drawerAutomationHoverModelID,
+                  message: "leaving the plot clears the hover")
+    report.expectEqual("", page.hoverText, cppID: drawerAutomationHoverModelID,
+                       what: "leaving the plot clears the hover text")
+    report.expect(page.hover == nil, cppID: drawerAutomationHoverModelID,
+                  message: "leaving the plot drops the hover")
+    report.expect(page.publishedNodes.allSatisfy { !$0.hovered },
+                  cppID: drawerAutomationHoverModelID,
+                  message: "leaving the plot unrings every node")
+    report.expectEqual(AutomationCursorKind.arrow.rawValue, page.cursorKind,
+                       cppID: drawerAutomationHoverModelID,
+                       what: "an arrow hover never arms the pencil cursor")
+    let clearedBuilds = page.hoverBuildCount
+    page.pointerLeave()
+    report.expectEqual(clearedBuilds, page.hoverBuildCount, cppID: drawerAutomationHoverModelID,
+                       what: "a repeated leave stays clear without churn")
+    report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                       what: "leave passes write nothing")
+    _ = page.pointerMove(x: backgroundX, y: backgroundY, buttons: 0)
+    report.expect(page.hoverVisible, cppID: drawerAutomationHoverModelID,
+                  message: "a move after a leave revives the hover")
+    page.cancelSectionInteraction()
+    report.expect(!page.hoverVisible && page.hover == nil, cppID: drawerAutomationHoverModelID,
+                  message: "a strong cancellation clears a live hover")
+    report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                       what: "cancelling a hover changes no document or history state")
+    _ = page.pointerMove(x: backgroundX, y: backgroundY, buttons: 0)
+    report.expect(page.hoverVisible, cppID: drawerAutomationHoverModelID,
+                  message: "a move after a cancellation revives the hover")
+    page.cancelSectionInteraction()
+    report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                       what: "an idle cancellation is a no-op on document and history")
+    report.expect(!page.interactionActive, cppID: drawerAutomationHoverModelID,
+                  message: "an idle cancellation leaves no interaction live")
+    page.isPencilMode = true
+    _ = page.pointerMove(x: backgroundX, y: backgroundY, buttons: 0)
+    report.expectEqual(18, page.hoverHintProfile, cppID: drawerAutomationHoverModelID,
+                       what: "a stationary pencil toggle offers the pencil profile")
+    page.isPencilMode = false
+    report.expectEqual(17, page.hoverHintProfile, cppID: drawerAutomationHoverModelID,
+                       what: "leaving pencil mode restores the sweep profile")
+    page.pointerLeave()
+    fixture.activate(.tempo)
+    if let tempoNode = page.projection?.points.first(where: { $0.tick == 48 }) {
+        _ = page.pointerMove(x: tempoNode.x, y: tempoNode.y, buttons: 0)
+        report.expectEqual(true, page.hover?.hasPoint, cppID: drawerAutomationHoverModelID,
+                           what: "Tempo hovers its node exactly like a CC lane")
+        report.expect(!page.hoverText.isEmpty, cppID: drawerAutomationHoverModelID,
+                      message: "the Tempo node hover names its value")
+        report.expectEqual(1, page.publishedNodes.filter(\.hovered).count,
+                           cppID: drawerAutomationHoverModelID,
+                           what: "Tempo rings exactly its hovered node")
+        report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                           what: "Tempo hover topology preserves the document")
+        page.pointerLeave()
+        report.expect(!page.hoverVisible, cppID: drawerAutomationHoverModelID,
+                      message: "Tempo leaves clear exactly like a CC lane")
+    } else {
+        report.fail(drawerAutomationHoverModelID, "the tempo lane projected no node at tick 48")
+    }
+    fixture.activate(fixture.panLane)
+    let pressX = fixture.x(72)
+    let pressY = fixture.y(fixture.panLane, lane.heldValue(at: 72) ?? 64)
+    _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: AutomationQtButton.left)
+    _ = page.pointerMove(x: pressX + 24, y: pressY - 12, buttons: AutomationQtButton.left)
+    fixture.document.writeLane(track: 0, lane: .controller(TimeDefaults.ccPan), from: 0,
+                               through: TimeDefaults.noTick,
+                               points: [LaneWrite(tick: 24, value: 64), LaneWrite(tick: 72, value: 70),
+                                        LaneWrite(tick: 120, value: 40)])
+    page.refreshFromDocument()
+    let afterRebuild = fixture.values(fixture.panLane)
+    _ = page.pointerRelease(x: pressX + 24, y: pressY - 12, button: AutomationQtButton.left)
+    report.expectEqual(afterRebuild, fixture.values(fixture.panLane), cppID: drawerAutomationHoverModelID,
+                       what: "a stale release after a mid-gesture rebuild commits nothing")
+    report.expect(!page.interactionActive, cppID: drawerAutomationHoverModelID,
+                  message: "a stale release leaves no interaction live")
+}

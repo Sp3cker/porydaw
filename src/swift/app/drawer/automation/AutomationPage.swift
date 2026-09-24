@@ -445,7 +445,10 @@ public final class AutomationPage: EditorDrawerPage {
             facts.revision != revision
                 || (facts.parameter.track != nil && facts.parameter.track != activeTrack())
         }
-        if let frozen, stale(frozen) { cancelGesture() }
+        if let frozen, stale(frozen) {
+            cancelGesture()
+            publishInteractionState()
+        }
         if let prompt, stale(prompt.facts) { cancelPrompt() }
         if let laneDelete, stale(laneDelete.facts) { cancelPrompt() }
         if let live = menu,

@@ -111,6 +111,7 @@ extension AutomationPage {
             syncRects(valueLines, [])
             syncTexts(valueLabels, [])
             syncRects(curveRuns, [])
+            curveRunSnapshots = []
             syncRamps([])
             syncNodes([])
             syncRects(selectionRects, [])
@@ -128,6 +129,7 @@ extension AutomationPage {
         }
         appendCurve(lane, projection: projection, isGhost: false, into: &runs, ramps: &segments)
         syncRects(curveRuns, runs)
+        curveRunSnapshots = runs
         syncRamps(segments)
         syncNodes(nodeHandles(lane, projection: projection))
         syncRects(selectionRects, selectionBand(lane, projection: projection))
@@ -154,6 +156,7 @@ extension AutomationPage {
         appendCurve(lane, projection: cameraProjection, isGhost: false,
                     into: &runs, ramps: &segments)
         syncRects(curveRuns, runs)
+        curveRunSnapshots = runs
         syncRamps(segments)
         syncNodes(nodeHandles(lane, projection: cameraProjection))
         syncRects(selectionRects, selectionBand(lane, projection: cameraProjection))
