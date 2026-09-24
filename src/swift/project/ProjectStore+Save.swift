@@ -14,8 +14,11 @@ extension ProjectStore {
         guard let store = voicegroupStore else {
             throw VoicegroupStoreError.operationFailed("Project is not open.")
         }
+        let savedSymbols = try savePendingSynths(for: lease.id)
         guard let reloaded = try store.saveVoicegroup(id: lease.id) else { return nil }
-        return try adoptBankLease(view: reloaded)
+        let saved = try adoptBankLease(view: reloaded)
+        didSaveSynths(savedSymbols)
+        return saved
     }
 
     /// Writes merged song flags and refreshes the opened song configuration after a successful write.

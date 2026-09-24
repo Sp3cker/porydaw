@@ -213,4 +213,72 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
     } catch {
         saveExpect("S06", false, report, "cannot prepare clean fixture: \(error)")
     }
+
+    do {
+        try saveFixture { root in
+            let macros = root.appendingPathComponent("asm/macros/music_voice.inc")
+            try FileManager.default.createDirectory(at: macros.deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
+            try Data(".macro set_synth_pulse a,b,c,d\n.endm\n".utf8).write(to: macros)
+            let assembly = root.appendingPathComponent("data/sound_data.s")
+            try FileManager.default.createDirectory(at: assembly.deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
+            try Data(".include \"sound/direct_sound_data.inc\"\n".utf8).write(to: assembly)
+            let store = ProjectStore(projectRoot: root)
+            let opened = awaitValue { try await store.open() }
+            let loaded = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
+            guard case .success = opened, case .success(let lease) = loaded,
+                  let original = lease.slotViews.first?.voice else {
+                saveFail(["S07", "S08", "S09"], report, "synth fixture failed to load")
+                return
+            }
+            let descriptor = VgSynthDesc(baseDuty: 0x55, dutyStep: 0x20,
+                                         modDepth: 0x40, phase: 0x10)
+            let minted = awaitValue { try await store.mintSynth(descriptor) }
+            let duplicate = awaitValue { try await store.mintSynth(descriptor) }
+            guard case .success(let symbol) = minted, case .success(let same) = duplicate else {
+                saveFail(["S07", "S08", "S09"], report,
+                         "mint failed: \(String(describing: minted))")
+                return
+            }
+            let synthFile = root.appendingPathComponent("sound/direct_sound_synth_data.inc")
+            saveExpect("S07", symbol == same && !FileManager.default.fileExists(atPath: synthFile.path),
+                       report, "mint deduplicates in memory and writes no file before save")
+            var voice = original
+            voice.symbol = symbol
+            let changed = voice
+            let edit = awaitValue {
+                try await store.applyVoicegroupEdit(
+                    lease: lease, operation: .set(.init(slot: 0, value: changed, expected: original)))
+            }
+            guard case .success(.applied(let edited, _)) = edit else {
+                saveFail(["S08", "S09"], report,
+                         "minted voice cannot preview: \(String(describing: edit))")
+                return
+            }
+            let saved = awaitValue { try await store.saveVoicegroup(lease: edited) }
+            let freshStore = ProjectStore(projectRoot: root)
+            let reopened = awaitValue { try await freshStore.open() }
+            let reloaded = awaitValue { try await freshStore.loadBank(voicegroupArg: "_fixture_rich") }
+            let catalog = VoicegroupSource.synthInstruments(root.path)
+            if case .success(let clean?) = saved, case .success = reopened,
+               case .success(let fresh) = reloaded {
+                saveExpect("S08", !clean.dirty && clean.slotViews[0].voice?.symbol == symbol &&
+                           fresh.slotViews[0].voice?.symbol == symbol &&
+                           catalog.find(symbol) == descriptor, report,
+                           "saved minted synth survives a fresh project load")
+            } else {
+                saveExpect("S08", false, report,
+                           "synth save or fresh load failed: \(String(describing: saved)), " +
+                           "\(String(describing: reloaded))")
+            }
+            let soundData = try String(contentsOf: root.appendingPathComponent("data/sound_data.s"),
+                                       encoding: .utf8)
+            saveExpect("S09", soundData.contains(".include \"sound/direct_sound_synth_data.inc\"") &&
+                       soundData.components(separatedBy: "direct_sound_synth_data.inc").count == 2,
+                       report, "synth definitions are assembled exactly once")
+        }
+    } catch {
+        saveFail(["S07", "S08", "S09"], report, "synth fixture setup failed: \(error)")
+    }
 }

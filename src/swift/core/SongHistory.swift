@@ -278,12 +278,44 @@ public final class SongHistory {
 
     public init() {}
 
-    /// The caller must end any owned bank transition before publishing a save.
+    /// A document save ends only the adjacent document merge gesture.
+    /// Bank merge boundaries belong to the bank editor, not the save receipt.
     public func markSaved(_ identity: DocumentIdentity) {
         assert(transition == nil, "Cannot mark saved during a bank transition.")
         guard transition == nil else { return }
         savedIdentity = identity
-        sealMergeBoundary()
+        guard index > 0, case var .document(entry) = entries[index - 1] else { return }
+        entry.mergeSealed = true
+        entries[index - 1] = .document(entry)
+    }
+
+    /// Ends a bank gesture without altering document identity or a document entry.
+    public func sealBankMerge() {
+        guard transition == nil, index > 0,
+              case var .bank(entry) = entries[index - 1] else { return }
+        entry.mergeSealed = true
+        entries[index - 1] = .bank(entry)
+    }
+
+    /// The adjacent document command's target bank, if replay changes `-G`.
+    /// A caller can load that source before crossing the history entry.
+    public func voicegroupArgumentAfter(_ direction: BankHistoryDirection) -> String? {
+        guard transition == nil else { return nil }
+        let target: Entry
+        switch direction {
+        case .undo:
+            guard index > 0 else { return nil }
+            target = entries[index - 1]
+        case .redo:
+            guard index < entries.count else { return nil }
+            target = entries[index]
+        }
+        guard case let .document(entry) = target, let config = entry.changes.config,
+              config.before.voicegroupArgument != config.after.voicegroupArgument else {
+            return nil
+        }
+        return direction == .undo
+            ? config.before.voicegroupArgument : config.after.voicegroupArgument
     }
 
     public func beginBankTransition() -> BankTransitionToken? {

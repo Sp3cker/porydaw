@@ -162,6 +162,121 @@ TestCase {
                "undo restores original ADSR")
     }
 
+    function test_editorSaveCommitsCleanBank() {
+        const controller = app.voiceListController()
+        controller.selectSlot(4)
+        const draft = controller.editorModel()
+        const initial = draft.release
+        draft.change("release", initial === 7 ? 6 : initial + 1)
+        verify(waitForNative(function() { return controller.bankDirty && draft.release !== initial },
+                             15000), "editor change makes bank dirty")
+        const save = findChild(panel, "vgSaveButton")
+        verify(save !== null && save.enabled, "mounted editor offers save for dirty bank")
+        mouseClick(save, save.width / 2, save.height / 2)
+        verify(waitForNative(function() { return !controller.bankDirty || app.lastSaveError.length > 0 },
+                             15000), "mounted save completes: " + app.lastSaveError)
+        compare(app.lastSaveError, "")
+        compare(controller.bankDirty, false)
+        compare(save.enabled, false)
+        compare(draft.release, initial === 7 ? 6 : initial + 1)
+    }
+
+    function test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit() {
+        const controller = app.voiceListController()
+        controller.selectSlot(0)
+        const draft = controller.editorModel()
+        function choose(symbol) {
+            const trigger = findChild(panel, "vgSamplePickerButton")
+            verify(trigger !== null, "mounted sample picker exists")
+            tryVerify(function() { return trigger.visible }, 5000,
+                      "sample picker becomes visible for macro " + draft.macro
+                      + " synth=" + draft.isSynth + " symbol=" + draft.symbol)
+            const position = trigger.mapToItem(panel, 0, 0)
+            verify(position.y >= 0 && position.y < panel.height,
+                   "sample picker is onscreen at " + position.y
+                   + " panel=" + panel.height + " triggerHeight=" + trigger.height)
+            mousePress(trigger, trigger.width / 2, trigger.height / 2)
+            verify(trigger.down, "sample trigger receives press at "
+                   + position.x + "," + position.y + " size "
+                   + trigger.width + "x" + trigger.height)
+            mouseRelease(trigger, trigger.width / 2, trigger.height / 2)
+            const popup = findChild(panel, "vgSamplePickerPopup")
+            verify(popup !== null, "popup is mounted")
+            tryCompare(popup, "opened", true, 1000,
+                       "popup opens after clicking button at " + position.x + "," + position.y)
+            const search = findChild(popup, "vgSamplePickerSearch")
+            const list = findChild(popup, "vgSamplePickerList")
+            search.text = symbol
+            tryVerify(function() {
+                return list.model.some(function(row) { return row.symbol === symbol })
+            }, 5000, "search finds " + symbol)
+            const index = list.model.findIndex(function(row) { return row.symbol === symbol })
+            list.positionViewAtIndex(index, ListView.Contain)
+            tryVerify(function() { return list.itemAtIndex(index) !== null }, 5000)
+            const item = list.itemAtIndex(index)
+            const before = draft.symbol
+            mouseClick(item, item.width / 2, item.height / 2)
+            compare(draft.symbol, before, "first click only auditions")
+            verify(waitForNative(function() { return controller.pickerSampleDetail.length > 0 },
+                                 15000), "resolved audition details for " + symbol)
+            mouseClick(item, item.width / 2, item.height / 2)
+            tryCompare(popup, "opened", false)
+            verify(waitForNative(function() { return draft.symbol === symbol }, 15000),
+                   "second click commits " + symbol)
+            compare(controller.pickerSampleDetail, "", "popup close ends the audition")
+        }
+        choose("DirectSoundWaveData_fixture_bass")
+        draft.changeType(7, "ProgrammableWaveData_fixture_pulse")
+        verify(waitForNative(function() { return draft.macro === 7 }, 15000),
+               "wave macro is selected")
+        choose("ProgrammableWaveData_fixture_saw")
+        draft.changeType(0, "DirectSoundWaveData_fixture_loop")
+        verify(waitForNative(function() { return draft.macro === 0 }, 15000),
+               "sample macro is selected")
+        choose("fixture_bass")
+        compare(draft.macro, 11, "keysplit symbol switches to keysplit macro")
+    }
+
+    function test_zzSynthMintAndMountedSave() {
+        const controller = app.voiceListController()
+        controller.selectSlot(0)
+        const draft = controller.editorModel()
+        compare(controller.canMintSynths, true)
+        draft.changeType(-1, draft.symbol)
+        verify(waitForNative(function() { return draft.isSynth && controller.bankDirty },
+                             15000), "synth type creates an unsaved bank edit")
+        const waveform = findChild(panel, "vgSynthWaveformCombo")
+        verify(waveform !== null && waveform.visible, "mounted synth waveform is visible")
+        compare(draft.waveform, 0)
+        draft.changeSynth("baseDuty", 77)
+        verify(waitForNative(function() { return draft.baseDuty === 77 }, 15000),
+               "duty LFO mints an edited pulse voice")
+        const pulse = draft.symbol
+        const baseDuty = findChild(panel, "vgSynthBaseDutySpin")
+        verify(baseDuty !== null && baseDuty.visible, "pulse parameters occupy the editor")
+        compare(baseDuty.value, 77)
+        verify(controller.synthCatalogChoices().indexOf(pulse) < 0,
+               "uncommitted synth does not masquerade as a saved definition")
+        const save = findChild(panel, "vgSaveButton")
+        mousePress(save, save.width / 2, save.height / 2)
+        mouseRelease(save, save.width / 2, save.height / 2)
+        verify(waitForNative(function() {
+            return (!controller.bankDirty && controller.synthCatalogChoices().includes(pulse))
+                   || app.lastSaveError.length > 0
+        }, 15000), "save persists synth and refreshes catalog: " + app.lastSaveError)
+        compare(app.lastSaveError, "")
+        compare(draft.symbol, pulse)
+        draft.changeSynth("waveform", 1)
+        verify(waitForNative(function() {
+            return draft.isSynth && draft.waveform === 1 && draft.symbol !== pulse
+        }, 15000), "waveform edit mints a saw")
+        compare(baseDuty.visible, false, "non-pulse waveforms hide duty LFO controls")
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return draft.symbol === pulse && draft.waveform === 0
+        }, 15000), "undo restores saved pulse voice")
+    }
+
     function test_referenceProfileCapture() {
         const controller = app.voiceListController()
         controller.selectSlot(0)

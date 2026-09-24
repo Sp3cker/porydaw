@@ -3,7 +3,7 @@ Assertion correspondence: voicegroupsave/picker.cpp
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/voicegroupsave/picker.cpp
 Original SHA-256: 08389b21540bc73dc1509b6107f92b0e02d0f0e99eb36bfee69fd78780a09a0b
-Swift counterpart: none identified
+Swift counterpart: src/checks/editorqml/tst_ShellVoicegroup.qml
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -14,16 +14,15 @@ PARTIAL means a related check exists but differs in a stated way;
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of a converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-No Swift counterpart was identified for this file, so every site below is GAP:
-no equivalent Swift assertion is established, and each original predicate and
-its setup remain an open obligation. None of these labels authorizes deletion
-or claims whole-case equivalence.
+Mounted QML predicates cover opening and interacting with sample, wave
+and keysplit pickers. Original C++ widget identity, bank publication and
+native rendering conditions not asserted by QML remain GAP or PARTIAL;
+no whole-case parity is claimed.
 
 Verification
-Command: deno task verify --filter voicegroup-save --verbose
-Result: pending integrated run.
-The "voicegroup-save" filter selects the retained native harness; it provides
-no Swift parity evidence.
+Command: deno task verify:shell --filter shell-voicegroup --verbose.
+Result: PASS for the mounted QML predicates; retained native checks
+are not Swift parity evidence.
 
 Execution ownership
 The retained native harness owns this file. runVoicegroupSaveCheck in
@@ -34,8 +33,8 @@ Shared per-test state (m_window, m_document, m_tab, m_browser, m_dsSlot,
 m_originalVoice, m_homeId/m_homeArg, voicegroup/MIDI baselines, save receipts)
 is built by VoicegroupSaveTest::openSong with VoicegroupBrowserDriver and the
 song/project fixtures declared in src/checks/voicegroupsave/tst_voicegroupsave.h.
-No Swift entry point executes these checks; there are no S entries and no
-shared-helper expects for this file.
+Mounted-editor QML predicates are listed below as S entries; unmatched
+native widget and bank-publication conditions remain open.
 
 Fixture, sequence and row constraints
 No data rows, loops, or branch guards expand these sites beyond the stated conditionals. The screenshot captures in samplePickerAuditionsAndCommits execute only when m_screenshotPath is non-empty. Single-click selects without committing while the second click commits; the unlisted typed symbol commits through Return and undoes cleanly. The keysplit and programmable-wave variants each execute once per run with their own staged-catalog preconditions.
@@ -46,7 +45,7 @@ Original assertion inventory and source sequence
 
 A001 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:41
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 #include "checks/voicegroupsave/tst_voicegroupsave.h"
 
@@ -93,8 +92,8 @@ Original expression:
 QCOMPARE(m_browser->visibleVoiceTypeData(), int(m_originalVoice.macro))
 
 A002 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:42
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S001 asserts the mounted voice editor exposes a sample picker trigger for the selected sample voice.
 Source context since previous assertion:
 ;
 
@@ -103,7 +102,7 @@ QVERIFY(m_browser->hasSamplePickerEditor())
 
 A003 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:43
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -112,7 +111,7 @@ QVERIFY(m_browser->samplePickerReplacesSymbolCombo())
 
 A004 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:45
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     const VgVoice before = *m_browser->selectedBankView()->slotViews.at(m_dsSlot).voice;
@@ -122,7 +121,7 @@ QCOMPARE(m_browser->samplePickerCurrentSymbol(), before.symbol)
 
 A005 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:63
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -147,8 +146,8 @@ Original expression:
 QVERIFY(search)
 
 A006 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:64
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S002 asserts clicking the picker trigger opens its mounted popup.
 Source context since previous assertion:
 ;
 
@@ -157,7 +156,7 @@ QVERIFY(m_browser->samplePickerPopupIsVisible())
 
 A007 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:65
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -166,7 +165,7 @@ QCOMPARE(m_browser->samplePickerPopupCornerColor(), themes::color(themes::Role::
 
 A008 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:66
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -175,7 +174,7 @@ QVERIFY(m_browser->samplePickerSymbolRowCount() >= 2)
 
 A009 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:67
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -185,7 +184,7 @@ QVERIFY2(settle([this] { return m_browser->samplePickerBadgedRowCount() > 0; }),
 
 A010 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:70
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     if (!m_screenshotPath.isEmpty()) {
@@ -195,7 +194,7 @@ QVERIFY(m_browser->saveSamplePickerPopup(m_screenshotPath))
 
 A011 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:72
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
         const QFileInfo path(m_screenshotPath);
@@ -206,7 +205,7 @@ QVERIFY(m_browser->saveBrowser(path.path() + QLatin1Char('/') + path.completeBas
 
 A012 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:77
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     }
@@ -218,7 +217,7 @@ QVERIFY2(!target.isEmpty(), "fixture has no alternate plain sample for picker co
 
 A013 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:79
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     search->setText(target);
@@ -228,7 +227,7 @@ QVERIFY(auditioned.contains(target))
 
 A014 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:80
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -238,7 +237,7 @@ QVERIFY2(settle([this] { return m_window->m_workspace->sampleSet() != nullptr; }
 
 A015 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:82
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -247,7 +246,7 @@ QCOMPARE(m_browser->currentPickerRowSymbol(), target)
 
 A016 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:84
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     m_browser->clickCurrentPickerRow();
@@ -256,8 +255,8 @@ Original expression:
 QVERIFY(m_browser->samplePickerPopupIsVisible())
 
 A017 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:85
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S003 asserts the first picker row click leaves the editor draft symbol unchanged; the original inspects the published bank slot directly.
 Source context since previous assertion:
 ;
 
@@ -266,7 +265,7 @@ QCOMPARE(m_browser->selectedBankView()->slotViews.at(m_dsSlot).voice->symbol, be
 
 A018 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:87
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     m_browser->clickCurrentPickerRow();
@@ -276,7 +275,7 @@ QVERIFY(!m_browser->samplePickerPopupIsVisible())
 
 A019 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:88
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -284,8 +283,8 @@ Original expression:
 QVERIFY(stops > 0)
 
 A020 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:89
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S004 asserts the mounted second click commits the selected symbol into the editor draft; the original additionally reads the published bank slot.
 Source context since previous assertion:
 ;
 
@@ -299,7 +298,7 @@ QVERIFY2(settle([this, &target] {
 
 A021 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:95
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -308,7 +307,7 @@ QVERIFY(!m_document->isDirty())
 
 A022 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:96
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -317,7 +316,7 @@ QVERIFY(m_browser->selectedBankView()->dirty)
 
 A023 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:98
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     requestUndo();
@@ -332,7 +331,7 @@ QVERIFY2(settle([this, &before] {
 
 A024 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:104
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -341,7 +340,7 @@ QCOMPARE(m_browser->samplePickerCurrentSymbol(), before.symbol)
 
 A025 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:108
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -353,7 +352,7 @@ QVERIFY(search)
 
 A026 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:112
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     const QString unlisted = QStringLiteral("VgSaveCheckUnlisted");
@@ -370,7 +369,7 @@ QVERIFY2(settle([this, &unlisted] {
 
 A027 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:119
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     requestUndo();
@@ -385,7 +384,7 @@ QVERIFY2(settle([this, &before] {
 
 A028 | VoicegroupSaveTest::samplePickerKeysplitAuditions | src/checks/voicegroupsave/picker.cpp:130
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 }
@@ -399,7 +398,7 @@ QVERIFY(m_browser->hasSamplePickerEditor())
 
 A029 | VoicegroupSaveTest::samplePickerKeysplitAuditions | src/checks/voicegroupsave/picker.cpp:138
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     QList<VgAuditionKind> kinds;
@@ -415,7 +414,7 @@ QVERIFY(m_browser->samplePickerPopupIsVisible())
 
 A030 | VoicegroupSaveTest::samplePickerKeysplitAuditions | src/checks/voicegroupsave/picker.cpp:139
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -426,7 +425,7 @@ QVERIFY2(m_browser->selectFirstKeysplitPickerRow(),
 
 A031 | VoicegroupSaveTest::samplePickerKeysplitAuditions | src/checks/voicegroupsave/picker.cpp:142
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -435,7 +434,7 @@ QVERIFY(!kinds.isEmpty())
 
 A032 | VoicegroupSaveTest::samplePickerKeysplitAuditions | src/checks/voicegroupsave/picker.cpp:143
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -444,7 +443,7 @@ QCOMPARE(kinds.last(), VgAuditionKind::Keysplit)
 
 A033 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:149
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 }
@@ -459,7 +458,7 @@ QVERIFY2(waves.size() >= 2, "required staged programmable waves missing: >=2 ent
 
 A034 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:161
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     m_window->show();
@@ -477,8 +476,8 @@ Original expression:
 QVERIFY(m_browser->activateVoiceType(VgMacro::ProgWave))
 
 A035 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:162
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S006 asserts the mounted editor switches to wave macro; the original also inspects the published bank slot after worker apply.
 Source context since previous assertion:
 ;
 
@@ -492,7 +491,7 @@ QVERIFY2(settle([this] {
 
 A036 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:168
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -500,8 +499,8 @@ Original expression:
 QCOMPARE(m_browser->visibleVoiceTypeData(), int(VgMacro::ProgWave))
 
 A037 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:170
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S001 asserts the mounted picker trigger is present and visible when the selected editor uses a sample or programmable wave.
 Source context since previous assertion:
 ;
     const VgVoice waveVoice = *m_browser->selectedBankView()->slotViews.at(m_dsSlot).voice;
@@ -511,7 +510,7 @@ QVERIFY(m_browser->samplePickerIsVisible())
 
 A038 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:171
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -520,7 +519,7 @@ QCOMPARE(m_browser->samplePickerCurrentSymbol(), waveVoice.symbol)
 
 A039 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:174
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     m_browser->openSamplePickerPopup();
@@ -532,7 +531,7 @@ QVERIFY(std::all_of(listed.cbegin(), listed.cend(),
 
 A040 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:176
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -541,7 +540,7 @@ QVERIFY(m_browser->pickerRowsShowFullSymbols())
 
 A041 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:178
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     const QString alternative = m_browser->firstAlternatePickerSymbol(waveVoice.symbol);
@@ -553,7 +552,7 @@ QVERIFY2(!alternative.isEmpty(),
 
 A042 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:182
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     QLineEdit *const search = m_browser->samplePickerFilterField();
@@ -563,7 +562,7 @@ QVERIFY(search)
 
 A043 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:184
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     search->setText(alternative);
@@ -573,7 +572,7 @@ QVERIFY(!kinds.isEmpty())
 
 A044 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:185
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
 
@@ -582,7 +581,7 @@ QCOMPARE(kinds.last(), VgAuditionKind::Wave)
 
 A045 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:187
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     events::sendKey(*search, QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier, QString(), false, 1);
@@ -597,7 +596,7 @@ QVERIFY2(settle([this, &alternative] {
 
 A046 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:194
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     requestUndo();
@@ -612,7 +611,7 @@ QVERIFY2(settle([this, &waveVoice] {
 
 A047 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:201
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
 Source context since previous assertion:
 ;
     requestUndo();
@@ -632,17 +631,31 @@ Remaining original source (closing sequence and helper bodies):
 
 } // namespace checks
 
-
 Swift assertion predicates
-No Swift counterpart identified for this file: no same-dir picker.swift
-exists and no Swift check covers the voicegroup browser/save suite, so no
-report.expect*/expectEqual predicates pair with these sites. There are no S
-entries and no shared-helper expects for this file.
 
-Related Swift source scope
-No file src/checks/voicegroupsave/picker.swift exists. A repo-wide search
-for Swift voicegroup-browser coverage finds only project-io voicegroup
-references in the workspace session suite (dispatched by
-src/checks/workspace/SessionChecks.swift and implemented in sibling scenario
-files), which exercise project open/save plumbing,
-not the browser/editor/picker/save flows inventoried here.
+S001 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "mounted sample picker exists"
+            verify(trigger !== null, "mounted sample picker exists")
+
+S002 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "popup opens after clicking button at "
+            tryCompare(popup, "opened", true, 1000,
+                       "popup opens after clicking button at " + position.x + "," + position.y)
+
+S003 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "first click only auditions"
+            compare(draft.symbol, before, "first click only auditions")
+
+S004 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "second click commits "
+            verify(waitForNative(function() { return draft.symbol === symbol }, 15000),
+                   "second click commits " + symbol)
+
+S005 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "keysplit symbol switches to keysplit macro"
+        compare(draft.macro, 11, "keysplit symbol switches to keysplit macro")
+
+S006 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "wave macro is selected"
+        verify(waitForNative(function() { return draft.macro === 7 }, 15000),
+               "wave macro is selected")

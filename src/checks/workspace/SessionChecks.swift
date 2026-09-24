@@ -94,6 +94,8 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         return
     }
     releaseEditorBankHistorySemantics(report, fixtureRoot: fixtureRoot)
+    bankSaveMergeBoundaryParity(report: report, fixtureRoot: fixtureRoot)
+    bankSwitchingParity(report: report, fixtureRoot: fixtureRoot)
 
     let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-bank-test")
     let service = ProjectService()

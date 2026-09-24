@@ -6,6 +6,8 @@ public actor ProjectStore {
     var openedSnapshot: ProjectSnapshot?
     var projectContext: ProjectContext?
     var voicegroupStore: VoicegroupStore?
+    var pendingSynths: [String: VgSynthDesc] = [:]
+    var pickerSamples: PickerSampleCache?
 
     /// Creates a store rooted at a lexically normalized project path.
     /// - Parameter projectRoot: The project directory URL.

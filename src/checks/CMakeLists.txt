@@ -221,6 +221,7 @@ if(APPLE)
         workspace/bank_edits.swift
         workspace/bank_saves.swift
         workspace/bank_sharing.swift
+        workspace/bank_switching.swift
     )
     set_target_properties(swift_core_check PROPERTIES
         Swift_MODULE_NAME SwiftCoreCheck

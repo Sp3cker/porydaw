@@ -283,6 +283,7 @@ qt_add_resources(porydaw_app "voicegroup_dock_qml"
     FILES
         src/ui/songview/quick/docks/VoicegroupPanel.qml
         src/ui/songview/quick/docks/VoiceEditor.qml
+        src/ui/songview/quick/docks/SamplePicker.qml
 )
 
 qt_add_resources(porydaw_app "voicegroup_type_icons"
