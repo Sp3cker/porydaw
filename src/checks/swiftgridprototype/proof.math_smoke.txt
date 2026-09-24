@@ -4,18 +4,38 @@ Reference revision: 18fee9357273c3351d1eaadf4fe6f8d52edb9a98
 Original: src/checks/swiftgridprototype/math_smoke.cpp
 Original SHA-256: 71563857606606545677f277b7fbef96e053b3bfdce42cc6dcd81452f7e732ac
 Swift counterpart: src/checks/rollcheck/static/camera.swift
-Swift SHA-256: 0321944175f23cab5587282618a52d043e1c44e650859d3599e42ce8c7db1f76
+Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
 Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Additional Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Deleted in: fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced Wave 4 re-scoped grid milestone: writable Swift roll through production seams
 Note: swiftrollgated/*.swift matches no file in this checkout; the receiving lane is C++-only (tst_swiftrollgated.cpp). The deletion commit records the load-bearing prototype rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Retired in: feature/w2-retired-prototypes — this ledger is the deletion certificate for
+src/checks/swiftgridprototype/math_smoke.cpp. The C++ original is uncompiled in every CMake target and
+unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt,
+src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from
+disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired shim. The
+controller deletes the dead sources after this ledger passes; nothing is deleted by this edit.
+
+Reference revision: 18fee9357273c3351d1eaadf4fe6f8d52edb9a98
+Original: src/checks/swiftgridprototype/math_smoke.cpp
+Original SHA-256: 71563857606606545677f277b7fbef96e053b3bfdce42cc6dcd81452f7e732ac
+Verification: lane run recorded by the controller, not re-run for this ledger:
+deno task verify --filter swiftcore --verbose -> verify: 1/6 ok (11.40s, 5 skipped); run_checks: PASS
+(all harnesses in 11.40s).
+Result: swiftcore PASS. No live native math_smoke run exists or is claimed; the deleted shim neither builds
+nor executes.
+
+Deletion certificate
+Retirement: zero assertion sites; there is nothing to dispose and no disposition to change. This file
+records the sgm_* shim role (pure forwarding over CoreTimeDefaults::shiftTickClamped/tickFromDouble,
+songview::TimeAxis and songview::PitchProjection) and its production owners: presenter-level time/pitch
+math in src/checks/rollcheck/static/camera.swift::runEditorCameraChecks:9, executed in the swiftcore lane.
+Parity-sweep execution lived in the likewise-deleted prototype MathSelftest.swift. No whole-case
+equivalence, native execution or parity claim is made.
 
 Status and evidence
 The deleted math_smoke.cpp contains zero assertion sites: it is a pure parity-oracle forwarding shim (sgm_* over CoreTimeDefaults, songview::TimeAxis, and songview::PitchProjection) with no QVERIFY/QCOMPARE/QFAIL/require construct. There is nothing to dispose; the forwarding functions are listed below so the shim is not mistaken for dropped coverage. Parity-sweep execution lived in the likewise-deleted prototype MathSelftest.swift; presenter-level time/pitch math is covered by S001-S041 and S064-S076. Reference inventories only, never current execution evidence.
-Execution boundary: SwiftGridPrototype is retired: its C++ sources were deleted in fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced and no target/registration for this prototype remains. The referenced rollcheck Swift predicates still run through the production Swift suite, but they are related presenter-level checks, not execution or differential proof of this prototype. PARTIAL rows are limited to 6 camera/time-axis/pitch-projection sites and 63 selection/revision sites; none is MATCHED.
-Verification
-Command: deno task verify --filter rollcheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Execution boundary: SwiftGridPrototype is retired: its C++ sources were deleted in fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced and no target/registration for this prototype remains.
 
 Execution and ownership
 No execution is paired: the shim forwarded to production C++ oracles and the parity sweep ran in the deleted prototype MathSelftest.swift. Presenter-level time/pitch coverage that overlaps the oracle domain lives in runEditorCameraChecks/checkGridCameraWheel (S001-S041) and checkProjection (S064-S076), which do not call these sgm_ symbols.

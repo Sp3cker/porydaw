@@ -4,21 +4,42 @@ Reference revision: 18fee9357273c3351d1eaadf4fe6f8d52edb9a98
 Original: src/checks/swiftgridprototype/policy_smoke.cpp
 Original SHA-256: 8e131f7b7ef8aa2854ddf179d1b4df18e290d970bde8e67ceb1a6958fcc8103d
 Swift counterpart: src/checks/rollcheck/static/camera.swift
-Swift SHA-256: 0321944175f23cab5587282618a52d043e1c44e650859d3599e42ce8c7db1f76
+Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
 Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Additional Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Deleted in: fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced Wave 4 re-scoped grid milestone: writable Swift roll through production seams
 Note: swiftrollgated/*.swift matches no file in this checkout; the receiving lane is C++-only (tst_swiftrollgated.cpp). The deletion commit records the load-bearing prototype rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Retired in: feature/w2-retired-prototypes — this ledger is the deletion certificate for
+src/checks/swiftgridprototype/policy_smoke.cpp. The C++ original is uncompiled in every CMake target and
+unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt,
+src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from
+disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired shim. The
+controller deletes the dead sources after this ledger passes; nothing is deleted by this edit.
+
+Reference revision: 18fee9357273c3351d1eaadf4fe6f8d52edb9a98
+Original: src/checks/swiftgridprototype/policy_smoke.cpp
+Original SHA-256: 8e131f7b7ef8aa2854ddf179d1b4df18e290d9708e67ceb1a6958fcc8103d
+Verification: lane run recorded by the controller, not re-run for this ledger:
+deno task verify --filter swiftcore --verbose -> verify: 1/6 ok (11.40s, 5 skipped); run_checks: PASS
+(all harnesses in 11.40s).
+Result: swiftcore PASS. No live native policy_smoke run exists or is claimed; the deleted shim neither builds
+nor executes.
+
+Deletion certificate
+Retirement: zero assertion sites; there is nothing to dispose and no disposition to change. This file
+records the sgp_* shim role (thin conversion over the production songview::editCommandPolicy table) and its
+production owners: the canonical Swift table at src/swift/app/commands/EditCommands.swift:169-280
+(editCommandPolicy) with arbitration and execution verified in src/checks/rollcheck/keyboard.swift
+(checkKeyboardTranspose:96, checkKeyboardResizeNotes:130, checkTimelineInsertBlankTimeTracks). Parity-sweep
+execution lived in the likewise-deleted prototype PolicySelftest.swift. No whole-case equivalence, native
+execution or parity claim is made.
 
 Status and evidence
 The deleted policy_smoke.cpp contains zero assertion sites: it is a thin conversion over the production songview::editCommandPolicy table with no QVERIFY/QCOMPARE/QFAIL/require construct. There is nothing to dispose; the two conversion functions are listed below so the shim is not mistaken for dropped coverage. Parity-sweep execution lived in the likewise-deleted prototype PolicySelftest.swift. No S predicate among S001-S086 reads the command-policy table, so the table rows have no Swift predicate in this pairing. Reference inventory only, never current execution evidence.
-Execution boundary: SwiftGridPrototype is retired: its C++ sources were deleted in fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced and no target/registration for this prototype remains. The referenced rollcheck Swift predicates still run through the production Swift suite, but they are related presenter-level checks, not execution or differential proof of this prototype. PARTIAL rows are limited to 6 camera/time-axis/pitch-projection sites and 63 selection/revision sites; none is MATCHED.
-Verification
-Command: deno task verify --filter rollcheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Execution boundary: SwiftGridPrototype is retired: its C++ sources were deleted in fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced and no target/registration for this prototype remains.
 
 Execution and ownership
-No execution is paired: the shim converted production table rows and the parity sweep ran in the deleted prototype PolicySelftest.swift. No Swift entry point in this pairing reads the edit-command policy table.
+No execution is paired: the shim converted production table rows and the parity sweep ran in the deleted prototype PolicySelftest.swift. The canonical policy owners are the Swift table and keyboard arbiter checks above, which do not call these sgp_ symbols.
 
 Fixture, sequence and row constraints
 No rows, loops, or guards carry assertions; commandOrdinal ranges over [0, SongView::EditCommand::GridTriplet] by the caller, and the row conversion is a straight field copy.

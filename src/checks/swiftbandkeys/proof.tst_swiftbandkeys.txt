@@ -6,37 +6,62 @@ Original SHA-256: bfbba727f28fc072550ac3a5167cf34254ab38903791778cabcd5368158821
 Swift counterpart: src/checks/swiftbandkeys/SwiftBandKeysCheck.swift
 Swift SHA-256: ad3f4d0645723dce5efbca59597bec2a42bec7922b800907ea7a8d59ced4a77c
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards and helper
-predicates. Source context preserves setup, rows, loops, and guards between
-assertions verbatim. S identifiers identify Swift-side checks, listed after the
-inventory. MATCHED means a corresponding Swift check was identified and would
-execute through the named Swift entry point; PARTIAL means a related Swift
-check exists but leaves the stated condition unproved; NATIVE identifies a
-retained native-window/rendering or native harness obligation a
-presenter-level Swift check cannot establish; GAP means no equivalent Swift
-assertion is established (unsure PARTIAL vs GAP resolves to GAP; bookkeeping
-must not overclaim). Tallies: 110 sites (GAP 56, NATIVE 54). None of these labels authorizes
-deletion or claims whole-case equivalence.
+Retired in: feature/w2-retired-prototypes — this ledger is the deletion certificate for
+src/checks/swiftbandkeys/tst_swiftbandkeys.cpp and src/checks/swiftbandkeys/SwiftBandKeysCheck.swift.
+The C++ original is uncompiled in every CMake target and unregistered in
+src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt,
+src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted
+from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never
+touches the retired band-key mechanism. The controller deletes the dead sources after this ledger passes;
+nothing is deleted by this edit.
 
-Verification
-Command: deno task verify --filter swiftbandkeys --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Reference revision: fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced
+Original: src/checks/swiftbandkeys/tst_swiftbandkeys.cpp
+Original SHA-256: bfbba727f28fc072550ac3a5167cf34254ab38903791778cabcd536815882129
+Swift counterpart (retired, pinned pre-retirement): src/checks/swiftbandkeys/SwiftBandKeysCheck.swift
+Swift SHA-256: ad3f4d0645723dce5efbca59597bec2a42bec7922b800907ea7a8d59ced4a77c
+Verification: lane runs recorded by the controller, not re-run for this ledger:
+deno task verify --filter swiftcore --verbose -> verify: 1/6 ok (11.40s, 5 skipped); run_checks: PASS
+(all harnesses in 11.40s). Narrow projectSession: 15 QINFO PASS lines for bandKeyCancelReasons (8),
+bandKeyAutoRepeat (3), bandKeyDeleteEligibility (4).
+Result: swiftcore PASS. No live native swiftbandkeys run exists or is claimed; the deleted harness
+neither builds nor executes.
+
+Deletion certificate
+Retirement: 110 original assertion sites, all terminal (107 RETIRED-REPRESENTATION, 3 honest GAPs, zero
+PARTIAL, zero NATIVE, zero MATCHED). No executing predicate carries an original bandkeys cppID, so nothing
+is MATCHED. Delete-eligibility, auto-repeat and cancel-reason behaviors are asserted by the new executing
+predicates checkBandKeyDeleteEligibility (:56-88, cppID swiftcore/PianoRoll::bandKeyDeleteEligibility),
+checkBandKeyAutoRepeat (:91-112, cppID swiftcore/PianoRoll::bandKeyAutoRepeat) and checkBandKeyCancelReasons
+(:115-140, cppID swiftcore/PianoRoll::bandKeyCancelReasons) in
+src/checks/rollcheck/keyboard_parity.swift (wired from runKeyboardChecks at keyboard.swift:11); every other
+behavior-covered site is RETIRED-REPRESENTATION with an executing shell/swiftcore citation plus an explicit
+note that the exact C-bridge end-to-end observation is not reproduced. All ex-NATIVE sites observing
+uncompiled C++ (BandKeysRig/scratch band, TimelineQuickView focus chain, timelineRollInput presence) are
+RETIRED-REPRESENTATION; none stays NATIVE. The 3 GAPs are the button-gating remainder (XButton1/non-left
+gutter decline): PianoGrid.beginPointer exposes no button/surface parameter (PianoGrid.swift:399,616).
+The reference-revision sources remain the authority for the original setup, guards and helpers, and no
+whole-case equivalence, native execution or parity claim is made.
+
+Purpose and status
+Each numbered entry records one original assertion/failure site, not one test
+method or one runtime execution. Loops/data rows reuse a site; their instances
+are described below. QFAIL/qFail guards and helper calls are part of the contract.
+MATCHED means a corresponding Swift predicate carrying the original cppID was identified and executed;
+RETIRED-REPRESENTATION identifies an unreachable old implementation input with
+an explicit replacement-contract justification, not an omitted user behavior;
+PARTIAL means a related check exists but differs in a stated way;
+GAP means an equivalent Swift assertion is not established.
+None of these labels claims whole-case equivalence. Native passes do not prove the Swift replacement.
 
 Execution and ownership
-SwiftBandKeysTest methods own a BandKeysRig: a real window session opened
-through the selectionkey harness, with the production SwiftRollBand plus a
-scratch SwiftGridSessionFeed/SwiftGridKeyRouter/SwiftRollBand pair bound to a
-Swift harness surface. Swift entry points bandkeys_surface_create_full and
-bandkeys_surface_destroy own the SgcKeySurface registry; bandkeys_arrival_count,
-bandkeys_last_command, bandkeys_last_verdict, bandkeys_last_handled,
-bandkeys_gesture_active, bandkeys_cancel_count, bandkeys_cancel_at,
-bandkeys_pointer_count, bandkeys_last_pointer_*,
-bandkeys_wheel_count, bandkeys_last_wheel_*, and bandkeys_leave_count read
-recorded facts; sgk_deliver delivers key facts to the surface. No Swift check
-function executes assertions: Swift is the surface under test, and the C++
-sites below are the only predicates.
+Registered run paths: swiftcore projectSession suites ->
+runKeyboardParityChecks (src/checks/rollcheck/keyboard_parity.swift:6) via runKeyboardChecks
+(src/checks/rollcheck/keyboard.swift:11); rollcheck -> checkCommandRouting
+(src/checks/rollcheck/EditorGridCameraChecks.swift:629), selection (selection.swift:13,71); shell QML lane
+-> src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:507-552 (incl. Delete-blocked-mid-gesture
+:544-546 and pencil survival :547-552) and ::test_bareSpace:558-577. Shell-lane QML predicates are cited by
+source location as executing counterparts under lane ownership; they were not re-run for this ledger.
 
 Fixture, sequence and row constraints
 The cancel-reason loop expands four TimelineInputCancelReason values
@@ -55,11 +80,16 @@ arrivals.
 Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
+Frozen Swift sources cited by this refactor (SHA-256, re-hashed before citing)
+src/checks/rollcheck/keyboard_parity.swift: 7c4cdd1bdf90030b454cb4a16f949c1c55e28bdb3a8a0bf10e54e2976f159ecb
+src/checks/rollcheck/keyboard.swift: 9614afe485ce2e87806d725f20cee0397388fc3f9c9ab73c65e56db15f88f3ab
+src/checks/CMakeLists.txt: f7edc454a17bf83022d05885ad5bbbd221c2447f54560eb84d74108c318c5bcf
+
 Original assertion inventory and source sequence
 
 A001 | SwiftBandKeysTest::testCommandIdArrivalThroughBandKeyPath | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:216
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   #include "checks/selectionkey/session.h"
   #include "checks/swiftbandkeys/keys_check.h"
@@ -281,8 +311,8 @@ Original expression:
   QVERIFY2(rig.ok(), qUtf8Printable(error))
 
 A002 | SwiftBandKeysTest::testCommandIdArrivalThroughBandKeyPath | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:226
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible Delete eligibility (decline on empty note/time selection, execute on populated selection, one-revision note removal) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyDeleteEligibility:56-88 (cppID swiftcore/PianoRoll::bandKeyDeleteEligibility; wired from runKeyboardChecks at keyboard.swift:11), with key mapping at src/swift/app/commands/KeybindingRegistry.swift::matches:62, availability at src/swift/app/roll/NoteCommands.swift::isAvailable:19, and arbitration at src/swift/app/commands/EditKeyArbiter.swift::decide:63. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
           const uint64_t target = rig.scratchTargetId();
@@ -299,8 +329,8 @@ Original expression:
   QVERIFY(!rig.scratchKeyPress(Qt::Key_Delete))
 
 A003 | SwiftBandKeysTest::testCommandIdArrivalThroughBandKeyPath | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:228
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -309,8 +339,8 @@ Original expression:
   QCOMPARE(bandkeys_arrival_count(target), 1)
 
 A004 | SwiftBandKeysTest::testCommandIdArrivalThroughBandKeyPath | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:229
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible Delete eligibility (decline on empty note/time selection, execute on populated selection, one-revision note removal) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyDeleteEligibility:56-88 (cppID swiftcore/PianoRoll::bandKeyDeleteEligibility; wired from runKeyboardChecks at keyboard.swift:11), with key mapping at src/swift/app/commands/KeybindingRegistry.swift::matches:62, availability at src/swift/app/roll/NoteCommands.swift::isAvailable:19, and arbitration at src/swift/app/commands/EditKeyArbiter.swift::decide:63. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -319,8 +349,8 @@ Original expression:
                    static_cast<int32_t>(SongView::EditCommand::Delete))
 
 A005 | SwiftBandKeysTest::testCommandIdArrivalThroughBandKeyPath | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:231
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible Delete eligibility (decline on empty note/time selection, execute on populated selection, one-revision note removal) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyDeleteEligibility:56-88 (cppID swiftcore/PianoRoll::bandKeyDeleteEligibility; wired from runKeyboardChecks at keyboard.swift:11), with key mapping at src/swift/app/commands/KeybindingRegistry.swift::matches:62, availability at src/swift/app/roll/NoteCommands.swift::isAvailable:19, and arbitration at src/swift/app/commands/EditKeyArbiter.swift::decide:63. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -328,8 +358,8 @@ Original expression:
   QCOMPARE(bandkeys_last_verdict(target), kVerdictDecline)
 
 A006 | SwiftBandKeysTest::testCommandIdArrivalThroughBandKeyPath | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:232
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -337,8 +367,8 @@ Original expression:
   QCOMPARE(bandkeys_last_handled(target), 0)
 
 A007 | SwiftBandKeysTest::testProductionKeyOwnership | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:245
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
       }
@@ -358,8 +388,8 @@ Original expression:
   QVERIFY2(rig.ok(), qUtf8Printable(error))
 
 A008 | SwiftBandKeysTest::testProductionKeyOwnership | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:249
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible auto-repeat consumption (repeat of eligible PencilMode consumes; first press executes and toggles) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyAutoRepeat:91-112 (cppID swiftcore/PianoRoll::bandKeyAutoRepeat), src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:723-731 (mid-gesture pencil survival), and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:535-537 (auto-repeat B consumed). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
           const uint64_t target = rig.targetId();
@@ -370,8 +400,8 @@ Original expression:
   QVERIFY(sgk_deliver(target, &repeat))
 
 A009 | SwiftBandKeysTest::testProductionKeyOwnership | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:252
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible auto-repeat consumption (repeat of eligible PencilMode consumes; first press executes and toggles) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyAutoRepeat:91-112 (cppID swiftcore/PianoRoll::bandKeyAutoRepeat), src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:723-731 (mid-gesture pencil survival), and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:535-537 (auto-repeat B consumed). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -381,8 +411,8 @@ Original expression:
   QVERIFY(!sgk_deliver(target, &first))
 
 A010 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:263
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
       }
@@ -400,8 +430,8 @@ Original expression:
   QVERIFY2(rig.ok(), qUtf8Printable(error))
 
 A011 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:268
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible Delete eligibility (decline on empty note/time selection, execute on populated selection, one-revision note removal) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyDeleteEligibility:56-88 (cppID swiftcore/PianoRoll::bandKeyDeleteEligibility; wired from runKeyboardChecks at keyboard.swift:11), with key mapping at src/swift/app/commands/KeybindingRegistry.swift::matches:62, availability at src/swift/app/roll/NoteCommands.swift::isAvailable:19, and arbitration at src/swift/app/commands/EditKeyArbiter.swift::decide:63. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
           const uint64_t target = rig.scratchTargetId();
@@ -413,8 +443,8 @@ Original expression:
   QVERIFY(!notes.empty())
 
 A012 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:278
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible Delete eligibility (decline on empty note/time selection, execute on populated selection, one-revision note removal) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyDeleteEligibility:56-88 (cppID swiftcore/PianoRoll::bandKeyDeleteEligibility; wired from runKeyboardChecks at keyboard.swift:11), with key mapping at src/swift/app/commands/KeybindingRegistry.swift::matches:62, availability at src/swift/app/roll/NoteCommands.swift::isAvailable:19, and arbitration at src/swift/app/commands/EditKeyArbiter.swift::decide:63. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
           // Swift mirrors production: it never judges selection itself, so each
@@ -431,8 +461,8 @@ Original expression:
   QVERIFY(!availableEmpty)
 
 A013 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:281
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
           const SgkKeyFacts emptyFacts =
@@ -442,8 +472,8 @@ Original expression:
   QVERIFY(!sgk_deliver(target, &emptyFacts))
 
 A014 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:282
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible Delete eligibility (decline on empty note/time selection, execute on populated selection, one-revision note removal) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyDeleteEligibility:56-88 (cppID swiftcore/PianoRoll::bandKeyDeleteEligibility; wired from runKeyboardChecks at keyboard.swift:11), with key mapping at src/swift/app/commands/KeybindingRegistry.swift::matches:62, availability at src/swift/app/roll/NoteCommands.swift::isAvailable:19, and arbitration at src/swift/app/commands/EditKeyArbiter.swift::decide:63. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -451,8 +481,8 @@ Original expression:
   QCOMPARE(bandkeys_last_verdict(target), kVerdictDecline)
 
 A015 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:283
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -460,8 +490,8 @@ Original expression:
   QCOMPARE(bandkeys_last_handled(target), 0)
 
 A016 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:288
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible Delete eligibility (decline on empty note/time selection, execute on populated selection, one-revision note removal) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyDeleteEligibility:56-88 (cppID swiftcore/PianoRoll::bandKeyDeleteEligibility; wired from runKeyboardChecks at keyboard.swift:11), with key mapping at src/swift/app/commands/KeybindingRegistry.swift::matches:62, availability at src/swift/app/roll/NoteCommands.swift::isAvailable:19, and arbitration at src/swift/app/commands/EditKeyArbiter.swift::decide:63. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -473,8 +503,8 @@ Original expression:
   QVERIFY(availableFull)
 
 A017 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:290
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
           const SgkKeyFacts fullFacts = keyFacts(SongView::EditCommand::Delete, false, availableFull);
@@ -483,8 +513,8 @@ Original expression:
   QVERIFY(!sgk_deliver(target, &fullFacts))
 
 A018 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:291
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible Delete eligibility (decline on empty note/time selection, execute on populated selection, one-revision note removal) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyDeleteEligibility:56-88 (cppID swiftcore/PianoRoll::bandKeyDeleteEligibility; wired from runKeyboardChecks at keyboard.swift:11), with key mapping at src/swift/app/commands/KeybindingRegistry.swift::matches:62, availability at src/swift/app/roll/NoteCommands.swift::isAvailable:19, and arbitration at src/swift/app/commands/EditKeyArbiter.swift::decide:63. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -492,8 +522,8 @@ Original expression:
   QCOMPARE(bandkeys_last_verdict(target), kVerdictExecute)
 
 A019 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:292
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -501,8 +531,8 @@ Original expression:
   QCOMPARE(bandkeys_last_handled(target), 0)
 
 A020 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:296
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible grid focus and input presence (focus takes routing; focused keys act) is asserted by executing src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:526-528 (forceActiveFocus/activeFocus) and ::test_bareSpace:567-569. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The retired native Quick focus chain and timelineRollInput item tree are not reproduced.
 Source context since previous assertion:
   ;
 
@@ -513,8 +543,8 @@ Original expression:
   QVERIFY(rig.focusRoll())
 
 A021 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:298
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible Delete eligibility (decline on empty note/time selection, execute on populated selection, one-revision note removal) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyDeleteEligibility:56-88 (cppID swiftcore/PianoRoll::bandKeyDeleteEligibility; wired from runKeyboardChecks at keyboard.swift:11), with key mapping at src/swift/app/commands/KeybindingRegistry.swift::matches:62, availability at src/swift/app/roll/NoteCommands.swift::isAvailable:19, and arbitration at src/swift/app/commands/EditKeyArbiter.swift::decide:63. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
           const qsizetype before = static_cast<qsizetype>(rig.document().notesForTrack(0).size());
@@ -523,8 +553,8 @@ Original expression:
   QVERIFY(!rig.scratchKeyPress(Qt::Key_Delete))
 
 A022 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:299
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible Delete eligibility (decline on empty note/time selection, execute on populated selection, one-revision note removal) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyDeleteEligibility:56-88 (cppID swiftcore/PianoRoll::bandKeyDeleteEligibility; wired from runKeyboardChecks at keyboard.swift:11), with key mapping at src/swift/app/commands/KeybindingRegistry.swift::matches:62, availability at src/swift/app/roll/NoteCommands.swift::isAvailable:19, and arbitration at src/swift/app/commands/EditKeyArbiter.swift::decide:63. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -532,8 +562,8 @@ Original expression:
   QVERIFY(rig.hostKeyPolicy(Qt::Key_Delete))
 
 A023 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:300
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible Delete eligibility (decline on empty note/time selection, execute on populated selection, one-revision note removal) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyDeleteEligibility:56-88 (cppID swiftcore/PianoRoll::bandKeyDeleteEligibility; wired from runKeyboardChecks at keyboard.swift:11), with key mapping at src/swift/app/commands/KeybindingRegistry.swift::matches:62, availability at src/swift/app/roll/NoteCommands.swift::isAvailable:19, and arbitration at src/swift/app/commands/EditKeyArbiter.swift::decide:63. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -541,8 +571,8 @@ Original expression:
   QCOMPARE(static_cast<qsizetype>(rig.document().notesForTrack(0).size()), before - 1)
 
 A024 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:312
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
       }
@@ -561,8 +591,8 @@ Original expression:
   QVERIFY2(rig.ok(), qUtf8Printable(error))
 
 A025 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:314
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible grid focus and input presence (focus takes routing; focused keys act) is asserted by executing src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:526-528 (forceActiveFocus/activeFocus) and ::test_bareSpace:567-569. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The retired native Quick focus chain and timelineRollInput item tree are not reproduced.
 Source context since previous assertion:
   ;
           const uint64_t scratch = rig.scratchTargetId();
@@ -571,8 +601,8 @@ Original expression:
   QVERIFY(rig.focusRoll())
 
 A026 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:318
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible grid focus and input presence (focus takes routing; focused keys act) is asserted by executing src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:526-528 (forceActiveFocus/activeFocus) and ::test_bareSpace:567-569. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The retired native Quick focus chain and timelineRollInput item tree are not reproduced.
 Source context since previous assertion:
   ;
 
@@ -583,8 +613,8 @@ Original expression:
   QVERIFY(rollInput != nullptr)
 
 A027 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:330
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible mid-gesture key blocking (gestureActive agreement; Delete swallowed mid-drag; cleared on release) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:717-722 and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:544-546 (Delete blocked mid-gesture) and :547-552 (pencil survival). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
           const QPointF scenePos =
@@ -603,8 +633,8 @@ Original expression:
   QVERIFY(rig.band().pointerPress(press))
 
 A028 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:331
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible mid-gesture key blocking (gestureActive agreement; Delete swallowed mid-drag; cleared on release) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:717-722 and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:544-546 (Delete blocked mid-gesture) and :547-552 (pencil survival). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -612,8 +642,8 @@ Original expression:
   QVERIFY(rig.band().gestureActive())
 
 A029 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:332
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible mid-gesture key blocking (gestureActive agreement; Delete swallowed mid-drag; cleared on release) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:717-722 and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:544-546 (Delete blocked mid-gesture) and :547-552 (pencil survival). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -621,8 +651,8 @@ Original expression:
   QVERIFY(rig.quickView().gestureActive())
 
 A030 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:335
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible mid-gesture key blocking (gestureActive agreement; Delete swallowed mid-drag; cleared on release) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:717-722 and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:544-546 (Delete blocked mid-gesture) and :547-552 (pencil survival). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
           const qsizetype before = static_cast<qsizetype>(rig.document().notesForTrack(0).size());
@@ -632,8 +662,8 @@ Original expression:
   QCOMPARE(static_cast<qsizetype>(rig.document().notesForTrack(0).size()), before)
 
 A031 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:336
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible mid-gesture key blocking (gestureActive agreement; Delete swallowed mid-drag; cleared on release) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:717-722 and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:544-546 (Delete blocked mid-gesture) and :547-552 (pencil survival). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -641,8 +671,8 @@ Original expression:
   QVERIFY(rig.band().pointerRelease(release))
 
 A032 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:337
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible mid-gesture key blocking (gestureActive agreement; Delete swallowed mid-drag; cleared on release) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:717-722 and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:544-546 (Delete blocked mid-gesture) and :547-552 (pencil survival). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -650,8 +680,8 @@ Original expression:
   QVERIFY(!rig.band().gestureActive())
 
 A033 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:338
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible mid-gesture key blocking (gestureActive agreement; Delete swallowed mid-drag; cleared on release) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:717-722 and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:544-546 (Delete blocked mid-gesture) and :547-552 (pencil survival). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -659,8 +689,8 @@ Original expression:
   QVERIFY(!rig.quickView().gestureActive())
 
 A034 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:342
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible mid-gesture key blocking (gestureActive agreement; Delete swallowed mid-drag; cleared on release) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:717-722 and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:544-546 (Delete blocked mid-gesture) and :547-552 (pencil survival). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -671,8 +701,8 @@ Original expression:
   QVERIFY(rig.scratchBand().pointerPress(press))
 
 A035 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:343
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible mid-gesture key blocking (gestureActive agreement; Delete swallowed mid-drag; cleared on release) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:717-722 and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:544-546 (Delete blocked mid-gesture) and :547-552 (pencil survival). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -680,8 +710,8 @@ Original expression:
   QVERIFY(rig.scratchBand().gestureActive())
 
 A036 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:344
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -689,8 +719,8 @@ Original expression:
   QCOMPARE(bandkeys_gesture_active(scratch), 1)
 
 A037 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:347
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -700,8 +730,8 @@ Original expression:
   QVERIFY(sgk_deliver(scratch, &autoRepeatDelete))
 
 A038 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:348
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible mid-gesture key blocking (gestureActive agreement; Delete swallowed mid-drag; cleared on release) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:717-722 and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:544-546 (Delete blocked mid-gesture) and :547-552 (pencil survival). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -709,8 +739,8 @@ Original expression:
   QCOMPARE(bandkeys_last_verdict(scratch), kVerdictConsume)
 
 A039 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:349
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -718,8 +748,8 @@ Original expression:
   QCOMPARE(bandkeys_last_handled(scratch), 1)
 
 A040 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:352
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -729,8 +759,8 @@ Original expression:
   QVERIFY(!sgk_deliver(scratch, &pencil))
 
 A041 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:353
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible auto-repeat consumption (repeat of eligible PencilMode consumes; first press executes and toggles) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyAutoRepeat:91-112 (cppID swiftcore/PianoRoll::bandKeyAutoRepeat), src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:723-731 (mid-gesture pencil survival), and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:535-537 (auto-repeat B consumed). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -738,8 +768,8 @@ Original expression:
   QCOMPARE(bandkeys_last_verdict(scratch), kVerdictExecute)
 
 A042 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:354
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -747,8 +777,8 @@ Original expression:
   QCOMPARE(bandkeys_last_handled(scratch), 0)
 
 A043 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:356
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible mid-gesture key blocking (gestureActive agreement; Delete swallowed mid-drag; cleared on release) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:717-722 and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:544-546 (Delete blocked mid-gesture) and :547-552 (pencil survival). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -757,8 +787,8 @@ Original expression:
   QVERIFY(rig.scratchBand().pointerRelease(release))
 
 A044 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:357
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible mid-gesture key blocking (gestureActive agreement; Delete swallowed mid-drag; cleared on release) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:717-722 and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:544-546 (Delete blocked mid-gesture) and :547-552 (pencil survival). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -766,8 +796,8 @@ Original expression:
   QVERIFY(!rig.scratchBand().gestureActive())
 
 A045 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:358
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -775,8 +805,8 @@ Original expression:
   QCOMPARE(bandkeys_gesture_active(scratch), 0)
 
 A046 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:367
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
       }
@@ -792,8 +822,8 @@ Original expression:
   QVERIFY2(rig.ok(), qUtf8Printable(error))
 
 A047 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:371
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
           const uint64_t target = rig.scratchTargetId();
@@ -804,8 +834,8 @@ Original expression:
   QVERIFY(sgk_deliver(target, &repeat))
 
 A048 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:372
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible auto-repeat consumption (repeat of eligible PencilMode consumes; first press executes and toggles) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyAutoRepeat:91-112 (cppID swiftcore/PianoRoll::bandKeyAutoRepeat), src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:723-731 (mid-gesture pencil survival), and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:535-537 (auto-repeat B consumed). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -813,8 +843,8 @@ Original expression:
   QCOMPARE(bandkeys_last_verdict(target), kVerdictConsume)
 
 A049 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:373
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -822,8 +852,8 @@ Original expression:
   QCOMPARE(bandkeys_last_handled(target), 1)
 
 A050 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:376
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -833,8 +863,8 @@ Original expression:
   QVERIFY(!sgk_deliver(target, &first))
 
 A051 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:377
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible auto-repeat consumption (repeat of eligible PencilMode consumes; first press executes and toggles) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyAutoRepeat:91-112 (cppID swiftcore/PianoRoll::bandKeyAutoRepeat), src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:723-731 (mid-gesture pencil survival), and src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:535-537 (auto-repeat B consumed). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -842,8 +872,8 @@ Original expression:
   QCOMPARE(bandkeys_last_verdict(target), kVerdictExecute)
 
 A052 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:378
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -851,8 +881,8 @@ Original expression:
   QCOMPARE(bandkeys_last_handled(target), 0)
 
 A053 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:388
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
       }
@@ -869,8 +899,8 @@ Original expression:
   QVERIFY2(rig.ok(), qUtf8Printable(error))
 
 A054 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:390
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible grid focus and input presence (focus takes routing; focused keys act) is asserted by executing src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:526-528 (forceActiveFocus/activeFocus) and ::test_bareSpace:567-569. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The retired native Quick focus chain and timelineRollInput item tree are not reproduced.
 Source context since previous assertion:
   ;
           const uint64_t target = rig.scratchTargetId();
@@ -879,8 +909,8 @@ Original expression:
   QVERIFY(rig.focusRoll())
 
 A055 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:395
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible host-policy fallback (unhandled keys fall through; bare Space drives transport without editing notes) is asserted by executing src/swift/app/roll/PianoGrid.swift::performCommand:363 with src/checks/editorqml/tst_ShellGridInput.qml::test_bareSpace:558-577. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -892,8 +922,8 @@ Original expression:
   QVERIFY(!notes.empty())
 
 A056 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:400
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible host-policy fallback (unhandled keys fall through; bare Space drives transport without editing notes) is asserted by executing src/swift/app/roll/PianoGrid.swift::performCommand:363 with src/checks/editorqml/tst_ShellGridInput.qml::test_bareSpace:558-577. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
           rig.view().selectionModel().setNoteSelection({notes.front().noteId});
@@ -905,8 +935,8 @@ Original expression:
   QVERIFY(!rig.scratchKeyPress(Qt::Key_Delete))
 
 A057 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:401
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible host-policy fallback (unhandled keys fall through; bare Space drives transport without editing notes) is asserted by executing src/swift/app/roll/PianoGrid.swift::performCommand:363 with src/checks/editorqml/tst_ShellGridInput.qml::test_bareSpace:558-577. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -914,8 +944,8 @@ Original expression:
   QVERIFY(rig.hostKeyPolicy(Qt::Key_Delete))
 
 A058 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:402
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible host-policy fallback (unhandled keys fall through; bare Space drives transport without editing notes) is asserted by executing src/swift/app/roll/PianoGrid.swift::performCommand:363 with src/checks/editorqml/tst_ShellGridInput.qml::test_bareSpace:558-577. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -923,8 +953,8 @@ Original expression:
   QCOMPARE(static_cast<qsizetype>(rig.document().notesForTrack(0).size()), before - 1)
 
 A059 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:403
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -932,8 +962,8 @@ Original expression:
   QCOMPARE(bandkeys_arrival_count(target), 0)
 
 A060 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:413
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
       }
@@ -950,8 +980,8 @@ Original expression:
   QVERIFY2(rig.ok(), qUtf8Printable(error))
 
 A061 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:418
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible grid focus and input presence (focus takes routing; focused keys act) is asserted by executing src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:526-528 (forceActiveFocus/activeFocus) and ::test_bareSpace:567-569. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The retired native Quick focus chain and timelineRollInput item tree are not reproduced.
 Source context since previous assertion:
   ;
           const uint64_t scratch = rig.scratchTargetId();
@@ -963,8 +993,8 @@ Original expression:
   QVERIFY(rollInput != nullptr)
 
 A062 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:432
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible gesture cancellation across all four GridCancelReason codes (gesture aborts, reason recorded, document untouched) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyCancelReasons:115-140 (cppID swiftcore/PianoRoll::bandKeyCancelReasons). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
           const QPointF scenePos =
@@ -985,8 +1015,8 @@ Original expression:
   QVERIFY(rig.scratchBand().pointerPress(press))
 
 A063 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:433
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible gesture cancellation across all four GridCancelReason codes (gesture aborts, reason recorded, document untouched) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyCancelReasons:115-140 (cppID swiftcore/PianoRoll::bandKeyCancelReasons). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -994,8 +1024,8 @@ Original expression:
   QVERIFY(rig.scratchBand().gestureActive())
 
 A064 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:435
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible gesture cancellation across all four GridCancelReason codes (gesture aborts, reason recorded, document untouched) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyCancelReasons:115-140 (cppID swiftcore/PianoRoll::bandKeyCancelReasons). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
               rig.scratchBand().inputCancelled(reasons[index]);
@@ -1004,8 +1034,8 @@ Original expression:
   QVERIFY(!rig.scratchBand().gestureActive())
 
 A065 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:437
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible gesture cancellation across all four GridCancelReason codes (gesture aborts, reason recorded, document untouched) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyCancelReasons:115-140 (cppID swiftcore/PianoRoll::bandKeyCancelReasons). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
           }
@@ -1014,8 +1044,8 @@ Original expression:
   QCOMPARE(bandkeys_cancel_count(scratch), 4)
 
 A066 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:439
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible gesture cancellation across all four GridCancelReason codes (gesture aborts, reason recorded, document untouched) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyCancelReasons:115-140 (cppID swiftcore/PianoRoll::bandKeyCancelReasons). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
           for (int index = 0; index < 4; ++index)
@@ -1024,8 +1054,8 @@ Original expression:
   QCOMPARE(bandkeys_cancel_at(scratch, index), static_cast<int32_t>(reasons[index]))
 
 A067 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:440
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible gesture cancellation across all four GridCancelReason codes (gesture aborts, reason recorded, document untouched) is asserted by executing src/checks/rollcheck/keyboard_parity.swift::checkBandKeyCancelReasons:115-140 (cppID swiftcore/PianoRoll::bandKeyCancelReasons). No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1033,8 +1063,8 @@ Original expression:
   QCOMPARE(bandkeys_gesture_active(scratch), 0)
 
 A068 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:452
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
       }
@@ -1053,8 +1083,8 @@ Original expression:
   QVERIFY2(rig.ok(), qUtf8Printable(error))
 
 A069 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:458
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible grid focus and input presence (focus takes routing; focused keys act) is asserted by executing src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:526-528 (forceActiveFocus/activeFocus) and ::test_bareSpace:567-569. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The retired native Quick focus chain and timelineRollInput item tree are not reproduced.
 Source context since previous assertion:
   ;
           const uint64_t target = rig.scratchTargetId();
@@ -1067,8 +1097,8 @@ Original expression:
   QVERIFY(rollInput != nullptr)
 
 A070 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:463
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible pointer press/drag/release gesture flow is asserted by executing src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 (:61-63) and ::checkSelectionNonScaleMove:71 (:122-139), and src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:629. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
           const QPointF scenePos =
@@ -1080,8 +1110,8 @@ Original expression:
   QVERIFY(!band.pointerMove(pointerInput(scenePos, globalPos, Qt::NoButton, Qt::NoButton)))
 
 A071 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:464
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible pointer press/drag/release gesture flow is asserted by executing src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 (:61-63) and ::checkSelectionNonScaleMove:71 (:122-139), and src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:629. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1090,8 +1120,8 @@ Original expression:
               band.pointerPress(pointerInput(scenePos, globalPos, Qt::LeftButton, Qt::LeftButton)))
 
 A072 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:466
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible pointer press/drag/release gesture flow is asserted by executing src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 (:61-63) and ::checkSelectionNonScaleMove:71 (:122-139), and src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:629. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1100,8 +1130,8 @@ Original expression:
                                                 Qt::NoButton, Qt::LeftButton)))
 
 A073 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:477
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible pointer press/drag/release gesture flow is asserted by executing src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 (:61-63) and ::checkSelectionNonScaleMove:71 (:122-139), and src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:629. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1118,8 +1148,8 @@ Original expression:
   QVERIFY(!band.wheel(wheel))
 
 A074 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:480
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible pointer press/drag/release gesture flow is asserted by executing src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 (:61-63) and ::checkSelectionNonScaleMove:71 (:122-139), and src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:629. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1130,8 +1160,8 @@ Original expression:
               band.pointerRelease(pointerInput(scenePos, globalPos, Qt::LeftButton, Qt::NoButton)))
 
 A075 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:483
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1140,8 +1170,8 @@ Original expression:
   QCOMPARE(bandkeys_pointer_count(target), 4)
 
 A076 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:484
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1149,8 +1179,8 @@ Original expression:
   QCOMPARE(bandkeys_last_pointer_kind(target), static_cast<int32_t>(SGB_POINTER_RELEASE))
 
 A077 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:486
-Disposition: GAP
-Mapping/reason: Range/finiteness guard over a crossed pointer/wheel fact. Swift records the fact but predicates nothing about it; no equivalent Swift assertion established.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
           const int32_t key = bandkeys_last_pointer_key(target);
@@ -1159,8 +1189,8 @@ Original expression:
   QVERIFY(key >= -1 && key <= 127)
 
 A078 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:487
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1168,8 +1198,8 @@ Original expression:
   QVERIFY(std::isfinite(bandkeys_last_pointer_tick(target)))
 
 A079 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:490
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
           // Full release facts: LeftButton released, no buttons still held, no
@@ -1179,8 +1209,8 @@ Original expression:
   QCOMPARE(bandkeys_last_pointer_button(target), static_cast<int32_t>(Qt::LeftButton))
 
 A080 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:491
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1188,8 +1218,8 @@ Original expression:
   QCOMPARE(bandkeys_last_pointer_buttons(target), static_cast<int32_t>(Qt::NoButton))
 
 A081 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:492
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1197,8 +1227,8 @@ Original expression:
   QCOMPARE(bandkeys_last_pointer_modifiers(target), 0)
 
 A082 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:493
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1206,8 +1236,8 @@ Original expression:
   QCOMPARE(bandkeys_last_pointer_surface(target), static_cast<int32_t>(SGB_SURFACE_PLOT))
 
 A083 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:497
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1218,8 +1248,8 @@ Original expression:
   QCOMPARE(bandkeys_wheel_count(target), 1)
 
 A084 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:498
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1227,8 +1257,8 @@ Original expression:
   QVERIFY(std::isfinite(bandkeys_last_wheel_tick(target)))
 
 A085 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:500
-Disposition: GAP
-Mapping/reason: Range/finiteness guard over a crossed pointer/wheel fact. Swift records the fact but predicates nothing about it; no equivalent Swift assertion established.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
           const int32_t wheelKey = bandkeys_last_wheel_key(target);
@@ -1237,8 +1267,8 @@ Original expression:
   QVERIFY(wheelKey >= -1 && wheelKey <= 127)
 
 A086 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:501
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1246,8 +1276,8 @@ Original expression:
   QCOMPARE(bandkeys_last_wheel_pixel_delta_x(target), 0)
 
 A087 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:502
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1255,8 +1285,8 @@ Original expression:
   QCOMPARE(bandkeys_last_wheel_pixel_delta_y(target), 0)
 
 A088 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:503
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1264,8 +1294,8 @@ Original expression:
   QCOMPARE(bandkeys_last_wheel_angle_delta_x(target), 0)
 
 A089 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:504
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible pointer press/drag/release gesture flow is asserted by executing src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 (:61-63) and ::checkSelectionNonScaleMove:71 (:122-139), and src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:629. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1273,8 +1303,8 @@ Original expression:
   QCOMPARE(bandkeys_last_wheel_angle_delta_y(target), -120)
 
 A090 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:505
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1282,8 +1312,8 @@ Original expression:
   QCOMPARE(bandkeys_last_wheel_modifiers(target), 0)
 
 A091 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:506
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1291,8 +1321,8 @@ Original expression:
   QCOMPARE(bandkeys_last_wheel_surface(target), static_cast<int32_t>(SGB_SURFACE_PLOT))
 
 A092 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:507
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1300,8 +1330,8 @@ Original expression:
   QCOMPARE(bandkeys_last_wheel_inverted(target), 0)
 
 A093 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:514
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible gutter audition (pitch-only, no timeline tick) and double-click note action are asserted by executing src/swift/app/roll/PianoGrid.swift::beginKeyboardPointer:616 and ::doublePointer:594, with double-click delete exercised at src/checks/rollcheck/pencil.swift::checkVelocityDoubleClickDelete:211. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1315,8 +1345,8 @@ Original expression:
   QVERIFY(band.pointerPress(gutter))
 
 A094 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:515
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1324,8 +1354,8 @@ Original expression:
   QCOMPARE(bandkeys_pointer_count(target), 5)
 
 A095 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:516
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1333,8 +1363,8 @@ Original expression:
   QCOMPARE(bandkeys_last_pointer_surface(target), static_cast<int32_t>(SGB_SURFACE_GUTTER))
 
 A096 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:517
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible gutter audition (pitch-only, no timeline tick) and double-click note action are asserted by executing src/swift/app/roll/PianoGrid.swift::beginKeyboardPointer:616 and ::doublePointer:594, with double-click delete exercised at src/checks/rollcheck/pencil.swift::checkVelocityDoubleClickDelete:211. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1342,8 +1372,8 @@ Original expression:
   QCOMPARE(bandkeys_last_pointer_tick(target), SGB_INVALID_TICK)
 
 A097 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:518
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible gutter audition (pitch-only, no timeline tick) and double-click note action are asserted by executing src/swift/app/roll/PianoGrid.swift::beginKeyboardPointer:616 and ::doublePointer:594, with double-click delete exercised at src/checks/rollcheck/pencil.swift::checkVelocityDoubleClickDelete:211. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1351,8 +1381,8 @@ Original expression:
   QVERIFY(band.pointerRelease(gutter))
 
 A098 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:521
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible gutter audition (pitch-only, no timeline tick) and double-click note action are asserted by executing src/swift/app/roll/PianoGrid.swift::beginKeyboardPointer:616 and ::doublePointer:594, with double-click delete exercised at src/checks/rollcheck/pencil.swift::checkVelocityDoubleClickDelete:211. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1363,8 +1393,8 @@ Original expression:
               pointerInput(scenePos, globalPos, Qt::LeftButton, Qt::LeftButton)))
 
 A099 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:523
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1372,8 +1402,8 @@ Original expression:
   QCOMPARE(bandkeys_pointer_count(target), 7)
 
 A100 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:524
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1382,8 +1412,8 @@ Original expression:
                    static_cast<int32_t>(SGB_POINTER_DOUBLE_CLICK))
 
 A101 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:526
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible pointer press/drag/release gesture flow is asserted by executing src/checks/rollcheck/selection.swift::checkSelectionBandSweep:13 (:61-63) and ::checkSelectionNonScaleMove:71 (:122-139), and src/checks/rollcheck/EditorGridCameraChecks.swift::checkCommandRouting:629. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1392,8 +1422,8 @@ Original expression:
               band.pointerRelease(pointerInput(scenePos, globalPos, Qt::LeftButton, Qt::NoButton)))
 
 A102 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:529
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1402,8 +1432,8 @@ Original expression:
   QCOMPARE(bandkeys_leave_count(target), 1)
 
 A103 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:541
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
       }
@@ -1422,8 +1452,8 @@ Original expression:
   QVERIFY2(rig.ok(), qUtf8Printable(error))
 
 A104 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:547
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible grid focus and input presence (focus takes routing; focused keys act) is asserted by executing src/checks/editorqml/tst_ShellGridInput.qml::test_focusedRouting:526-528 (forceActiveFocus/activeFocus) and ::test_bareSpace:567-569. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The retired native Quick focus chain and timelineRollInput item tree are not reproduced.
 Source context since previous assertion:
   ;
           const uint64_t target = rig.scratchTargetId();
@@ -1436,8 +1466,8 @@ Original expression:
   QVERIFY(rollInput != nullptr)
 
 A105 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:555
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: explicit decline of non-standard buttons (Qt::XButton1 on the plot, non-left gutter presses) has no executing predicate. src/swift/app/roll/PianoGrid.swift::beginPointer:399 and ::beginKeyboardPointer:616 expose no button/surface parameter, so the retired decline verdict cannot be re-observed through the production API.
 Source context since previous assertion:
   ;
           const QPointF scenePos =
@@ -1452,8 +1482,8 @@ Original expression:
   QVERIFY(!band.pointerPress(gutterRight))
 
 A106 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:559
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: explicit decline of non-standard buttons (Qt::XButton1 on the plot, non-left gutter presses) has no executing predicate. src/swift/app/roll/PianoGrid.swift::beginPointer:399 and ::beginKeyboardPointer:616 expose no button/surface parameter, so the retired decline verdict cannot be re-observed through the production API.
 Source context since previous assertion:
   ;
           // Middle-button press on the gutter declines for the same reason.
@@ -1464,8 +1494,8 @@ Original expression:
   QVERIFY(!band.pointerPress(gutterMiddle))
 
 A107 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:561
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: explicit decline of non-standard buttons (Qt::XButton1 on the plot, non-left gutter presses) has no executing predicate. src/swift/app/roll/PianoGrid.swift::beginPointer:399 and ::beginKeyboardPointer:616 expose no button/surface parameter, so the retired decline verdict cannot be re-observed through the production API.
 Source context since previous assertion:
   ;
           // Exotic-button press on the plot declines.
@@ -1474,8 +1504,8 @@ Original expression:
   QVERIFY(!band.pointerPress(pointerInput(scenePos, globalPos, Qt::XButton1, Qt::XButton1)))
 
 A108 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:563
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1484,8 +1514,8 @@ Original expression:
   QCOMPARE(bandkeys_pointer_count(target), 3)
 
 A109 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:564
-Disposition: GAP
-Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: this site pins the BandKeysRig window session, scratch SwiftRollBand/SwiftGridSessionFeed/SwiftGridKeyRouter pair, SgcKeySurface registry, or sgk_/Sgb C-struct delivery/count reflection of the deleted prototype. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed.
 Source context since previous assertion:
   ;
 
@@ -1493,8 +1523,8 @@ Original expression:
   QCOMPARE(bandkeys_gesture_active(target), 0)
 
 A110 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:565
-Disposition: NATIVE
-Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible gutter audition (pitch-only, no timeline tick) and double-click note action are asserted by executing src/swift/app/roll/PianoGrid.swift::beginKeyboardPointer:616 and ::doublePointer:594, with double-click delete exercised at src/checks/rollcheck/pencil.swift::checkVelocityDoubleClickDelete:211. No-ingress: tst_swiftbandkeys.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired band-key mechanism. No live native run exists or is claimed. The exact retired C-bridge end-to-end observation (scratch-band verdicts, sgk_/Sgb struct counts) is not reproduced.
 Source context since previous assertion:
   ;
 

@@ -107,6 +107,7 @@ if(APPLE)
         editcheck/TimeChecks.swift
         editcheck/TimeCorpusChecks.swift
         editcheck/SelectionChecks.swift
+        editcheck/TickBoundsChecks.swift
         rollcheck/static/camera.swift
         rollcheck/static/geometry.swift
         rollcheck/static/gate.swift
@@ -115,6 +116,7 @@ if(APPLE)
         rollcheck/scale_editing.swift
         rollcheck/note_rendering.swift
         rollcheck/keyboard.swift
+        rollcheck/keyboard_parity.swift
         rollcheck/selection.swift
         rollcheck/identity.swift
         rollcheck/interlock.swift

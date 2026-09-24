@@ -8,6 +8,7 @@ func runKeyboardChecks(_ report: CheckReport, session: DocumentSession) {
     checkKeyboardResizeNotes(report, session: session)
     checkTimelineInsertBlankTimeTracks(report, session: session)
     checkTimelineInsertBlankTimeLanes(report, session: session)
+    runKeyboardParityChecks(report, session: session)
 }
 
 private struct KeyboardSeed {
