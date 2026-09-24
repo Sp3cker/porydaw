@@ -2011,8 +2011,11 @@ TestCase {
         mouseMove(input, point.x, point.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
                   "the node move published its hover")
-        tryVerify(function() { return label.text === model.hoverText && label.text.length > 0 },
-                  2000, "the drawn label shows the published hover text")
+        tryVerify(function() {
+            return label.text === model.hoverDisplay.text && label.text.length > 0
+                && label.visible && model.hoverDisplay.hasNode
+                && model.hoverDisplay.nodeTick === nodes[written].model.tick
+        }, 2000, "the node ring and value label share one hover presentation")
         compare(bootstrap.automationHoverBuilds() > builds, true,
                 "the node move published one hover")
         compare(bootstrap.automationInteractionActive(), false,
@@ -2034,7 +2037,9 @@ TestCase {
         verify(hoveredNode, "the hovered node is drawn")
         var hoverRing = findChild(hoveredNode, "automationNodeHover")
         verify(hoverRing, "the hovered node draws its hover ring")
-        compare(hoverRing.visible, true, "the hover ring shows on the hovered node")
+        tryCompare(hoverRing, "visible", true, 2000,
+                   "the hover ring shows on the hovered node")
+        compare(label.visible, true, "the ring and value label appear together")
         fuzzyCompare(hoverRing.x + hoverRing.width / 2, hoveredNode.model.x, 0.01,
                      "the hover ring centers on its node")
         fuzzyCompare(hoverRing.y + hoverRing.height / 2, hoveredNode.model.y, 0.01,
@@ -2091,6 +2096,7 @@ TestCase {
                 ++shownRings
         }
         compare(shownRings, 0, "a background hover draws no ring")
+        compare(label.visible, true, "background hover retains its value label without a ring")
         compare(bootstrap.automationDocumentRevision(), revision,
                 "hovering the background writes nothing")
         var backgroundGrab = grabImage(testCase.surface)
@@ -2114,6 +2120,11 @@ TestCase {
         mouseMove(input, point.x, point.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
                   "a move after a leave revives the hover")
+        tryCompare(hoverRing, "visible", true, 2000,
+                   "the returned node hover redraws its ring")
+        tryCompare(label, "visible", true, 2000,
+                   "the returned node hover redraws its value label")
+        waitForRendering(testCase.surface)
         var hovered = grabImage(testCase.surface)
         var changed = false
         for (var dx = -8; dx <= 8; dx += 4) {
@@ -5002,6 +5013,8 @@ TestCase {
         var childPanel = findChild(testCase.surface, "automationMenuSubmenu")
         var range = testCase.menuRowByAction(menuPanel, 12)
         verify(range, "Volume offers the historical Value range submenu")
+        verify(range.width > 0 && range.height > 0 && testCase.isEffectivelyVisible(range),
+               "the Value range row has a visible pointer target")
         mouseMove(range, range.width / 2, range.height / 2)
         tryVerify(function() {
             var child = testCase.menuRowByAction(childPanel, 16)
@@ -5010,14 +5023,19 @@ TestCase {
         var full = testCase.menuRowByAction(childPanel, 17)
         compare(full.model.checked, true, "Volume initially uses the full range")
         var range64 = testCase.menuRowByAction(childPanel, 16)
+        verify(range64.width > 0 && range64.height > 0
+               && testCase.isEffectivelyVisible(range64),
+               "the 0-64 row has a visible pointer target")
         mouseClick(range64, range64.width / 2, range64.height / 2, Qt.LeftButton)
         testCase.awaitAutomationModal("automationMenu", false)
         testCase.openAutomationTabMenu(volume)
         range = testCase.menuRowByAction(menuPanel, 12)
+        verify(range.width > 0 && range.height > 0 && testCase.isEffectivelyVisible(range),
+               "the reopened Value range row has a visible pointer target")
         mouseMove(range, range.width / 2, range.height / 2)
         tryVerify(function() {
             var child = testCase.menuRowByAction(childPanel, 16)
-            return child && child.model.checked
+            return child && testCase.isEffectivelyVisible(child) && child.model.checked
         }, 1000, "reopening remembers the selected 64 range")
         var checked = 0
         for (var action = 13; action <= 17; ++action) {
@@ -5029,6 +5047,13 @@ TestCase {
         keyClick(Qt.Key_Escape)
         keyClick(Qt.Key_Escape)
         testCase.openAutomationTabMenu(volume)
+        // The menu opens under the real pointer; leave its hover target before
+        // driving its keyboard selection so a queued hover cannot select a row.
+        var menuUnderlay = findChild(testCase.surface, "automationMenuUnderlay")
+        verify(menuUnderlay, "the reopened menu has an outside pointer target")
+        mouseMove(menuUnderlay, menuUnderlay.width - 1, menuUnderlay.height - 1)
+        wait(0)
+        compare(bootstrap.automationMenuOpen(), true, "moving off the menu keeps it open")
         keyClick(Qt.Key_Left)
         for (var step = 0; step < 12 && testCase.currentAutomationMenuAction() !== 12; ++step)
             keyClick(Qt.Key_Down)

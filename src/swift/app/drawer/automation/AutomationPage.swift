@@ -156,6 +156,12 @@ public final class AutomationPage: EditorDrawerPage {
     public var hoverText: String = ""
     public var hoverLabelRect: [String: QVariantSettable] = AutomationPage.rect(0, 0, 0, 0)
     public var hoverTick: Double = 0
+    /// One QtBridge notification drives both the drawn node hover ring and its
+    /// value label; separate node-model and label notifications can straddle a frame.
+    public var hoverDisplay: [String: QVariantSettable] = [
+        "visible": false, "text": "", "hasNode": false, "nodeTick": 0.0,
+        "x": 0.0, "y": 0.0, "width": 0.0, "height": 0.0,
+    ]
     /// The frozen gesture's own value readout: one text per move.
     public var previewLabelVisible: Bool = false
     public var previewLabelText: String = ""

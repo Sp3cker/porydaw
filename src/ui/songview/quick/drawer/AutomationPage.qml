@@ -97,10 +97,8 @@ FocusScope {
         readonly property int menuChildRowCount: 0
         readonly property bool bandVisible: false
         readonly property var bandRect: ({ "x": 0, "y": 0, "width": 0, "height": 0 })
-        readonly property bool hoverVisible: false
-        readonly property string hoverText: ""
-        readonly property var hoverLabelRect: ({ "x": 0, "y": 0, "width": 0, "height": 0 })
-        readonly property double hoverTick: 0
+        readonly property var hoverDisplay: ({ "visible": false, "text": "",
+            "hasNode": false, "nodeTick": 0, "x": 0, "y": 0, "width": 0, "height": 0 })
         readonly property bool previewLabelVisible: false
         readonly property string previewLabelText: ""
         readonly property var previewLabelRect: ({ "x": 0, "y": 0, "width": 0, "height": 0 })
@@ -394,7 +392,9 @@ FocusScope {
 
                 Rectangle {
                     objectName: "automationNodeHover"
-                    visible: node.model.hovered && !node.model.selected
+                    visible: page.pageModel.hoverDisplay.hasNode
+                             && page.pageModel.hoverDisplay.nodeTick === node.model.tick
+                             && !node.model.selected
                     x: node.model.x - node.model.ringRadius
                     y: node.model.y - node.model.ringRadius
                     width: 2 * node.model.ringRadius
@@ -445,12 +445,12 @@ FocusScope {
         Text {
             objectName: "automationHoverLabel"
 
-            visible: (page.pageModel ? page.pageModel.hoverVisible : false)
-            x: (page.pageModel ? page.pageModel.hoverLabelRect.x : 0)
-            y: (page.pageModel ? page.pageModel.hoverLabelRect.y : 0)
-            width: (page.pageModel ? page.pageModel.hoverLabelRect.width : 0)
-            height: (page.pageModel ? page.pageModel.hoverLabelRect.height : 0)
-            text: (page.pageModel ? page.pageModel.hoverText : "")
+            visible: page.pageModel.hoverDisplay.visible
+            x: page.pageModel.hoverDisplay.x
+            y: page.pageModel.hoverDisplay.y
+            width: page.pageModel.hoverDisplay.width
+            height: page.pageModel.hoverDisplay.height
+            text: page.pageModel.hoverDisplay.text
             color: page.gridPalette.primaryText
             font: Qt.font(page.pageModel ? page.pageModel.captionFont : {})
             textFormat: Text.PlainText

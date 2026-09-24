@@ -93,17 +93,12 @@ Disposition: MATCHED
 Mapping: S011
 
 Original 290
-Disposition: GAP
-Mapping: Swift presenter coverage does not establish a rendered row center.
-QVERIFY2(!rangeCenter.isNull(), "the value range row never rendered")
+Disposition: MATCHED
+Mapping: S028, S029
 
 Original 293
-Disposition: GAP
-Mapping: Swift presenter coverage does not establish hover-driven submenu rendering.
-QVERIFY2(QTest::qWaitFor([&menu, &submenu] {
-                 return (submenu = menuSubmenuPanel(*menu.session)) != nullptr;
-             }),
-             "hovering the value range row did not open its submenu")
+Disposition: MATCHED
+Mapping: S029
 
 Original 298
 Disposition: PARTIAL
@@ -111,9 +106,8 @@ Mapping: Swift typed menuChildRows contains enabled Range64, but rendered submen
 QVERIFY2(submenuModel, "the value range submenu rendered without a typed model")
 
 Original 306
-Disposition: GAP
-Mapping: Swift presenter coverage does not establish a rendered child row center.
-QVERIFY2(!pickCenter.isNull(), "the 0-64 range row never rendered")
+Disposition: MATCHED
+Mapping: S029, S030
 
 Original 309
 Disposition: MATCHED
@@ -141,17 +135,12 @@ Disposition: MATCHED
 Mapping: S020
 
 Original 323
-Disposition: GAP
-Mapping: Swift presenter coverage does not establish the reopened row's rendered center.
-QVERIFY2(!reopenedRangeCenter.isNull(), "the reopened value range row never rendered")
+Disposition: MATCHED
+Mapping: S031
 
 Original 326
-Disposition: GAP
-Mapping: Swift presenter coverage does not establish hover reopening the rendered submenu.
-QVERIFY2(QTest::qWaitFor([&reopened, &reopenedSubmenu] {
-                 return (reopenedSubmenu = menuSubmenuPanel(*reopened.session)) != nullptr;
-             }),
-             "reopening the value range submenu failed")
+Disposition: MATCHED
+Mapping: S032
 
 Original 331
 Disposition: PARTIAL
@@ -250,3 +239,18 @@ Anchor: message "Escape claims the open lane menu"
 
 S027 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift
 Anchor: message "Escape closes the open lane menu"
+
+S028 | test_productionAutomationRangeSubmenu | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the Value range row has a visible pointer target"
+
+S029 | test_productionAutomationRangeSubmenu | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "hover reveals the hierarchical range choices"
+
+S030 | test_productionAutomationRangeSubmenu | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the 0-64 row has a visible pointer target"
+
+S031 | test_productionAutomationRangeSubmenu | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the reopened Value range row has a visible pointer target"
+
+S032 | test_productionAutomationRangeSubmenu | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "reopening remembers the selected 64 range"
