@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/presentation/painting.cpp
 Original SHA-256: 159ac9525ae9956c17b2648674383eccba7e8dc64498ab9fa0c5f02964f78926
 Swift counterpart: src/checks/automation/presentation/painting.swift
-Swift SHA-256: 591fb9b3c5dc1551c3f2a2ec4caa3b32529389f161b8b09a83841c4625d69aaa
+Swift SHA-256: cce7241445742f07d030d6617dd6f51afaff6c1c2e1968a8184df5bf7f0c5487
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -14,6 +14,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
+Tally: MATCHED 130, PARTIAL 24, GAP 0, NATIVE 41.
 This inventory does not authorize removing native checks. Unresolved entries remain work.
 
 Execution and ownership
@@ -23,7 +24,16 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Provided by the controller handoff for this reconciliation on the settled sources pinned
+above; this agent did not re-run either lane:
+deno task verify --filter swiftcore -> run_checks PASS (1/14 ok, 13 skipped). The selected
+harness runs runProjectSessionSuite -> runAutomationPageChecks
+(src/checks/workspace/SessionChecks.swift:71), which invokes the paired predicate
+drawerAutomationPresentationPaintingModel at src/checks/automation/AutomationPageChecks.swift:353.
+deno task verify:qml -> run_checks PASS (all harnesses). The Qt Quick Test lane runs
+src/checks/editorqml/tst_EditorDrawer.qml; its automation cases are indexed here as S###
+entries whose paths are src/checks/editorqml/tst_EditorDrawer.qml.
+No whole-tree run and no differential C++ comparison is claimed.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -50,1241 +60,1242 @@ src/checks/automation/presentation/painting.cpp:771 | for (const QRectF &rect : 
 Original assertion inventory
 
 A001 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S075 — mountProductionAutomation, src/checks/editorqml/tst_EditorDrawer.qml:2827, "the production Automation page attaches to its slot": the production page is mounted and identified; the Swift fixture's page is a stored non-optional value, so no nullable-page ingress remains to assert.
 Original expression:
   QVERIFY(automationPage)
 
 A002 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native EditorRig precondition: the C++ AutomationCanvas interaction object was retired with the native rig and has no Swift counterpart; AutomationPage publishes the model and owns pointer input, and the QML lane mounts the production page (S075).
 Original expression:
   QVERIFY(canvas)
 
 A003 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S035 — drawerAutomationPresentationPaintingModel, src/checks/automation/presentation/painting.swift:151, "the selector publishes one tab per catalog parameter", with S037 "the Tempo row closes the selector": the catalog is the supported controller list plus the song-global Tempo row.
 Original expression:
   QCOMPARE(labels.size(), int(controllers.size()) + 1)
 
 A004 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S037 — painting.swift:155, "the Tempo row closes the selector", with S080 "the last catalog parameter is the Tempo row the selector drew" (tst_EditorDrawer.qml:4131): the trailing enumerated row resolves to the song-global Tempo row.
 Original expression:
   QVERIFY(tempoRow.has_value())
 
 A005 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:126
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S037 — painting.swift:155 and S010 — drawerAutomationScaleLabelsAndLaneCounts, painting.swift:45, "the Tempo row leads the stack": the closing row is the Tempo identity {Tempo, 0, 0}.
 Original expression:
   QVERIFY((*tempoRow == EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}))
 
 A006 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:129
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S075 — tst_EditorDrawer.qml:2827: the production Automation page attaches to its drawer slot, the drawn equivalent of the resolved EditorDrawer section.
 Original expression:
   QVERIFY(drawer)
 
 A007 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S109 — test_parameterLabelsFitGutterAtDerivedMinimum, tst_EditorDrawer.qml:2961, "the requested height is clamped to the derived minimum": the derived minimum is positive, the precondition the original asserted.
 Original expression:
   QVERIFY(minimumHeight > 0)
 
 A008 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:134
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S109/S110 — tst_EditorDrawer.qml:2961/2966: the mounted viewport height settles at the derived minimum and stays there under further shrinking.
 Original expression:
   QTRY_COMPARE(automationPage->automationViewportSize().height(), minimumHeight)
 
 A009 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:135
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S095 — verifyAutomationLabelsFitGutter, tst_EditorDrawer.qml:2895, "the selector exposes its gutter and clipped scroller": the gutter item exists and is findable.
 Original expression:
   QVERIFY(m_gutterInput)
 
 A010 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:136
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S110 — tst_EditorDrawer.qml:2966, "further shrinking keeps the derived minimum": the gutter's own height equals the derived minimum.
 Original expression:
   QTRY_COMPARE(qCeil(m_gutterInput->height()), minimumHeight)
 
 A011 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:143
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S097 — tst_EditorDrawer.qml:2909, "the parameter tab has bounds": every catalog label's tab is found and has positive width and height.
 Original expression:
   QTRY_VERIFY((tab = parameterLabelItem(index)) && tab->isVisible() && tab->width() > 0.0 &&
                       tab->height() > 0.0)
 
 A012 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S098 — tst_EditorDrawer.qml:2911, "stays inside the widened gutter": each tab's mapped rect lies inside the gutter horizontally.
 Original expression:
   QVERIFY2(!bounds.isEmpty() && bounds.left() >= gutter.left() - layout::singlePixel() &&
                        bounds.right() <= gutter.right() + layout::singlePixel(),
                    "a label escaped the gutter's width")
 
 A013 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:150
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S103 — tst_EditorDrawer.qml:2926, "parameter tabs do not overlap at one center": every tab center is distinct from each earlier center.
 Original expression:
   QVERIFY(std::abs(center.x() - bounds.center().x()) > layout::singlePixel() ||
                       std::abs(center.y() - bounds.center().y()) > layout::singlePixel())
 
 A014 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S099 — tst_EditorDrawer.qml:2914, "the parameter tab has its production Text item": the Qt Quick contentItem itself is a control internal and is not published; the drawn tab's production Text item stands for the rendered label content.
 Original expression:
   QVERIFY2(content, "a catalog label rendered without its content item")
 
 A015 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:160
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S099 — tst_EditorDrawer.qml:2914: the tab's production Text item exists for every label.
 Original expression:
   QVERIFY2(text, "a catalog label rendered without its Text item")
 
 A016 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S100 — tst_EditorDrawer.qml:2915, compare(text.text, labels[i]): the drawn label text is the catalog label.
 Original expression:
   QCOMPARE(text->property("text").toString(), labels.at(index))
 
 A017 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:164
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S101 — tst_EditorDrawer.qml:2916, "the parameter label has rendered ink": the fitted text reports positive rendered content.
 Original expression:
   QVERIFY(contentWidth > 0.0 && contentHeight > 0.0)
 
 A018 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:165
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 — tst_EditorDrawer.qml:2918, "fits without clipping its rendered text": contentWidth stays within the Text width.
 Original expression:
   QVERIFY2(contentWidth <= text->width() + 0.5,
                    "the rendered fitted Text exceeds its label width")
 
 A019 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:167
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 — tst_EditorDrawer.qml:2918: contentHeight stays within the Text height.
 Original expression:
   QVERIFY2(contentHeight <= text->height() + 0.5,
                    "the rendered fitted Text exceeds its label height")
 
 A020 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S015 — drawerAutomationScaleLabelsAndLaneCounts, painting.swift:55, the selector's counts array: one published count per catalog row, in catalog order.
 Original expression:
   QCOMPARE(counts.size(), labels.size())
 
 A021 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:175
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S009 — painting.swift:43, "the row stack carries one row per catalog parameter": every catalog index resolves to a row.
 Original expression:
   QVERIFY(row.has_value())
 
 A022 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S011 — painting.swift:47, "a row counts the lane's written events", with S015 (the complete counts array): each row's count is the lane's written event count.
 Original expression:
   QCOMPARE(counts.at(index).toULongLong(), written)
 
 A023 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:186
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S096 — tst_EditorDrawer.qml:2902, "every catalog label has a tab": the measured tab list has one entry per label.
 Original expression:
   QCOMPARE(labelBounds.size(), static_cast<std::size_t>(labels.size()))
 
 A024 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:189
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S104 — tst_EditorDrawer.qml:2932, "related controller pairs share a row": each related pair's tab centers share one y.
 Original expression:
   QVERIFY2(std::abs(labelBounds.at(pair).center().y() -
                             labelBounds.at(pair + 1).center().y()) <= layout::singlePixel(),
                    "a related parameter pair no longer shares a selector row")
 
 A025 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:196
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S103 — tst_EditorDrawer.qml:2926: the odd trailing controller keeps a distinct center, i.e. a selector row of its own.
 Original expression:
   QVERIFY2(oddBounds.center().y() > labelBounds.at(controllers.size() - 2).center().y() +
                                                     layout::singlePixel(),
                        "the odd trailing controller no longer sits on its own selector row")
 
 A026 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S107 — tst_EditorDrawer.qml:2940, "Tempo closes the selector below the controllers": the final controller row sits above Tempo's row.
 Original expression:
   QVERIFY2(oddBounds.center().y() < labelBounds.back().center().y() - layout::singlePixel(),
                    "the odd trailing controller no longer sits above Tempo")
 
 A027 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:204
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S107 — tst_EditorDrawer.qml:2940: Tempo is the closing drawn row; the Swift lane asserts the closing-row ordering below the last controller row (the original's comparison against the first label is the weaker form of the same contract).
 Original expression:
   QVERIFY2(tempoBounds.center().y() > labelBounds.front().center().y(),
                "the song-global Tempo label no longer closes the selector grid")
 
 A028 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:206
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S105/S106 — tst_EditorDrawer.qml:2937/2938, "Tempo shares the first column's left edge"/"Tempo spans both columns": the Tempo tab spans the two-column selector grid.
 Original expression:
   QVERIFY2(tempoBounds.width() > labelBounds.front().width() * 1.5,
                "the song-global Tempo label no longer spans the closing selector row")
 
 A029 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S095 — tst_EditorDrawer.qml:2895: the scroller lookup resolves.
 Original expression:
   QVERIFY(scroller)
 
 A030 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:211
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S108 — tst_EditorDrawer.qml:2942, "the selector clips its scrolling content": scroller.clip is true.
 Original expression:
   QVERIFY(scroller->property("clip").toBool())
 
 A031 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:213
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S111 — tst_EditorDrawer.qml:2969, "the catalog scrolls at minimum height": contentHeight exceeds the scroller height.
 Original expression:
   QTRY_VERIFY(scroller->property("contentHeight").toReal() > scroller->height())
 
 A032 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S112 — tst_EditorDrawer.qml:2973, "the first parameter is visible at the content top": the first tab lies inside the scroller viewport at contentY 0.
 Original expression:
   QVERIFY2(checks::support::rectInside(labelBounds.front(), viewport),
                "the first tab is not visible at the content top")
 
 A033 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:218
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S111 — tst_EditorDrawer.qml:2969: contentHeight > height is exactly a positive maximum content offset.
 Original expression:
   QVERIFY(maximumContentY > 0.0)
 
 A034 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:221
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S097 — tst_EditorDrawer.qml:2909 (the per-label loop reaches the last tab), with S113 "Tempo is visible at the content bottom".
 Original expression:
   QVERIFY(lastTab)
 
 A035 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:222
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S113 — tst_EditorDrawer.qml:2978, "Tempo is visible at the content bottom": the last tab lies inside the viewport at the maximum content offset.
 Original expression:
   QTRY_VERIFY(
           checks::support::rectInside(lastTab->mapRectToScene(lastTab->boundingRect()), viewport))
 
 A036 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:233
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S075 — tst_EditorDrawer.qml:2827: the production page is mounted and identified.
 Original expression:
   QVERIFY(automationPage)
 
 A037 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:234
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native TimelineQuickScene precondition: the C++ quick scene and its automation layers were retired with the native rig; the QML lane draws and asserts its own items (S075/S081).
 Original expression:
   QVERIFY(scene)
 
 A038 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:235
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas interaction object; see A002.
 Original expression:
   QVERIFY(canvas)
 
 A039 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:241
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S009 — painting.swift:43: every catalog index resolves to a row before its activation.
 Original expression:
   QVERIFY(row.has_value())
 
 A040 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:242
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176, "activating a catalog row is accepted unless already active"/"the activated row becomes active": the Swift lane activates every catalog row and asserts acceptance plus the new active row; the already-active row is re-activation, asserted rejected by the paired lane (drawerAutomationParameterSwitchAndGhosts, "re-activating the active parameter is not a switch").
 Original expression:
   QVERIFY2(activateParameter(*row), qUtf8Printable(labels.at(index)))
 
 A041 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:243
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S042 — painting.swift:176, "the activated row becomes active": the activated row is the active parameter.
 Original expression:
   QCOMPARE(canvas->activeParameter(), index)
 
 A042 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:245
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S043 — painting.swift:179, "switching every parameter mutates nothing", with S114 — tst_EditorDrawer.qml:4243, "switching parameters wrote nothing to the lane": the revision/identity/history snapshot and the drawn lane ticks stay fixed, the no-commit condition that leaves the serialized document unchanged.
 Original expression:
   QCOMPARE(m_document->smf().write(), before)
 
 A043 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:256
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas LaneHandle row lookup: no Swift handle exists to validate; Swift addresses the lane by AutomationParameter and catalog index (S097).
 Original expression:
   QVERIFY(volumeHandle.valid())
 
 A044 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A043.
 Original expression:
   QVERIFY(panHandle.valid())
 
 A045 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:258
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A043.
 Original expression:
   QVERIFY(lfoHandle.valid())
 
 A046 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:269
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the catalog activation loop covers the Volume row.
 Original expression:
   QVERIFY(activateParameter(volume))
 
 A047 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:270
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S084/S083 — tst_EditorDrawer.qml:4162/4157, "the lane with written events drew its nodes"/"the active lane drew one marker per published node", with S045 — painting.swift:185: the drawn markers are exactly the active lane's published nodes; the node-ink role itself is theme-owned.
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
                                   volumeNode, QPoint{}, ccColor))
 
 A048 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083 — tst_EditorDrawer.qml:4157, with S044 — painting.swift:182, "the active projection is the switched parameter's": only the active lane's markers are published and drawn, so no marker is painted at another lane's node position.
 Original expression:
   QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes), lfoNode,
                                QPoint{}, ccColor))
 
 A049 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:275
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the LFO row activates.
 Original expression:
   QVERIFY(activateParameter(lfo))
 
 A050 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:276
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083/S084 — tst_EditorDrawer.qml:4157/4162, with S044: after the switch the LFO lane's published markers are the drawn set.
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
                                   lfoNode, QPoint{}, ccColor))
 
 A051 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:278
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083 — tst_EditorDrawer.qml:4157, with S044: the superseded Volume lane publishes no marker, so none is drawn.
 Original expression:
   QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
                                volumeNode, QPoint{}, ccColor))
 
 A052 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:281
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the Pan row activates.
 Original expression:
   QVERIFY(activateParameter(pan))
 
 A053 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:282
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083/S084 — tst_EditorDrawer.qml:4157/4162, with S044: the Pan lane's published markers are the drawn set.
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
                                   panNode, QPoint{}, ccColor))
 
 A054 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:284
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083 — tst_EditorDrawer.qml:4157, with S044: the superseded LFO lane publishes no marker.
 Original expression:
   QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes), lfoNode,
                                QPoint{}, ccColor))
 
 A055 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:293
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the catalog activation loop covers the Tempo row.
 Original expression:
   QVERIFY(activateParameter(tempo))
 
 A056 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:296
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S085/S084 — tst_EditorDrawer.qml:4164/4162 assert the active pipeline's curve and nodes on the volume lane; unproved: the Tempo lane's own active curve run in the node ink (Tempo's curve run is asserted only in its pinned-ghost form, S087).
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                   QRegion(body), QPoint{}, tempoColor))
 
 A057 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:298
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Negative colour-identity probe on the retired AutomationCurves raster layer: no non-identity-colour ingress is published; the drawn curve runs themselves are asserted by S085.
 Original expression:
   QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                QRegion(body), QPoint{},
                                themes::trackIdentityColor(kTrack % themes::trackIdentityColorCount)))
 
 A058 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:308
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
 Original expression:
   QVERIFY(automationPage)
 
 A059 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:309
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native TimelineQuickScene; see A037.
 Original expression:
   QVERIFY(scene)
 
 A060 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:310
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas; see A002.
 Original expression:
   QVERIFY(canvas)
 
 A061 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:314
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the Tempo row activates.
 Original expression:
   QVERIFY(activateParameter(tempo))
 
 A062 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:317
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A043.
 Original expression:
   QVERIFY(volumeHandle.valid())
 
 A063 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:318
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S059 — painting.swift:226, "Tempo shares the active lane's plot origin", with S060 — painting.swift:229, "Tempo keeps its own event count on the shared body": Tempo is projected over the same shared body as a controller lane.
 Original expression:
   QCOMPARE(tempoBody, canvas->laneBody(volumeHandle))
 
 A064 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:319
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S076 — tst_EditorDrawer.qml:4112, "the plot spans the body height", with S059: the Swift lane body is the shared AutomationPlotBounds the plot spans, and Tempo projects through its origin.
 Original expression:
   QCOMPARE(tempoBody, m_plotInput->bounds().toAlignedRect())
 
 A065 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:320
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S076 — tst_EditorDrawer.qml:4112 and S059 — painting.swift:226: the shared Tempo body is the composed, non-empty plot over which Tempo projects.
 Original expression:
   QVERIFY(!tempoBody.isEmpty())
 
 A066 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:328
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S085/S084 — tst_EditorDrawer.qml:4164/4162 assert the active pipeline on the volume lane; unproved: the Tempo lane's own active curve run (Tempo's curve is asserted only as the pinned ghost, S087).
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                   QRegion(tempoBody), QPoint{}, tempoColor))
 
 A067 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:337
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
 Original expression:
   QVERIFY(automationPage)
 
 A068 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:338
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native TimelineQuickScene; see A037.
 Original expression:
   QVERIFY(scene)
 
 A069 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:339
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas; see A002.
 Original expression:
   QVERIFY(canvas)
 
 A070 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:343
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the Volume row activates.
 Original expression:
   QVERIFY(activateParameter(volume))
 
 A071 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:353
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S048 — painting.swift:192, "an unpinned lane draws no ghost curve": before pinning every published run is the active curve type, so no ghost ink is painted.
 Original expression:
   QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                QRegion(body), QPoint{}, ghostInk))
 
 A072 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:355
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S047 — painting.swift:190, "a lane with events draws its curve", with S085 — tst_EditorDrawer.qml:4164, "the lane with written events drew its curve".
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                   QRegion(body), QPoint{}, ink))
 
 A073 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:358
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S080 — tst_EditorDrawer.qml:4129, "the last catalog parameter is the Tempo row the selector drew": the Tempo index resolves.
 Original expression:
   QVERIFY(tempoIndex >= 0)
 
 A074 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:360
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S087 — tst_EditorDrawer.qml:1975, "the plot drew the ghost's curve", with S086 — tst_EditorDrawer.qml:1970 and S051 — painting.swift:203, "Tempo pins as a ghost under the active lane".
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                   QRegion(body), QPoint{}, ghostInk))
 
 A075 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S088/S089 — tst_EditorDrawer.qml:1980/1994, "pinning adds exactly the ghost runs before the active runs"/"every ghost run draws before the active runs": the pinned ghost's runs are added under the still-drawn active runs.
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                   QRegion(body), QPoint{}, ink))
 
 A076 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:365
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S090 — tst_EditorDrawer.qml:1996, "a second Control press cleared the pin", with S057/S058 — painting.swift:220/222: the pinned set empties and the ghost curve drops.
 Original expression:
   QVERIFY(canvas->ghostParameters().isEmpty())
 
 A077 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:366
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S091 — tst_EditorDrawer.qml:1998, "unpinning restores the unpinned plot", with S058 — painting.swift:222: the ghost run is gone from the drawn and published runs.
 Original expression:
   QTRY_VERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                    QRegion(body), QPoint{}, ghostInk))
 
 A078 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:375
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
 Original expression:
   QVERIFY(automationPage)
 
 A079 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:376
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native TimelineQuickScene; see A037.
 Original expression:
   QVERIFY(scene)
 
 A080 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:377
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas; see A002.
 Original expression:
   QVERIFY(canvas)
 
 A081 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:380
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the Volume row activates.
 Original expression:
   QVERIFY(activateParameter(volume))
 
 A082 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:382
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A043.
 Original expression:
   QVERIFY(volumeHandle.valid())
 
 A083 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:399
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S061 — painting.swift:234, "the plot draws its time grid", with S081 — tst_EditorDrawer.qml:4139, "the page composed its time grid": before the growth the published grid lines are non-empty.
 Original expression:
   QVERIFY(!beforeGrid.empty())
 
 A084 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:404
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S062 — painting.swift:238, "drawer growth moves the value axis", asserts the grown body through the moved value axis, and S110/S111 (tst_EditorDrawer.qml:2961/2966) exercise the real grip resize; unproved: the lane body's own height increase.
 Original expression:
   QTRY_VERIFY(canvas->laneBody(volumeHandle).height() > beforeBody.height())
 
 A085 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:407
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S062 — painting.swift:238, "drawer growth moves the value axis": a lane point's projected y changes after the body grows.
 Original expression:
   QVERIFY(beforeValueY != afterValueY)
 
 A086 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:415
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S063 — painting.swift:242, "drawer growth keeps every grid line's horizontal center": the grid line x set is identical before and after growth.
 Original expression:
   QTRY_VERIFY(sameGridCenters(beforeGrid, gridCenters(afterBody)))
 
 A087 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:430
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationGrid raster rect probe (separator-role frame at the body edge): the grown grid alignment is asserted structurally by S061/S063.
 Original expression:
   QVERIFY(hasFrame(QRectF(afterBody).top()))
 
 A088 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:431
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationGrid raster rect probe; see A087.
 Original expression:
   QVERIFY(hasFrame(QRectF(afterBody).bottom()))
 
 A089 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:439
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
 Original expression:
   QVERIFY(automationPage)
 
 A090 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:440
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas; see A002.
 Original expression:
   QVERIFY(canvas)
 
 A091 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:448
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the Pan row activates.
 Original expression:
   QVERIFY(activateParameter(pan))
 
 A092 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:453
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S009 — painting.swift:43 (one row per catalog parameter), with S096 — tst_EditorDrawer.qml:2902: every named index resolves.
 Original expression:
   QVERIFY(panIndex >= 0 && lfoIndex >= 0 && tempoIndex >= 0 && modulationIndex >= 0)
 
 A093 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:471
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S029 — painting.swift:126, "the page publishes the selected inactive parameters", with S021/S022/S023 — painting.swift:99/102/102 (only covered lanes with events are selected; coverage alone never selects) and S115 — tst_EditorDrawer.qml:4245, "the explicit selection survives a parameter switch": the Swift fixture covers Pan+Tempo where the C++ covered LFO+Tempo; the selection contract is identical.
 Original expression:
   QTRY_VERIFY(canvas->selectedParameters() == expectedSelected)
 
 A094 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:472
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S020 — painting.swift:88, "an uncovered lane carries no scope indicator", with S023 — painting.swift:102: the uncovered Modulation lane is not published as selected.
 Original expression:
   QVERIFY(!canvas->selectedParameters().contains(modulationIndex))
 
 A095 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:477
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S097 — tst_EditorDrawer.qml:2909: the Pan row's drawn tab is found and has bounds.
 Original expression:
   QVERIFY(panTab)
 
 A096 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:478
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S097 — tst_EditorDrawer.qml:2909: the LFO row's drawn tab is found and has bounds.
 Original expression:
   QVERIFY(lfoTab)
 
 A097 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:479
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S097 — tst_EditorDrawer.qml:2909 with S080 — tst_EditorDrawer.qml:4129: the Tempo row's drawn tab is found.
 Original expression:
   QVERIFY(tempoTab)
 
 A098 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:483
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Qt Quick Control backgroundItem internals: the drawn tab background item has no published counterpart; the selection itself is asserted at the model level (S029).
 Original expression:
   QVERIFY(panBackground)
 
 A099 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:484
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Qt Quick Control backgroundItem internals; see A098.
 Original expression:
   QVERIFY(lfoBackground)
 
 A100 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:485
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Qt Quick Control backgroundItem internals; see A098.
 Original expression:
   QVERIFY(tempoBackground)
 
 A101 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:487
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Tab background colour identity (the tabSelectedBackground role): the model-level selection is asserted (S029/S115); the drawn role colour is owned by the QML theme and no executing predicate samples it.
 Original expression:
   QCOMPARE(panBackground->property("color").value<QColor>(),
                appearance.value(QStringLiteral("tabSelectedBackground")).value<QColor>())
 
 A102 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:489
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Tab background colour identity (the tabBackground role); see A101.
 Original expression:
   QCOMPARE(lfoBackground->property("color").value<QColor>(),
                appearance.value(QStringLiteral("tabBackground")).value<QColor>())
 
 A103 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:491
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Tab background colour identity (the tabBackground role); see A101.
 Original expression:
   QCOMPARE(tempoBackground->property("color").value<QColor>(),
                appearance.value(QStringLiteral("tabBackground")).value<QColor>())
 
 A104 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:496
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native timeline band layout geometry (TimelineBand::Automation): the band rect is a native layout object with no Swift counterpart; the QML lane grabs the composed band (S094).
 Original expression:
   QVERIFY(band)
 
 A105 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:498
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native band raster capture precondition (a non-null composed band image).
 Original expression:
   QVERIFY(!image.isNull())
 
 A106 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:517
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S029 — painting.swift:126 publishes the selected inactive parameters; unproved: the drawn shared-selection indicator inside the inactive label's rect.
 Original expression:
   QVERIFY2(containsOutline(localBounds(lfoTab), selectionBar),
                "the inactive LFO label has no visible shared-selection indicator")
 
 A107 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:519
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S029 — painting.swift:126 publishes the selected inactive parameters; unproved: the drawn shared-selection indicator inside the inactive Tempo label's rect.
 Original expression:
   QVERIFY2(containsOutline(localBounds(tempoTab), selectionBar),
                "the inactive Tempo label has no visible shared-selection indicator")
 
 A108 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:522
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Negative colour-leak probe on the retired band raster (the selectionOutline role): no drawn ghost-rule colour predicate exists.
 Original expression:
   QVERIFY2(!containsOutline(localBounds(lfoTab), ghostRule),
                "the shared selection leaked onto the ghost rule")
 
 A109 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:524
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Negative colour-leak probe on the retired band raster; see A108.
 Original expression:
   QVERIFY2(!containsOutline(localBounds(tempoTab), ghostRule),
                "the shared selection leaked onto the ghost rule")
 
 A110 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:532
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
 Original expression:
   QVERIFY(automationPage)
 
 A111 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:533
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas; see A002.
 Original expression:
   QVERIFY(canvas)
 
 A112 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:534
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the Tempo row activates.
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
 
 A113 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:548
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native timeline band layout geometry; see A104.
 Original expression:
   QVERIFY(band)
 
 A114 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:550
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native band raster capture precondition; see A105.
 Original expression:
   QVERIFY(!before.isNull())
 
 A115 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:553
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S069/S070 — painting.swift:271/273, "hovering a tempo node shows its readout"/"the readout text is the hovered value's own text", with S092/S093 — tst_EditorDrawer.qml:1847/1849, "the node move published its hover"/"the drawn label shows the published hover text".
 Original expression:
   QTRY_VERIFY((label = visibleHoverTextRecord(lane.valueText(bpm))).has_value())
 
 A116 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:554
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S072 — painting.swift:281, "the hover label stays inside the plot": the hover label rect lies inside the plot bounds.
 Original expression:
   QVERIFY(QRectF(QPointF{}, QSizeF(automationPage->automationViewportSize())).contains(*label))
 
 A117 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:556
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native band raster capture precondition; see A105.
 Original expression:
   QVERIFY(!after.isNull())
 
 A118 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:557
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S094 — tst_EditorDrawer.qml:1945, "the node hover paints over the background hover": a hovered node visibly repaints the composed band, the drawn equivalent of the changed capture.
 Original expression:
   QVERIFY(after != before)
 
 A119 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:565
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
 Original expression:
   QVERIFY(automationPage)
 
 A120 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:566
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native TimelineQuickScene; see A037.
 Original expression:
   QVERIFY(scene)
 
 A121 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:567
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas; see A002.
 Original expression:
   QVERIFY(canvas)
 
 A122 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:571
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the Volume row activates.
 Original expression:
   QVERIFY(activateParameter(volume))
 
 A123 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:579
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native TimelineQuickScene automationLaneTextModel: the C++ lane text model has no Swift counterpart; ghost label text is asserted by S052 — painting.swift:205.
 Original expression:
   QVERIFY(ghostModel)
 
 A124 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:582
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S080 — tst_EditorDrawer.qml:4129: the Tempo index resolves.
 Original expression:
   QVERIFY(tempoIndex >= 0)
 
 A125 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:586
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S052 — painting.swift:205, "the ghost label names the curve and its event count", with S032 — painting.swift:133 (["Pan (PAN) · 2 Events"]): the label names the curve and its counted events, each fixture's own written points.
 Original expression:
   QTRY_VERIFY((label = findTextRecord(ghostModel, QStringLiteral("Tempo · 1 Event"), viewport))
                       .has_value())
 
 A126 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:588
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S052 — painting.swift:205 asserts the ghost label text; unproved: the drawn name label's right-edge placement against the plot's right edge.
 Original expression:
   QVERIFY2(label->right() <= viewport.right() && label->right() > viewport.right() * 0.5,
                "the ghost name label no longer hugs the plot's right edge")
 
 A127 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:593
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S052 — painting.swift:205 asserts the ghost label text; unproved: the drawn name label's vertical tracking of its curve's height.
 Original expression:
   QVERIFY2(std::abs(label->center().y() - curveY) <= label->height(),
                "the ghost name label no longer tracks its curve's height")
 
 A128 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:595
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S052 — painting.swift:205: the pinned label list is exactly the pinned lane's label, so no unpinned lane's name label exists.
 Original expression:
   QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Volume"), viewport).has_value())
 
 A129 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:599
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S069/S092 assert the hover readout for the active lane's node; unproved: the hover readout raised over a pinned ghost's curve.
 Original expression:
   QTRY_VERIFY((label = findTextRecord(scene->automationHoverTextModel(), QStringLiteral("Tempo"),
                                           viewport))
                       .has_value())
 
 A130 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:602
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S093 — tst_EditorDrawer.qml:1849 asserts the drawn hover label text; unproved: its horizontal tracking of the pointer.
 Original expression:
   QVERIFY2(std::abs(label->center().x() - hoverPoint.x()) <= label->width(),
                "the ghost hover label no longer tracks the pointer horizontally")
 
 A131 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:604
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S093 — tst_EditorDrawer.qml:1849 asserts the drawn hover label text; unproved: the drawn label sitting above the nodeline.
 Original expression:
   QVERIFY2(label->bottom() <= curveY, "the ghost hover label no longer sits above the nodeline")
 
 A132 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:605
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retired text-model separation (the lane name model versus the hover readout model): the hover readout is asserted as its own text by S070/S093.
 Original expression:
   QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value())
 
 A133 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:608
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S090 — tst_EditorDrawer.qml:1996, "a second Control press cleared the pin", with S057 — painting.swift:220, "the ghost unpins": the pinned set is empty after unpinning.
 Original expression:
   QVERIFY(canvas->ghostParameters().isEmpty())
 
 A134 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:609
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S034 — painting.swift:137, "unpinning drops the ghost label", with S091 — tst_EditorDrawer.qml:1998.
 Original expression:
   QTRY_VERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value())
 
 A135 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:610
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S074 — painting.swift:286, "leaving the plot clears the tempo hover", clears the readout on pointer leave; unproved: the hover readout clearing when its ghost is unpinned.
 Original expression:
   QTRY_VERIFY(
           !findTextRecord(scene->automationHoverTextModel(), QStringLiteral("Tempo"), viewport)
                .has_value())
 
 A136 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:620
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the Pan row activates.
 Original expression:
   QVERIFY(activateParameter(pan))
 
 A137 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:623
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S078 — tst_EditorDrawer.qml:4123, "the active parameter's tab is drawn", with S079 — tst_EditorDrawer.qml:4124, "the active parameter reports itself selected".
 Original expression:
   QVERIFY(tab)
 
 A138 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:625
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Qt Quick Control contentItem internals of the tab: no published counterpart; the tab's production Text item is asserted by S099.
 Original expression:
   QVERIFY(content)
 
 A139 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:630
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S039 — painting.swift:160, "a tab counts its lane's written events"; unproved: the drawn event-count delegate item.
 Original expression:
   QVERIFY(count)
 
 A140 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:631
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S099 — tst_EditorDrawer.qml:2914, "the parameter tab has its production Text item".
 Original expression:
   QVERIFY(name)
 
 A141 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:632
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S039 — painting.swift:160 asserts the published lane count; unproved: the drawn badge's visibility and opacity.
 Original expression:
   QTRY_VERIFY(count->isVisible() && count->opacity() > 0.0)
 
 A142 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:633
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S039 — painting.swift:160 with S011 — painting.swift:47: the badge renders the published per-lane event count (2 for the two written Pan points).
 Original expression:
   QTRY_VERIFY(count->property("text").toString().startsWith(QString::number(2)))
 
 A143 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:634
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S097 — tst_EditorDrawer.qml:2909 asserts the tab bounds; unproved: the drawn badge staying inside the tab content.
 Original expression:
   QTRY_VERIFY(
           content->boundingRect().contains(count->mapRectToItem(content, count->boundingRect())))
 
 A144 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:636
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S097/S102 — tst_EditorDrawer.qml:2909/2918 assert the tab bounds and the fitted text; unproved: the drawn name/count horizontal separation.
 Original expression:
   QVERIFY(name->x() + name->width() <= count->x())
 
 A145 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:643
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S039/S040 — painting.swift:160/163, "a tab counts its lane's written events"/"a lane the document never wrote counts no event": the published count follows the lane's written points (2 and 0 asserted); the original asserts the same contract at 1.
 Original expression:
   QTRY_VERIFY(count->property("text").toString().startsWith(QString::number(1)))
 
 A146 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:646
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the Volume row activates.
 Original expression:
   QVERIFY(activateParameter(volume))
 
 A147 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:647
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S041/S042 assert the parameter switch; unproved: the inactive tab's drawn badge opacity.
 Original expression:
   QTRY_COMPARE(count->opacity(), 0.0)
 
 A148 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:648
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S097 — tst_EditorDrawer.qml:2909 asserts the tab bounds; unproved: the drawn tab height staying fixed across a badge change.
 Original expression:
   QCOMPARE(tab->height(), height)
 
 A149 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:649
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S102 — tst_EditorDrawer.qml:2918; unproved: the drawn name's x staying fixed when the badge appears.
 Original expression:
   QCOMPARE(name->x(), nameX)
 
 A150 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:650
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the Pan row activates again.
 Original expression:
   QVERIFY(activateParameter(pan))
 
 A151 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:651
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S039 — painting.swift:160; unproved: the drawn badge opacity returning when the row becomes active again.
 Original expression:
   QTRY_VERIFY(count->opacity() > 0.0)
 
 A152 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:654
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S040 — painting.swift:163, "a lane the document never wrote counts no event"; unproved: the drawn badge opacity dropping to zero.
 Original expression:
   QTRY_COMPARE(count->opacity(), 0.0)
 
 A153 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:662
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
 Original expression:
   QVERIFY(automationPage)
 
 A154 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:663
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native TimelineQuickScene; see A037.
 Original expression:
   QVERIFY(scene)
 
 A155 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:664
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas; see A002.
 Original expression:
   QVERIFY(canvas)
 
 A156 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:667
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native TimelineQuickScene lane text model; see A123.
 Original expression:
   QVERIFY(laneTextModel)
 
 A157 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:678
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041/S042 — painting.swift:174/176: the Pan row activates.
 Original expression:
   QVERIFY(activateParameter(pan))
 
 A158 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:683
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S002 — painting.swift:18, the scale labels use the parameter's own formatting (["c_v+63", "c_v-64", "c_v+0"]).
 Original expression:
   QTRY_VERIFY(
           (maxLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+63"), viewport)).has_value())
 
 A159 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:685
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S002 — painting.swift:18: the minimum label text.
 Original expression:
   QTRY_VERIFY(
           (minLabel = findTextRecord(laneTextModel, QStringLiteral("c_v-64"), viewport)).has_value())
 
 A160 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:687
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S003 — painting.swift:20, "the neutral label names the neutral value".
 Original expression:
   QTRY_VERIFY((neutralLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport))
                       .has_value())
 
 A161 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:690
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S002 — painting.swift:18 asserts the label texts; unproved: the drawn labels hugging the viewport's left edge.
 Original expression:
   QVERIFY2(rect.left() < viewport.left() + viewport.width() / 4.0,
                    "a scale label no longer hugs the viewport's left edge")
 
 A162 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:693
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S004 — painting.swift:22, "maximum, neutral and minimum sit at their curve-true heights": the maximum label sits above the neutral at its own curve height, the drawn equivalent of the viewport's top third.
 Original expression:
   QVERIFY2(maxLabel->center().y() < viewport.top() + viewport.height() / 3.0,
                "the maximum scale label left the plot's top third")
 
 A163 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:695
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S004 — painting.swift:22: the neutral label sits between the extremes at its curve height, the drawn equivalent of the middle third.
 Original expression:
   QVERIFY2(neutralLabel->center().y() >= viewport.top() + viewport.height() / 3.0 &&
                    neutralLabel->center().y() < viewport.top() + viewport.height() * 2.0 / 3.0,
                "the neutral scale label left the plot's middle third")
 
 A164 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:698
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S004 — painting.swift:22: the minimum label sits below the neutral at its curve height, the drawn equivalent of the bottom third.
 Original expression:
   QVERIFY2(minLabel->center().y() >= viewport.top() + viewport.height() * 2.0 / 3.0,
                "the minimum scale label left the plot's bottom third")
 
 A165 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:700
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S066 — painting.swift:251, "maximum, neutral and minimum stack top to bottom without overlap": the extremes and neutral are ordered without overlap.
 Original expression:
   QVERIFY(!maxLabel->intersects(*minLabel))
 
 A166 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:701
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S066 — painting.swift:251: the maximum and neutral labels are ordered without overlap.
 Original expression:
   QVERIFY(!maxLabel->intersects(*neutralLabel))
 
 A167 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:702
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S066 — painting.swift:251: the minimum and neutral labels are ordered without overlap.
 Original expression:
   QVERIFY(!minLabel->intersects(*neutralLabel))
 
 A168 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:708
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A043.
 Original expression:
   QVERIFY(panHandle.valid())
 
 A169 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:710
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S061 — painting.swift:234, "the plot draws its time grid", with S082 — tst_EditorDrawer.qml:4140, "the page composed its value axis": the composed Pan body is non-empty and carries its grid and value axis.
 Original expression:
   QVERIFY(!body.isEmpty())
 
 A170 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:716
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S004 — painting.swift:22: the minimum label sits at its curve height.
 Original expression:
   QVERIFY2(std::abs(minLabel->center().y() - minY) <= minLabel->height() / 2.0,
                "the minimum scale label moved off its curve height")
 
 A171 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:737
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S064 — painting.swift:244, "the centered lane keeps its three value rules"; unproved: the drawn left-edge tick rects and their exact three-count.
 Original expression:
   QTRY_VERIFY(ticksNear(maxY) == 1 && ticksNear(neutralY) == 1 && ticksNear(minY) == 1 &&
                   edgeTickYs().size() == 3)
 
 A172 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:743
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S069 — painting.swift:271, "hovering a tempo node shows its readout", with S092 — tst_EditorDrawer.qml:1847: a hover pass publishes the readout.
 Original expression:
   QTRY_VERIFY(scene->automationHoverTextModel()->rowCount() > 0)
 
 A173 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:744
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S067 — painting.swift:257, "a hover pass preserves the scale labels": the label texts are unchanged across a hover pass.
 Original expression:
   QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v+63"), viewport), maxLabel)
 
 A174 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:745
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S067 — painting.swift:257: the minimum label is preserved across a hover pass.
 Original expression:
   QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v-64"), viewport), minLabel)
 
 A175 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:746
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S067 — painting.swift:257: the neutral label is preserved across a hover pass.
 Original expression:
   QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport), neutralLabel)
 
 A176 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:747
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S067 — painting.swift:257 preserves the labels across a hover pass; unproved: the drawn left-edge tick sitting at each label's curve height.
 Original expression:
   QVERIFY2(ticksNear(maxY) == 1 && ticksNear(neutralY) == 1 && ticksNear(minY) == 1,
                "a scale tick no longer sits at its label's curve height")
 
 A177 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:749
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S068 — painting.swift:261, "a hover pass appends no duplicate value rules": a hover-only pass adds no duplicate edge rules.
 Original expression:
   QVERIFY2(edgeTickYs().size() == 3,
                "a hover-only pass appended duplicate left-edge scale ticks")
 
 A178 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:759
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S009 — painting.swift:43 with S080 — tst_EditorDrawer.qml:4129: the Volume index resolves.
 Original expression:
   QVERIFY(volumeIndex >= 0)
 
 A179 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:762
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S052/S032 — painting.swift:205/133: the ghost label names the curve and its event count for the pinned lane (each fixture's own counted lane).
 Original expression:
   QTRY_VERIFY(
           (ghostLabel = findTextRecord(laneTextModel, QStringLiteral("Volume · 2 Events"), viewport))
               .has_value())
 
 A180 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:765
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S002 — painting.swift:18: the maximum label text is found again with the ghost pinned.
 Original expression:
   QTRY_VERIFY(
           (maxLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+63"), viewport)).has_value())
 
 A181 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:767
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S002 — painting.swift:18: the minimum label text is found again with the ghost pinned.
 Original expression:
   QTRY_VERIFY(
           (minLabel = findTextRecord(laneTextModel, QStringLiteral("c_v-64"), viewport)).has_value())
 
 A182 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:769
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S002 — painting.swift:18: the neutral label text is found again with the ghost pinned.
 Original expression:
   QTRY_VERIFY((neutralLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport))
                       .has_value())
 
 A183 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:772
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S052 — painting.swift:205 asserts the ghost label; unproved: the drawn ghost label keeping to the plot's right edge so that it cannot intersect the left-edge scale labels.
 Original expression:
   QVERIFY2(!ghostLabel->intersects(rect),
                    "the ghost label overlaps a scale label instead of keeping its side")
 
 A184 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:776
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S090 — tst_EditorDrawer.qml:1996, "a second Control press cleared the pin": the pinned set is empty.
 Original expression:
   QVERIFY(canvas->ghostParameters().isEmpty())
 
 A185 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:781
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S006 — painting.swift:31, Volume's scale labels are its raw values (["127", "0"]).
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("127"), viewport).has_value())
 
 A186 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:782
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S006 — painting.swift:31: Volume's minimum label.
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("0"), viewport).has_value())
 
 A187 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:783
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S005 — painting.swift:28, "a parameter without a neutral emits only its extremes": no neutral label for Volume.
 Original expression:
   QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport).has_value())
 
 A188 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:788
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S080 — tst_EditorDrawer.qml:4129: the Tempo index resolves.
 Original expression:
   QVERIFY(tempoIndex >= 0)
 
 A189 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:791
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S007 — painting.swift:33, Tempo's scale labels are its BPM bounds with no neutral (["255", "20"]).
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("255"), viewport).has_value())
 
 A190 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:792
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S007 — painting.swift:33: Tempo's minimum label.
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("20"), viewport).has_value())
 
 A191 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:793
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S007 — painting.swift:33: Tempo's label set emits no neutral, so the current tempo value is not labelled.
 Original expression:
   QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("120"), viewport).has_value())
 
 A192 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:795
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S009 — painting.swift:43 with S096 — tst_EditorDrawer.qml:2902: the Bend index resolves.
 Original expression:
   QVERIFY(bendIndex >= 0)
 
 A193 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:798
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S008 — painting.swift:36, Bend's scale labels take the bend format path (["+8191", "-8192", "0"]).
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("+8191"), viewport).has_value())
 
 A194 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:799
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S008 — painting.swift:36: Bend's minimum label.
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("-8192"), viewport).has_value())
 
 A195 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:800
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S008 — painting.swift:36: Bend's neutral label.
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("0"), viewport).has_value())
 
-Swift executable assertion index
-The S entries are exact predicates already called by the suite. Their presence alone
+Swift and Qt Quick predicate index
+The S entries are exact predicates already called by the swiftcore suite and the Qt Quick
+Test lane (src/checks/editorqml/tst_EditorDrawer.qml). Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
 S001 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:15
@@ -1470,3 +1481,415 @@ S034 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/pr
 Swift expression:
   report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
                          what: "unpinning drops the ghost label")
+S035 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:151
+Swift expression:
+  report.expectEqual(AutomationCatalog.count, page.tabCount, cppID: drawerAutomationPaintingModelID,
+                         what: "the selector publishes one tab per catalog parameter")
+
+S036 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:153
+Swift expression:
+  report.expectEqual(catalog.count, page.publishedTabs.count, cppID: drawerAutomationPaintingModelID,
+                         what: "every catalog parameter draws a selector tab")
+
+S037 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:155
+Swift expression:
+  report.expectEqual(true, page.publishedTabs.last?.tempo ?? false, cppID: drawerAutomationPaintingModelID,
+                         what: "the Tempo row closes the selector")
+
+S038 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:157
+Swift expression:
+  report.expectEqual(catalog.map(AutomationCatalog.tabLabel),
+                         page.publishedTabs.map(\.label), cppID: drawerAutomationPaintingModelID,
+                         what: "each tab carries its catalog label")
+
+S039 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:160
+Swift expression:
+  report.expectEqual(2, page.publishedTabs[page.catalogIndex(of: fixture.volumeLane)].eventCount,
+                         cppID: drawerAutomationPaintingModelID,
+                         what: "a tab counts its lane's written events")
+
+S040 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:163
+Swift expression:
+  report.expectEqual(0, page.publishedTabs[page.catalogIndex(of: fixture.modulationLane)].eventCount,
+                         cppID: drawerAutomationPaintingModelID,
+                         what: "a lane the document never wrote counts no event")
+
+S041 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:174
+Swift expression:
+  report.expect(accepted || index == firstActive, cppID: drawerAutomationPaintingModelID,
+                        message: "activating a catalog row is accepted unless already active")
+
+S042 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:176
+Swift expression:
+  report.expectEqual(parameter, page.activeParameter, cppID: drawerAutomationPaintingModelID,
+                             what: "the activated row becomes active")
+
+S043 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:179
+Swift expression:
+  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationPaintingModelID,
+                         what: "switching every parameter mutates nothing")
+
+S044 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:182
+Swift expression:
+  report.expectEqual(fixture.projection(fixture.volumeLane).points.map(\.x),
+                         page.projection?.points.map(\.x) ?? [], cppID: drawerAutomationPaintingModelID,
+                         what: "the active projection is the switched parameter's")
+
+S045 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:185
+Swift expression:
+  report.expectEqual(2, page.nodeCount, cppID: drawerAutomationPaintingModelID,
+                         what: "the active lane draws one marker per written event")
+
+S046 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:187
+Swift expression:
+  report.expect(page.publishedNodes.allSatisfy { !$0.projected },
+                    cppID: drawerAutomationPaintingModelID,
+                    message: "a fully written lane shows no synthetic nodes")
+
+S047 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:190
+Swift expression:
+  report.expect(!page.publishedCurveRuns.isEmpty, cppID: drawerAutomationPaintingModelID,
+                    message: "a lane with events draws its curve")
+
+S048 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:192
+Swift expression:
+  report.expect(page.publishedCurveRuns.allSatisfy { $0.primitiveName == "automationCurve" },
+                    cppID: drawerAutomationPaintingModelID,
+                    message: "an unpinned lane draws no ghost curve")
+
+S049 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:196
+Swift expression:
+  report.expectEqual(0, page.nodeCount, cppID: drawerAutomationPaintingModelID,
+                         what: "an empty lane draws no markers")
+
+S050 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:198
+Swift expression:
+  report.expect(page.publishedCurveRuns.isEmpty, cppID: drawerAutomationPaintingModelID,
+                    message: "an empty lane draws no curve")
+
+S051 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:203
+Swift expression:
+  report.expect(page.toggleGhostParameter(index: tempoIndex), cppID: drawerAutomationPaintingModelID,
+                    message: "Tempo pins as a ghost under the active lane")
+
+S052 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:205
+Swift expression:
+  report.expectEqual(["Tempo (BPM) · 2 Events"], page.ghostLabels, cppID: drawerAutomationPaintingModelID,
+                         what: "the ghost label names the curve and its event count")
+
+S053 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:207
+Swift expression:
+  report.expect(page.publishedCurveRuns.count > activeRuns, cppID: drawerAutomationPaintingModelID,
+                    message: "pinning a ghost adds its curve under the active lane")
+
+S054 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:209
+Swift expression:
+  report.expect(page.publishedCurveRuns.last?.primitiveName == "automationCurve",
+                    cppID: drawerAutomationPaintingModelID,
+                    message: "the active lane keeps the top curve run")
+
+S055 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:212
+Swift expression:
+  report.expect(page.publishedCurveRuns.dropLast(activeRuns)
+          .allSatisfy { $0.primitiveName == "automationGhostCurve" },
+                    cppID: drawerAutomationPaintingModelID,
+                    message: "every earlier run is the pinned ghost's curve")
+
+S056 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:216
+Swift expression:
+  report.expect(page.publishedCurveRuns.suffix(activeRuns)
+          .allSatisfy { $0.primitiveName == "automationCurve" },
+                    cppID: drawerAutomationPaintingModelID,
+                    message: "the active tail keeps its own runs on top")
+
+S057 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:220
+Swift expression:
+  report.expect(page.toggleGhostParameter(index: tempoIndex), cppID: drawerAutomationPaintingModelID,
+                    message: "the ghost unpins")
+
+S058 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:222
+Swift expression:
+  report.expectEqual(activeRuns, page.publishedCurveRuns.count, cppID: drawerAutomationPaintingModelID,
+                         what: "unpinning drops the ghost curve")
+
+S059 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:226
+Swift expression:
+  report.expectEqual(volumeProjection.points.first?.x ?? -1, tempoProjection.points.first?.x ?? -2,
+                         cppID: drawerAutomationPaintingModelID,
+                         what: "Tempo shares the active lane's plot origin")
+
+S060 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:229
+Swift expression:
+  report.expectEqual(2, tempoProjection.eventCount, cppID: drawerAutomationPaintingModelID,
+                         what: "Tempo keeps its own event count on the shared body")
+
+S061 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:234
+Swift expression:
+  report.expect(!shortGrid.isEmpty, cppID: drawerAutomationPaintingModelID,
+                    message: "the plot draws its time grid")
+
+S062 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:238
+Swift expression:
+  report.expect(page.projection?.points.first(where: { $0.tick == 24 })?.y != shortY,
+                    cppID: drawerAutomationPaintingModelID,
+                    message: "drawer growth moves the value axis")
+
+S063 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:242
+Swift expression:
+  report.expectEqual(shortGrid, tallGrid, cppID: drawerAutomationPaintingModelID,
+                         what: "drawer growth keeps every grid line's horizontal center")
+
+S064 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:244
+Swift expression:
+  report.expectEqual(3, page.valueLines.count, cppID: drawerAutomationPaintingModelID,
+                         what: "the centered lane keeps its three value rules")
+
+S065 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:246
+Swift expression:
+  report.expectEqual(["c_v+63", "c_v-64", "c_v+0"],
+                         (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText },
+                         cppID: drawerAutomationPaintingModelID,
+                         what: "the value axis labels the centered lane's extremes and neutral")
+
+S066 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:251
+Swift expression:
+  report.expect(labelTop[0] < labelTop[2] && labelTop[2] < labelTop[1],
+                    cppID: drawerAutomationPaintingModelID,
+                    message: "maximum, neutral and minimum stack top to bottom without overlap")
+
+S067 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:257
+Swift expression:
+  report.expectEqual(labelsBefore,
+                             (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText },
+                             cppID: drawerAutomationPaintingModelID,
+                             what: "a hover pass preserves the scale labels")
+
+S068 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:261
+Swift expression:
+  report.expectEqual(3, page.valueLines.count, cppID: drawerAutomationPaintingModelID,
+                             what: "a hover pass appends no duplicate value rules")
+
+S069 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:271
+Swift expression:
+  report.expect(page.hoverVisible, cppID: drawerAutomationPaintingModelID,
+                        message: "hovering a tempo node shows its readout")
+
+S070 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:273
+Swift expression:
+  report.expectEqual(page.hover?.text ?? "", page.hoverText, cppID: drawerAutomationPaintingModelID,
+                             what: "the readout text is the hovered value's own text")
+
+S071 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:275
+Swift expression:
+  report.expect(!page.hoverText.isEmpty, cppID: drawerAutomationPaintingModelID,
+                        message: "the tempo hover names its value")
+
+S072 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:281
+Swift expression:
+  report.expect(inPlot, cppID: drawerAutomationPaintingModelID,
+                        message: "the hover label stays inside the plot")
+
+S073 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:283
+Swift expression:
+  report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationPaintingModelID,
+                             what: "hovering a tempo node writes nothing")
+
+S074 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:286
+Swift expression:
+  report.expect(!page.hoverVisible, cppID: drawerAutomationPaintingModelID,
+                        message: "leaving the plot clears the tempo hover")
+
+S075 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml:2827
+QML expression:
+  verify(bootstrap.attachProductionSection(testCase.automationKind),
+                 "the production Automation page attaches to its slot")
+
+S076 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4112
+QML expression:
+  fuzzyCompare(plot.height, page.height, 0.01, "the plot spans the body height")
+
+S077 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4115
+QML expression:
+  compare(testCase.automationTabItems().length, model.tabCount,
+                  "every catalog parameter drew a selector tab")
+
+S078 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4123
+QML expression:
+  verify(activeTab, "the active parameter's tab is drawn")
+
+S079 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4124
+QML expression:
+  compare(activeTab.Accessible.selected, true, "the active parameter reports itself selected")
+
+S080 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4129
+QML expression:
+  compare(bootstrap.automationTabLabels().split(",").slice(-1)[0],
+                  testCase.collectByNames(tempoTab, ["automationParameterTabText"], [])[0].text,
+                  "the last catalog parameter is the Tempo row the selector drew")
+
+S081 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4139
+QML expression:
+  verify(findChild(page, "automationGridLines"), "the page composed its time grid")
+
+S082 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4140
+QML expression:
+  verify(findChild(page, "automationValueLines"), "the page composed its value axis")
+
+S083 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4157
+QML expression:
+  tryVerify(function() { return testCase.automationNodeItems().length
+                                         === testCase.automationModel().nodeCount }, 2000,
+                    "the active lane drew one marker per published node ("
+                    + testCase.automationNodeItems().length + " drawn of "
+                    + testCase.automationModel().nodeCount + ")")
+
+S084 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4162
+QML expression:
+  compare(testCase.automationNodeItems().length > 0, true,
+                  "the lane with written events drew its nodes")
+
+S085 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4164
+QML expression:
+  compare(testCase.automationCurveItems().length > 0, true,
+                  "the lane with written events drew its curve")
+
+S086 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1970
+QML expression:
+  verify(active > 0, "the active lane draws its curve")
+
+S087 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1975
+QML expression:
+  tryVerify(function() {
+              return testCase.collectByNames(page, ["automationGhostCurve"], []).length > 0
+          }, 2000, "the plot drew the ghost's curve")
+
+S088 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1980
+QML expression:
+  compare(drawn.length, active + ghosts,
+                  "pinning adds exactly the ghost runs before the active runs")
+
+S089 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1994
+QML expression:
+  verify(ordered, "every ghost run draws before the active runs")
+
+S090 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1996
+QML expression:
+  tryVerify(function() { return bootstrap.automationGhostParameters().length === 0 }, 2000,
+                    "a second Control press cleared the pin")
+
+S091 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1998
+QML expression:
+  tryVerify(function() {
+              return testCase.automationCurveItems().length === active
+          }, 2000, "unpinning restores the unpinned plot")
+
+S092 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1847
+QML expression:
+  tryVerify(function() { return model.hoverVisible === true }, 2000,
+                    "the node move published its hover")
+
+S093 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1849
+QML expression:
+  tryVerify(function() { return label.text === model.hoverText && label.text.length > 0 },
+                    2000, "the drawn label shows the published hover text")
+
+S094 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1945
+QML expression:
+  verify(changed, "the node hover paints over the background hover")
+
+S095 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2895
+QML expression:
+  verify(gutter && scroller, "the selector exposes its gutter and clipped scroller")
+
+S096 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2902
+QML expression:
+  compare(tabs.length, labels.length, "every catalog label has a tab")
+
+S097 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2909
+QML expression:
+  verify(tab && tab.width > 0 && tab.height > 0, "the parameter tab has bounds")
+
+S098 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2911
+QML expression:
+  verify(origin.x >= -0.5 && origin.x + tab.width <= gutter.width + 0.5,
+                         "parameter " + labels[i] + " stays inside the widened gutter")
+
+S099 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2914
+QML expression:
+  verify(text, "the parameter tab has its production Text item")
+
+S100 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2915
+QML expression:
+  compare(text.text, labels[i])
+
+S101 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2916
+QML expression:
+  verify(text.contentWidth > 0 && text.contentHeight > 0,
+                         "the parameter label has rendered ink")
+
+S102 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2918
+QML expression:
+  verify(text.contentWidth <= text.width + 0.5
+                         && text.contentHeight <= text.height + 0.5,
+                         labels[i] + " fits without clipping its rendered text")
+
+S103 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2926
+QML expression:
+  verify(Math.abs(center.x - bounds[j].x) > 0.5
+                             || Math.abs(center.y - bounds[j].y) > 0.5,
+                             "parameter tabs do not overlap at one center")
+
+S104 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2932
+QML expression:
+  fuzzyCompare(bounds[pair].y, bounds[pair + 1].y, 0.5,
+                               "related controller pairs share a row")
+
+S105 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2937
+QML expression:
+  fuzzyCompare(tempo.x, left.x, 0.01, "Tempo shares the first column's left edge")
+
+S106 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2938
+QML expression:
+  fuzzyCompare(tempo.x + tempo.width, right.x + right.width, 0.01,
+                           "Tempo spans both columns")
+
+S107 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2940
+QML expression:
+  verify(bounds[bounds.length - 1].y > bounds[bounds.length - 2].y,
+                     "Tempo closes the selector below the controllers")
+
+S108 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2942
+QML expression:
+  compare(scroller.clip, true, "the selector clips its scrolling content")
+
+S109 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2961
+QML expression:
+  verify(gutter.height > 1, "the requested height is clamped to the derived minimum")
+
+S110 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2966
+QML expression:
+  fuzzyCompare(gutter.height, minimum, 0.01, "further shrinking keeps the derived minimum")
+
+S111 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2969
+QML expression:
+  verify(scroller.contentHeight > scroller.height, "the catalog scrolls at minimum height")
+
+S112 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2973
+QML expression:
+  verify(firstOrigin.y >= -0.5 && firstOrigin.y + first.height <= scroller.height + 0.5,
+                     "the first parameter is visible at the content top")
+
+S113 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2978
+QML expression:
+  verify(lastOrigin.y >= -0.5 && lastOrigin.y + last.height <= scroller.height + 0.5,
+                     "Tempo is visible at the content bottom")
+
+S114 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml:4243
+QML expression:
+  compare(bootstrap.automationLaneTicks(), ticksBefore,
+                  "switching parameters wrote nothing to the lane")
+
+S115 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml:4245
+QML expression:
+  compare(bootstrap.automationSelectionRange(), selected,
+                  "the explicit selection survives a parameter switch")

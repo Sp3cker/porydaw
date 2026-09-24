@@ -4,30 +4,83 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 Original: src/checks/automation/hover/tst_automationhover.cpp
 Original SHA-256: f1526e7f5e5571d3ed6b6c940db6f47fdccfa70d74d3993f00f60a0c142053d1
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/automation/automationcanvasediting.swift
+Swift SHA-256: 0134a98e5ef126a384cd7dc31020163100a3fc72219143a7a08b0e592fd569d4
+Additional Swift counterpart: src/checks/automation/AutomationPageChecks.swift
+Additional Swift SHA-256: 7521b2dfd55e2702e7d3f705e6eb3dcdf3fd0689d8634631b54ceb1ee7ab67f9
+Additional Swift counterpart: src/checks/automation/automationactions.swift
+Additional Swift SHA-256: 1529386a279c90602e10b8ab6eea604c3a13672bbccc0724c506724aaef3c435
+Additional Swift counterpart: src/checks/automation/domain/gestures.swift
+Additional Swift SHA-256: 5c57b1ca8d62ccec7ffef66c3d5d95f863495eba10021966910e99c772230615
+Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
+Additional Swift SHA-256: 86670017de3e8b42610fb203a36e7e06a6b653e002ac054b51c80ba8d5cadff6
+Additional Swift counterpart: src/checks/automation/domain/tst_automationdomain.swift
+Additional Swift SHA-256: c7314347f30a129f9ba667ef57a9b569b475c2dd4d6f520f51552f51329c32b7
+Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
+Additional Swift SHA-256: 02aa52b575a3b66b1d6bea8419170d3712e6454c4703cdecfb5e5db708971c3e
+Additional Swift counterpart: src/checks/editorqml/tst_ShellDrawerParity.qml
+Additional Swift SHA-256: 4e8a64ed35f57faa8ff7578ec1e4c4e325f19f74bcb4b481f47dbd8e77ca32e2
+Additional Swift counterpart: src/checks/editorqml/EditorQmlTests.swift
+Additional Swift SHA-256: 095a2162f5ecbe188ab5e89ca2ddb2116a410f43707bf6946e2452d02aa07e00
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-All 153 sites in this file are GAP: directInputHostRouting, focusLostKeepsGrab, deactivationClears, hoverRevivesAfterCancellation, idleCancellationsDoNotMutate, guideGhostTextAndRing, repeatHoverDoesNotChurn, leaveClearsRetainedHover, tempoAndCcTopologyMatch, rowRebuildStaleReleaseDoesNotMutate, targetAndToolProfilesUpdate, popupDismissalRecoversHover, and liveModifierGesturesCommitAndUndo exercise native Quick item hover routing, mouse grab recovery, guide ghost indicators, and modifier-driven hover updates. No Swift counterpart file was identified in the converted tree.
+The 153 sites cover directInputHostRouting, focusLostKeepsGrab, deactivationClears,
+hoverRevivesAfterCancellation, idleCancellationsDoNotMutate, guideGhostTextAndRing,
+repeatHoverDoesNotChurn, leaveClearsRetainedHover, tempoAndCcTopologyMatch,
+rowRebuildStaleReleaseDoesNotMutate, targetAndToolProfilesUpdate,
+popupDismissalRecoversHover and liveModifierGesturesCommitAndUndo. The original
+suite drove native Quick item hover routing, native mouse-grab recovery, guide and
+ghost indicators over the raw AutomationHover vertex mesh, the native hover text
+model and modifier-driven sweeps through a native EditorRig. That harness was
+deleted in the T2 boundary sweep; the converted counterparts are the Swift page
+model (automationcanvasediting.swift, automationactions.swift, domain/gestures.swift,
+presentation/*) executed by the swiftcore lane and the production QML cases
+(tst_EditorDrawer.qml, tst_ShellDrawerParity.qml) executed by the editorqml lane.
+S identifiers below name exact predicates of those counterparts.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
+NATIVE identifies a retired native mechanism (Quick window and grabber, numeric
+lane handle, raw vertex and annulus mesh, native fixture precondition) whose
+obligation has no counterpart in the converted window; it does not establish
+coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
 Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
+Tally: MATCHED 73, PARTIAL 10, GAP 4, NATIVE 66. The MATCHED sites cite exact S
+identifiers: the page hover model, context and cancellation predicates in
+src/checks/automation/automationcanvasediting.swift (S001-S033), the fine lattice,
+sweep commit and ramp predicates in automationactions.swift and domain/gestures.swift
+(S034-S043), the parameter switch and pencil cursor predicates in
+presentation/tst_automationpresentation.swift (S044, S045), the origin phantom
+projection predicate in domain/tst_automationdomain.swift (S046), the production
+QML hover, hints, menu and raster predicates in src/checks/editorqml (S047-S066),
+and the residual hover, hint-text, ramp-excursion and sweep-undo predicates in
+src/checks/automation/automationcanvasediting.swift (S067-S075).
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: run_checks PASS (1/14 ok, 13 skipped) for the settled tree at commit
+ddf64e1f; the swiftcore entries named under Execution ownership execute S001-S046
+and S067-S075.
 Converted-window command: deno task verify:qml --verbose
+Converted-window result: run_checks PASS (all harnesses), executing the QML
+predicates S047-S066. Both results were reported by the controller for commit
+ddf64e1f; this ledger re-ran neither and claims no other execution.
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
 
 Execution ownership
-The legacy AutomationHoverTest suite executed under the automation hover check harness. No direct Swift counterpart file exists; presenter-level hover and tooltip tracking are integrated into QML drawer components and pure Swift domain models.
+The legacy AutomationHoverTest suite executed under the retired automation hover
+check harness. Its converted counterparts are the swiftcore entry points
+drawerAutomationCancellationAndNoOps, drawerAutomationHoverModel,
+drawerAutomationHoverResidual, drawerAutomationContextAndPublicationDiagnostics and
+drawerAutomationGestureContractParity
+(dispatched from src/checks/automation/AutomationPageChecks.swift), with the sweep
+and modifier predicates in domain/gestures.swift and automationactions.swift, plus
+the editorqml production cases test_productionAutomationHoverThroughInput,
+test_automationHintsRetainGrabOrigin and test_aAutomationHoverRaster.
 
 Fixture, sequence and row constraints
 Data rows expand guideGhostTextAndRing across CC and Tempo lanes. Loops verify hover ghost text, target and tool profiles, coordinate mapping, and modifier transitions without spurious document churn.
@@ -37,8 +90,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationHoverTest::init | src/checks/automation/hover/tst_automationhover.cpp:78
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: the native fixture construction (temporary SMF, EditorRig, exposed Quick window) was deleted in the T2 boundary sweep and no native lane runs it; the converted lanes build an in-process fixture (drawerAutomationAutomationFixture, AutomationPageChecks.swift:141, no failure branch) and the production cases mount through tst_EditorDrawer.qml:1832.
 Source context since previous assertion:
   #include "checks/automation/hover/tst_automationhover.h"
 
@@ -122,8 +175,8 @@ Original expression:
   QVERIFY2(automation_hover::create(*fixture, error), qPrintable(error));
 
 A002 | AutomationHoverTest::init | src/checks/automation/hover/tst_automationhover.cpp:80
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: native TimelineInputItem lookup retired; the QML lane resolves the plot through testCase.automationPlotInput at tst_EditorDrawer.qml:1843 and no predicate asserts a native item handle.
 Source context since previous assertion:
 
       m_fixture = std::move(fixture);
@@ -132,8 +185,8 @@ Original expression:
   QVERIFY(automation_hover::plotInput(*m_fixture));
 
 A003 | AutomationHoverTest::init | src/checks/automation/hover/tst_automationhover.cpp:81
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: native gutter input lookup retired; the QML lane resolves the gutter through testCase.automationGutter at tst_EditorDrawer.qml:1913.
 Source context since previous assertion:
 
 
@@ -141,8 +194,8 @@ Original expression:
   QVERIFY(automation_hover::gutterInput(*m_fixture));
 
 A004 | AutomationHoverTest::init | src/checks/automation/hover/tst_automationhover.cpp:82
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: native Quick window handle (TimelineQuickView::quickWindow) retired; the QML production cases run in the shared test window and assert page behavior instead (S010, S054).
 Source context since previous assertion:
 
 
@@ -150,8 +203,8 @@ Original expression:
   QVERIFY(automation_hover::quickWindow(*m_fixture));
 
 A005 | AutomationHoverTest::init | src/checks/automation/hover/tst_automationhover.cpp:83
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: native TimelineQuickScene and its raw AutomationHover layer retired; the converted page publishes Swift records to QML items (automationHoverLabel, automationNodeHover) and no native scene is built.
 Source context since previous assertion:
 
 
@@ -159,8 +212,8 @@ Original expression:
   QVERIFY(m_fixture->rig->quickScene());
 
 A006 | QTest::mouseRelease | src/checks/automation/hover/tst_automationhover.cpp:103
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: native grab cleanup (mouseGrabberItem, ungrabMouse) retired; the QML MouseArea owns the grab and no predicate exposes a grabber item.
 Source context since previous assertion:
 
   }
@@ -187,8 +240,8 @@ Original expression:
   QVERIFY(grabCleared);
 
 A007 | AutomationHoverTest::directInputHostRouting | src/checks/automation/hover/tst_automationhover.cpp:109
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition (Quick plot geometry, lane body rect, native parameter-tab click); the Swift fixture activates panLane in-process at automationcanvasediting.swift:244.
 Source context since previous assertion:
 
   }
@@ -201,8 +254,8 @@ Original expression:
   QVERIFY(lane.has_value());
 
 A008 | AutomationHoverTest::directInputHostRouting | src/checks/automation/hover/tst_automationhover.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the background move publishes its hover (S010); the QML parity case observes the same publication through real pointer input (S061).
 Source context since previous assertion:
 
       const auto frozen = automation_hover::documentState(*m_fixture);
@@ -215,8 +268,8 @@ Original expression:
   QTRY_VERIFY(m_fixture->rig->view().quickView()->hoverVisible());
 
 A009 | AutomationHoverTest::directInputHostRouting | src/checks/automation/hover/tst_automationhover.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the hover publication is counted (S006).
 Source context since previous assertion:
 
 
@@ -224,8 +277,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::observe(*m_fixture).revision > idle.revision);
 
 A010 | AutomationHoverTest::directInputHostRouting | src/checks/automation/hover/tst_automationhover.cpp:118
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native-view geometry oracle (TimelineQuickView::hoverRootContentX within layout::singlePixel of timelineSplitX + camera.contentX(tick)); the Swift page publishes hoverTick instead (S012, S010) and the raster case proves the insertion hover paints (S062), but no predicate asserts the anchor X.
 Source context since previous assertion:
 
       const qreal expectedRootX = expectedRootContentX(*m_fixture, lane->insertionTick);
@@ -235,8 +288,8 @@ Original expression:
                   layout::singlePixel());
 
 A011 | AutomationHoverTest::directInputHostRouting | src/checks/automation/hover/tst_automationhover.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired raw-triangle ghost probe (hasFilledNodeAt over the deleted TimelineQuickLayer::AutomationHover mesh); the converted page draws the hover value label instead, asserted at S011 and S050.
 Source context since previous assertion:
 
       const auto &layer =
@@ -246,8 +299,8 @@ Original expression:
   QVERIFY(automation_hover::hasFilledNodeAt(layer, lane->insertionViewport));
 
 A012 | AutomationHoverTest::directInputHostRouting | src/checks/automation/hover/tst_automationhover.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the background hover reads the value the lane holds there (S011) and the drawn label shows the published hover text (S050).
 Source context since previous assertion:
 
 
@@ -255,8 +308,8 @@ Original expression:
   QVERIFY(automation_hover::hasValueText(*m_fixture, automation_hover::observe(*m_fixture)));
 
 A013 | AutomationHoverTest::directInputHostRouting | src/checks/automation/hover/tst_automationhover.cpp:124
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: hovering the background writes nothing (S013); the production QML case observes the same document revision (S051).
 Source context since previous assertion:
 
 
@@ -264,8 +317,8 @@ Original expression:
   QVERIFY(automation_hover::documentState(*m_fixture) == frozen);
 
 A014 | AutomationHoverTest::focusLostKeepsGrab | src/checks/automation/hover/tst_automationhover.cpp:130
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition; the Swift CC fixture activates panLane in-process at automationcanvasediting.swift:244.
 Source context since previous assertion:
 
   }
@@ -278,8 +331,8 @@ Original expression:
   QVERIFY(lane.has_value());
 
 A015 | AutomationHoverTest::focusLostKeepsGrab | src/checks/automation/hover/tst_automationhover.cpp:134
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native grabber query (QQuickWindow::mouseGrabberItem); the QML MouseArea holds the grab and the production hints case exercises it (S048, S049), but no check exposes the grabber item.
 Source context since previous assertion:
 
       const auto frozen = automation_hover::documentState(*m_fixture);
@@ -290,8 +343,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::quickWindow(*m_fixture)->mouseGrabberItem());
 
 A016 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:141
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native grabber identity and FocusLost cancel reason; no predicate asserts grab retention across focus loss. The cancellation itself is asserted at S001 and S002.
 Source context since previous assertion:
 
       QQuickItem *const grabber = automation_hover::quickWindow(*m_fixture)->mouseGrabberItem();
@@ -305,8 +358,8 @@ Original expression:
   QVERIFY(automation_hover::quickWindow(*m_fixture)->mouseGrabberItem() == grabber);
 
 A017 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:142
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: cancelling a live press gesture mutates nothing (S002); the converted page cancels through cancelSectionInteraction (QML MouseArea onCanceled) instead of the retired FocusLost reason.
 Source context since previous assertion:
 
 
@@ -314,8 +367,8 @@ Original expression:
   QVERIFY(automation_hover::documentState(*m_fixture) == frozen);
 
 A018 | AutomationHoverTest::deactivationClears | src/checks/automation/hover/tst_automationhover.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition; the Swift fixture activates the CC lane in-process.
 Source context since previous assertion:
 
       automation_hover::mouseRelease(*m_fixture, m_fixture->lastWindowPosition);
@@ -329,8 +382,8 @@ Original expression:
   QVERIFY(lane.has_value());
 
 A019 | AutomationHoverTest::deactivationClears | src/checks/automation/hover/tst_automationhover.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the background move publishes its hover chrome (S010).
 Source context since previous assertion:
 
       automation_hover::mouseMove(*m_fixture, lane->insertionWindowPosition);
@@ -339,8 +392,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::observe(*m_fixture).chromeVisible);
 
 A020 | AutomationHoverTest::deactivationClears | src/checks/automation/hover/tst_automationhover.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native grabber query after a press; the QML MouseArea grab is exercised at S048.
 Source context since previous assertion:
 
       const auto frozen = automation_hover::documentState(*m_fixture);
@@ -351,8 +404,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::quickWindow(*m_fixture)->mouseGrabberItem());
 
 A021 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a strong cancellation clears a live hover (S022) and ends the gesture synchronously (S001); the WindowDeactivated reason enum is retired and the converted ingress is cancelSectionInteraction from QML MouseArea onCanceled.
 Source context since previous assertion:
 
       automation_hover::canvas(*m_fixture)
@@ -363,8 +416,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::isClear(*m_fixture));
 
 A022 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:160
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native grabber query after cancellation; the QML MouseArea owns the grab.
 Source context since previous assertion:
 
 
@@ -372,8 +425,8 @@ Original expression:
   QTRY_VERIFY(!automation_hover::quickWindow(*m_fixture)->mouseGrabberItem());
 
 A023 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: cancelling a hover changes no document or history state (S023).
 Source context since previous assertion:
 
 
@@ -381,8 +434,8 @@ Original expression:
   QVERIFY(automation_hover::documentState(*m_fixture) == frozen);
 
 A024 | AutomationHoverTest::hoverRevivesAfterCancellation | src/checks/automation/hover/tst_automationhover.cpp:168
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition.
 Source context since previous assertion:
 
       m_fixture->heldButton = Qt::NoButton;
@@ -396,8 +449,8 @@ Original expression:
   QVERIFY(lane.has_value());
 
 A025 | AutomationHoverTest::hoverRevivesAfterCancellation | src/checks/automation/hover/tst_automationhover.cpp:170
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the background move publishes its hover chrome (S010).
 Source context since previous assertion:
 
       automation_hover::mouseMove(*m_fixture, lane->insertionWindowPosition);
@@ -406,8 +459,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::observe(*m_fixture).chromeVisible);
 
 A026 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:175
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the strong cancellation clears a live hover (S022); the WindowDeactivated reason is retired.
 Source context since previous assertion:
 
       const quint64 firstRevision = automation_hover::observe(*m_fixture).revision;
@@ -419,8 +472,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::isClear(*m_fixture));
 
 A027 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:178
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a move after a cancellation revives the hover (S024).
 Source context since previous assertion:
 
       automation_hover::mouseMove(*m_fixture, lane->insertionWindowPosition);
@@ -430,8 +483,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::observe(*m_fixture).chromeVisible);
 
 A028 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native-view geometry oracle (hoverRootContentX within singlePixel); the revival itself is asserted (S024) but the anchor X has no converted counterpart.
 Source context since previous assertion:
 
 
@@ -441,8 +494,8 @@ Original expression:
                   layout::singlePixel());
 
 A029 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:182
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the hover publication is counted (S006) and the revival publishes again after the cancellation (S024).
 Source context since previous assertion:
 
 
@@ -450,8 +503,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::observe(*m_fixture).revision > firstRevision);
 
 A030 | AutomationHoverTest::idleCancellationsDoNotMutate | src/checks/automation/hover/tst_automationhover.cpp:188
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition.
 Source context since previous assertion:
 
   }
@@ -464,8 +517,8 @@ Original expression:
   QVERIFY(lane.has_value());
 
 A031 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:197
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the cancellation clears the live hover (S022) and an idle cancellation is a no-op (S025); the Hidden and PointerUngrabbed reason enums are retired.
 Source context since previous assertion:
 
       const auto frozen = automation_hover::documentState(*m_fixture);
@@ -481,8 +534,8 @@ Original expression:
   QVERIFY(automation_hover::isClear(*m_fixture));
 
 A032 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:198
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native grabber query while idle.
 Source context since previous assertion:
 
 
@@ -490,8 +543,8 @@ Original expression:
   QVERIFY(!automation_hover::quickWindow(*m_fixture)->mouseGrabberItem());
 
 A033 | automation_hover::canvas | src/checks/automation/hover/tst_automationhover.cpp:199
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: an idle cancellation is a no-op on document and history (S025).
 Source context since previous assertion:
 
 
@@ -499,8 +552,8 @@ Original expression:
   QVERIFY(automation_hover::documentState(*m_fixture) == frozen);
 
 A034 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:214
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition with the lane kind of the data row selected.
 Source context since previous assertion:
 
   }
@@ -522,8 +575,8 @@ Original expression:
   QVERIFY(prepared.has_value());
 
 A035 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:218
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native topology harness precondition (topologyFor reporting a clear baseline, guide or leave failure); the converted predicates assert the topology facts directly (S028-S032).
 Source context since previous assertion:
 
       QString error;
@@ -534,8 +587,8 @@ Original expression:
   QVERIFY2(error.isEmpty(), qPrintable(error));
 
 A036 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:219
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the publication and tick placement are asserted (S010, S012, S006) and the insertion hover paints (S062), but the retired native-view anchor geometry (timelineSplitX + camera.contentX(hoverTick) within singlePixel) is unproved.
 Source context since previous assertion:
 
 
@@ -543,8 +596,8 @@ Original expression:
   QVERIFY(topology.insertionGuide);
 
 A037 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:220
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired raw-triangle ghost probe (hasFilledNodeAt at the insertion column and not at the pointer); the converted page draws no insertion ghost and reads the held value as hover text instead (S011, S050).
 Source context since previous assertion:
 
 
@@ -552,8 +605,8 @@ Original expression:
   QVERIFY(topology.heldGhost);
 
 A038 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:221
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the insertion hover reads the held value of the lane (S011) and the drawn label shows it (S050).
 Source context since previous assertion:
 
 
@@ -561,8 +614,8 @@ Original expression:
   QVERIFY(topology.insertionText);
 
 A039 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:222
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired raw-annulus-mesh probe (hasAnnulusAt with the hover ring radius); the converted ring is a published model fact (S017) drawn and pixel-verified by the QML ring cases (S052, S065, S066, S060).
 Source context since previous assertion:
 
 
@@ -570,8 +623,8 @@ Original expression:
   QVERIFY(topology.nodeRing);
 
 A040 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:223
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the node hover reads the value of the node (S016, S003) and the drawn label shows it (S050).
 Source context since previous assertion:
 
 
@@ -579,8 +632,8 @@ Original expression:
   QVERIFY(topology.nodeText);
 
 A041 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:224
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired raw-triangle probe for insertion-ghost suppression; the converted page draws no insertion ghost, and hovering a node rings exactly that node (S017, S052) and reads its own value (S016).
 Source context since previous assertion:
 
 
@@ -588,8 +641,8 @@ Original expression:
   QVERIFY(topology.suppressesInsertionGhost);
 
 A042 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:225
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a repeated hover does not churn (S014); the QML cases prove the repeated hover publishes nothing new (S053) and is pixel-stable (S063).
 Source context since previous assertion:
 
 
@@ -597,8 +650,8 @@ Original expression:
   QVERIFY(topology.repeatDoesNotChurn);
 
 A043 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:226
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: leaving the plot clears the hover (S019) and the raster case observes the clear (S054, S064).
 Source context since previous assertion:
 
 
@@ -606,8 +659,8 @@ Original expression:
   QVERIFY(topology.leaveCleared);
 
 A044 | AutomationHoverTest::guideGhostTextAndRing | src/checks/automation/hover/tst_automationhover.cpp:227
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the parameter switch is asserted (S044), a hover reads the held value of the active lane (S011), and the reactivation predicate revives the hover and reads the current held value after switching away and back (S068, S069).
 Source context since previous assertion:
 
 
@@ -615,8 +668,8 @@ Original expression:
   QVERIFY(topology.reactivatedHeldText);
 
 A045 | AutomationHoverTest::repeatHoverDoesNotChurn | src/checks/automation/hover/tst_automationhover.cpp:233
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition.
 Source context since previous assertion:
 
   }
@@ -629,8 +682,8 @@ Original expression:
   QVERIFY(lane.has_value());
 
 A046 | AutomationHoverTest::repeatHoverDoesNotChurn | src/checks/automation/hover/tst_automationhover.cpp:236
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the background move publishes its hover chrome (S010).
 Source context since previous assertion:
 
       const auto frozen = automation_hover::documentState(*m_fixture);
@@ -640,8 +693,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::observe(*m_fixture).chromeVisible);
 
 A047 | AutomationHoverTest::repeatHoverDoesNotChurn | src/checks/automation/hover/tst_automationhover.cpp:242
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a repeated hover does not churn (S014).
 Source context since previous assertion:
 
       const auto first = automation_hover::observe(*m_fixture);
@@ -654,8 +707,8 @@ Original expression:
   QCOMPARE(repeated.revision, first.revision);
 
 A048 | AutomationHoverTest::repeatHoverDoesNotChurn | src/checks/automation/hover/tst_automationhover.cpp:243
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a repeated hover does not churn (S014) and the QML raster case proves the repeated hover is pixel-stable (S063).
 Source context since previous assertion:
 
 
@@ -663,8 +716,8 @@ Original expression:
   QVERIFY(repeated == first);
 
 A049 | AutomationHoverTest::repeatHoverDoesNotChurn | src/checks/automation/hover/tst_automationhover.cpp:244
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a repeated hover still writes nothing (S015).
 Source context since previous assertion:
 
 
@@ -672,8 +725,8 @@ Original expression:
   QVERIFY(automation_hover::documentState(*m_fixture) == frozen);
 
 A050 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:250
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition.
 Source context since previous assertion:
 
   }
@@ -686,8 +739,8 @@ Original expression:
   QVERIFY(lane.has_value());
 
 A051 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:254
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the background move publishes its hover chrome (S010).
 Source context since previous assertion:
 
       const auto frozen = automation_hover::documentState(*m_fixture);
@@ -698,8 +751,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::observe(*m_fixture).chromeVisible);
 
 A052 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired raw-triangle ghost probe (hasFilledNodeAt); the converted page draws the hover value label instead (S011, S050).
 Source context since previous assertion:
 
       const auto &hoverLayer =
@@ -709,8 +762,8 @@ Original expression:
   QVERIFY(automation_hover::hasFilledNodeAt(hoverLayer, lane->insertionViewport));
 
 A053 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:258
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the background hover reads the held value of the lane (S011, S005) and the drawn label shows it (S050).
 Source context since previous assertion:
 
 
@@ -718,8 +771,8 @@ Original expression:
   QVERIFY(automation_hover::hasValueText(*m_fixture, automation_hover::observe(*m_fixture)));
 
 A054 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:260
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native gutter-input pointer delivery (leavePlot through the gutter item); the converted page clears on MouseArea onExited and page.pointerLeave, asserted at S019 and S054.
 Source context since previous assertion:
 
 
@@ -728,8 +781,8 @@ Original expression:
   QVERIFY(automation_hover::leavePlot(*m_fixture));
 
 A055 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:261
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: leaving the plot clears the hover (S019, S054).
 Source context since previous assertion:
 
 
@@ -737,8 +790,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::isClear(*m_fixture));
 
 A056 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:263
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native gutter-input pointer delivery, second leave.
 Source context since previous assertion:
 
 
@@ -747,8 +800,8 @@ Original expression:
   QVERIFY(automation_hover::leavePlot(*m_fixture));
 
 A057 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:264
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a repeated leave stays clear without churn (S020) and clears the hover (S019).
 Source context since previous assertion:
 
 
@@ -756,8 +809,8 @@ Original expression:
   QTRY_VERIFY(automation_hover::isClear(*m_fixture));
 
 A058 | AutomationHoverTest::leaveClearsRetainedHover | src/checks/automation/hover/tst_automationhover.cpp:265
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: leave passes write nothing (S021).
 Source context since previous assertion:
 
 
@@ -765,8 +818,8 @@ Original expression:
   QVERIFY(automation_hover::documentState(*m_fixture) == frozen);
 
 A059 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:271
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition for the Tempo lane (tempo edit plus native parameter-tab click).
 Source context since previous assertion:
 
   }
@@ -779,8 +832,8 @@ Original expression:
   QVERIFY(tempo.has_value());
 
 A060 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:274
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native topology harness precondition for the Tempo lane.
 Source context since previous assertion:
 
       QString tempoError;
@@ -790,8 +843,8 @@ Original expression:
   QVERIFY2(tempoError.isEmpty(), qPrintable(tempoError));
 
 A061 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:277
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition for the CC lane.
 Source context since previous assertion:
 
 
@@ -801,8 +854,8 @@ Original expression:
   QVERIFY(cc.has_value());
 
 A062 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:280
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native topology harness precondition for the CC lane.
 Source context since previous assertion:
 
       QString ccError;
@@ -812,8 +865,8 @@ Original expression:
   QVERIFY2(ccError.isEmpty(), qPrintable(ccError));
 
 A063 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:282
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native-view geometry oracle (hoverRootContentX within singlePixel) for the Tempo lane; Tempo publication is asserted (S028) but the anchor X has no converted counterpart.
 Source context since previous assertion:
 
 
@@ -822,8 +875,8 @@ Original expression:
   QVERIFY(tempoTopology.insertionGuide);
 
 A064 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:283
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired raw-triangle ghost probe for the Tempo lane; the converted page draws no insertion ghost and reads the held value as hover text (S011, S050).
 Source context since previous assertion:
 
 
@@ -831,8 +884,8 @@ Original expression:
   QVERIFY(tempoTopology.heldGhost);
 
 A065 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:284
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the Tempo background hover publishes and reads the held value of the lane (S067), and the Tempo node hover value text is asserted (S029).
 Source context since previous assertion:
 
 
@@ -840,8 +893,8 @@ Original expression:
   QVERIFY(tempoTopology.insertionText);
 
 A066 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:285
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired raw-annulus probe for the Tempo lane; the Tempo ring publication is asserted (S030) and the parameterized QML lane cases run for Pan and Tempo (S065, S066, S060).
 Source context since previous assertion:
 
 
@@ -849,8 +902,8 @@ Original expression:
   QVERIFY(tempoTopology.nodeRing);
 
 A067 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:286
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the Tempo node hover reads the value of the node (S029) and the drawn label shows it (S050).
 Source context since previous assertion:
 
 
@@ -858,8 +911,8 @@ Original expression:
   QVERIFY(tempoTopology.nodeText);
 
 A068 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:287
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired raw-triangle probe for Tempo insertion-ghost suppression; no converted insertion ghost exists.
 Source context since previous assertion:
 
 
@@ -867,8 +920,8 @@ Original expression:
   QVERIFY(tempoTopology.suppressesInsertionGhost);
 
 A069 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:288
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a repeated hover does not churn (S014) and the parameterized QML case covers Pan and Tempo repeated hovers (S063, S060).
 Source context since previous assertion:
 
 
@@ -876,8 +929,8 @@ Original expression:
   QVERIFY(tempoTopology.repeatDoesNotChurn);
 
 A070 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:289
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: Tempo leaves clear exactly like a CC lane (S032) and the QML leave case runs for both lanes (S054, S060).
 Source context since previous assertion:
 
 
@@ -885,8 +938,8 @@ Original expression:
   QVERIFY(tempoTopology.leaveCleared);
 
 A071 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:290
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the reactivation predicate switches away and back on the Tempo lane, revives the hover and reads the current held value (S068, S069).
 Source context since previous assertion:
 
 
@@ -894,8 +947,8 @@ Original expression:
   QVERIFY(tempoTopology.reactivatedHeldText);
 
 A072 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:291
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: Tempo publishes the same node hover, ring, preservation and leave behavior as a CC lane (S028-S032) and one parameterized QML case applies the same assertions to Pan and Tempo (S060).
 Source context since previous assertion:
 
 
@@ -903,8 +956,8 @@ Original expression:
   QVERIFY(tempoTopology == ccTopology);
 
 A073 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:297
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native AutomationCanvas handle; the converted page owns published rows and activates parameters in-process.
 Source context since previous assertion:
 
   }
@@ -917,8 +970,8 @@ Original expression:
   QVERIFY(canvas);
 
 A074 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:301
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native parameter-tab activation (clickVisibleTab); the converted checks activate parameters through page.activateParameter (S044).
 Source context since previous assertion:
 
       const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
@@ -929,8 +982,8 @@ Original expression:
   QVERIFY(automation_hover::activateParameter(*m_fixture, lfoRow));
 
 A075 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:305
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native numeric LaneHandle to row-id mapping (findHandle and rowMatches over canvas row indices); the converted stack addresses rows by AutomationParameter.
 Source context since previous assertion:
 
       const LaneHandle tempoBefore{0};
@@ -941,8 +994,8 @@ Original expression:
   QVERIFY(automation_hover::rowMatches(*canvas, panBefore, panRow));
 
 A076 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:306
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native numeric LaneHandle to row-id mapping, second row.
 Source context since previous assertion:
 
 
@@ -950,8 +1003,8 @@ Original expression:
   QVERIFY(automation_hover::rowMatches(*canvas, lfoBefore, lfoRow));
 
 A077 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:307
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native lane body rect (AutomationCanvas::laneBody); the converted page publishes lane rows and hover geometry rather than body rects.
 Source context since previous assertion:
 
 
@@ -959,8 +1012,8 @@ Original expression:
   QVERIFY(!canvas->laneBody(tempoBefore).isEmpty());
 
 A078 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:310
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native lane body rect for the drag row.
 Source context since previous assertion:
 
 
@@ -970,8 +1023,8 @@ Original expression:
   QVERIFY(!lfoBody.isEmpty());
 
 A079 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:323
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a live draft writes nothing before its release (S040); the same freeze is asserted for a node drag under its activation distance at automationcanvasediting.swift:100 and :104.
 Source context since previous assertion:
 
       const QPointF grabbed(
@@ -991,8 +1044,8 @@ Original expression:
   QVERIFY(automation_hover::documentState(*m_fixture) == frozen);
 
 A080 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:331
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native lane body rect across AutomationCanvas::rebuildRows; the converted page rebuilds published rows instead.
 Source context since previous assertion:
 
 
@@ -1007,8 +1060,8 @@ Original expression:
   QVERIFY(!canvas->laneBody(tempoBefore).isEmpty());
 
 A081 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:332
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native invalid-handle behavior (a default LaneHandle yields an empty body); the converted rows are a typed array with no numeric handle validity API.
 Source context since previous assertion:
 
 
@@ -1016,8 +1069,8 @@ Original expression:
   QVERIFY(canvas->laneBody(LaneHandle{}).isEmpty());
 
 A082 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:333
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native invalid-handle behavior (LaneHandle 9999 yields an empty body).
 Source context since previous assertion:
 
 
@@ -1025,8 +1078,8 @@ Original expression:
   QVERIFY(canvas->laneBody(LaneHandle{9999}).isEmpty());
 
 A083 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:337
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a stale release after a mid-gesture rebuild commits nothing (S033).
 Source context since previous assertion:
 
 
@@ -1037,8 +1090,8 @@ Original expression:
   QVERIFY(automation_hover::documentState(*m_fixture) == frozen);
 
 A084 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:338
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native grabber query after the stale release.
 Source context since previous assertion:
 
 
@@ -1046,8 +1099,8 @@ Original expression:
   QVERIFY(!automation_hover::quickWindow(*m_fixture)->mouseGrabberItem());
 
 A085 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:340
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native numeric LaneHandle stability across a rebuild; the converted rows are addressed by parameter.
 Source context since previous assertion:
 
 
@@ -1056,8 +1109,8 @@ Original expression:
   QVERIFY(automation_hover::findHandle(*canvas, panRow) == panBefore);
 
 A086 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native numeric LaneHandle stability across a rebuild, second row.
 Source context since previous assertion:
 
 
@@ -1065,8 +1118,8 @@ Original expression:
   QVERIFY(automation_hover::findHandle(*canvas, lfoRow) == lfoBefore);
 
 A087 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:342
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native handle-to-row-id resolution after the rebuild.
 Source context since previous assertion:
 
 
@@ -1075,8 +1128,8 @@ Original expression:
                                            panRow));
 
 A088 | AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate | src/checks/automation/hover/tst_automationhover.cpp:344
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native handle-to-row-id resolution after the rebuild, second row.
 Source context since previous assertion:
 
 
@@ -1085,8 +1138,8 @@ Original expression:
                                            lfoRow));
 
 A089 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:351
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition.
 Source context since previous assertion:
 
   }
@@ -1099,8 +1152,8 @@ Original expression:
   QVERIFY(lane.has_value());
 
 A090 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:356
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native canvas, page, plot and window handle set.
 Source context since previous assertion:
 
       AutomationCanvas *const canvas = automation_hover::canvas(*m_fixture);
@@ -1112,8 +1165,8 @@ Original expression:
   QVERIFY(canvas && automationPage && plot && window);
 
 A091 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:360
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the automation plot claims the hint scope; the production status strip shows the plot instructions when the pointer is on the automation plot (S047).
 Source context since previous assertion:
 
       ui::MouseHints &hints = ui::MouseHints::instance();
@@ -1124,8 +1177,8 @@ Original expression:
   QTRY_VERIFY(hints.currentSource() == plot);
 
 A092 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:361
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the production status text is non-empty for an automation plot hover (S047).
 Source context since previous assertion:
 
 
@@ -1133,8 +1186,8 @@ Original expression:
   QTRY_VERIFY(!hints.currentText().isEmpty());
 
 A093 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:365
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the plot claims the hint scope at a hover (S047), the insertion hover publishes the sweep profile (S007, S004) and that profile carries the ramp instructions (S070).
 Source context since previous assertion:
 
       const QString nodeText = hints.currentText();
@@ -1145,8 +1198,8 @@ Original expression:
   QTRY_VERIFY(hints.currentSource() == plot);
 
 A094 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:366
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: same composition as A093; the sweep profile text is non-empty and carries the ramp instructions (S070), with the plot owning the claim (S047).
 Source context since previous assertion:
 
 
@@ -1154,8 +1207,8 @@ Original expression:
   QTRY_VERIFY(!hints.currentText().isEmpty());
 
 A095 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:368
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the node and background hovers publish different hint profiles (S018 and S004 node 15, S007 sweep 17).
 Source context since previous assertion:
 
       const QString sweepText = hints.currentText();
@@ -1164,8 +1217,8 @@ Original expression:
   QVERIFY(sweepText != nodeText);
 
 A096 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:374
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native QAction PencilToggle; the converted tool is a published page property (AutomationInteraction.swift isPencilMode) and no check exposes a pencil action object.
 Source context since previous assertion:
 
 
@@ -1178,8 +1231,8 @@ Original expression:
   QVERIFY(!pencil.isNull());
 
 A097 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:376
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native QKeySequence shape (one key combination).
 Source context since previous assertion:
 
       const QKeySequence shortcut = pencil->shortcut();
@@ -1188,8 +1241,8 @@ Original expression:
   QVERIFY(shortcut.count() == 1);
 
 A098 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:378
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native QKeySequence key identity.
 Source context since previous assertion:
 
       const QKeyCombination combination = shortcut[0];
@@ -1198,8 +1251,8 @@ Original expression:
   QVERIFY(combination.key() != Qt::Key_unknown);
 
 A099 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:381
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the published effects of the pencil tool are asserted (S008 pencil profile, S009 restore, S045 pencil cursor after a stroke), but no check presses the PencilToggle key command; the converted checks set page.isPencilMode directly.
 Source context since previous assertion:
 
 
@@ -1209,8 +1262,8 @@ Original expression:
   QVERIFY(canvas->pencilMode());
 
 A100 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:382
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the automation plot keeps the hint claim across the stationary tool switch (S047, S008).
 Source context since previous assertion:
 
 
@@ -1218,8 +1271,8 @@ Original expression:
   QTRY_VERIFY(hints.currentSource() == plot);
 
 A101 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:383
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the status text stays non-empty across the tool switch (S047).
 Source context since previous assertion:
 
 
@@ -1227,8 +1280,8 @@ Original expression:
   QTRY_VERIFY(!hints.currentText().isEmpty());
 
 A102 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:385
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the pencil and sweep profiles differ (S008 pencil 18, S009 restored sweep 17, S026, S027).
 Source context since previous assertion:
 
       const QString pencilText = hints.currentText();
@@ -1237,8 +1290,8 @@ Original expression:
   QVERIFY(pencilText != sweepText);
 
 A103 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:386
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the pencil and node profiles differ (S026 pencil 18, S018 node 15).
 Source context since previous assertion:
 
 
@@ -1246,8 +1299,8 @@ Original expression:
   QVERIFY(pencilText != nodeText);
 
 A104 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:389
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: same unproved condition as A099; the published restoration is asserted (S009) but no PencilToggle key command is exercised.
 Source context since previous assertion:
 
 
@@ -1257,8 +1310,8 @@ Original expression:
   QVERIFY(!canvas->pencilMode());
 
 A105 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:390
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the plot keeps the hint claim after the second toggle (S047, S009).
 Source context since previous assertion:
 
 
@@ -1266,8 +1319,8 @@ Original expression:
   QTRY_VERIFY(hints.currentSource() == plot);
 
 A106 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:391
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: leaving pencil mode restores the sweep instructions (S009, S027).
 Source context since previous assertion:
 
 
@@ -1275,8 +1328,8 @@ Original expression:
   QTRY_COMPARE(hints.currentText(), sweepText);
 
 A107 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:398
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native lane body rect used to locate the origin-phantom anchor.
 Source context since previous assertion:
 
 
@@ -1290,8 +1343,8 @@ Original expression:
   QVERIFY(!body.isEmpty());
 
 A108 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:406
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the origin phantom is asserted as a projection fact (S046), but no predicate hovers the phantom anchor and asserts the hint claim of the plot or the origin-phantom profile.
 Source context since previous assertion:
 
       m_fixture->rig->view().setEditorHorizontalScroll(geometry.pointHitRadius + 8.0);
@@ -1306,8 +1359,8 @@ Original expression:
   QTRY_VERIFY(hints.currentSource() == plot);
 
 A109 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:407
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: same unproved condition as A108; no predicate observes the phantom hover text.
 Source context since previous assertion:
 
 
@@ -1315,8 +1368,8 @@ Original expression:
   QTRY_VERIFY(!hints.currentText().isEmpty());
 
 A110 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:409
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: same unproved condition as A108; the distinctness of the phantom hint text from the node text is unproved.
 Source context since previous assertion:
 
       const QString phantomText = hints.currentText();
@@ -1325,8 +1378,8 @@ Original expression:
   QVERIFY(phantomText != nodeText);
 
 A111 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:410
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: same unproved condition as A108; the distinctness of the phantom hint text from the sweep text is unproved.
 Source context since previous assertion:
 
 
@@ -1334,8 +1387,8 @@ Original expression:
   QVERIFY(phantomText != sweepText);
 
 A112 | AutomationHoverTest::targetAndToolProfilesUpdate | src/checks/automation/hover/tst_automationhover.cpp:411
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: same unproved condition as A108; the distinctness of the phantom hint text from the pencil text is unproved.
 Source context since previous assertion:
 
 
@@ -1343,8 +1396,8 @@ Original expression:
   QVERIFY(phantomText != pencilText);
 
 A113 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:417
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition.
 Source context since previous assertion:
 
   }
@@ -1357,8 +1410,8 @@ Original expression:
   QVERIFY(lane.has_value());
 
 A114 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:420
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native plot and window handle set.
 Source context since previous assertion:
 
       songview::TimelineInputItem *const plot = automation_hover::plotInput(*m_fixture);
@@ -1368,8 +1421,8 @@ Original expression:
   QVERIFY(plot && window);
 
 A115 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:426
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the automation plot claims the hint scope at the recovery target (S047).
 Source context since previous assertion:
 
       ui::MouseHints &hints = ui::MouseHints::instance();
@@ -1382,8 +1435,8 @@ Original expression:
   QTRY_VERIFY(hints.currentSource() == plot);
 
 A116 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:427
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the status text is non-empty at the recovery target (S047).
 Source context since previous assertion:
 
 
@@ -1391,8 +1444,8 @@ Original expression:
   QTRY_VERIFY(!hints.currentText().isEmpty());
 
 A117 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:431
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the plot claims the hint scope on the node (S047).
 Source context since previous assertion:
 
       const QString sweepText = hints.currentText();
@@ -1403,8 +1456,8 @@ Original expression:
   QTRY_VERIFY(hints.currentSource() == plot);
 
 A118 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:432
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the status text is non-empty on the node (S047).
 Source context since previous assertion:
 
 
@@ -1412,8 +1465,8 @@ Original expression:
   QTRY_VERIFY(!hints.currentText().isEmpty());
 
 A119 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:434
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the node and sweep hint profiles differ (S018 and S004 node 15, S007 sweep 17).
 Source context since previous assertion:
 
       const QString nodeText = hints.currentText();
@@ -1422,8 +1475,8 @@ Original expression:
   QVERIFY(nodeText != sweepText);
 
 A120 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:439
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a right click opens the node menu (S056) and the open menu realises its published actions and separators (S059).
 Source context since previous assertion:
 
 
@@ -1436,7 +1489,7 @@ Original expression:
 
 A121 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:440
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: the hint-scope ownership of the menu (the modal muting the underlay claim, page.hintScopeAllowed) has no assertion; the checks assert the open state and focus of the menu (S056, S059) but not its hint scope.
 Source context since previous assertion:
 
 
@@ -1445,7 +1498,7 @@ Original expression:
 
 A122 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:441
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: the muted underlay hint text while the menu owns the scope has no assertion; no check reads the status strip with an automation menu open.
 Source context since previous assertion:
 
 
@@ -1454,7 +1507,7 @@ Original expression:
 
 A123 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:447
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: the continued hint-scope ownership of the menu while the pointer moves between underlying targets has no assertion.
 Source context since previous assertion:
 
 
@@ -1468,7 +1521,7 @@ Original expression:
 
 A124 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:448
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: GAP: the muted underlay hint text after that motion has no assertion.
 Source context since previous assertion:
 
 
@@ -1476,8 +1529,8 @@ Original expression:
   QVERIFY(hints.currentText().isEmpty());
 
 A125 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:454
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: dismissing the menu with Escape closes it (S057).
 Source context since previous assertion:
 
 
@@ -1490,8 +1543,8 @@ Original expression:
   QTRY_VERIFY(!menu.session->isOpen());
 
 A126 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:455
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the hover recovery is asserted only after a further pointer motion (S058, S055); a recovery that republishes the hover without pointer movement is unproved, because the Swift owner revives hover through pointer motion by design.
 Source context since previous assertion:
 
 
@@ -1499,8 +1552,8 @@ Original expression:
   QTRY_VERIFY(hints.currentSource() == plot);
 
 A127 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:456
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: same unproved condition as A126; the recovered sweep hint text at the stationary pointer is unproved.
 Source context since previous assertion:
 
 
@@ -1508,8 +1561,8 @@ Original expression:
   QTRY_COMPARE(hints.currentText(), sweepText);
 
 A128 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:462
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native prepareLane precondition.
 Source context since previous assertion:
 
   }
@@ -1522,8 +1575,8 @@ Original expression:
   QVERIFY(lane.has_value());
 
 A129 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:467
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native canvas, page, plot and window handle set.
 Source context since previous assertion:
 
       AutomationCanvas *const canvas = automation_hover::canvas(*m_fixture);
@@ -1535,8 +1588,8 @@ Original expression:
   QVERIFY(canvas && automationPage && plot && window);
 
 A130 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:472
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native lane body rect.
 Source context since previous assertion:
 
       ui::MouseHints &hints = ui::MouseHints::instance();
@@ -1548,8 +1601,8 @@ Original expression:
   QVERIFY(!body.isEmpty());
 
 A131 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:476
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the automation plot claims the hint scope before the sweep (S047).
 Source context since previous assertion:
 
       const auto frozen = automation_hover::documentState(*m_fixture);
@@ -1560,8 +1613,8 @@ Original expression:
   QTRY_VERIFY(hints.currentSource() == plot);
 
 A132 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:477
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the status text is non-empty before the sweep (S047).
 Source context since previous assertion:
 
 
@@ -1569,8 +1622,8 @@ Original expression:
   QTRY_VERIFY(!hints.currentText().isEmpty());
 
 A133 | AutomationHoverTest::liveModifierGesturesCommitAndUndo | src/checks/automation/hover/tst_automationhover.cpp:511
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native coordinate scan precondition (a window position where the fine snap differs from the coarse snap).
 Source context since previous assertion:
 
       const QString sweepText = hints.currentText();
@@ -1611,8 +1664,8 @@ Original expression:
   QVERIFY(found);
 
 A134 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:521
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a live sweep retains its originating hint profile (S073) and that profile carries the sweep instructions (S070); the middle-button grab case remains asserted at S048 and S049.
 Source context since previous assertion:
 
       const int expectedEndValue =
@@ -1629,8 +1682,8 @@ Original expression:
   QCOMPARE(hints.currentText(), sweepText);
 
 A135 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:522
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the live sweep keeps the plot hint claim through its retained profile (S073) with the plot owning the claim (S047).
 Source context since previous assertion:
 
 
@@ -1638,8 +1691,8 @@ Original expression:
   QVERIFY(hints.currentSource() == plot);
 
 A136 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:527
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the Alt bit arms the fine lattice (S034), each stepped tick of the sweep is written (S035) and the released sweep commits its stroke with the release point (S041).
 Source context since previous assertion:
 
       QTest::mouseRelease(window, Qt::LeftButton, Qt::AltModifier, endWindow);
@@ -1651,8 +1704,8 @@ Original expression:
   QVERIFY(m_fixture->document.findLanePoint(0, kPanController, fineTick, &written));
 
 A137 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:528
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the release point value of the stroke is written (S038, S041) and the page value mapping preserves the value of the pixel (S043).
 Source context since previous assertion:
 
 
@@ -1660,8 +1713,8 @@ Original expression:
   QCOMPARE(written.value, expectedEndValue);
 
 A138 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:529
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the released sweep commits once and advances one revision (S041).
 Source context since previous assertion:
 
 
@@ -1669,8 +1722,8 @@ Original expression:
   QVERIFY(automation_hover::documentState(*m_fixture).smf != frozen.smf);
 
 A139 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:532
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the sweep is undoable, one undo restores the flat lane and exactly one history entry is recorded (S042).
 Source context since previous assertion:
 
       m_fixture->document.undoStack()->undo();
@@ -1680,8 +1733,8 @@ Original expression:
   QVERIFY(automation_hover::documentState(*m_fixture).smf == frozen.smf);
 
 A140 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:533
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: one undo restores the lane without the release point of the stroke (S042).
 Source context since previous assertion:
 
 
@@ -1689,8 +1742,8 @@ Original expression:
   QVERIFY(!m_fixture->document.findLanePoint(0, kPanController, fineTick, nullptr));
 
 A141 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:577
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native coordinate scan precondition for the ramp endpoint.
 Source context since previous assertion:
 
 
@@ -1741,8 +1794,8 @@ Original expression:
   QVERIFY(rampFound);
 
 A142 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:586
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native plot-bounds precondition for the dip position.
 Source context since previous assertion:
 
       const int expectedMidValue =
@@ -1758,8 +1811,8 @@ Original expression:
   QVERIFY(plot->bounds().contains(dipViewport));
 
 A143 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:590
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: NATIVE: retired native value-mapping precondition (the dip pixel maps away from the linear midpoint).
 Source context since previous assertion:
 
       const int dipValue = std::clamp(qRound(AutomationProjection::valueAtY(
@@ -1770,8 +1823,8 @@ Original expression:
   QVERIFY(dipValue != expectedMidValue);
 
 A144 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:595
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a live sweep retains its originating hint profile (S073) and that profile carries the ramp instructions (S070).
 Source context since previous assertion:
 
 
@@ -1783,8 +1836,8 @@ Original expression:
   QCOMPARE(hints.currentText(), sweepText);
 
 A145 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:600
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the ramp runs from its anchor value to its release value (S036).
 Source context since previous assertion:
 
       QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, rampEndWindow);
@@ -1796,8 +1849,8 @@ Original expression:
   QVERIFY(m_fixture->document.findLanePoint(0, kPanController, startTick, &written));
 
 A146 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:601
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the anchor value of the ramp is written (S036, S037).
 Source context since previous assertion:
 
 
@@ -1805,8 +1858,8 @@ Original expression:
   QCOMPARE(written.value, startValue);
 
 A147 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:602
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the release endpoint of the ramp is written (S036, S039).
 Source context since previous assertion:
 
 
@@ -1814,8 +1867,8 @@ Original expression:
   QVERIFY(m_fixture->document.findLanePoint(0, kPanController, endTick, &written));
 
 A148 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:603
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the release value of the ramp is written (S036, S039).
 Source context since previous assertion:
 
 
@@ -1823,8 +1876,8 @@ Original expression:
   QCOMPARE(written.value, endValue);
 
 A149 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:604
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the ramp fills every lattice tick between its endpoints (S036).
 Source context since previous assertion:
 
 
@@ -1832,8 +1885,8 @@ Original expression:
   QVERIFY(m_fixture->document.findLanePoint(0, kPanController, midTick, &written));
 
 A150 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:605
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the midpoint of the ramp interpolates linearly (S036).
 Source context since previous assertion:
 
 
@@ -1841,8 +1894,8 @@ Original expression:
   QCOMPARE(written.value, expectedMidValue);
 
 A151 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:606
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: a ramp ignores its interior excursion while keeping its anchor and release (S071, S072); the linear midpoint and endpoints remain asserted at S036.
 Source context since previous assertion:
 
 
@@ -1850,8 +1903,8 @@ Original expression:
   QVERIFY(written.value != dipValue);
 
 A152 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:610
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the drafted sweep commits through the page and one undo restores the pre-sweep lane (S074, S075); the drag-sweep undo remains asserted at S042.
 Source context since previous assertion:
 
 
@@ -1862,8 +1915,8 @@ Original expression:
   QVERIFY(automation_hover::documentState(*m_fixture).smf == frozen.smf);
 
 A153 | std::clamp | src/checks/automation/hover/tst_automationhover.cpp:611
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: one undo restores the pre-sweep lane, so the swept midpoint is gone (S075, S074).
 Source context since previous assertion:
 
 
@@ -1884,6 +1937,453 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-No Swift counterpart file was identified covering this file. There are no S entries for this file.
 
-No shared Swift helper fixture applies to this retired native file.
+S001 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:25
+Swift expression:
+  report.expect(!fixture.page.hasGesture && !fixture.page.interactionActive, cppID: drawerAutomationCancelID,
+                message: "cancelling ends the gesture synchronously")
+
+S002 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:27
+Swift expression:
+  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
+                     what: "a cancelled gesture mutates nothing")
+
+S003 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:194
+Swift expression:
+  report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: drawerAutomationContextID,
+                     what: "a node hover reads out the node's value")
+
+S004 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:196
+Swift expression:
+  report.expectEqual(15, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
+                     what: "a written node advertises node movement")
+
+S005 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:202
+Swift expression:
+  report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: drawerAutomationContextID,
+                     what: "a background hover reads the value the lane holds there")
+
+S006 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:204
+Swift expression:
+  report.expect(fixture.page.hoverBuildCount > hoverBuilds, cppID: drawerAutomationContextID,
+                message: "the hover publications are counted")
+
+S007 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:206
+Swift expression:
+  report.expectEqual(17, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
+                     what: "the background advertises sweep and ramp input")
+
+S008 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:209
+Swift expression:
+  report.expectEqual(18, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
+                     what: "switching tools updates stationary hover instructions")
+
+S009 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:212
+Swift expression:
+  report.expectEqual(17, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
+                     what: "leaving pencil mode restores sweep instructions")
+
+S010 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:251
+Swift expression:
+  report.expect(page.hoverVisible, cppID: drawerAutomationHoverModelID,
+                message: "a background move publishes its hover")
+
+S011 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:255
+Swift expression:
+  report.expectEqual(AutomationParameterMetadata(parameter: fixture.panLane)
+      .valueText(lane.heldValue(at: backgroundTick) ?? 64), page.hoverText,
+                     cppID: drawerAutomationHoverModelID,
+                     what: "a background hover reads the value the lane holds there")
+
+S012 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:259
+Swift expression:
+  report.expect(page.hover?.tick != 24 && page.hover?.tick != 120,
+                cppID: drawerAutomationHoverModelID,
+                message: "the insertion tick sits between its neighboring nodes")
+
+S013 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:267
+Swift expression:
+  report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                     what: "hovering the background writes nothing")
+
+S014 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:271
+Swift expression:
+  report.expectEqual(builds, page.hoverBuildCount, cppID: drawerAutomationHoverModelID,
+                     what: "a repeated hover does not churn")
+
+S015 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:273
+Swift expression:
+  report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                     what: "a repeated hover still writes nothing")
+
+S016 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:281
+Swift expression:
+  report.expectEqual(AutomationParameterMetadata(parameter: fixture.panLane).valueText(64),
+                     page.hoverText, cppID: drawerAutomationHoverModelID,
+                     what: "the node hover reads the node's own text")
+
+S017 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:284
+Swift expression:
+  report.expectEqual(1, page.publishedNodes.filter(\.hovered).count,
+                     cppID: drawerAutomationHoverModelID,
+                     what: "exactly the hovered node carries the ring")
+
+S018 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:287
+Swift expression:
+  report.expectEqual(15, page.hoverHintProfile, cppID: drawerAutomationHoverModelID,
+                     what: "an arrow node hover offers the node profile")
+
+S019 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:295
+Swift expression:
+  report.expect(!page.hoverVisible, cppID: drawerAutomationHoverModelID,
+                message: "leaving the plot clears the hover")
+
+S020 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:309
+Swift expression:
+  report.expectEqual(clearedBuilds, page.hoverBuildCount, cppID: drawerAutomationHoverModelID,
+                     what: "a repeated leave stays clear without churn")
+
+S021 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:311
+Swift expression:
+  report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                     what: "leave passes write nothing")
+
+S022 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:317
+Swift expression:
+  report.expect(!page.hoverVisible && page.hover == nil, cppID: drawerAutomationHoverModelID,
+                message: "a strong cancellation clears a live hover")
+
+S023 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:319
+Swift expression:
+  report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                     what: "cancelling a hover changes no document or history state")
+
+S024 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:322
+Swift expression:
+  report.expect(page.hoverVisible, cppID: drawerAutomationHoverModelID,
+                message: "a move after a cancellation revives the hover")
+
+S025 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:325
+Swift expression:
+  report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                     what: "an idle cancellation is a no-op on document and history")
+
+S026 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:331
+Swift expression:
+  report.expectEqual(18, page.hoverHintProfile, cppID: drawerAutomationHoverModelID,
+                     what: "a stationary pencil toggle offers the pencil profile")
+
+S027 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:334
+Swift expression:
+  report.expectEqual(17, page.hoverHintProfile, cppID: drawerAutomationHoverModelID,
+                     what: "leaving pencil mode restores the sweep profile")
+
+S028 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:340
+Swift expression:
+  report.expectEqual(true, page.hover?.hasPoint, cppID: drawerAutomationHoverModelID,
+                     what: "Tempo hovers its node exactly like a CC lane")
+
+S029 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:342
+Swift expression:
+  report.expect(!page.hoverText.isEmpty, cppID: drawerAutomationHoverModelID,
+                message: "the Tempo node hover names its value")
+
+S030 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:344
+Swift expression:
+  report.expectEqual(1, page.publishedNodes.filter(\.hovered).count,
+                     cppID: drawerAutomationHoverModelID,
+                     what: "Tempo rings exactly its hovered node")
+
+S031 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:347
+Swift expression:
+  report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                     what: "Tempo hover topology preserves the document")
+
+S032 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:350
+Swift expression:
+  report.expect(!page.hoverVisible, cppID: drawerAutomationHoverModelID,
+                message: "Tempo leaves clear exactly like a CC lane")
+
+S033 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:367
+Swift expression:
+  report.expectEqual(afterRebuild, fixture.values(fixture.panLane), cppID: drawerAutomationHoverModelID,
+                     what: "a stale release after a mid-gesture rebuild commits nothing")
+
+S034 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:21
+Swift expression:
+  report.expectEqual(AutomationModifiers(fine: true),
+                     AutomationQtModifier.automation(AutomationQtModifier.alt), cppID: drawerAutomationModifierMappingID,
+                     what: "Qt's alt bit arms the fine lattice")
+
+S035 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:37
+Swift expression:
+  report.expectEqual((0...10).map { "\($0):\($0 * 10)" },
+                     fixture.laneValues(sweep.points), cppID: drawerAutomationSweepStepsID,
+                     what: "each stepped tick interpolates its value across the stroke")
+  report.expectEqual(11, sweep.points.count, cppID: drawerAutomationSweepStepsID,
+                     what: "the sweep steps every lattice tick of the stroke")
+
+S036 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:61
+Swift expression:
+  report.expectEqual(11, rampPoints.count, cppID: drawerAutomationSweepStepsID,
+                     what: "a ramp sweep fills every lattice tick between its endpoints")
+  report.expectEqual(["0:0", "10:100"],
+                     fixture.laneValues([rampPoints[0], rampPoints[10]]), cppID: drawerAutomationSweepStepsID,
+                     what: "the ramp runs from its anchor value to its release value")
+  report.expectEqual(50, rampPoints[5].value, cppID: drawerAutomationSweepStepsID,
+                     what: "the ramp's midpoint interpolates linearly")
+
+S037 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:68
+Swift expression:
+  report.expect(edit != nil && !edit!.unchanged, cppID: drawerAutomationSweepStepsID,
+                message: "the completed ramp is a changed span replacement")
+  report.expectEqual(Tick(0), edit?.tickBegin ?? 99, cppID: drawerAutomationSweepStepsID,
+                     what: "the ramp replacement starts at its anchor")
+  report.expectEqual("0:0", "\(edit?.points.first?.tick ?? 0):\(edit?.points.first?.value ?? 0)",
+                     cppID: drawerAutomationSweepStepsID, what: "the replacement keeps the ramp's first point")
+
+S038 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:134
+Swift expression:
+  report.expect(dragEdit?.points.contains { $0.tick == 144 && $0.value == 25 } == true,
+                cppID: drawerAutomationSweepTailID, message: "the stroke's release point is written")
+
+S039 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:150
+Swift expression:
+  report.expect(rampEdit?.points.contains { $0.tick == 144 && $0.value == 25 } == true,
+                cppID: drawerAutomationSweepTailID, message: "the ramp's release point is written")
+
+S040 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:199
+Swift expression:
+  report.expectEqual(["48:85", "72:70", "96:55", "120:40", "144:25"],
+                     committed.laneValues(live.preview), cppID: drawerAutomationSweepTailID,
+                     what: "the sweep preview is the stepped draft alone")
+  report.expectEqual(beforeRelease, committed.snapshot, cppID: drawerAutomationSweepTailID,
+                     what: "the draft writes nothing before the release")
+
+S041 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:208
+Swift expression:
+  report.expect(AutomationCommit.apply(committedEdit, in: committed.document), cppID: drawerAutomationSweepTailID,
+                message: "the released sweep commits once")
+  report.expectEqual(["0:85", "72:70", "96:55", "120:40", "144:25", "168:85"],
+                     committed.values(committed.modulationLane), cppID: drawerAutomationSweepTailID,
+                     what: "the committed lane holds the stroke and its restored tail")
+  report.expectEqual(beforeRelease.revision + 1, committed.document.revision, cppID: drawerAutomationSweepTailID,
+                     what: "one released sweep is one revision")
+
+S042 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:215
+Swift expression:
+  report.expect(committed.undo(), cppID: drawerAutomationSweepTailID, message: "the sweep is undoable")
+  report.expectEqual(["0:85"], committed.values(committed.modulationLane), cppID: drawerAutomationSweepTailID,
+                     what: "one undo restores the flat lane")
+  report.expect(!committed.document.history.canUndo, cppID: drawerAutomationSweepTailID,
+                message: "the released sweep recorded exactly one history entry")
+
+S043 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:255
+Swift expression:
+  report.expectEqual(Tick(100), plain.tick, cppID: drawerAutomationNeutralSnapID,
+                     what: "the unsnapped value mapping preserves tick 100")
+  report.expectEqual(valueNear, plain.value, cppID: drawerAutomationNeutralSnapID,
+                     what: "the unsnapped value mapping keeps the near-neutral pixel value")
+
+S044 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:19
+Swift expression:
+  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
+                message: "a parameter switch is accepted")
+  report.expectEqual(fixture.panLane, fixture.page.activeParameter, cppID: drawerAutomationSwitchID,
+                     what: "the switched parameter becomes active")
+
+S045 | drawerAutomationPencilCursorKind | src/checks/automation/presentation/tst_automationpresentation.swift:100
+Swift expression:
+  report.expectEqual(AutomationCursorKind.pencil.rawValue, page.cursorKind,
+                     cppID: drawerAutomationCursorKindID,
+                     what: "a pencil release arms the pencil cursor")
+
+S046 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:213
+Swift expression:
+  report.expectEqual(Tick(0), scrolledProjection.originPhantom?.point.tick ?? 99,
+                     cppID: drawerAutomationProjectionID,
+                     what: "an off-plot node becomes the origin phantom")
+
+S047 | test_automationHintsRetainGrabOrigin | src/checks/editorqml/tst_EditorDrawer.qml:1810
+QML expression:
+  mouseMove(input, point.x, point.y)
+  tryVerify(function() { return text.text.length > 0 }, 1000,
+            "the node advertises its interaction before the grab")
+
+S048 | test_automationHintsRetainGrabOrigin | src/checks/editorqml/tst_EditorDrawer.qml:1815
+QML expression:
+  mousePress(input, point.x, point.y, Qt.MiddleButton)
+  tryCompare(text, "text", instructions, 1000,
+             "starting a grab retains the originating node instructions")
+
+S049 | test_automationHintsRetainGrabOrigin | src/checks/editorqml/tst_EditorDrawer.qml:1818
+QML expression:
+  mouseMove(input, point.x, outside.y, -1, Qt.MiddleButton)
+  compare(text.text, instructions, "the originating instructions survive outside motion")
+
+S050 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1849
+QML expression:
+  tryVerify(function() { return label.text === model.hoverText && label.text.length > 0 },
+            2000, "the drawn label shows the published hover text")
+
+S051 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1855
+QML expression:
+  compare(bootstrap.automationDocumentRevision(), revision,
+          "hovering a node writes nothing")
+
+S052 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1863
+QML expression:
+  compare(ringed, 1, "exactly the hovered node carries the ring")
+
+S053 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1866
+QML expression:
+  mouseMove(input, point.x, point.y)
+  wait(100)
+  compare(bootstrap.automationHoverBuilds(), builds,
+          "a repeated hover at the same point publishes nothing new")
+
+S054 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1914
+QML expression:
+  mouseMove(gutter, gutter.width / 2, gutter.height / 2)
+  tryVerify(function() { return model.hoverVisible === false }, 2000,
+            "leaving the plot clears the hover")
+
+S055 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1927
+QML expression:
+  mouseMove(input, point.x, point.y)
+  tryVerify(function() { return model.hoverVisible === true }, 2000,
+            "a move after a leave revives the hover")
+
+S056 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1946
+QML expression:
+  mouseClick(input, point.x, point.y, Qt.RightButton)
+  tryVerify(function() { return bootstrap.automationMenuOpen() === true }, 2000,
+            "the right click opened the node menu")
+
+S057 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1949
+QML expression:
+  keyClick(Qt.Key_Escape)
+  tryVerify(function() { return bootstrap.automationMenuOpen() === false }, 2000,
+            "dismissing the menu closes it")
+
+S058 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1952
+QML expression:
+  mouseMove(input, gapX, free.y)
+  tryVerify(function() { return model.hoverVisible === true }, 2000,
+            "pointer motion after a dismissal recovers the hover")
+
+S059 | awaitAutomationModal | src/checks/editorqml/tst_EditorDrawer.qml:3244
+QML expression:
+  var actions = bootstrap.automationMenuActions().split(",")
+  return testCase.automationMenuRowItems().length
+      + testCase.automationMenuSeparatorItems().length === actions.length
+  }, 2000, "the open menu has realized every published action and separator")
+
+S060 | test_aAutomationHoverRaster | src/checks/editorqml/tst_ShellDrawerParity.qml:250
+QML expression:
+  var parameters = ["Pan", "Tempo"]
+  for (var p = 0; p < parameters.length; ++p)
+      checkAutomationParameter(parameters[p])
+
+S061 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml:283
+QML expression:
+  verify(waitForNative(function() { return model.hoverVisible }, 3000),
+         parameter + " publishes its insertion hover")
+
+S062 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml:287
+QML expression:
+  verify(changedPixels(idle, hovered, inputRegion, 0) > 0,
+         parameter + ": the insertion hover paints")
+
+S063 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml:290
+QML expression:
+  mouseMove(input, insertion.x, insertion.y)
+  var repeated = grabRegionStable(tabsRoot(), inputRegion)
+  compare(changedPixels(hovered, repeated, inputRegion, 0), 0,
+          parameter + ": the repeated hover is pixel-stable")
+
+S064 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml:296
+QML expression:
+  verify(waitForNative(function() { return !model.hoverVisible }, 3000),
+         parameter + ": leaving the plot clears the hover")
+  ...
+  compare(changedPixels(idle, cleared, inputRegion, 0), 0,
+          parameter + ": the cleared plot matches idle")
+
+S065 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml:321
+QML expression:
+  verify(waitForNative(function() {
+      var rings = collectByName(automationPageItem(), "automationNodeHover", [])
+      return rings.some(function(item) { return item.visible })
+  }, 3000), parameter + ": the node hover ring draws")
+
+S066 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml:326
+QML expression:
+  var ringFrame = grabUntilDifferent(tabsRoot(), idle, ringRegion)
+  verify(changedPixels(idle, ringFrame, ringRegion, 0) > 0,
+         parameter + ": the ring paints")
+  compare(revision(), before, parameter + ": node hovering writes nothing")
+
+S067 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift:390
+Swift expression:
+  report.expectEqual(AutomationParameterMetadata(parameter: .tempo)
+      .valueText(tempoLane.heldValue(at: backgroundTick) ?? 120), page.hoverText,
+                     cppID: drawerAutomationHoverResidualID,
+                     what: "a tempo background hover reads the held value")
+
+S068 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift:398
+Swift expression:
+  report.expect(page.hoverVisible, cppID: drawerAutomationHoverResidualID,
+                message: "a hover after switching away and back revives")
+
+S069 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift:400
+Swift expression:
+  report.expectEqual(AutomationParameterMetadata(parameter: .tempo)
+      .valueText(tempoLane.heldValue(at: backgroundTick) ?? 120), page.hoverText,
+                     cppID: drawerAutomationHoverResidualID,
+                     what: "the revived hover reads the current held value")
+
+S070 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift:408
+Swift expression:
+  hints.claim(sourceToken: token, profile: 17)
+  report.expect(hints.text.contains("draw ramp"), cppID: drawerAutomationHoverResidualID,
+                message: "the sweep profile instructs the ramp gesture")
+
+S071 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift:430
+Swift expression:
+  ramp.updateRamp(mapped: AutomationLanePoint(tick: 96, value: 20))
+  ramp.updateRamp(mapped: AutomationLanePoint(tick: 120, value: 100))
+  let rampPoints = ramp.finishedPoints(fine: true, projection: projection)
+  report.expect(rampPoints.allSatisfy { $0.tick < 72 || $0.tick > 120 || $0.value != 20 },
+                cppID: drawerAutomationHoverResidualID,
+                message: "a ramp ignores its interior excursion")
+
+S072 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift:436
+Swift expression:
+  report.expectEqual(AutomationLanePoint(tick: 72, value: 60), rampPoints.first,
+                     cppID: drawerAutomationHoverResidualID, what: "the ramp keeps its anchor")
+  report.expectEqual(AutomationLanePoint(tick: 120, value: 100), rampPoints.last,
+                     cppID: drawerAutomationHoverResidualID, what: "the ramp keeps its release")
+
+S073 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift:445
+Swift expression:
+  report.expectEqual(profile, page.hoverHintProfile, cppID: drawerAutomationHoverResidualID,
+                     what: "a live sweep retains its originating hint profile")
+
+S074 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift:448
+Swift expression:
+  report.expect(page.pointerRelease(x: sweepX + 52, y: sweepY - 34, button: AutomationQtButton.left),
+                cppID: drawerAutomationHoverResidualID, message: "the drafted sweep commits")
+
+S075 | drawerAutomationHoverResidual | src/checks/automation/automationcanvasediting.swift:450
+Swift expression:
+  report.expect(fixture.undo(), cppID: drawerAutomationHoverResidualID,
+                message: "the committed sweep is undoable")
+  report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane),
+                     cppID: drawerAutomationHoverResidualID,
+                     what: "one undo restores the pre-sweep lane")
+
+Shared helpers: the swiftcore predicates run under drawerAutomationAutomationFixture with the
+suite dispatch in src/checks/automation/AutomationPageChecks.swift; the QML predicates run in the
+editorqml lane through src/checks/editorqml/EditorQmlTests.swift (mountProductionAutomation,
+automationHoverBuilds, automationMenuOpen, automationDocumentRevision).

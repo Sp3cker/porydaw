@@ -369,3 +369,87 @@ func drawerAutomationHoverModel(_ report: CheckReport, suite: DocumentSession,
     report.expect(!page.interactionActive, cppID: drawerAutomationHoverModelID,
                   message: "a stale release leaves no interaction live")
 }
+
+let drawerAutomationHoverResidualID = "swiftcore/AutomationPage::hoverResidual"
+
+@MainActor
+func drawerAutomationHoverResidual(_ report: CheckReport, suite: DocumentSession,
+                                   service: ProjectService) {
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                    pan: [(24, 64), (120, 40)],
+                                    tempo: [(0, 500_000), (96, 400_000)])
+    let page = fixture.page
+    fixture.activate(.tempo)
+    let tempoLane = fixture.makeProjection(.tempo)
+    let backgroundTick = Tick(48)
+    let backgroundX = fixture.x(backgroundTick)
+    let backgroundY = fixture.y(.tempo, tempoLane.heldValue(at: backgroundTick) ?? 120)
+    _ = page.pointerMove(x: backgroundX, y: backgroundY, buttons: 0)
+    report.expect(page.hoverVisible, cppID: drawerAutomationHoverResidualID,
+                  message: "a tempo background move publishes its hover")
+    report.expectEqual(AutomationParameterMetadata(parameter: .tempo)
+        .valueText(tempoLane.heldValue(at: backgroundTick) ?? 120), page.hoverText,
+                       cppID: drawerAutomationHoverResidualID,
+                       what: "a tempo background hover reads the held value")
+    page.pointerLeave()
+    fixture.activate(fixture.panLane)
+    fixture.activate(.tempo)
+    _ = page.pointerMove(x: backgroundX, y: backgroundY, buttons: 0)
+    report.expect(page.hoverVisible, cppID: drawerAutomationHoverResidualID,
+                  message: "a hover after switching away and back revives")
+    report.expectEqual(AutomationParameterMetadata(parameter: .tempo)
+        .valueText(tempoLane.heldValue(at: backgroundTick) ?? 120), page.hoverText,
+                       cppID: drawerAutomationHoverResidualID,
+                       what: "the revived hover reads the current held value")
+    page.pointerLeave()
+    let hints = MouseHints()
+    let token = hints.allocateSourceToken()
+    hints.setWindowActive(active: true)
+    hints.claim(sourceToken: token, profile: 17)
+    report.expect(hints.text.contains("draw ramp"), cppID: drawerAutomationHoverResidualID,
+                  message: "the sweep profile instructs the ramp gesture")
+    hints.claim(sourceToken: token, profile: 15)
+    report.expect(hints.text.contains("constrain to axis"), cppID: drawerAutomationHoverResidualID,
+                  message: "the node profile instructs the axis constraint")
+    hints.clear(sourceToken: token)
+    report.expectEqual("", hints.text, cppID: drawerAutomationHoverResidualID,
+                       what: "clearing the claim retires its instructions")
+    fixture.activate(fixture.panLane)
+    let facts = fixture.facts(fixture.panLane)
+    let projection = AutomationProjection(
+        camera: fixture.session.camera,
+        bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
+        geometry: page.geometry,
+        snapPolicy: AutomationSnapPolicy(document: fixture.document,
+                                         timeline: fixture.session.timeline,
+                                         baseFontPx: 13, devicePixelRatio: 1),
+        songEndTick: fixture.songEndTick)
+    var ramp = AutomationSweepTransaction(facts: facts, mode: .ramp,
+                                          mapped: AutomationLanePoint(tick: 72, value: 60),
+                                          rawTick: 72, pressX: 0, pressY: 0)
+    ramp.updateRamp(mapped: AutomationLanePoint(tick: 96, value: 20))
+    ramp.updateRamp(mapped: AutomationLanePoint(tick: 120, value: 100))
+    let rampPoints = ramp.finishedPoints(fine: true, projection: projection)
+    report.expect(rampPoints.allSatisfy { $0.tick < 72 || $0.tick > 120 || $0.value != 20 },
+                  cppID: drawerAutomationHoverResidualID,
+                  message: "a ramp ignores its interior excursion")
+    report.expectEqual(AutomationLanePoint(tick: 72, value: 60), rampPoints.first,
+                       cppID: drawerAutomationHoverResidualID, what: "the ramp keeps its anchor")
+    report.expectEqual(AutomationLanePoint(tick: 120, value: 100), rampPoints.last,
+                       cppID: drawerAutomationHoverResidualID, what: "the ramp keeps its release")
+    let profile = page.hoverHintProfile
+    let sweepX = fixture.x(72)
+    let sweepY = fixture.y(fixture.panLane, 64)
+    _ = page.pointerPress(x: sweepX, y: sweepY, surface: 1, button: AutomationQtButton.left)
+    _ = page.pointerMove(x: sweepX + 48, y: sweepY - 30, buttons: AutomationQtButton.left)
+    report.expectEqual(profile, page.hoverHintProfile, cppID: drawerAutomationHoverResidualID,
+                       what: "a live sweep retains its originating hint profile")
+    _ = page.pointerMove(x: sweepX + 52, y: sweepY - 34, buttons: AutomationQtButton.left)
+    report.expect(page.pointerRelease(x: sweepX + 52, y: sweepY - 34, button: AutomationQtButton.left),
+                  cppID: drawerAutomationHoverResidualID, message: "the drafted sweep commits")
+    report.expect(fixture.undo(), cppID: drawerAutomationHoverResidualID,
+                  message: "the committed sweep is undoable")
+    report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane),
+                       cppID: drawerAutomationHoverResidualID,
+                       what: "one undo restores the pre-sweep lane")
+}

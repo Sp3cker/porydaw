@@ -5,7 +5,11 @@ Deleted in: c7cf74255c70f3b78d81067d116bbb45147d3f6a Complete offscreen automati
 Original: src/checks/automationgesturecheck/parity.cpp
 Original SHA-256: 38c3be9d3a4a7201a577c79d6619ff8331e3e2422b6f76045ab840eb4894d35f
 Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: ed769eeedca873b5a9d77d5b20399840f5f4357643468157e10c7520bd6c2f31
+Swift SHA-256: 5c57b1ca8d62ccec7ffef66c3d5d95f863495eba10021966910e99c772230615
+Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
+Additional Swift SHA-256: 0134a98e5ef126a384cd7dc31020163100a3fc72219143a7a08b0e592fd569d4
+Additional Swift counterpart: src/checks/automation/automationselection.swift
+Additional Swift SHA-256: d651f10e23d47da379a39447f659f276580244134775262b3b6810a706be3d4d
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -15,9 +19,9 @@ S identifiers identify exact counterpart predicates, listed after the inventory.
 Eleven gesture-parity cases (hover-insertion, click-delete, node-drag,
 origin-phantom, selection, sweep-ramp, pencil, band-select, escape,
 rebuild-cancel, semantic-no-op) pin NodeLane gesture outcomes against the
-document. Eight sites are partial toward converted model predicates, eleven have no
-Swift assertion, and two require the retired native cursor and layer.
-Disposition tally: 21 sites: 11 GAP, 2 NATIVE, 8 PARTIAL.
+document. Eight sites are matched by converted model predicates, eleven are partial toward them,
+and two require the retired native cursor and layer.
+Disposition tally: 21 sites: 8 MATCHED, 11 PARTIAL, 2 NATIVE.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related counterpart predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -26,8 +30,18 @@ GAP identifies an original predicate without a replacement assertion.
 Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
-Command: deno task verify --filter automation-gestures --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore (implementer run on the counterpart
+hashes pinned above) -> run_checks PASS (1/14 ok, 13 skipped).
+Command: deno task verify:qml (same tree, same implementer run) -> run_checks PASS
+(all harnesses).
+Result: the converted Swift and QML suites are green on the counterpart hashes
+pinned above. This ledger was not re-run here and no per-predicate execution was
+observed beyond that report; predicate presence alone does not close any A entry.
+Note: a sibling lane is appending new hover-residual predicates to
+automationcanvasediting.swift while this ledger was written (additive hunks after
+line 371 only); every line pinned here was re-verified unchanged against the current
+content, whose hash is pinned above. Refresh that hash if the sibling lane lands more
+appends.
 Converted-suite note: the retired automation-gestures C++ harness never runs again;
 candidate model predicates live in the automation lane Swift suite.
 
@@ -54,7 +68,7 @@ Original assertion inventory and source sequence
 
 A001 | expectOneEdit | src/checks/automationgesturecheck/parity.cpp:184
 Disposition: PARTIAL
-Mapping/reason: One-edit helper guard; Related history predicates are indexed below (pencil revision S006, one-undo S007, cancel snapshot S011); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Mapping/reason: One-edit helper guard; related one-edit predicates are indexed below (S015 and S016 fractional drag, S020 selected drag one revision, S021 redo, S028 and S029 recovered drag); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
 Source context since previous assertion:
   #include "domains.h"
   #include "support.h"
@@ -246,7 +260,7 @@ Original expression:
 
 A002 | expectUnchanged | src/checks/automationgesturecheck/parity.cpp:191
 Disposition: PARTIAL
-Mapping/reason: Unchanged helper guard; Related history predicates are indexed below (pencil revision S006, one-undo S007, cancel snapshot S011); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Mapping/reason: Unchanged helper guard; related non-mutation predicates are indexed below (S025, S026, and S027 stale release snapshots, S031 sub-threshold write, S033 parked press); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
 Source context since previous assertion:
   }
 
@@ -258,8 +272,8 @@ Original expression:
           QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
 
 A003 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:233
-Disposition: GAP
-Mapping/reason: Horizontal Shift-drag value locking has no corresponding Swift gesture predicate; S001..S003 cover generic no-op, delete, and move release classifications, not axis locking.
+Disposition: MATCHED
+Mapping/reason: S012 and S013 (drawerAutomationNodeDragAndPhantomOutcomes, gestures.swift:425 and 427: a time axis lock keeps the original value and the mapped tick) assert the horizontal Shift-drag value lock.
 Source context since previous assertion:
   }
 
@@ -305,8 +319,8 @@ Original expression:
                         QStringLiteral("horizontal Shift drag did not lock value"));
 
 A004 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:244
-Disposition: GAP
-Mapping/reason: Vertical Shift-drag time locking has no corresponding Swift gesture predicate; S001..S003 cover generic no-op, delete, and move release classifications, not axis locking.
+Disposition: MATCHED
+Mapping/reason: S014 (drawerAutomationGestureContractParity, gestures.swift:930: a value axis lock keeps the original tick) asserts the vertical Shift-drag time lock.
 Source context since previous assertion:
       seed(ctx, kFixture);
       const auto axisStart = at(ctx, kFixtureTick, 100).position;
@@ -322,8 +336,8 @@ Original expression:
                         QStringLiteral("vertical Shift drag did not lock time"));
 
 A005 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:252
-Disposition: PARTIAL
-Mapping/reason: Node-drag one-edit guard; Related history predicates are indexed below (pencil revision S006, one-undo S007, cancel snapshot S011); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: MATCHED
+Mapping/reason: S015 and S016 (a fractional tempo drag commits one edit and one revision) assert the fractional Tempo drag one-edit outcome.
 Source context since previous assertion:
       if (ctx.adapter.kind == AdapterKind::Tempo) {
           setTempo(ctx, {{kFixtureTick, kPreservedTempoUs}, {288, tempoUsForBpm(64)}});
@@ -336,8 +350,8 @@ Original expression:
                             QStringLiteral("fractional Tempo drag did not commit one edit"));
 
 A006 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:255
-Disposition: GAP
-Mapping/reason: Preserving the exact fractional Tempo microseconds on a same-value move has no corresponding Swift predicate; S003 only classifies a generic released stroke as a move.
+Disposition: PARTIAL
+Mapping/reason: S017 (an unchanged-value tempo move preserves its microseconds) covers an exact-BPM source (500000 microseconds at 120 BPM); unproved: a fractional source where preservation and recomputation differ, plus native pointer delivery.
 Source context since previous assertion:
           const auto moved = ctx.rig.document().tempoPoints();
 Original expression:
@@ -346,8 +360,8 @@ Original expression:
                             QStringLiteral("unchanged-value Tempo drag discarded microseconds"));
 
 A007 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:274
-Disposition: GAP
-Mapping/reason: Grouped same-tick CC events retaining order across a drag has no corresponding Swift predicate; S003 only classifies a generic released stroke as a move.
+Disposition: PARTIAL
+Mapping/reason: S018 (same-tick CC writes keep their order) and S019 (a move onto a free tick keeps every occupant in order) are indexed below; unproved: a same-tick group dragged as a group keeps both raw events ordered at the destination tick, plus native pointer delivery.
 Source context since previous assertion:
           return;
       }
@@ -375,7 +389,7 @@ Original expression:
 
 A008 | runSelection | src/checks/automationgesturecheck/parity.cpp:289
 Disposition: PARTIAL
-Mapping/reason: Selection outcome; S008..S009 cover band and selection at model level; unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Mapping/reason: Selection outcome; S020 (heterogeneous selected drag is one revision), S021 (the drag is redoable), and S022 (redo restores the committed Tempo stream) are indexed below; unproved: the translated selection range and the per-node outcome list on the retired fixture, plus native pointer delivery.
 Source context since previous assertion:
   }
 
@@ -395,7 +409,7 @@ Original expression:
 
 A009 | runSweepRamp | src/checks/automationgesturecheck/parity.cpp:311
 Disposition: PARTIAL
-Mapping/reason: Sweep-ramp one-edit outcome; S005 covers changed-span completion at model level; unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Mapping/reason: Sweep-ramp one-edit outcome; S040 (each stepped tick interpolates its value across the stroke) and S015 (a fractional drag commits one edit) are indexed below; unproved: the mapped target point list on the retired fixture and native pointer delivery.
 Source context since previous assertion:
       seed(ctx, kMulti);
       selectRange(ctx, kFixtureTick, 288);
@@ -420,7 +434,7 @@ Original expression:
 
 A010 | runSweepRamp | src/checks/automationgesturecheck/parity.cpp:323
 Disposition: PARTIAL
-Mapping/reason: Sweep-ramp outcome; S004..S005 cover ramp interpolation and completion at model level; unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Mapping/reason: Sweep-ramp outcome; S004 (the ramp midpoint interpolates linearly) and S041 (a ramp sweep fills every lattice tick between its endpoints) are indexed below; unproved: the committed endpoint pair on the retired fixture and native pointer delivery.
 Source context since previous assertion:
       seed(ctx, kFixture);
       start = at(ctx, 48, 80);
@@ -439,7 +453,7 @@ Original expression:
 
 A011 | runPencil | src/checks/automationgesturecheck/parity.cpp:342
 Disposition: PARTIAL
-Mapping/reason: Pencil outcome; S006..S007 cover pencil revision and undo at model level; unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Mapping/reason: Pencil outcome; S006 (one pencil press and release is one revision) and S007 (one undo restores the pre-stroke lane) are indexed below; unproved: a non-empty committed point list, native pointer delivery, and the retired rig fixture.
 Source context since previous assertion:
   }
 
@@ -462,8 +476,8 @@ Original expression:
                         QStringLiteral("Pencil stroke did not commit one edit"));
 
 A012 | runBandSelect | src/checks/automationgesturecheck/parity.cpp:366
-Disposition: GAP
-Mapping/reason: Publishing the complete lane-scoped time-selection range has no corresponding Swift predicate; S008 tests band activation and S009 tests clearing an existing selection.
+Disposition: PARTIAL
+Mapping/reason: S023 (a right-drag band publishes its shared time selection) asserts the published range; unproved: the lane set and scope flags of the published selection, plus native pointer delivery.
 Source context since previous assertion:
       ctx.rig.setPersistentPencil(false);
   }
@@ -495,8 +509,8 @@ Original expression:
                         QStringLiteral("right-drag band did not publish the shared time selection"));
 
 A013 | runEscapeCancel | src/checks/automationgesturecheck/parity.cpp:387
-Disposition: PARTIAL
-Mapping/reason: Escape-cancel idle outcome; S010 covers Escape claiming the live gesture at model level; unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: MATCHED
+Mapping/reason: S024 (an escape leaves no interaction live) asserts the original idle outcome after Escape.
 Source context since previous assertion:
   }
 
@@ -518,8 +532,8 @@ Original expression:
       ctx.check.require(ctx.rig.isIdle(), QStringLiteral("Escape left a live gesture"));
 
 A014 | runRebuildCancel | src/checks/automationgesturecheck/parity.cpp:403
-Disposition: GAP
-Mapping/reason: No Swift predicate asserts rebuild-cancel semantics; build counters alone do not cover cancellation.
+Disposition: MATCHED
+Mapping/reason: S025, S026, and S027 (a stale release after a mid-gesture rebuild commits nothing and leaves no interaction live) assert the original unchanged and idle outcome.
 Source context since previous assertion:
   }
 
@@ -541,8 +555,8 @@ Original expression:
                         QStringLiteral("release after document rebuild committed a stale handle"));
 
 A015 | runRebuildCancel | src/checks/automationgesturecheck/parity.cpp:414
-Disposition: GAP
-Mapping/reason: No Swift predicate asserts rebuild-cancel semantics; build counters alone do not cover cancellation.
+Disposition: PARTIAL
+Mapping/reason: S026 (a cancelled stale gesture never writes on release) covers the unchanged conjunct; unproved: the retired geometry-stack rebuild path and the native band-preview clearing.
 Source context since previous assertion:
       const QSize size = ctx.rig.automationViewportSize();
       before = snapshot(ctx.rig.document());
@@ -560,8 +574,8 @@ Original expression:
           QStringLiteral("release after a geometry stack rebuild committed a stale handle"));
 
 A016 | runRebuildCancel | src/checks/automationgesturecheck/parity.cpp:422
-Disposition: GAP
-Mapping/reason: No Swift predicate asserts rebuild-cancel semantics; build counters alone do not cover cancellation.
+Disposition: PARTIAL
+Mapping/reason: S028 and S029 (input recovers after a cancellation and the recovered drag commits its move) cover the recovery; unproved: recovery specifically after a stack-rebuild cancellation, plus native pointer delivery.
 Source context since previous assertion:
       const auto followGrab = at(ctx, kFixtureTick, 100);
       const auto followTarget = at(ctx, 192, 100);
@@ -572,8 +586,8 @@ Original expression:
                         QStringLiteral("input did not recover after stack-rebuild cancellation"));
 
 A017 | runSemanticNoOp | src/checks/automationgesturecheck/parity.cpp:438
-Disposition: GAP
-Mapping/reason: A sub-threshold pointer jitter leaving document and node points unchanged has no corresponding Swift predicate; S001 tests a gesture with no target, not a jittered drag.
+Disposition: MATCHED
+Mapping/reason: S030, S031, S032, and S033 (a sub-threshold move previews the untouched target and writes nothing; a press that never travelled commits nothing and leaves the document alone) assert the original jitter no-op.
 Source context since previous assertion:
   }
 
@@ -655,16 +669,16 @@ Original expression:
                                        "held-value curve"));
 
 A020 | runOriginPhantom | src/checks/automationgesturecheck/parity.cpp:489
-Disposition: GAP
-Mapping/reason: An origin-phantom preview leaving document state unchanged has no corresponding Swift predicate; S006..S007 cover pencil edit history, not this preview.
+Disposition: MATCHED
+Mapping/reason: S034 and S035 (a reset phantom finishes as no edit and restores the phantom source value) assert the preview that writes nothing before release.
 Source context since previous assertion:
 Original expression:
       ctx.check.require(isUnchanged(before, snapshot(ctx.rig.document())),
                         QStringLiteral("origin phantom preview mutated the document before release"));
 
 A021 | runOriginPhantom | src/checks/automationgesturecheck/parity.cpp:494
-Disposition: GAP
-Mapping/reason: Committing an origin-phantom drag to the expected node result has no corresponding Swift predicate; S006..S007 cover pencil editing and undo.
+Disposition: MATCHED
+Mapping/reason: S037, S038, and S039 (the promotion commits, the projected node becomes a written event at its own tick, and one undo returns the lane to its projected node alone) assert the committed phantom drag outcome.
 Source context since previous assertion:
       ctx.rig.mouseRelease(end);
       ctx.rig.pump();
@@ -741,7 +755,7 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Counterpart executable predicate index
-The S entries are exact predicates already executed by the converted automation Swift suite. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+The S entries are exact predicates defined in the converted automation Swift suites pinned by the counterpart hashes above. Their presence alone does not close any A entry; execution is claimed only as recorded in Verification. Preserve their surrounding setup and order in the paired source.
 
 S001 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:331
 Counterpart expression:
@@ -778,12 +792,12 @@ Counterpart expression:
       report.expectEqual(["0:20"], committed.values(committed.modulationLane), cppID: drawerAutomationPointRangeID,
                          what: "one undo restores the pre-stroke lane")
 
-S008 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:58
+S008 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:65
 Counterpart expression:
       report.expect(page.bandVisible, cppID: id,
                     message: "diagonal travel activates at Manhattan ten before Euclidean ten")
 
-S009 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:48
+S009 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:55
 Counterpart expression:
       report.expect(page.selection == nil, cppID: id,
                     message: "outside right press clears selection before opening a menu")
@@ -797,3 +811,161 @@ S011 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationca
 Counterpart expression:
       report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
                          what: "a cancelled gesture mutates nothing")
+
+S012 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:425
+Counterpart expression:
+      report.expectEqual(80, locked.targets[0].current.value, cppID: drawerAutomationNodeDragID,
+                         what: "a time lock keeps the original value")
+
+S013 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:427
+Counterpart expression:
+      report.expectEqual(Tick(60), locked.targets[0].current.tick, cppID: drawerAutomationNodeDragID,
+                         what: "a time lock keeps the mapped tick")
+
+S014 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:930
+Counterpart expression:
+      report.expectEqual(Tick(24), verticalDrag.targets[0].current.tick,
+                         cppID: drawerAutomationContractParityID,
+                         what: "a value lock keeps the original tick")
+
+S015 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:915
+Counterpart expression:
+      report.expect(AutomationCommit.apply(fractionalPlan, in: fractional.document),
+                    cppID: drawerAutomationContractParityID, message: "a fractional tempo drag commits one edit")
+
+S016 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:917
+Counterpart expression:
+      report.expectEqual(fractionalBefore.revision + 1, fractional.document.revision,
+                         cppID: drawerAutomationContractParityID, what: "one fractional drag is one revision")
+
+S017 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:898
+Counterpart expression:
+      report.expectEqual(preservedUs, tempo.document.state.tempo.first(where: { $0.tick == 48 })?
+          .microsecondsPerQuarterNote ?? 0, cppID: drawerAutomationContractParityID,
+                         what: "an unchanged-value tempo move preserves its microseconds")
+
+S018 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:824
+Counterpart expression:
+      report.expectEqual(["96:10", "96:20"], sameTick.values(sameTick.panLane),
+                         cppID: drawerAutomationContractParityID,
+                         what: "same-tick CC writes keep their order")
+
+S019 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:839
+Counterpart expression:
+      report.expectEqual(["48:80", "96:60"], moved.values(moved.panLane),
+                         cppID: drawerAutomationContractParityID,
+                         what: "a move onto a free tick keeps every occupant in order")
+
+S020 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:28
+Counterpart expression:
+      report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+                         what: "heterogeneous selected drag is one revision")
+
+S021 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:35
+Counterpart expression:
+      report.expect(redone, cppID: id, message: "the heterogeneous drag is redoable")
+
+S022 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:36
+Counterpart expression:
+      report.expectEqual(["0:120", "36:160"], fixture.tempoValues, cppID: id,
+                         what: "redo restores the committed Tempo stream")
+
+S023 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:938
+Counterpart expression:
+      report.expectEqual(TimeRange(startTick: 0, endTick: 96), lanes.page.selection?.range,
+                         cppID: drawerAutomationContractParityID,
+                         what: "a right-drag band publishes its shared time selection")
+
+S024 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:963
+Counterpart expression:
+      report.expect(!cancel.page.interactionActive, cppID: drawerAutomationContractParityID,
+                    message: "an escape leaves no interaction live")
+
+S025 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:367
+Counterpart expression:
+      report.expectEqual(afterRebuild, fixture.values(fixture.panLane), cppID: drawerAutomationHoverModelID,
+                         what: "a stale release after a mid-gesture rebuild commits nothing")
+
+S026 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:72
+Counterpart expression:
+      report.expectEqual(afterStale, fixture.snapshot, cppID: drawerAutomationCancelID,
+                         what: "a cancelled stale gesture never writes on release")
+
+S027 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:369
+Counterpart expression:
+      report.expect(!page.interactionActive, cppID: drawerAutomationHoverModelID,
+                    message: "a stale release leaves no interaction live")
+
+S028 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:967
+Counterpart expression:
+      report.expect(cancel.drag(cancel.panLane, from: (24, 60), to: 70,
+                                modifiers: AutomationQtModifier.alt),
+                    cppID: drawerAutomationContractParityID, message: "input recovers after a cancellation")
+
+S029 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:970
+Counterpart expression:
+      report.expectEqual(["24:70"], cancel.values(cancel.panLane), cppID: drawerAutomationContractParityID,
+                         what: "the recovered drag commits its move")
+
+S030 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:102
+Counterpart expression:
+      report.expectEqual([Tick(24): 64], [jitter.page.previewPoints.first?.tick ?? 0:
+                                              jitter.page.previewPoints.first?.value ?? 0],
+                         cppID: drawerAutomationCancelID,
+                         what: "a sub-threshold move previews the untouched target")
+
+S031 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:104
+Counterpart expression:
+      report.expectEqual(jitter.snapshot, drawerAutomationAutomationDocumentSnapshot(jitter.document), cppID: drawerAutomationCancelID,
+                         what: "a sub-threshold move writes nothing")
+
+S032 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:82
+Counterpart expression:
+      report.expect(!empty.page.pointerRelease(x: pressX, y: 60, button: 1), cppID: drawerAutomationCancelID,
+                    message: "a press that never travelled commits nothing")
+
+S033 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:84
+Counterpart expression:
+      report.expectEqual(emptyBefore, empty.snapshot, cppID: drawerAutomationCancelID,
+                         what: "the parked press leaves the document alone")
+
+S034 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:440
+Counterpart expression:
+      report.expect(phantom.finish() == nil, cppID: drawerAutomationNodeDragID,
+                    message: "a reset phantom finishes as no edit")
+
+S035 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:438
+Counterpart expression:
+      report.expectEqual(AutomationLanePoint(tick: 24, value: 60), phantom.target.current,
+                         cppID: drawerAutomationNodeDragID, what: "a reset restores the phantom's source value")
+
+S036 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:497
+Counterpart expression:
+      report.expect(!promotionPlan.isEmpty, cppID: drawerAutomationNodeDragID,
+                    message: "a write on the projected node resolves to a promotion")
+
+S037 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:499
+Counterpart expression:
+      report.expect(AutomationCommit.apply(promotionPlan, in: promotion.document), cppID: drawerAutomationNodeDragID,
+                    message: "the promotion commits")
+
+S038 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:501
+Counterpart expression:
+      report.expectEqual(["0:20"], promotion.values(promotion.panLane), cppID: drawerAutomationNodeDragID,
+                         what: "the projected node becomes a written event at its own tick")
+
+S039 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:503
+Counterpart expression:
+      report.expect(promotion.undo() && promotion.values(promotion.panLane).isEmpty, cppID: drawerAutomationNodeDragID,
+                    message: "one undo returns the lane to its projected node alone")
+
+S040 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:37
+Counterpart expression:
+      report.expectEqual((0...10).map { "\($0):\($0 * 10)" },
+                         fixture.laneValues(sweep.points), cppID: drawerAutomationSweepStepsID,
+                         what: "each stepped tick interpolates its value across the stroke")
+
+S041 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:61
+Counterpart expression:
+      report.expectEqual(11, rampPoints.count, cppID: drawerAutomationSweepStepsID,
+                         what: "a ramp sweep fills every lattice tick between its endpoints")
